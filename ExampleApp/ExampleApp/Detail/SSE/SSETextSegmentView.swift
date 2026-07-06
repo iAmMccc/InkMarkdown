@@ -1,5 +1,4 @@
 import UIKit
-import SnapKit
 
 /// 文本片段视图：把一段 NSAttributedString 包成可逐字吐字的片段。
 ///
@@ -19,8 +18,14 @@ final class SSETextSegmentView: UIView, SSETypewriterSegment {
         textView.dataDetectorTypes = [.link]
         textView.textContainerInset = .zero
         textView.textContainer.lineFragmentPadding = 0
+        textView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(textView)
-        textView.snp.makeConstraints { $0.edges.equalToSuperview() }
+        NSLayoutConstraint.activate([
+            textView.topAnchor.constraint(equalTo: topAnchor),
+            textView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            textView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            textView.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ])
         // 默认全部可见（历史消息、滚动回来）
         textView.attributedText = attributedText
     }

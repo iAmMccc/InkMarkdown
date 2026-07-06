@@ -113,9 +113,10 @@ import UIKit
   """
   let result = InkAttributedRenderer.render(source)
 
+  // 代码块走富文本通道 fallback（visitCodeBlock），行高取 codeBlock.lineHeight = 24
   let para = extractParagraphStyle(from: result, at: 0)
-  #expect(para.minimumLineHeight == 28)
-  #expect(para.maximumLineHeight == 28)
+  #expect(para.minimumLineHeight == 24)
+  #expect(para.maximumLineHeight == 24)
 }
 
 @Test func thematicBreak_height() async throws {
@@ -132,8 +133,10 @@ import UIKit
 
 @Test func baselineOffset_neverNegative() async throws {
   // 即使注入大字号字体，baselineOffset 也不应为负
-  let theme = InkTheme(bodyFontSize: 30, bodyLineHeight: 28)
-  let config = InkConfiguration(theme: theme)
+  var appearance = InkAppearance()
+  appearance.text.fontSize = 30
+  appearance.text.lineHeight = 28
+  let config = InkConfiguration(appearance: appearance)
   let source = "大字号测试"
   let result = InkAttributedRenderer.render(source, configuration: config)
 
@@ -154,9 +157,9 @@ import UIKit
   """
   let result = InkAttributedRenderer.render(source)
 
-  // 第一段的 paragraphSpacing 应为 24pt
+  // 第一段的 paragraphSpacing 应为 text.paragraphSpacing = 12
   let para = extractParagraphStyle(from: result, at: 0)
-  #expect(para.paragraphSpacing == 24)
+  #expect(para.paragraphSpacing == 12)
 }
 
 @Test func listItemSpacing() async throws {
@@ -166,28 +169,28 @@ import UIKit
   """
   let result = InkAttributedRenderer.render(source)
 
-  // 第一个列表项的 paragraphSpacing 应为 listItemSpacing (16pt)
+  // 第一个列表项的 paragraphSpacing 应为 list.itemSpacing = 12
   let para = extractParagraphStyle(from: result, at: 0)
-  #expect(para.paragraphSpacing == 16)
+  #expect(para.paragraphSpacing == 12)
 }
 
-@Test func theme_defaultValues() async throws {
-  let theme = InkTheme.standard
-  #expect(theme.bodyFontSize == 17)
-  #expect(theme.codeFontSize == 14)
-  #expect(theme.h1FontSize == 19)
-  #expect(theme.headingFontSize == 17)
-  #expect(theme.bodyLineHeight == 28)
-  #expect(theme.h1LineHeight == 30)
-  #expect(theme.codeLineHeight == 28)
-  #expect(theme.tableLineHeight == 20)
-  #expect(theme.paragraphSpacing == 24)
-  #expect(theme.innerParagraphSpacing == 12)
-  #expect(theme.h1SpacingAfter == 16)
-  #expect(theme.headingSpacingAfter == 8)
-  #expect(theme.listItemSpacing == 16)
-  #expect(theme.listSpacingAfter == 24)
-  #expect(theme.thematicBreakHeight == 1)
+@Test func appearance_defaultValues() async throws {
+  let a = InkAppearance()
+  #expect(a.text.fontSize == 17)
+  #expect(a.codeBlock.fontSize == 14)
+  #expect(a.heading.h1FontSize == 19)
+  #expect(a.heading.fontSize == 17)
+  #expect(a.text.lineHeight == 28)
+  #expect(a.heading.h1LineHeight == 30)
+  #expect(a.codeBlock.lineHeight == 24)
+  #expect(a.table.lineHeight == 20)
+  #expect(a.text.paragraphSpacing == 12)
+  #expect(a.blockquote.innerSpacing == 12)
+  #expect(a.heading.h1SpacingAfter == 16)
+  #expect(a.heading.spacingAfter == 8)
+  #expect(a.list.itemSpacing == 12)
+  #expect(a.list.spacingAfter == 24)
+  #expect(a.thematicBreak.lineThickness == 1)
 }
 
 @Test func mixedInlineStyles_uniformLineHeight() async throws {
@@ -207,6 +210,24 @@ import UIKit
     #expect(para.minimumLineHeight == 28)
     #expect(para.maximumLineHeight == 28)
   }
+}
+
+// MARK: - 标题内联样式回归测试
+
+/// 回归：标题内的行内代码不应被 heading 的 bold 字体覆盖掉等宽外观。
+/// 修复前 visitHeading 对全 range 强设 .font，会把 `visitInlineCode` 设的等宽字体抹掉。
+@Test func heading_preservesInlineCodeMonospaceFont() async throws {
+  let source = "# 标题里的 `代码` 片段"
+  let result = InkAttributedRenderer.render(source)
+
+  var hasMonospaceRun = false
+  result.enumerateAttribute(.font, in: NSRange(location: 0, length: result.length), options: []) { value, _, _ in
+    if let font = value as? UIFont,
+       font.fontDescriptor.symbolicTraits.contains(.traitMonoSpace) {
+      hasMonospaceRun = true
+    }
+  }
+  #expect(hasMonospaceRun)
 }
 
 // MARK: - Helpers

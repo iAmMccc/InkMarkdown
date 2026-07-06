@@ -9,16 +9,8 @@
 /* Begin PBXBuildFile section */
 		990847902FFBA63D00763DA9 /* InkMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 9908478F2FFBA63D00763DA9 /* InkMarkdown */; };
 		990847932FFBA65B00763DA9 /* InkMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 990847922FFBA65B00763DA9 /* InkMarkdown */; };
-		99381E942FC98F76008A333B /* JXPagingView in Frameworks */ = {isa = PBXBuildFile; productRef = 99381E932FC98F76008A333B /* JXPagingView */; };
-		99381E972FC98F84008A333B /* JXSegmentedView in Frameworks */ = {isa = PBXBuildFile; productRef = 99381E962FC98F84008A333B /* JXSegmentedView */; };
-		99381E9A2FC98F90008A333B /* SmartCodable in Frameworks */ = {isa = PBXBuildFile; productRef = 99381E992FC98F90008A333B /* SmartCodable */; };
-		99381E9D2FC990C1008A333B /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 99381E9C2FC990C1008A333B /* SnapKit */; };
-		994C35D72FEA3584008C0F02 /* JXPagingView in Frameworks */ = {isa = PBXBuildFile; productRef = 994C35D62FEA3584008C0F02 /* JXPagingView */; };
-		994C35DA2FEA3598008C0F02 /* JXSegmentedView in Frameworks */ = {isa = PBXBuildFile; productRef = 994C35D92FEA3598008C0F02 /* JXSegmentedView */; };
-		994C35DD2FEA35A9008C0F02 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 994C35DC2FEA35A9008C0F02 /* SnapKit */; };
 		994C35E22FEA35BD008C0F02 /* cmark-gfm in Frameworks */ = {isa = PBXBuildFile; productRef = 994C35E12FEA35BD008C0F02 /* cmark-gfm */; };
 		994C35E42FEA35CA008C0F02 /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = 994C35E32FEA35CA008C0F02 /* Markdown */; };
-		994C35E72FEA35EA008C0F02 /* SmartCodable in Frameworks */ = {isa = PBXBuildFile; productRef = 994C35E62FEA35EA008C0F02 /* SmartCodable */; };
 		994C35EB2FEA3A97008C0F02 /* InkMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = 994C35EA2FEA3A97008C0F02 /* InkMarkdown */; };
 		994C35EE2FEA3BD1008C0F02 /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = 994C35ED2FEA3BD1008C0F02 /* Markdown */; };
 		994C35F12FEA3C4E008C0F02 /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = 994C35F02FEA3C4E008C0F02 /* Markdown */; };
@@ -60,21 +52,13 @@
 				994C37012FEA58E7008C0F02 /* InkMarkdown in Frameworks */,
 				994C35F42FEA3C65008C0F02 /* InkMarkdown in Frameworks */,
 				99EC94932FC929C5000865B4 /* InkMarkdown in Frameworks */,
-				994C35DD2FEA35A9008C0F02 /* SnapKit in Frameworks */,
-				99381E9A2FC98F90008A333B /* SmartCodable in Frameworks */,
 				994C35F12FEA3C4E008C0F02 /* Markdown in Frameworks */,
 				994C35EE2FEA3BD1008C0F02 /* Markdown in Frameworks */,
-				99381E942FC98F76008A333B /* JXPagingView in Frameworks */,
 				994C35EB2FEA3A97008C0F02 /* InkMarkdown in Frameworks */,
 				994C35E22FEA35BD008C0F02 /* cmark-gfm in Frameworks */,
 				990847932FFBA65B00763DA9 /* InkMarkdown in Frameworks */,
-				994C35E72FEA35EA008C0F02 /* SmartCodable in Frameworks */,
-				994C35DA2FEA3598008C0F02 /* JXSegmentedView in Frameworks */,
 				994C35E42FEA35CA008C0F02 /* Markdown in Frameworks */,
-				99381E972FC98F84008A333B /* JXSegmentedView in Frameworks */,
 				990847902FFBA63D00763DA9 /* InkMarkdown in Frameworks */,
-				99381E9D2FC990C1008A333B /* SnapKit in Frameworks */,
-				994C35D72FEA3584008C0F02 /* JXPagingView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,16 +102,8 @@
 			name = ExampleApp;
 			packageProductDependencies = (
 				99EC94922FC929C5000865B4 /* InkMarkdown */,
-				99381E932FC98F76008A333B /* JXPagingView */,
-				99381E962FC98F84008A333B /* JXSegmentedView */,
-				99381E992FC98F90008A333B /* SmartCodable */,
-				99381E9C2FC990C1008A333B /* SnapKit */,
-				994C35D62FEA3584008C0F02 /* JXPagingView */,
-				994C35D92FEA3598008C0F02 /* JXSegmentedView */,
-				994C35DC2FEA35A9008C0F02 /* SnapKit */,
 				994C35E12FEA35BD008C0F02 /* cmark-gfm */,
 				994C35E32FEA35CA008C0F02 /* Markdown */,
-				994C35E62FEA35EA008C0F02 /* SmartCodable */,
 				994C35EA2FEA3A97008C0F02 /* InkMarkdown */,
 				994C35ED2FEA3BD1008C0F02 /* Markdown */,
 				994C35F02FEA3C4E008C0F02 /* Markdown */,
@@ -165,11 +141,7 @@
 			mainGroup = 9958A8852FBC445600BAE387;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				994C35D52FEA3584008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/JXPagingView" */,
-				994C35D82FEA3598008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/JXSegmentedView" */,
-				994C35DB2FEA35A9008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/SnapKit" */,
 				994C35E02FEA35BD008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/swift-cmark" */,
-				994C35E52FEA35EA008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/SmartCodable" */,
 				994C35EF2FEA3C4E008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/swift-markdown" */,
 				990847912FFBA65B00763DA9 /* XCLocalSwiftPackageReference "../../InkMarkdown" */,
 			);
@@ -417,25 +389,9 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../../InkMarkdown;
 		};
-		994C35D52FEA3584008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/JXPagingView" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/Caches/JXPagingView;
-		};
-		994C35D82FEA3598008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/JXSegmentedView" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/Caches/JXSegmentedView;
-		};
-		994C35DB2FEA35A9008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/SnapKit" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/Caches/SnapKit;
-		};
 		994C35E02FEA35BD008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/swift-cmark" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "Packages/Caches/swift-cmark";
-		};
-		994C35E52FEA35EA008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/SmartCodable" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/Caches/SmartCodable;
 		};
 		994C35EF2FEA3C4E008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/swift-markdown" */ = {
 			isa = XCLocalSwiftPackageReference;
@@ -452,34 +408,6 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = InkMarkdown;
 		};
-		99381E932FC98F76008A333B /* JXPagingView */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = JXPagingView;
-		};
-		99381E962FC98F84008A333B /* JXSegmentedView */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = JXSegmentedView;
-		};
-		99381E992FC98F90008A333B /* SmartCodable */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SmartCodable;
-		};
-		99381E9C2FC990C1008A333B /* SnapKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SnapKit;
-		};
-		994C35D62FEA3584008C0F02 /* JXPagingView */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = JXPagingView;
-		};
-		994C35D92FEA3598008C0F02 /* JXSegmentedView */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = JXSegmentedView;
-		};
-		994C35DC2FEA35A9008C0F02 /* SnapKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SnapKit;
-		};
 		994C35E12FEA35BD008C0F02 /* cmark-gfm */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = "cmark-gfm";
@@ -487,10 +415,6 @@
 		994C35E32FEA35CA008C0F02 /* Markdown */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Markdown;
-		};
-		994C35E62FEA35EA008C0F02 /* SmartCodable */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SmartCodable;
 		};
 		994C35EA2FEA3A97008C0F02 /* InkMarkdown */ = {
 			isa = XCSwiftPackageProductDependency;

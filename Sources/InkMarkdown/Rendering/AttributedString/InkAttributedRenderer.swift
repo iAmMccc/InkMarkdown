@@ -190,15 +190,37 @@ private struct AttributedVisitor: MarkupVisitor {
     let lh = appearance.heading.lineHeight(forLevel: level)
     let spacing = appearance.heading.spacingAfter(forLevel: level)
 
-    let font = UIFont.systemFont(ofSize: size, weight: .bold)
     let inline = renderInlineChildren(of: h)
-
     let mutable = NSMutableAttributedString(attributedString: inline)
     let fullRange = NSRange(location: 0, length: mutable.length)
-    mutable.addAttributes(
-      [.font: font, .foregroundColor: appearance.heading.color],
-      range: fullRange
-    )
+
+    // 标题以 bold + 标题字号为基准，但**合并而非覆盖**行内元素自身的字体特征：
+    // 直接对全 range 强设 .font 会把行内代码的等宽字体一并抹掉（`# 标题里的 `代码``
+    // 会退化成 bold 系统字体）。因此逐 run 读取既有字体，保留其等宽/斜体特征，
+    // 只把字号与基础字重归一化到标题规格。
+    mutable.enumerateAttribute(.font, in: fullRange, options: []) { value, range, _ in
+      let existing = (value as? UIFont) ?? UIFont.systemFont(ofSize: contextFontSize)
+      let traits = existing.fontDescriptor.symbolicTraits
+
+      let headingFont: UIFont
+      if traits.contains(.traitMonoSpace) {
+        // 行内代码：保持等宽，缩放到标题字号（bold 与标题一致）。
+        headingFont = UIFont.monospacedSystemFont(ofSize: size, weight: .bold)
+      } else {
+        // 普通文字：bold + 标题字号；若原本命中 emphasis(italic) 则保留斜体。
+        let base = UIFont.systemFont(ofSize: size, weight: .bold)
+        if traits.contains(.traitItalic),
+           let desc = base.fontDescriptor.withSymbolicTraits([.traitBold, .traitItalic]) {
+          headingFont = UIFont(descriptor: desc, size: size)
+        } else {
+          headingFont = base
+        }
+      }
+      mutable.addAttribute(.font, value: headingFont, range: range)
+    }
+
+    // 颜色维持原行为：标题色覆盖全段。仅本次修复字体 clobber，不改动颜色语义。
+    mutable.addAttribute(.foregroundColor, value: appearance.heading.color, range: fullRange)
 
     applyFixedLineHeight(to: mutable, lineHeight: lh, spacingAfter: spacing)
     return mutable

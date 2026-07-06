@@ -5,6 +5,11 @@
 ## User settings
 xcuserdata/
 
+## macOS / 编辑器产物
+.DS_Store
+*.bak
+*.bak.*
+
 ## Obj-C/Swift specific
 *.hmap
 

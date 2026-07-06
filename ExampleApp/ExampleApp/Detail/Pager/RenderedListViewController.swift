@@ -1,8 +1,6 @@
 import UIKit
 import InkMarkdown
-import JXSegmentedView
 import Markdown
-import SnapKit
 
 // MARK: - Table Block Handler
 
@@ -23,7 +21,7 @@ private struct DemoTableBlockHandler: InkBlockHandler {
 }
 
 /// 渲染 tab：标准样式或某一种自定义样式，共用同一套 VC。
-final class RenderedListViewController: UIViewController, PagerListController, JXSegmentedListContainerViewListDelegate, UITextViewDelegate, TagInlineInteractionHandler {
+final class RenderedListViewController: UIViewController, PagerListController, UITextViewDelegate, TagInlineInteractionHandler {
 
   let tabTitle: String
 
@@ -77,10 +75,14 @@ final class RenderedListViewController: UIViewController, PagerListController, J
     let rendered = InkAttributedRenderer.render(source, configuration: style.configuration)
     textStorage.setAttributedString(rendered)
 
+    textView.translatesAutoresizingMaskIntoConstraints = false
     view.addSubview(textView)
-    textView.snp.makeConstraints { make in
-      make.edges.equalToSuperview()
-    }
+    NSLayoutConstraint.activate([
+      textView.topAnchor.constraint(equalTo: view.topAnchor),
+      textView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+      textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      textView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+    ])
   }
 
   func textView(
@@ -117,10 +119,14 @@ final class RenderedListViewController: UIViewController, PagerListController, J
   private func setupGenericBlockRouting() {
     let scrollView = UIScrollView()
     scrollView.alwaysBounceVertical = true
+    scrollView.translatesAutoresizingMaskIntoConstraints = false
     view.addSubview(scrollView)
-    scrollView.snp.makeConstraints { make in
-      make.edges.equalToSuperview()
-    }
+    NSLayoutConstraint.activate([
+      scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+      scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+      scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+    ])
 
     let stack = UIStackView()
     stack.axis = .vertical
@@ -129,11 +135,15 @@ final class RenderedListViewController: UIViewController, PagerListController, J
     stack.distribution = .fill
     stack.layoutMargins = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
     stack.isLayoutMarginsRelativeArrangement = true
+    stack.translatesAutoresizingMaskIntoConstraints = false
     scrollView.addSubview(stack)
-    stack.snp.makeConstraints { make in
-      make.edges.equalToSuperview()
-      make.width.equalTo(scrollView.snp.width)
-    }
+    NSLayoutConstraint.activate([
+      stack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+      stack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+      stack.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+      stack.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+      stack.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+    ])
 
     let config = InkConfiguration(blockHandlers: [H1ActionCardBlockHandler()] + InkConfiguration.defaultBlockHandlers)
     let blocks = InkBlockRenderer.render(source, configuration: config)
@@ -147,10 +157,13 @@ final class RenderedListViewController: UIViewController, PagerListController, J
     let toggleBar = UIStackView()
     toggleBar.axis = .vertical
     toggleBar.spacing = 0
+    toggleBar.translatesAutoresizingMaskIntoConstraints = false
     view.addSubview(toggleBar)
-    toggleBar.snp.makeConstraints { make in
-      make.top.leading.trailing.equalToSuperview()
-    }
+    NSLayoutConstraint.activate([
+      toggleBar.topAnchor.constraint(equalTo: view.topAnchor),
+      toggleBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      toggleBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+    ])
 
     // 横向滑动开关
     let scrollRow = makeToggleRow(title: "横向滑动") { [weak self] toggle in
@@ -168,18 +181,20 @@ final class RenderedListViewController: UIViewController, PagerListController, J
 
     let separator = UIView()
     separator.backgroundColor = .separator
+    separator.translatesAutoresizingMaskIntoConstraints = false
     toggleBar.addArrangedSubview(separator)
-    separator.snp.makeConstraints { make in
-      make.height.equalTo(0.5)
-    }
+    separator.heightAnchor.constraint(equalToConstant: 0.5).isActive = true
 
     // 表格内容区域
     let contentView = UIView()
+    contentView.translatesAutoresizingMaskIntoConstraints = false
     view.addSubview(contentView)
-    contentView.snp.makeConstraints { make in
-      make.top.equalTo(toggleBar.snp.bottom)
-      make.leading.trailing.bottom.equalToSuperview()
-    }
+    NSLayoutConstraint.activate([
+      contentView.topAnchor.constraint(equalTo: toggleBar.bottomAnchor),
+      contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      contentView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+    ])
     blockContentView = contentView
 
     rebuildTableContent()
@@ -187,27 +202,28 @@ final class RenderedListViewController: UIViewController, PagerListController, J
 
   private func makeToggleRow(title: String, configure: (UISwitch) -> Void) -> UIView {
     let row = UIView()
-    row.snp.makeConstraints { make in
-      make.height.equalTo(44)
-    }
+    row.translatesAutoresizingMaskIntoConstraints = false
+    row.heightAnchor.constraint(equalToConstant: 44).isActive = true
 
     let label = UILabel()
     label.text = title
     label.font = .systemFont(ofSize: 14)
     label.textColor = .secondaryLabel
+    label.translatesAutoresizingMaskIntoConstraints = false
     row.addSubview(label)
-    label.snp.makeConstraints { make in
-      make.leading.equalToSuperview().inset(16)
-      make.centerY.equalToSuperview()
-    }
+    NSLayoutConstraint.activate([
+      label.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 16),
+      label.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+    ])
 
     let toggle = UISwitch()
     toggle.isOn = false
+    toggle.translatesAutoresizingMaskIntoConstraints = false
     row.addSubview(toggle)
-    toggle.snp.makeConstraints { make in
-      make.trailing.equalToSuperview().inset(16)
-      make.centerY.equalToSuperview()
-    }
+    NSLayoutConstraint.activate([
+      toggle.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -16),
+      toggle.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+    ])
     configure(toggle)
 
     return row
@@ -226,10 +242,14 @@ final class RenderedListViewController: UIViewController, PagerListController, J
 
     let scrollView = UIScrollView()
     scrollView.alwaysBounceVertical = true
+    scrollView.translatesAutoresizingMaskIntoConstraints = false
     contentView.addSubview(scrollView)
-    scrollView.snp.makeConstraints { make in
-      make.edges.equalToSuperview()
-    }
+    NSLayoutConstraint.activate([
+      scrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
+      scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+      scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+      scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+    ])
 
     let stack = UIStackView()
     stack.axis = .vertical
@@ -238,11 +258,15 @@ final class RenderedListViewController: UIViewController, PagerListController, J
     stack.distribution = .fill
     stack.layoutMargins = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
     stack.isLayoutMarginsRelativeArrangement = true
+    stack.translatesAutoresizingMaskIntoConstraints = false
     scrollView.addSubview(stack)
-    stack.snp.makeConstraints { make in
-      make.edges.equalToSuperview()
-      make.width.equalTo(scrollView.snp.width)
-    }
+    NSLayoutConstraint.activate([
+      stack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+      stack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+      stack.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+      stack.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+      stack.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+    ])
 
     let layoutMode: InkTableLayoutMode = scrollable ? .scroll : .wrap
     let tableConfig = InkConfiguration(
@@ -253,9 +277,6 @@ final class RenderedListViewController: UIViewController, PagerListController, J
       stack.addArrangedSubview(block.makeView())
     }
   }
-
-
-  @objc func listView() -> UIView { view }
 }
 
 // MARK: - H1 Action Card Block Handler

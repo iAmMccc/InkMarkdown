@@ -1,8 +1,7 @@
 import UIKit
-import JXSegmentedView
 
 /// 源码 tab：等宽字体展示 Markdown 原文。
-final class SourceListViewController: UIViewController, PagerListController, JXSegmentedListContainerViewListDelegate {
+final class SourceListViewController: UIViewController, PagerListController {
 
   let tabTitle = "源码"
 
@@ -40,6 +39,4 @@ final class SourceListViewController: UIViewController, PagerListController, JXS
       textView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
     ])
   }
-
-  @objc func listView() -> UIView { view }
 }

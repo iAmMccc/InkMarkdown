@@ -1,5 +1,4 @@
 import UIKit
-import SnapKit
 import InkMarkdown
 
 /// 可逐字吐字的片段视图协议。
@@ -63,19 +62,26 @@ private final class CodeBlockCardView: UIView, SSETypewriterSegment {
         card.layer.cornerRadius = 10
         card.layer.cornerCurve = .continuous
         card.layer.masksToBounds = true
+        card.translatesAutoresizingMaskIntoConstraints = false
         addSubview(card)
-        card.snp.makeConstraints { make in
-            // 左右不再自缩进——卡片在 cell 的 stack 里已和文本段对齐
-            make.edges.equalToSuperview()
-        }
+        // 左右不再自缩进——卡片在 cell 的 stack 里已和文本段对齐
+        NSLayoutConstraint.activate([
+            card.topAnchor.constraint(equalTo: topAnchor),
+            card.bottomAnchor.constraint(equalTo: bottomAnchor),
+            card.leadingAnchor.constraint(equalTo: leadingAnchor),
+            card.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ])
 
         // Header：左侧三个「红黄绿」圆点装饰 + 「代码块」文案，右侧语言标签
         headerView.backgroundColor = UIColor(red: 0.16, green: 0.17, blue: 0.21, alpha: 1)
+        headerView.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(headerView)
-        headerView.snp.makeConstraints { make in
-            make.top.leading.trailing.equalToSuperview()
-            make.height.equalTo(34)
-        }
+        NSLayoutConstraint.activate([
+            headerView.topAnchor.constraint(equalTo: card.topAnchor),
+            headerView.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            headerView.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            headerView.heightAnchor.constraint(equalToConstant: 34),
+        ])
 
         let dots = UIStackView()
         dots.axis = .horizontal
@@ -84,42 +90,51 @@ private final class CodeBlockCardView: UIView, SSETypewriterSegment {
             let dot = UIView()
             dot.backgroundColor = color
             dot.layer.cornerRadius = 5
-            dot.snp.makeConstraints { $0.width.height.equalTo(10) }
+            dot.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                dot.widthAnchor.constraint(equalToConstant: 10),
+                dot.heightAnchor.constraint(equalToConstant: 10),
+            ])
             dots.addArrangedSubview(dot)
         }
+        dots.translatesAutoresizingMaskIntoConstraints = false
         headerView.addSubview(dots)
-        dots.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(12)
-            make.centerY.equalToSuperview()
-        }
+        NSLayoutConstraint.activate([
+            dots.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 12),
+            dots.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+        ])
 
         titleLabel.text = "代码块"
         titleLabel.font = .systemFont(ofSize: 13, weight: .medium)
         titleLabel.textColor = UIColor(white: 0.85, alpha: 1)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
         headerView.addSubview(titleLabel)
-        titleLabel.snp.makeConstraints { make in
-            make.leading.equalTo(dots.snp.trailing).offset(10)
-            make.centerY.equalToSuperview()
-        }
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: dots.trailingAnchor, constant: 10),
+            titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+        ])
 
         languageLabel.text = (language?.isEmpty == false) ? language : "text"
         languageLabel.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         languageLabel.textColor = UIColor(white: 0.55, alpha: 1)
+        languageLabel.translatesAutoresizingMaskIntoConstraints = false
         headerView.addSubview(languageLabel)
-        languageLabel.snp.makeConstraints { make in
-            make.trailing.equalToSuperview().offset(-12)
-            make.centerY.equalToSuperview()
-        }
+        NSLayoutConstraint.activate([
+            languageLabel.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -12),
+            languageLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+        ])
 
         bodyLabel.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
         bodyLabel.textColor = UIColor(white: 0.92, alpha: 1)
         bodyLabel.numberOfLines = 0
+        bodyLabel.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(bodyLabel)
-        bodyLabel.snp.makeConstraints { make in
-            make.top.equalTo(headerView.snp.bottom).offset(12)
-            make.leading.trailing.equalToSuperview().inset(14)
-            make.bottom.equalToSuperview().offset(-12)
-        }
+        NSLayoutConstraint.activate([
+            bodyLabel.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 12),
+            bodyLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            bodyLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+            bodyLabel.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -12),
+        ])
     }
 
     // MARK: - SSETypewriterSegment

@@ -1,5 +1,4 @@
 import UIKit
-import SnapKit
 import InkMarkdown
 import Markdown
 
@@ -36,7 +35,7 @@ final class SSEChatViewController: UIViewController {
     private let inputContainer = UIView()
     private let textField = UITextField()
     private let sendButton = UIButton(type: .system)
-    private var inputBottom: Constraint?
+    private var inputBottom: NSLayoutConstraint?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -68,26 +67,34 @@ final class SSEChatViewController: UIViewController {
         sendButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         sendButton.addTarget(self, action: #selector(handleSend), for: .touchUpInside)
 
-        tableView.snp.makeConstraints { make in
-            make.top.leading.trailing.equalToSuperview()
-            make.bottom.equalTo(inputContainer.snp.top)
-        }
-        inputContainer.snp.makeConstraints { make in
-            make.leading.trailing.equalToSuperview()
-            inputBottom = make.bottom.equalTo(view.safeAreaLayoutGuide.snp.bottom).constraint
-            make.height.equalTo(56)
-        }
-        sendButton.snp.makeConstraints { make in
-            make.trailing.equalToSuperview().offset(-16)
-            make.centerY.equalToSuperview()
-            make.width.equalTo(48)
-        }
-        textField.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(16)
-            make.trailing.equalTo(sendButton.snp.leading).offset(-8)
-            make.centerY.equalToSuperview()
-            make.height.equalTo(40)
-        }
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        inputContainer.translatesAutoresizingMaskIntoConstraints = false
+        sendButton.translatesAutoresizingMaskIntoConstraints = false
+        textField.translatesAutoresizingMaskIntoConstraints = false
+
+        let inputBottomConstraint = inputContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        inputBottom = inputBottomConstraint
+
+        NSLayoutConstraint.activate([
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: inputContainer.topAnchor),
+
+            inputContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            inputContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            inputBottomConstraint,
+            inputContainer.heightAnchor.constraint(equalToConstant: 56),
+
+            sendButton.trailingAnchor.constraint(equalTo: inputContainer.trailingAnchor, constant: -16),
+            sendButton.centerYAnchor.constraint(equalTo: inputContainer.centerYAnchor),
+            sendButton.widthAnchor.constraint(equalToConstant: 48),
+
+            textField.leadingAnchor.constraint(equalTo: inputContainer.leadingAnchor, constant: 16),
+            textField.trailingAnchor.constraint(equalTo: sendButton.leadingAnchor, constant: -8),
+            textField.centerYAnchor.constraint(equalTo: inputContainer.centerYAnchor),
+            textField.heightAnchor.constraint(equalToConstant: 40),
+        ])
     }
 
     /// 预填一个示例问题，降低 demo 上手成本。
@@ -174,7 +181,7 @@ final class SSEChatViewController: UIViewController {
         guard let frame = n.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
         let duration = (n.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
         let inset = frame.height - view.safeAreaInsets.bottom
-        inputBottom?.update(offset: -max(inset, 0))
+        inputBottom?.constant = -max(inset, 0)
         UIView.animate(withDuration: duration) {
             self.view.layoutIfNeeded()
             if !self.messages.isEmpty { self.scrollToBottom(animated: false) }
@@ -183,7 +190,7 @@ final class SSEChatViewController: UIViewController {
 
     @objc private func keyboardWillHide(_ n: Notification) {
         let duration = (n.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
-        inputBottom?.update(offset: 0)
+        inputBottom?.constant = 0
         UIView.animate(withDuration: duration) { self.view.layoutIfNeeded() }
     }
 
@@ -240,17 +247,21 @@ private final class SSEUserCell: UITableViewCell {
         label.textColor = .white
         label.font = .systemFont(ofSize: 16)
         label.numberOfLines = 0
+        bubbleView.translatesAutoresizingMaskIntoConstraints = false
+        label.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(bubbleView)
         bubbleView.addSubview(label)
-        bubbleView.snp.makeConstraints { make in
-            make.trailing.equalToSuperview().offset(-16)
-            make.leading.greaterThanOrEqualToSuperview().offset(40)
-            make.top.equalToSuperview().offset(8)
-            make.bottom.equalToSuperview().offset(-8)
-        }
-        label.snp.makeConstraints { make in
-            make.edges.equalToSuperview().inset(UIEdgeInsets(top: 10, left: 14, bottom: 10, right: 14))
-        }
+        NSLayoutConstraint.activate([
+            bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            bubbleView.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 40),
+            bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+
+            label.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 10),
+            label.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -10),
+            label.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
+            label.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
+        ])
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -303,19 +314,23 @@ private final class SSEAssistantCell: UITableViewCell {
         thinkingLabel.font = .systemFont(ofSize: 16)
         thinkingLabel.textColor = .secondaryLabel
 
+        bubbleView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(bubbleView)
         bubbleView.addSubview(stackView)
         stackView.addArrangedSubview(thinkingLabel)
 
-        bubbleView.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(16)
-            make.trailing.lessThanOrEqualToSuperview().offset(-40)
-            make.top.equalToSuperview().offset(8)
-            make.bottom.equalToSuperview().offset(-8)
-        }
-        stackView.snp.makeConstraints { make in
-            make.edges.equalToSuperview().inset(UIEdgeInsets(top: 14, left: 14, bottom: 14, right: 14))
-        }
+        NSLayoutConstraint.activate([
+            bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            bubbleView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -40),
+            bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+
+            stackView.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 14),
+            stackView.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -14),
+            stackView.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
+            stackView.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
+        ])
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
