@@ -26,7 +26,8 @@ public enum InkBlockRenderer {
       if attributed.length > 0 {
         blocks.append(InkAttributedTextBlock(
           attributedText: attributed,
-          insets: configuration.appearance.text.blockInsets
+          insets: configuration.appearance.text.blockInsets,
+          linkTapHandler: configuration.linkTapHandler
         ))
       }
     }

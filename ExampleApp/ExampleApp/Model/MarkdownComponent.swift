@@ -243,7 +243,7 @@ enum MarkdownComponent: String, CaseIterable {
   /// 该组件支持的自定义样式；为空时详情页仅 [源码][标准] 两个 tab。
   ///
   /// 重构后核心库不再内置预设配方，这里只保留能用**扩展点**演示的几种：
-  /// 自定义主题（`InkTheme`）、行内语法插件（`InkInlineSyntax`）、Block 路由。
+  /// 自定义主题（`InkAppearance`）、行内语法插件（`InkInlineSyntax`）、Block 路由。
   var customStyles: [DemoStyle] {
     switch self {
     case .headingH1:

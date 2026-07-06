@@ -19,7 +19,7 @@ enum DemoCategory: CaseIterable {
   var subtitle: String {
     switch self {
     case .markdownStandard: return "标准 Markdown 语法的默认渲染效果"
-    case .customComponent: return "表格、导出等业务自定义组件"
+    case .customComponent: return "表格等业务自定义组件"
     case .streaming: return "SSE 逐字吐字渲染"
     case .integration: return "综合长文、本地文件、服务端 JSON"
     }
@@ -55,8 +55,6 @@ enum DemoCatalog {
         footer: "通过 Block 路由或独立组件实现的业务定制样式。",
         rows: [
           .component(.table),
-          .scenario(.exportComponent),
-          .scenario(.sourceComponent),
         ]
       ),
     ]

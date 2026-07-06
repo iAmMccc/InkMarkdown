@@ -21,7 +21,11 @@ private struct DemoTableBlockHandler: InkBlockHandler {
 }
 
 /// 渲染 tab：标准样式或某一种自定义样式，共用同一套 VC。
-final class RenderedListViewController: UIViewController, PagerListController, UITextViewDelegate, TagInlineInteractionHandler {
+///
+/// 所有非流式样式统一走块路由（`InkBlockRenderer`）：代码块 / 表格 / 分割线优先渲染为
+/// 自定义 UIView，其余元素落进富文本兜底块 `InkAttributedTextBlock`。tableCard 因带交互
+/// 开关（横滑 / 长按复制）走独立路径，其余样式共用通用块路由。
+final class RenderedListViewController: UIViewController, PagerListController {
 
   let tabTitle: String
 
@@ -48,57 +52,35 @@ final class RenderedListViewController: UIViewController, PagerListController, U
     super.viewDidLoad()
     view.backgroundColor = .systemBackground
 
-    if style.usesBlockRouting {
-      setupBlockRouting()
+    // tableCard 带交互开关，走独立路径；其余样式统一走通用块路由。
+    if style == .tableCard {
+      setupTableBlockRouting()
     } else {
-      setupAttributedText()
+      setupGenericBlockRouting()
     }
   }
 
-  private func setupAttributedText() {
-    let layoutManager = InkMarkdownLayoutManager()
-    let textStorage = NSTextStorage()
-    textStorage.addLayoutManager(layoutManager)
-    let textContainer = NSTextContainer()
-    textContainer.lineFragmentPadding = 0
-    textContainer.widthTracksTextView = true
-    layoutManager.addTextContainer(textContainer)
+  /// 该样式对应的完整渲染配置。行内标签点击等业务交互（需要 `self`）在此注入，
+  /// 因此配置在 VC 内构造而非 `DemoStyle` 静态属性。
+  private func makeConfiguration() -> InkConfiguration {
+    var config = style.configuration
 
-    let textView = UITextView(frame: .zero, textContainer: textContainer)
-    textView.isEditable = false
-    textView.isSelectable = true
-    textView.dataDetectorTypes = [.link]
-    textView.delegate = self
-    textView.backgroundColor = .systemBackground
-    textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-
-    let rendered = InkAttributedRenderer.render(source, configuration: style.configuration)
-    textStorage.setAttributedString(rendered)
-
-    textView.translatesAutoresizingMaskIntoConstraints = false
-    view.addSubview(textView)
-    NSLayoutConstraint.activate([
-      textView.topAnchor.constraint(equalTo: view.topAnchor),
-      textView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      textView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-    ])
-  }
-
-  func textView(
-    _ textView: UITextView,
-    shouldInteractWith URL: URL,
-    in characterRange: NSRange,
-    interaction: UITextItemInteraction
-  ) -> Bool {
-    if let tagText = URL.tagInlineText() {
-      tagInline(tagText, didTapInTextView: textView)
-      return false
+    // tagInline：$标签$ 点击 → 经 linkTapHandler 交还业务弹窗。
+    // 富文本兜底块 InkAttributedTextBlock 已接 linkTapHandler，块路由下点击照常生效。
+    config.linkTapHandler = { [weak self] url, _ in
+      guard let tagText = url.tagInlineText() else { return false }
+      self?.presentTagAlert(tagText)
+      return true
     }
-    return true
+
+    // h1ActionCard：H1 替换为业务卡片，其余走默认路由。
+    if style == .h1ActionCard {
+      config.blockHandlers = [H1ActionCardBlockHandler()] + InkConfiguration.defaultBlockHandlers
+    }
+    return config
   }
 
-  func tagInline(_ text: String, didTapInTextView textView: UITextView) {
+  private func presentTagAlert(_ text: String) {
     let alert = UIAlertController(
       title: text,
       message: "这是 InkMarkdown 演示用的 $...$ 行内标签——主库未来通过扩展语法 $标签$(target) 声明跳转目标。",
@@ -106,14 +88,6 @@ final class RenderedListViewController: UIViewController, PagerListController, U
     )
     alert.addAction(UIAlertAction(title: "好的", style: .default))
     present(alert, animated: true)
-  }
-
-  private func setupBlockRouting() {
-    if style == .tableCard {
-      setupTableBlockRouting()
-    } else {
-      setupGenericBlockRouting()
-    }
   }
 
   private func setupGenericBlockRouting() {
@@ -145,8 +119,7 @@ final class RenderedListViewController: UIViewController, PagerListController, U
       stack.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
     ])
 
-    let config = InkConfiguration(blockHandlers: [H1ActionCardBlockHandler()] + InkConfiguration.defaultBlockHandlers)
-    let blocks = InkBlockRenderer.render(source, configuration: config)
+    let blocks = InkBlockRenderer.render(source, configuration: makeConfiguration())
     for block in blocks {
       stack.addArrangedSubview(block.makeView())
     }

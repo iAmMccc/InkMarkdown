@@ -88,10 +88,6 @@ final class CategoryListViewController: DemoListViewController {
       return ServerMarkdownViewController()
     case .sseStreaming:
       return SSEChatViewController()
-    case .exportComponent:
-      return ExportComponentDemoViewController()
-    case .sourceComponent:
-      return SourceComponentDemoViewController()
     }
   }
 }

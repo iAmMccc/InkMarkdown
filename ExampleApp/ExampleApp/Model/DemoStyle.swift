@@ -5,13 +5,13 @@ import InkMarkdown
 ///
 /// 重构后核心库只内置「标准 Markdown + 标准样式」，不含任何预设配方。业务定制一律走
 /// 三个扩展点，本枚举每个 case 对应其中一种用法：
-/// - ``brandedTheme``：自定义 `InkTheme`（覆盖字号 / 颜色）。
+/// - ``brandedTheme``：自定义 `InkAppearance`（覆盖字号 / 颜色）。
 /// - ``tagInline``：注册 `InkInlineSyntax` 行内语法插件（`$标签$`）。
 /// - ``h1ActionCard``：Block 路由，把整块标题替换成自定义 UIView。
 enum DemoStyle {
     /// 标准样式（核心内置，开箱即用）。
     case standard
-    /// 自定义主题：放大标题 + 品牌色链接，演示 `InkTheme` 覆盖。
+    /// 自定义主题：放大标题 + 品牌色链接，演示 `InkAppearance` 覆盖。
     case brandedTheme
     /// 行内标签语法：`$标签$` 渲染为可点击胶囊，演示 `InkInlineSyntax`。
     case tagInline
@@ -31,10 +31,10 @@ enum DemoStyle {
         }
     }
 
-    /// 是否走 Block 路由（独立 UIView 替换整块）。
-    var usesBlockRouting: Bool { self == .h1ActionCard || self == .tableCard }
-
-    /// 该样式对应的渲染配置（非 Block 路由路径使用）。
+    /// 该样式的基础渲染配置（appearance / inlineSyntaxes）。
+    ///
+    /// 所有样式统一走块路由；业务交互（如 tagInline 点击）与 Block 路由的
+    /// blockHandlers 由 `RenderedListViewController.makeConfiguration()` 在此基础上叠加。
     var configuration: InkConfiguration {
         switch self {
         case .standard, .h1ActionCard, .tableCard:

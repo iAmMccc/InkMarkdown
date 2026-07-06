@@ -139,11 +139,12 @@ final class ComponentPagerViewController: UIViewController {
   private func buildListViewControllers() -> [PagerListController] {
     let sample = component.standardSample
     var vcs: [PagerListController] = []
-    vcs.append(SourceListViewController(source: sample))
+    // 标准渲染放首位——一进来直接看到效果；自定义样式次之；源码放最后。
     vcs.append(RenderedListViewController(source: sample, style: .standard))
     for custom in component.customStyles {
       vcs.append(RenderedListViewController(source: sample, style: custom))
     }
+    vcs.append(SourceListViewController(source: sample))
     return vcs
   }
 }
