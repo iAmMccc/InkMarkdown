@@ -1,0 +1,8 @@
+[
+  { "url": "https://github.com/swiftlang/swift-markdown.git" },
+  { "url": "https://github.com/swiftlang/swift-cmark.git", "branch": "gfm" },
+  { "url": "https://github.com/pujiaxin33/JXSegmentedView.git" },
+  { "url": "https://github.com/pujiaxin33/JXPagingView.git" },
+  { "url": "https://github.com/SnapKit/SnapKit" },
+  { "url": "https://github.com/iAmMccc/SmartCodable.git", "version": "7.0.0-beta.1" }
+]

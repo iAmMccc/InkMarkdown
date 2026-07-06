@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcodebuild -project ExampleApp/ExampleApp.xcodeproj -scheme ExampleApp -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build)",
+      "Bash(xcodebuild -project ExampleApp.xcodeproj -scheme ExampleApp -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build)",
+      "Bash(git rm *)"
+    ]
+  }
+}

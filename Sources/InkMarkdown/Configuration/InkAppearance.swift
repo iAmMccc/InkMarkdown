@@ -1,0 +1,273 @@
+import UIKit
+
+/// InkMarkdown 统一样式配置，按 Markdown 语法元素分类。
+///
+/// 支持两种用法：
+/// - **全局单例**：App 启动时设置 `InkAppearance.shared`，后续渲染自动读取
+/// - **per-instance**：某次渲染需要特殊样式时，传入自定义实例
+///
+/// ```swift
+/// // 全局配置
+/// InkAppearance.shared.text.fontSize = 16
+/// InkAppearance.shared.table.cornerRadius = 12
+///
+/// // 渲染自动读 shared
+/// let attr = InkAttributedRenderer.render(source)
+///
+/// // 某次特殊样式
+/// var custom = InkAppearance.shared
+/// custom.heading.h1FontSize = 32
+/// let attr = InkAttributedRenderer.render(source, configuration: InkConfiguration(appearance: custom))
+/// ```
+public struct InkAppearance {
+
+  /// 全局默认样式（可变单例）。App 启动时配置一次，后续渲染自动读取。
+  public static var shared = InkAppearance()
+
+  // MARK: - 子配置
+
+  /// 正文段落样式。
+  public var text: Text = .init()
+  /// 标题样式（H1~H5）。
+  public var heading: Heading = .init()
+  /// 引用块样式。
+  public var blockquote: Blockquote = .init()
+  /// 列表样式。
+  public var list: List = .init()
+  /// 围栏代码块样式（渲染为自定义 View）。
+  public var codeBlock: CodeBlock = .init()
+  /// 行内代码样式（渲染为富文本）。
+  public var inlineCode: InlineCode = .init()
+  /// 表格样式（渲染为自定义 View）。
+  public var table: Table = .init()
+  /// 分割线样式。
+  public var thematicBreak: ThematicBreak = .init()
+  /// 链接样式。
+  public var link: Link = .init()
+
+  public init() {}
+}
+
+// MARK: - Text（正文段落）
+
+public extension InkAppearance {
+
+  struct Text {
+    /// 正文字号。
+    public var fontSize: CGFloat = 17
+    /// 正文行高（min=max 双向锁死）。
+    public var lineHeight: CGFloat = 28
+    /// 正文颜色。
+    public var color: UIColor = .label
+    /// 次要文字颜色（图片占位等非主要内容）。
+    public var secondaryColor: UIColor = .secondaryLabel
+    /// 段落间距（段落之间）。
+    public var paragraphSpacing: CGFloat = 12
+    /// 块级内容相对文本容器的内边距。
+    public var blockInsets: UIEdgeInsets = UIEdgeInsets(top: 16, left: 12, bottom: 16, right: 12)
+
+    public init() {}
+  }
+}
+
+// MARK: - Heading（标题）
+
+public extension InkAppearance {
+
+  struct Heading {
+    /// H1 字号。
+    public var h1FontSize: CGFloat = 19
+    /// H2~H5 统一字号。
+    public var fontSize: CGFloat = 17
+    /// H1 行高。
+    public var h1LineHeight: CGFloat = 30
+    /// H2~H5 行高。
+    public var lineHeight: CGFloat = 28
+    /// H1 距下方内容间距。
+    public var h1SpacingAfter: CGFloat = 16
+    /// H2~H5 距下方内容间距。
+    public var spacingAfter: CGFloat = 8
+    /// 标题颜色。
+    public var color: UIColor = .label
+
+    public init() {}
+
+    /// 取指定标题级别的字号。
+    public func fontSize(forLevel level: Int) -> CGFloat {
+      level == 1 ? h1FontSize : fontSize
+    }
+
+    /// 取指定标题级别的行高。
+    public func lineHeight(forLevel level: Int) -> CGFloat {
+      level == 1 ? h1LineHeight : lineHeight
+    }
+
+    /// 取指定标题级别的下方间距。
+    public func spacingAfter(forLevel level: Int) -> CGFloat {
+      level == 1 ? h1SpacingAfter : spacingAfter
+    }
+  }
+}
+
+// MARK: - Blockquote（引用块）
+
+public extension InkAppearance {
+
+  struct Blockquote {
+    /// 引用块文字字号。
+    public var fontSize: CGFloat = 15
+    /// 引用块行高。
+    public var lineHeight: CGFloat = 24
+    /// 引用块文字颜色。
+    public var color: UIColor = .secondaryLabel
+    /// 内容距左侧竖线的间距。
+    public var leftPadding: CGFloat = 15
+    /// 引用块距下方元素间距。
+    public var spacingAfter: CGFloat = 12
+    /// 引用块内多段落之间的间距。
+    public var innerSpacing: CGFloat = 12
+    /// 左侧竖线宽度。
+    public var barWidth: CGFloat = 3
+    /// 左侧竖线颜色。
+    public var barColor: UIColor = UIColor(red: 0x66/255.0, green: 0x66/255.0, blue: 0x66/255.0, alpha: 0.1)
+
+    public init() {}
+  }
+}
+
+// MARK: - List（列表）
+
+public extension InkAppearance {
+
+  struct List {
+    /// 列表条目之间间距。
+    public var itemSpacing: CGFloat = 12
+    /// 列表结束后距下方内容间距。
+    public var spacingAfter: CGFloat = 24
+
+    public init() {}
+  }
+}
+
+// MARK: - CodeBlock（围栏代码块）
+
+public extension InkAppearance {
+
+  struct CodeBlock {
+    /// 代码字号。
+    public var fontSize: CGFloat = 14
+    /// 代码行高。
+    public var lineHeight: CGFloat = 24
+    /// 容器圆角。
+    public var cornerRadius: CGFloat = 4
+    /// 代码左右内边距。
+    public var horizontalPadding: CGFloat = 8
+    /// 代码上下内边距。
+    public var verticalPadding: CGFloat = 8
+    /// 代码块与前后文本的间距。
+    public var spacingToText: CGFloat = 4
+    /// 代码文字颜色。
+    public var textColor: UIColor = .label
+    /// 代码块背景色。
+    public var backgroundColor: UIColor = .secondarySystemFill
+
+    public init() {}
+  }
+}
+
+// MARK: - InlineCode（行内代码）
+
+public extension InkAppearance {
+
+  struct InlineCode {
+    /// 行内代码字号。
+    public var fontSize: CGFloat = 14
+    /// 背景圆角。
+    public var cornerRadius: CGFloat = 4
+    /// 内边距（文字到背景边缘）。
+    public var insets: CGFloat = 6
+    /// 外边距（背景边缘到相邻文字）。
+    public var margin: CGFloat = 8
+    /// 背景高度（小于行高避免上下行连接）。
+    public var backgroundHeight: CGFloat = 24
+    /// 文字颜色。
+    public var textColor: UIColor = .label
+    /// 背景色。
+    public var backgroundColor: UIColor = .secondarySystemFill
+
+    public init() {}
+  }
+}
+
+// MARK: - Table（表格）
+
+public extension InkAppearance {
+
+  struct Table {
+    /// 表头字号。
+    public var headerFontSize: CGFloat = 14
+    /// 数据行字号。
+    public var bodyFontSize: CGFloat = 14
+    /// 表头文字颜色。
+    public var headerColor: UIColor = UIColor.label.withAlphaComponent(0.9)
+    /// 数据行文字颜色。
+    public var bodyColor: UIColor = .label
+    /// 分割线颜色。
+    public var separatorColor: UIColor = .separator
+    /// 表头背景色。
+    public var headerBackgroundColor: UIColor = .secondarySystemBackground
+    /// 单元格内文字左右间距。
+    public var horizontalPadding: CGFloat = 10
+    /// 单元格内文字上下间距。
+    public var verticalPadding: CGFloat = 12
+    /// 文字行高。
+    public var lineHeight: CGFloat = 20
+    /// 表格外层左右边距。
+    public var horizontalInset: CGFloat = 0
+    /// 表格外层上下边距。
+    public var verticalInset: CGFloat = 12
+    /// 表格圆角。
+    public var cornerRadius: CGFloat = 8
+    /// 边框宽度。
+    public var borderWidth: CGFloat = 0.5
+    /// 分割线粗细。
+    public var separatorThickness: CGFloat = 0.5
+    /// 单列最大宽度占屏幕宽度比例。
+    public var columnMaxWidthRatio: CGFloat = 0.5
+    /// 是否支持长按复制。
+    public var enableLongPressCopy: Bool = false
+    /// 复制成功后的 UI 反馈回调。传入触发复制的 view，由调用方决定如何展示 toast。
+    /// 为 nil 时使用内置默认 toast。
+    public var onCopyFeedback: ((UIView) -> Void)?
+
+    public init() {}
+  }
+}
+
+// MARK: - ThematicBreak（分割线）
+
+public extension InkAppearance {
+
+  struct ThematicBreak {
+    /// 分割线粗细。
+    public var lineThickness: CGFloat = 1
+    /// 分割线颜色。
+    public var color: UIColor = UIColor(red: 0x21/255.0, green: 0x21/255.0, blue: 0x21/255.0, alpha: 0.1)
+    /// 分割线下方间距。
+    public var spacingAfter: CGFloat = 24
+
+    public init() {}
+  }
+}
+
+// MARK: - Link（链接）
+
+public extension InkAppearance {
+
+  struct Link {
+    /// 链接颜色。
+    public var color: UIColor = .link
+
+    public init() {}
+  }
+}
