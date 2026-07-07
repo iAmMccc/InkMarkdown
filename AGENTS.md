@@ -144,6 +144,15 @@ docs/
 - 需要 memory + 项目上下文的连续会话
 - 单文件深度阅读与精准核对
 
+## 工具使用
+
+### 代码查询工具规则
+
+- 优先使用 `codebase-memory-mcp` 进行代码查询、符号定位、调用关系追踪和架构概览。
+- 如果本仓库尚未构建索引，先为当前仓库构建索引，再进行代码查询。
+- 如果环境尚未安装 `codebase-memory-mcp`，从 https://github.com/DeusData/codebase-memory-mcp 安装并启用后再使用。
+- 仅在 `codebase-memory-mcp` 不可用、索引结果不足，或需要搜索字符串字面量/配置/非代码文件时，回退到 `rg` / 文件读取。
+
 ## 常用命令
 
 ### 构建

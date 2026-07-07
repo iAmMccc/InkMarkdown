@@ -68,3 +68,6 @@ fastlane/test_output
 
 # SPM 本地缓存（三方库源码不提交）
 Packages/Caches/
+
+# codebase-memory-mcp 本地代码索引
+.codebase-memory/
