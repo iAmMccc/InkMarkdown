@@ -60,34 +60,15 @@ final class RenderedListViewController: UIViewController, PagerListController {
     }
   }
 
-  /// 该样式对应的完整渲染配置。行内标签点击等业务交互（需要 `self`）在此注入，
-  /// 因此配置在 VC 内构造而非 `DemoStyle` 静态属性。
+  /// 该样式对应的完整渲染配置。Block 路由的 blockHandlers（需要 `self` 侧信息）在此注入。
   private func makeConfiguration() -> InkConfiguration {
     var config = style.configuration
-
-    // tagInline：$标签$ 点击 → 经 linkTapHandler 交还业务弹窗。
-    // 富文本兜底块 InkAttributedTextBlock 已接 linkTapHandler，块路由下点击照常生效。
-    config.linkTapHandler = { [weak self] url, _ in
-      guard let tagText = url.tagInlineText() else { return false }
-      self?.presentTagAlert(tagText)
-      return true
-    }
 
     // h1ActionCard：H1 替换为业务卡片，其余走默认路由。
     if style == .h1ActionCard {
       config.blockHandlers = [H1ActionCardBlockHandler()] + InkConfiguration.defaultBlockHandlers
     }
     return config
-  }
-
-  private func presentTagAlert(_ text: String) {
-    let alert = UIAlertController(
-      title: text,
-      message: "这是 InkMarkdown 演示用的 $...$ 行内标签——主库未来通过扩展语法 $标签$(target) 声明跳转目标。",
-      preferredStyle: .alert
-    )
-    alert.addAction(UIAlertAction(title: "好的", style: .default))
-    present(alert, animated: true)
   }
 
   private func setupGenericBlockRouting() {
@@ -104,10 +85,11 @@ final class RenderedListViewController: UIViewController, PagerListController {
 
     let stack = UIStackView()
     stack.axis = .vertical
-    stack.spacing = 8
+    stack.spacing = 0  // 容器紧贴：块间距由各块自身的 bottom 间距承担，不由 stack 叠加
     stack.alignment = .fill
     stack.distribution = .fill
-    stack.layoutMargins = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
+    // Markdown 距屏幕左右 15pt（demo 侧统一控制；库 blockInsets 已归零不占边距）。
+    stack.layoutMargins = UIEdgeInsets(top: 12, left: 15, bottom: 12, right: 15)
     stack.isLayoutMarginsRelativeArrangement = true
     stack.translatesAutoresizingMaskIntoConstraints = false
     scrollView.addSubview(stack)
@@ -226,10 +208,11 @@ final class RenderedListViewController: UIViewController, PagerListController {
 
     let stack = UIStackView()
     stack.axis = .vertical
-    stack.spacing = 8
+    stack.spacing = 0  // 容器紧贴：块间距由各块自身的 bottom 间距承担，不由 stack 叠加
     stack.alignment = .fill
     stack.distribution = .fill
-    stack.layoutMargins = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
+    // Markdown 距屏幕左右 15pt（demo 侧统一控制；库 blockInsets 已归零不占边距）。
+    stack.layoutMargins = UIEdgeInsets(top: 12, left: 15, bottom: 12, right: 15)
     stack.isLayoutMarginsRelativeArrangement = true
     stack.translatesAutoresizingMaskIntoConstraints = false
     scrollView.addSubview(stack)
@@ -262,11 +245,11 @@ private struct H1ActionCardBlockHandler: InkBlockHandler {
   func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
     guard let heading = markup as? Markdown.Heading, heading.level == 1 else { return nil }
     let title = heading.plainText
-    let accessory: H1ActionCardBlock.Accessory? = (title == "集团结构")
+    let accessory: H1ActionCardBlock.Accessory? = (title == "值类型与引用类型")
       ? .init(
-          text: "查看集团成员",
-          alertTitle: "查看集团成员",
-          alertMessage: "这是 Block 路由演示——业务卡片可承载真实跳转逻辑，主库 Theme/BlockStyle 体系落地后将通过 Markdown 扩展语法声明 target。"
+          text: "查看示例",
+          alertTitle: "值类型与引用类型",
+          alertMessage: "这是 Block 路由演示——H1 被替换为可点击的自定义卡片。业务方可通过 InkBlockHandler 把任意块渲染成原生 UIView 并承载交互。"
         )
       : nil
     return H1ActionCardBlock(title: title, accessory: accessory)

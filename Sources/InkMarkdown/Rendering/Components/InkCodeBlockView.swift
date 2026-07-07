@@ -52,7 +52,8 @@ private final class InkCodeBlockViewImpl: UIView {
     addSubview(container)
 
     NSLayoutConstraint.activate([
-      container.topAnchor.constraint(equalTo: topAnchor, constant: config.spacingToText),
+      // 规范总纲：上方不设间距（top=0），下方间距由 spacingToText 承担（规范：4）。
+      container.topAnchor.constraint(equalTo: topAnchor),
       container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.spacingToText),
       container.leadingAnchor.constraint(equalTo: leadingAnchor),
       container.trailingAnchor.constraint(equalTo: trailingAnchor),

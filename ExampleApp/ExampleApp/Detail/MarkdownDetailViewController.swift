@@ -59,7 +59,8 @@ final class MarkdownDetailViewController: UIViewController {
         textView.isEditable = false
         textView.isSelectable = true
         textView.alwaysBounceVertical = true
-        textView.textContainerInset = UIEdgeInsets(top: 16, left: 12, bottom: 16, right: 12)
+        // Markdown 距屏幕左右 15pt（demo 侧统一）。
+        textView.textContainerInset = UIEdgeInsets(top: 16, left: 15, bottom: 16, right: 15)
         textView.translatesAutoresizingMaskIntoConstraints = false
         textView.dataDetectorTypes = [.link]
 

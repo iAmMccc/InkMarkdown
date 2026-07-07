@@ -1,7 +1,7 @@
 import UIKit
 import InkMarkdown
 
-/// 业务卡片样式 H1：浅紫圆角卡片 + ✦ 前缀图标 + 主标题 + 右侧"查看集团成员 ›" accessory。
+/// 业务卡片样式 H1：浅紫圆角卡片 + ✦ 前缀图标 + 主标题 + 右侧"查看示例 ›" accessory。
 struct H1ActionCardBlock: InkRenderableBlock {
   let title: String
   /// 仅当该卡片需要 accessory 时设置；其余卡片只展示「✦ + 加粗标题」。

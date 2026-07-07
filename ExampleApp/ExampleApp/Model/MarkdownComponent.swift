@@ -22,7 +22,6 @@ enum MarkdownComponent: String, CaseIterable {
   case link
   case image
   case escapeAndEntity
-  case tag
 
   /// 主列表 row 标题。
   var displayName: String {
@@ -43,7 +42,6 @@ enum MarkdownComponent: String, CaseIterable {
     case .link: return "链接"
     case .image: return "图片"
     case .escapeAndEntity: return "转义与实体"
-    case .tag: return "标签"
     }
   }
 
@@ -66,7 +64,6 @@ enum MarkdownComponent: String, CaseIterable {
     case .link: return "行内 / 引用 / 自动链接"
     case .image: return "图片与 alt 文本"
     case .escapeAndEntity: return "反斜杠转义与 HTML 实体"
-    case .tag: return "$ 标签 $ 行内可点击标签"
     }
   }
 
@@ -108,11 +105,6 @@ enum MarkdownComponent: String, CaseIterable {
       return "语法与链接类似，前缀加 !。alt 文本用于无障碍与加载失败时的占位。"
     case .escapeAndEntity:
       return "反斜杠可转义 ASCII 标点；&copy;、&#169; 等 HTML 实体会解析为对应 Unicode 字符。"
-    case .tag:
-      return """
-      InkMarkdown 演示用扩展语法：用 $...$ 包裹任意文本，渲染为带背景的可点击行内标签。
-      标签内文字不解析 Markdown 语法；$ 字符可前后留空格。点击会触发自定义跳转（演示弹 alert 占位）。
-      """
     }
   }
 
@@ -121,21 +113,21 @@ enum MarkdownComponent: String, CaseIterable {
     switch self {
     case .headingH1:
       return """
-      # 集团结构
+      # 值类型与引用类型
 
-      展示集团组织架构、子公司层级与控股关系。
+      Swift 用 struct/enum 表达值语义，用 class 表达引用语义。
 
-      # 经营基础
+      # 可选类型
 
-      涵盖主营业务、营收构成、市场分布等核心经营数据。
+      Optional 用类型系统显式表达"可能没有值"，从源头消除空指针。
 
-      # 风险状态
+      # 协议与泛型
 
-      跟踪财务、法律、合规等维度的风险信号与预警。
+      协议定义能力约定，泛型让同一份逻辑适配多种类型。
 
-      # 资产沉淀
+      # 并发模型
 
-      汇总固定资产、知识产权、品牌价值等长期沉淀。
+      async/await 与 actor 让异步代码顺序书写、数据竞争编译期可查。
       """
     case .headingH2:
       return """
@@ -194,18 +186,18 @@ enum MarkdownComponent: String, CaseIterable {
       """
     case .table:
       return """
-      | 序号 | 股东名称 | 持股比例 | 认缴出资(万元) | 实缴出资(万元) |
-      |------|----------|----------|----------------|----------------|
-      | 1 | 镇立新 | 32.25% | 3,225.00 | 3,225.00 |
-      | 2 | 罗希平 | 6.84% | 684.00 | 684.00 |
-      | 3 | 东方富海（芜湖）股权投资基金（有限合伙） | 6.76% | 676.00 | 676.00 |
-      | 4 | 常州鼎仕投资合伙企业（有限合伙） | 6.43% | 643.00 | 643.00 |
-      | 5 | 陈青山 | 6.26% | 626.00 | 626.00 |
-      | 6 | 经纬（杭州）创业投资合伙企业（有限合伙） | 5.24% | 524.00 | 524.00 |
-      | 7 | 宁波梅山保税港区启安企业管理合伙企业（有限合伙） | 5.05% | 505.00 | 505.00 |
-      | 8 | 上海卉新投资中心（有限合伙） | 4.54% | 454.00 | 454.00 |
-      | 9 | 上海目一然投资中心（有限合伙） | 3.86% | 386.00 | 386.00 |
-      | 10 | 龙腾 | 3.52% | 352.00 | 352.00 |
+      | 序号 | 类型 | 语义 | 典型代表 | 分配方式 |
+      |------|------|------|----------|----------|
+      | 1 | struct | 值类型，赋值即拷贝 | CGPoint、Array、String | 栈优先 |
+      | 2 | class | 引用类型，共享同一实例 | UIView、UIViewController | 堆分配 |
+      | 3 | enum | 值类型，有限枚举/关联值 | Optional、Result | 栈优先 |
+      | 4 | protocol | 抽象接口，定义能力约定 | Equatable、Codable | 不适用 |
+      | 5 | actor | 引用类型，隔离可变状态 | 自定义并发安全类型 | 堆分配 |
+      | 6 | closure | 引用类型，可捕获上下文 | 排序/回调闭包 | 堆分配 |
+      | 7 | tuple | 值类型，轻量组合 | (Int, String) 返回值 | 栈优先 |
+      | 8 | Array | 值类型集合，写时复制 | [Int]、[String] | 缓冲区 |
+      | 9 | Dictionary | 值类型键值映射，写时复制 | [String: Int] | 缓冲区 |
+      | 10 | Set | 值类型唯一集合，写时复制 | Set<Int> | 缓冲区 |
       """
     case .thematicBreak:
       return """
@@ -231,12 +223,6 @@ enum MarkdownComponent: String, CaseIterable {
       return "![InkMarkdown 示意图](https://via.placeholder.com/160x48.png?text=InkMarkdown \"示例 title\")"
     case .escapeAndEntity:
       return "转义：\\*星号\\*  实体：&copy; &#169;（©）"
-    case .tag:
-      return """
-      本公司 $上市公司$ 近期 $高增长$ 表现明显，关注度持续走高。
-
-      关联标签： $央企$ $核心资产$ $科创板$
-      """
     }
   }
 
@@ -252,8 +238,6 @@ enum MarkdownComponent: String, CaseIterable {
       return [.tableCard]
     case .link:
       return [.brandedTheme]
-    case .tag:
-      return [.tagInline]
     default:
       return []
     }
@@ -270,6 +254,6 @@ enum MarkdownComponent: String, CaseIterable {
   /// Section 2 行内组件列表。
   static let inlineComponents: [MarkdownComponent] = [
     .strong, .emphasis, .inlineCode,
-    .link, .image, .escapeAndEntity, .tag,
+    .link, .image, .escapeAndEntity,
   ]
 }

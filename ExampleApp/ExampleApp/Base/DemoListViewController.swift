@@ -12,6 +12,9 @@ class DemoListViewController: UIViewController, UITableViewDataSource, UITableVi
     tableView.dataSource = self
     tableView.delegate = self
     tableView.translatesAutoresizingMaskIntoConstraints = false
+      
+    print("启动了")
+      
     view.addSubview(tableView)
     NSLayoutConstraint.activate([
       tableView.topAnchor.constraint(equalTo: view.topAnchor),

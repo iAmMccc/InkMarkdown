@@ -122,7 +122,8 @@ public final class InkStreamTableView: UIView {
     addSubview(container)
     container.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([
-      container.topAnchor.constraint(equalTo: topAnchor, constant: config.verticalInset),
+      // 规范总纲：上方不设间距（top=0），下方间距由 verticalInset 承担（规范：24）。
+      container.topAnchor.constraint(equalTo: topAnchor),
       container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset),
       container.leadingAnchor.constraint(equalTo: leadingAnchor, constant: config.horizontalInset),
       container.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -config.horizontalInset),
@@ -147,7 +148,8 @@ public final class InkStreamTableView: UIView {
     scrollView.translatesAutoresizingMaskIntoConstraints = false
     addSubview(scrollView)
     NSLayoutConstraint.activate([
-      scrollView.topAnchor.constraint(equalTo: topAnchor, constant: config.verticalInset),
+      // 规范总纲：上方不设间距（top=0），下方间距由 verticalInset 承担（规范：24）。
+      scrollView.topAnchor.constraint(equalTo: topAnchor),
       scrollView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset),
       scrollView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: config.horizontalInset),
       scrollView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -config.horizontalInset),

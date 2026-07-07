@@ -212,22 +212,110 @@ import UIKit
   }
 }
 
-// MARK: - 标题内联样式回归测试
+// MARK: - context 下传验收（slice 1）
+//
+// 这批测试锁定 render-then-rewrite → context 下传重写后的样式正确性：
+// 行内元素在混入 heading / blockquote / list 时，字体、颜色、链接、背景不再互相覆盖。
 
-/// 回归：标题内的行内代码不应被 heading 的 bold 字体覆盖掉等宽外观。
-/// 修复前 visitHeading 对全 range 强设 .font，会把 `visitInlineCode` 设的等宽字体抹掉。
-@Test func heading_preservesInlineCodeMonospaceFont() async throws {
+/// 1. heading + inline code：标题里的行内代码保持等宽（不被标题 bold 字体抹掉），
+///    且字号跟随标题（等宽字号 == 标题字号，而非正文字号）。
+@Test func headingInlineCode_keepsMonospaceAtHeadingSize() async throws {
   let source = "# 标题里的 `代码` 片段"
   let result = InkAttributedRenderer.render(source)
 
-  var hasMonospaceRun = false
+  var monoFont: UIFont?
   result.enumerateAttribute(.font, in: NSRange(location: 0, length: result.length), options: []) { value, _, _ in
-    if let font = value as? UIFont,
-       font.fontDescriptor.symbolicTraits.contains(.traitMonoSpace) {
-      hasMonospaceRun = true
+    if let font = value as? UIFont, font.fontDescriptor.symbolicTraits.contains(.traitMonoSpace) {
+      monoFont = font
     }
   }
-  #expect(hasMonospaceRun)
+  #expect(monoFont != nil)
+  // 字号跟随 H1（19），而非正文（17）。
+  #expect(monoFont?.pointSize == InkAppearance().heading.h1FontSize)
+}
+
+/// 2. heading + link：链接 run 用链接色 + 带 .link 属性；非链接 run 用标题色。两者共存不互覆盖。
+@Test func headingLink_linkColorCoexistsWithHeadingColor() async throws {
+  let source = "# 标题 [链接](https://example.com) 收尾"
+  let result = InkAttributedRenderer.render(source)
+  let full = NSRange(location: 0, length: result.length)
+
+  var linkRunColor: UIColor?
+  var hasLinkAttr = false
+  var nonLinkColors: Set<UIColor> = []
+  result.enumerateAttributes(in: full, options: []) { attrs, _, _ in
+    let color = attrs[.foregroundColor] as? UIColor
+    if attrs[.link] != nil {
+      hasLinkAttr = true
+      linkRunColor = color
+    } else if let c = color {
+      nonLinkColors.insert(c)
+    }
+  }
+  #expect(hasLinkAttr)
+  #expect(linkRunColor == InkAppearance().link.color)      // 链接色
+  #expect(nonLinkColors.contains(InkAppearance().heading.color))  // 标题色仍在
+  #expect(!nonLinkColors.contains(InkAppearance().link.color))    // 非链接 run 未被染成链接色
+}
+
+/// 3. blockquote + link：引用块里的链接保持链接色，周围文字保持引用色，二者共存。
+@Test func blockquoteLink_bothColorsCoexist() async throws {
+  let source = "> 引用里有 [链接](https://example.com) 和普通文字"
+  let result = InkAttributedRenderer.render(source)
+  let full = NSRange(location: 0, length: result.length)
+
+  var linkRunColor: UIColor?
+  var nonLinkColors: Set<UIColor> = []
+  result.enumerateAttributes(in: full, options: []) { attrs, _, _ in
+    let color = attrs[.foregroundColor] as? UIColor
+    if attrs[.link] != nil {
+      linkRunColor = color
+    } else if let c = color {
+      nonLinkColors.insert(c)
+    }
+  }
+  #expect(linkRunColor == InkAppearance().link.color)             // 链接色
+  #expect(nonLinkColors.contains(InkAppearance().blockquote.color))  // 引用色仍在
+}
+
+/// 4. list + inline code：列表项里的行内代码保留代码背景 attribute + 等宽字体。
+@Test func listInlineCode_keepsBackgroundAndMonospace() async throws {
+  let source = """
+  - 列表项含 `代码`
+  - 第二项
+  """
+  let result = InkAttributedRenderer.render(source)
+  let full = NSRange(location: 0, length: result.length)
+
+  var hasBackgroundAttr = false
+  var codeRunIsMono = false
+  result.enumerateAttributes(in: full, options: []) { attrs, _, _ in
+    if attrs[.inkInlineCodeBackground] as? InkInlineCodeBackgroundInfo != nil {
+      hasBackgroundAttr = true
+      if let font = attrs[.font] as? UIFont, font.fontDescriptor.symbolicTraits.contains(.traitMonoSpace) {
+        codeRunIsMono = true
+      }
+    }
+  }
+  #expect(hasBackgroundAttr)
+  #expect(codeRunIsMono)
+}
+
+/// 5. strong 里的 inline code 不加粗（monospaced() 重置字重，不继承 bold）。
+@Test func strongInlineCode_codeStaysRegularWeight() async throws {
+  let source = "**加粗中的 `代码`**"
+  let result = InkAttributedRenderer.render(source)
+  let full = NSRange(location: 0, length: result.length)
+
+  var codeFont: UIFont?
+  result.enumerateAttribute(.font, in: full, options: []) { value, _, _ in
+    if let font = value as? UIFont, font.fontDescriptor.symbolicTraits.contains(.traitMonoSpace) {
+      codeFont = font
+    }
+  }
+  #expect(codeFont != nil)
+  // 代码身份：等宽但不加粗。
+  #expect(codeFont?.fontDescriptor.symbolicTraits.contains(.traitBold) == false)
 }
 
 // MARK: - Helpers

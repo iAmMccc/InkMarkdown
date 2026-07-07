@@ -8,6 +8,8 @@ class StoreViewController: DemoListViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     title = "InkMarkdown"
+      
+    print("首页启动了")
   }
 
   override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {

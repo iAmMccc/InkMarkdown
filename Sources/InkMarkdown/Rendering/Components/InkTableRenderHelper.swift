@@ -92,7 +92,7 @@ enum InkTableRenderHelper {
     let baseFont: UIFont
     let textColor: UIColor
     if isHeader {
-      baseFont = .systemFont(ofSize: config.headerFontSize, weight: .medium)
+      baseFont = .systemFont(ofSize: config.headerFontSize, weight: .bold)
       textColor = config.headerColor
     } else {
       baseFont = .systemFont(ofSize: config.bodyFontSize, weight: .regular)
@@ -212,7 +212,7 @@ enum InkTableRenderHelper {
     let colCount = headers.count
     guard colCount > 0 else { return [] }
 
-    let headerFont = UIFont.systemFont(ofSize: config.headerFontSize, weight: .medium)
+    let headerFont = UIFont.systemFont(ofSize: config.headerFontSize, weight: .bold)
     let bodyFont = UIFont.systemFont(ofSize: config.bodyFontSize)
     let maxColumnWidth = containerWidth * config.columnMaxWidthRatio
     var widths: [CGFloat] = Array(repeating: 0, count: colCount)

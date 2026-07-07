@@ -63,8 +63,11 @@ public extension InkAppearance {
     public var secondaryColor: UIColor = .secondaryLabel
     /// 段落间距（段落之间）。
     public var paragraphSpacing: CGFloat = 12
-    /// 块级内容相对文本容器的内边距。
-    public var blockInsets: UIEdgeInsets = UIEdgeInsets(top: 16, left: 12, bottom: 16, right: 12)
+    /// 块级富文本容器的内边距。默认 `.zero`：**库不占用任何屏幕边距**——
+    /// 垂直间距由各元素自身下间距（经 render(markups:) 尾部哨兵撑出）承担，
+    /// 水平边距由接入方（宿主容器）统一决定，从而文本块与表格/代码块等 view 块左右对齐。
+    /// 接入方可覆盖此值为自己想要的内容内边距。
+    public var blockInsets: UIEdgeInsets = .zero
 
     public init() {}
   }
@@ -121,7 +124,7 @@ public extension InkAppearance {
     /// 引用块文字颜色。
     public var color: UIColor = .secondaryLabel
     /// 内容距左侧竖线的间距。
-    public var leftPadding: CGFloat = 15
+    public var leftPadding: CGFloat = 12
     /// 引用块距下方元素间距。
     public var spacingAfter: CGFloat = 12
     /// 引用块内多段落之间的间距。
@@ -190,8 +193,10 @@ public extension InkAppearance {
     public var margin: CGFloat = 8
     /// 背景高度（小于行高避免上下行连接）。
     public var backgroundHeight: CGFloat = 24
-    /// 文字颜色。
-    public var textColor: UIColor = .label
+    /// 文字颜色。`nil` 表示跟随所在上下文的前景色（正文色 / 标题色 / 引用色…），
+    /// 使行内代码在"字号 + 颜色"上跟随环境，仅在"等宽 + 背景"上保持代码身份。
+    /// 显式设色则始终用该色。
+    public var textColor: UIColor? = nil
     /// 背景色。
     public var backgroundColor: UIColor = .secondarySystemFill
 
@@ -224,8 +229,8 @@ public extension InkAppearance {
     public var lineHeight: CGFloat = 20
     /// 表格外层左右边距。
     public var horizontalInset: CGFloat = 0
-    /// 表格外层上下边距。
-    public var verticalInset: CGFloat = 12
+    /// 表格下方间距（规范总纲：上方 0，此值仅作用于下方）。
+    public var verticalInset: CGFloat = 24
     /// 表格圆角。
     public var cornerRadius: CGFloat = 8
     /// 边框宽度。

@@ -99,7 +99,7 @@ final class SSEChatViewController: UIViewController {
 
     /// 预填一个示例问题，降低 demo 上手成本。
     private func seedSuggestion() {
-        textField.text = "如何联系中国信达张卫东"
+        textField.text = "Swift 里 struct 和 class 有什么区别"
     }
 
     private func setupKeyboard() {
