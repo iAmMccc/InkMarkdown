@@ -1,0 +1,10 @@
+[
+  {
+    "url": "https://github.com/swiftlang/swift-markdown.git",
+    "version": "07ebc9c071b22a5d021031b798c3a84b76281213"
+  },
+  {
+    "url": "https://github.com/swiftlang/swift-cmark.git",
+    "version": "0101bf2c6ff6a218f93150f340fe5ccf76d9f3aa"
+  }
+]

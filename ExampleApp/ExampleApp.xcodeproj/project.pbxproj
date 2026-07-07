@@ -141,8 +141,8 @@
 			mainGroup = 9958A8852FBC445600BAE387;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				994C35E02FEA35BD008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/swift-cmark" */,
-				994C35EF2FEA3C4E008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/swift-markdown" */,
+				994C35E02FEA35BD008C0F02 /* XCLocalSwiftPackageReference "../Packages/Caches/swift-cmark" */,
+				994C35EF2FEA3C4E008C0F02 /* XCLocalSwiftPackageReference "../Packages/Caches/swift-markdown" */,
 				990847912FFBA65B00763DA9 /* XCLocalSwiftPackageReference "../../InkMarkdown" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -183,7 +183,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = XJ6YHRS6AW;
+				DEVELOPMENT_TEAM = 4N9BH2C28C;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ExampleApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -215,7 +215,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = XJ6YHRS6AW;
+				DEVELOPMENT_TEAM = 4N9BH2C28C;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ExampleApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -389,13 +389,13 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../../InkMarkdown;
 		};
-		994C35E02FEA35BD008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/swift-cmark" */ = {
+		994C35E02FEA35BD008C0F02 /* XCLocalSwiftPackageReference "../Packages/Caches/swift-cmark" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "Packages/Caches/swift-cmark";
+			relativePath = "../Packages/Caches/swift-cmark";
 		};
-		994C35EF2FEA3C4E008C0F02 /* XCLocalSwiftPackageReference "Packages/Caches/swift-markdown" */ = {
+		994C35EF2FEA3C4E008C0F02 /* XCLocalSwiftPackageReference "../Packages/Caches/swift-markdown" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "Packages/Caches/swift-markdown";
+			relativePath = "../Packages/Caches/swift-markdown";
 		};
 /* End XCLocalSwiftPackageReference section */
 
