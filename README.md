@@ -1,35 +1,46 @@
 # InkMarkdown
 
-InkMarkdown 是基于 Apple [swift-markdown](https://github.com/swiftlang/swift-markdown) 的 UIKit Markdown 渲染库。它把 Markdown 的 Markup 树渲染为 `NSAttributedString` 和 UIKit 视图组件，面向不使用 SwiftUI 的 iOS 场景。
+[简体中文](README.zh-CN.md)
 
-## 特性
+InkMarkdown is a Markdown rendering library built on top of Apple
+[swift-markdown](https://github.com/swiftlang/swift-markdown). It currently
+supports UIKit only.
 
-- UIKit only，不引入 SwiftUI。
-- 支持 `NSAttributedString` 富文本渲染。
-- 支持代码块、表格、分割线等块级 UIKit 组件。
-- 支持主题配置、块级路由和链接点击回调。
-- 示例 App 展示普通渲染、组件渲染和流式渲染场景。
+The project does not try to replace `swift-markdown` as a parser. Instead, it
+uses the Markup tree from `swift-markdown` and turns it into UIKit-native output:
 
-## 要求
+- `NSAttributedString` for text rendering.
+- UIKit block components for content that does not fit well in plain text.
+- Incremental rendering for streaming Markdown, such as AI chat responses.
+
+## Why InkMarkdown
+
+Most modern Swift Markdown libraries focus on SwiftUI, parsing, or HTML output.
+InkMarkdown focuses on the UIKit gap:
+
+| Library type | What it usually provides | How InkMarkdown is different |
+| --- | --- | --- |
+| `swift-markdown` | CommonMark parsing and Markup AST | InkMarkdown adds UIKit rendering on top of the AST. |
+| MarkdownUI / Textual | SwiftUI Markdown rendering | InkMarkdown currently supports UIKit only. |
+| HTML / WebView renderers | HTML output or embedded web rendering | InkMarkdown renders native UIKit views and attributed text. |
+| Simple attributed string renderers | Inline rich text | InkMarkdown also supports block routing, tables, code blocks, and streaming output. |
+
+## Requirements
 
 - Swift 6.2+
 - iOS 14+
 
-## 安装
+## Installation
 
-通过 Swift Package Manager 引入：
+Add InkMarkdown with Swift Package Manager:
 
 ```swift
 .package(url: "https://github.com/<owner>/InkMarkdown.git", branch: "main")
 ```
 
-本仓库当前依赖 `swift-markdown`：
+## Usage
 
-```swift
-.package(url: "https://github.com/swiftlang/swift-markdown.git", branch: "main")
-```
-
-## 使用
+Render Markdown as `NSAttributedString`:
 
 ```swift
 import InkMarkdown
@@ -43,34 +54,79 @@ Hello **InkMarkdown**.
 let attributed = InkAttributedRenderer.render(markdown)
 ```
 
-块级组件渲染：
+Render Markdown as UIKit blocks:
 
 ```swift
 let blocks = InkBlockRenderer.render(markdown)
 let views = blocks.map { $0.makeView() }
 ```
 
-## 构建与测试
+Use the streaming renderer for AI-style incremental text:
+
+```swift
+let renderer = InkStreamRenderer()
+renderer.bindTextView(textView)
+renderer.append("## Streaming title\n")
+renderer.append("Markdown content can keep growing.")
+renderer.finish()
+```
+
+Customize rendering:
+
+```swift
+let configuration = InkConfiguration(
+  inlineSyntaxes: [MyInlineSyntax()],
+  linkTapHandler: { url, view in
+    // Return true when the app handles the link.
+    false
+  }
+)
+
+let attributed = InkAttributedRenderer.render(markdown, configuration: configuration)
+```
+
+## Current Markdown Support
+
+| Area | Status |
+| --- | --- |
+| Headings | Supported |
+| Paragraphs | Supported |
+| Strong / emphasis | Supported |
+| Inline code | Supported |
+| Links | Supported |
+| Images | Supported as text fallback |
+| Fixed line height | Supported |
+| Ordered / unordered lists | Supported |
+| Block quotes | Supported |
+| Code blocks | Supported as attributed text and UIKit block component |
+| Tables | Supported as UIKit block component |
+| Thematic breaks | Supported |
+| Custom inline syntax | Supported |
+| Link tap callback | Supported |
+| Streaming Markdown | Supported |
+| SwiftUI renderer | Not supported |
+
+## Project Structure
+
+```text
+Sources/InkMarkdown/       Library source
+Tests/InkMarkdownTests/    Unit tests
+ExampleApp/                UIKit example app
+```
+
+## Build and Test
 
 ```bash
 swift build
 swift test
 ```
 
-打开示例 App：
+Open the example app:
 
 ```bash
 open ExampleApp/ExampleApp.xcodeproj
 ```
 
-## 项目结构
+## License
 
-```text
-Sources/InkMarkdown/       库源码
-Tests/InkMarkdownTests/    单元测试
-ExampleApp/                UIKit 示例 App
-```
-
-## 定位
-
-InkMarkdown 不做 SwiftUI 封装。SwiftUI 场景已有 MarkdownUI / Textual 等方案，本项目专注 UIKit 和 `NSAttributedString`。
+See [LICENSE](LICENSE).

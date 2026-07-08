@@ -153,6 +153,12 @@ docs/
 - 如果环境尚未安装 `codebase-memory-mcp`，从 https://github.com/DeusData/codebase-memory-mcp 安装并启用后再使用。
 - 仅在 `codebase-memory-mcp` 不可用、索引结果不足，或需要搜索字符串字面量/配置/非代码文件时，回退到 `rg` / 文件读取。
 
+## 文档规则
+
+### 文档更新规则
+
+- 更新 README 文档时，必须同时更新英文版 [README.md](README.md) 和中文版 [README.zh-CN.md](README.zh-CN.md)，保持核心信息一致。
+
 ## 常用命令
 
 ### 构建
@@ -181,6 +187,12 @@ open ExampleApp/ExampleApp.xcodeproj
 ```
 
 ## 开发约定
+
+### 设计与编码规则
+
+- 不做补丁式设计，不写只覆盖当前症状的补丁逻辑；先理解相关调用链、状态边界和复用点，再给出全局最优解。
+- 局部修复与全局一致性冲突时，以全局一致性为准，在正确的共享边界解决根因。
+- 最小实现不等于临时实现；少写代码的前提是方案完整、边界正确、后续维护成本最低。
 
 ### 代码风格
 
