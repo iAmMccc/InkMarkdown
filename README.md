@@ -2,37 +2,37 @@
 
 [简体中文](README.zh-CN.md)
 
-InkMarkdown is a Markdown rendering library built on top of Apple
-[swift-markdown](https://github.com/swiftlang/swift-markdown). It currently
-supports UIKit only.
+InkMarkdown is a Markdown rendering library built on Apple
+[swift-markdown](https://github.com/swiftlang/swift-markdown).
 
-The project does not try to replace `swift-markdown` as a parser. Instead, it
-uses the Markup tree from `swift-markdown` and turns it into UIKit-native output:
+**Positioning:** Apple-platform native Markdown rendering with a pluggable
+pipeline (parse → transform → render). **UIKit is shipping now; SwiftUI is on
+the roadmap** (same intermediate model, separate backend). It does not target
+WebView / HTML-first rendering as the primary path.
 
-- `NSAttributedString` for text rendering.
-- UIKit block components for content that does not fit well in plain text.
-- Incremental rendering for streaming Markdown, such as AI chat responses.
+The project does not replace `swift-markdown` as a parser. It consumes the
+Markup tree and turns it into native UI:
+
+- **Today (UIKit):** `NSAttributedString`, block `UIView`s, streaming for AI chat.
+- **Planned (SwiftUI):** a SwiftUI backend over the same pipeline / IR, without
+  forcing UIKit-only hosts to take a SwiftUI dependency for the core path.
 
 ## Why InkMarkdown
 
-Most modern Swift Markdown libraries focus on SwiftUI, parsing, or HTML output.
-InkMarkdown focuses on the UIKit gap:
-
 | Library type | What it usually provides | How InkMarkdown is different |
 | --- | --- | --- |
-| `swift-markdown` | CommonMark parsing and Markup AST | InkMarkdown adds UIKit rendering on top of the AST. |
-| MarkdownUI / Textual | SwiftUI Markdown rendering | InkMarkdown currently supports UIKit only. |
-| HTML / WebView renderers | HTML output or embedded web rendering | InkMarkdown renders native UIKit views and attributed text. |
-| Simple attributed string renderers | Inline rich text | InkMarkdown also supports block routing, tables, code blocks, and streaming output. |
+| `swift-markdown` | Parsing + Markup AST | Adds a native **render layer** and (planned) transform IR on top. |
+| MarkdownUI / Textual | Mature **SwiftUI** rendering | **UIKit-first** today; SwiftUI later as a **second backend**, not a fork of those APIs. |
+| Microsoft SwiftStreamingMarkdown | Streaming + SwiftUI-oriented product features | Pure native stack with **block routing**, fixed line height, and host-pluggable handlers—built for embedding in existing UIKit apps first. |
+| HTML / WebView renderers | HTML or embedded web | Native text + views; no WebView required for core content. |
+| Simple attributed-string helpers | Inline rich text | Block routing (tables / code), streaming, and extension points. |
 
 ## Requirements
 
 - Swift 6.2+
-- iOS 14+
+- iOS 14+ (current package declaration)
 
 ## Installation
-
-Add InkMarkdown with Swift Package Manager:
 
 ```swift
 .package(url: "https://github.com/<owner>/InkMarkdown.git", branch: "main")
@@ -61,7 +61,7 @@ let blocks = InkBlockRenderer.render(markdown)
 let views = blocks.map { $0.makeView() }
 ```
 
-Use the streaming renderer for AI-style incremental text:
+Streaming (AI-style incremental text):
 
 ```swift
 let renderer = InkStreamRenderer()
@@ -71,7 +71,7 @@ renderer.append("Markdown content can keep growing.")
 renderer.finish()
 ```
 
-Customize rendering:
+Customize:
 
 ```swift
 let configuration = InkConfiguration(
@@ -94,17 +94,17 @@ let attributed = InkAttributedRenderer.render(markdown, configuration: configura
 | Strong / emphasis | Supported |
 | Inline code | Supported |
 | Links | Supported |
-| Images | Supported as text fallback |
+| Images | Text fallback |
 | Fixed line height | Supported |
 | Ordered / unordered lists | Supported |
 | Block quotes | Supported |
-| Code blocks | Supported as attributed text and UIKit block component |
-| Tables | Supported as UIKit block component |
+| Code blocks | Attributed text + UIKit block |
+| Tables | UIKit block |
 | Thematic breaks | Supported |
 | Custom inline syntax | Supported |
 | Link tap callback | Supported |
 | Streaming Markdown | Supported |
-| SwiftUI renderer | Not supported |
+| SwiftUI renderer | Roadmap (not shipped) |
 
 ## Project Structure
 
@@ -112,6 +112,7 @@ let attributed = InkAttributedRenderer.render(markdown, configuration: configura
 Sources/InkMarkdown/       Library source
 Tests/InkMarkdownTests/    Unit tests
 ExampleApp/                UIKit example app
+docs/                      Architecture, spec, roadmap
 ```
 
 ## Build and Test
@@ -120,8 +121,6 @@ ExampleApp/                UIKit example app
 swift build
 swift test
 ```
-
-Open the example app:
 
 ```bash
 open ExampleApp/ExampleApp.xcodeproj

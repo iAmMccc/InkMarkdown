@@ -2,34 +2,35 @@
 
 [English](README.md)
 
-InkMarkdown 是一个基于 Apple
-[swift-markdown](https://github.com/swiftlang/swift-markdown) 的 Markdown 渲染库，目前只支持 UIKit。
+InkMarkdown 是基于 Apple
+[swift-markdown](https://github.com/swiftlang/swift-markdown) 的 Markdown 渲染库。
 
-项目不尝试替代 `swift-markdown` 的解析能力，而是复用它产出的 Markup 树，并将其转换为 UIKit 原生输出：
+**定位：** Apple 平台原生 Markdown 渲染，管线可插拔（解析 → 变换 → 渲染）。
+**当前交付 UIKit；SwiftUI 在路线图中**（同一中间模型、独立后端）。不以
+WebView / HTML 作为主路径。
 
-- 用于文本渲染的 `NSAttributedString`。
-- 用于复杂内容的 UIKit 块级组件。
-- 用于 AI 对话等场景的流式 Markdown 渲染。
+项目不替代 `swift-markdown` 的解析，而是消费 Markup 树并转为原生 UI：
+
+- **当前（UIKit）：** `NSAttributedString`、块级 `UIView`、面向 AI 对话的流式渲染。
+- **规划（SwiftUI）：** 在同一管线 / IR 上增加 SwiftUI 后端；不要求纯 UIKit 宿主为
+  核心路径强依赖 SwiftUI。
 
 ## 为什么需要 InkMarkdown
 
-多数现代 Swift Markdown 库主要面向 SwiftUI、解析层或 HTML 输出。InkMarkdown 聚焦 UIKit 场景的空缺：
-
-| 库类型 | 通常提供什么 | InkMarkdown 的不同点 |
+| 库类型 | 通常提供 | InkMarkdown 的不同 |
 | --- | --- | --- |
-| `swift-markdown` | CommonMark 解析和 Markup AST | InkMarkdown 在 AST 之上补 UIKit 渲染层。 |
-| MarkdownUI / Textual | SwiftUI Markdown 渲染 | InkMarkdown 目前只支持 UIKit。 |
-| HTML / WebView 渲染器 | HTML 输出或 WebView 展示 | InkMarkdown 渲染原生 UIKit 视图和富文本。 |
-| 简单富文本 Markdown 库 | 行内富文本 | InkMarkdown 还支持块级路由、表格、代码块和流式输出。 |
+| `swift-markdown` | 解析 + Markup AST | 在 AST 之上补原生**渲染层**，并规划可变换的 IR。 |
+| MarkdownUI / Textual | 成熟的 **SwiftUI** 渲染 | **UIKit 优先**；SwiftUI 作为**第二后端**，不照搬其 API。 |
+| Microsoft SwiftStreamingMarkdown | 流式 + 偏 SwiftUI 的产品能力 | 原生栈 + **块路由**、固定行高、宿主可插拔扩展——先服务可嵌入的 UIKit App。 |
+| HTML / WebView 渲染 | HTML 或内嵌网页 | 核心内容走原生文本与视图，不依赖 WebView。 |
+| 简单富文本助手 | 行内富文本 | 另有块路由（表格/代码）、流式与扩展点。 |
 
 ## 要求
 
 - Swift 6.2+
-- iOS 14+
+- iOS 14+（当前 Package 声明）
 
 ## 安装
-
-通过 Swift Package Manager 引入：
 
 ```swift
 .package(url: "https://github.com/<owner>/InkMarkdown.git", branch: "main")
@@ -58,7 +59,7 @@ let blocks = InkBlockRenderer.render(markdown)
 let views = blocks.map { $0.makeView() }
 ```
 
-用于 AI 对话类场景的流式渲染：
+流式渲染（AI 对话类）：
 
 ```swift
 let renderer = InkStreamRenderer()
@@ -68,7 +69,7 @@ renderer.append("Markdown content can keep growing.")
 renderer.finish()
 ```
 
-自定义渲染：
+自定义：
 
 ```swift
 let configuration = InkConfiguration(
@@ -91,17 +92,17 @@ let attributed = InkAttributedRenderer.render(markdown, configuration: configura
 | 加粗 / 斜体 | 已支持 |
 | 行内代码 | 已支持 |
 | 链接 | 已支持 |
-| 图片 | 已支持文本降级 |
+| 图片 | 文本降级 |
 | 固定行高 | 已支持 |
 | 有序 / 无序列表 | 已支持 |
 | 引用块 | 已支持 |
-| 代码块 | 支持富文本和 UIKit 块级组件 |
-| 表格 | 支持 UIKit 块级组件 |
+| 代码块 | 富文本 + UIKit 块 |
+| 表格 | UIKit 块 |
 | 分割线 | 已支持 |
 | 自定义行内语法 | 已支持 |
 | 链接点击回调 | 已支持 |
 | 流式 Markdown | 已支持 |
-| SwiftUI 渲染器 | 不支持 |
+| SwiftUI 渲染器 | 路线图（未交付） |
 
 ## 项目结构
 
@@ -109,6 +110,7 @@ let attributed = InkAttributedRenderer.render(markdown, configuration: configura
 Sources/InkMarkdown/       库源码
 Tests/InkMarkdownTests/    单元测试
 ExampleApp/                UIKit 示例 App
+docs/                      架构、规范、路线图
 ```
 
 ## 构建与测试
@@ -117,8 +119,6 @@ ExampleApp/                UIKit 示例 App
 swift build
 swift test
 ```
-
-打开示例 App：
 
 ```bash
 open ExampleApp/ExampleApp.xcodeproj

@@ -7,8 +7,12 @@ xcuserdata/
 
 ## macOS / 编辑器产物
 .DS_Store
+**/.DS_Store
 *.bak
 *.bak.*
+
+## 本地工具状态（勿提交）
+.workbuddy/
 
 ## Obj-C/Swift specific
 *.hmap
