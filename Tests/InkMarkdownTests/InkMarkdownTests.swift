@@ -1,6 +1,6 @@
 import Testing
 import UIKit
-@testable import InkMarkdown
+@_spi(Performance) @testable import InkMarkdown
 
 // MARK: - 固定行高核心测试
 
@@ -38,19 +38,24 @@ import UIKit
   #expect(para.minimumLineHeight == 28)
   #expect(para.maximumLineHeight == 28)
 
-  // 行内代码 14pt 的 baselineOffset 应大于正文 17pt 的
+  // 行内代码跟随正文字号，只切换到等宽字体；baselineOffset 应与正文一致。
   var codeOffset: CGFloat = 0
   var bodyOffset: CGFloat = 0
+  var codeFont: UIFont?
+  var bodyFont: UIFont?
   result.enumerateAttributes(in: NSRange(location: 0, length: result.length), options: []) { attrs, _, _ in
     guard let font = attrs[.font] as? UIFont,
           let offset = attrs[.baselineOffset] as? CGFloat else { return }
     if font.fontDescriptor.symbolicTraits.contains(.traitMonoSpace) {
       codeOffset = offset
+      codeFont = font
     } else {
       bodyOffset = offset
+      bodyFont = font
     }
   }
-  #expect(codeOffset > bodyOffset)
+  #expect(codeFont?.pointSize == bodyFont?.pointSize)
+  #expect(codeOffset == bodyOffset)
 }
 
 @Test func fixedLineHeight_h1() async throws {
@@ -210,6 +215,71 @@ import UIKit
     #expect(para.minimumLineHeight == 28)
     #expect(para.maximumLineHeight == 28)
   }
+}
+
+// MARK: - 流式增量渲染
+
+@Test func streamRenderer_reparsesOnlyActiveSuffixAfterStableBlock() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  let config = InkConfiguration.standard
+
+  _ = renderer.append("# 标题\n\n正在生成", configuration: config)
+  let result = renderer.append("更多内容", configuration: config)
+  let full = InkAttributedRenderer.render("# 标题\n\n正在生成更多内容")
+
+  #expect(result.refreshLocation > 0)
+  #expect(result.content.string == full.string)
+}
+
+@Test func streamRenderer_keepsUnclosedCodeFenceInActiveSuffix() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  let config = InkConfiguration.standard
+
+  let openFence = renderer.append("```swift\nlet a = 1\n", configuration: config)
+  #expect(openFence.refreshLocation == 0)
+
+  _ = renderer.append("```\n\n下一段", configuration: config)
+  let stableFence = renderer.append("继续", configuration: config)
+  #expect(stableFence.refreshLocation > 0)
+}
+
+@Test func streamRenderer_keepsUnclosedTildeFenceInActiveSuffix() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  let config = InkConfiguration.standard
+
+  _ = renderer.append("~~~swift\n# 不是标题\n\n", configuration: config)
+  let activeFence = renderer.append("let value = 1", configuration: config)
+
+  #expect(activeFence.refreshLocation == 0)
+}
+
+@Test func streamRenderer_doesNotFreezeListBeforeIndentedContinuation() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  let config = InkConfiguration.standard
+
+  _ = renderer.append("- 第一段\n\n", configuration: config)
+  let continuedList = renderer.append("  续段", configuration: config)
+  let full = InkAttributedRenderer.render("- 第一段\n\n  续段")
+
+  #expect(continuedList.refreshLocation == 0)
+  #expect(continuedList.content.string == full.string)
+}
+
+@Test func streamRenderer_replaceSourceSeedsFutureAppend() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  let config = InkConfiguration.standard
+
+  _ = renderer.replaceSource("# 标题\n\n已有内容", configuration: config)
+  let result = renderer.append("继续", configuration: config)
+  let full = InkAttributedRenderer.render("# 标题\n\n已有内容继续")
+
+  #expect(result.refreshLocation > 0)
+  #expect(result.content.string == full.string)
+}
+
+@Test func streamRenderer_incrementalBenchmarkMatchesFinalFullRender() async throws {
+  let result = InkStreamingPerformanceBenchmark.measure()
+  #expect(result.outputMatches)
 }
 
 // MARK: - context 下传验收（slice 1）

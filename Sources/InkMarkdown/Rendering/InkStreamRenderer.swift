@@ -7,7 +7,7 @@ import Markdown
 /// ## 架构：解析-显示双缓冲
 ///
 /// ```
-/// SSE chunk 到达 → 后台串行队列全量解析 → preloadContent（缓冲区）
+/// SSE chunk 到达 → 后台串行队列增量解析 → preloadContent（缓冲区）
 ///                                              ↓
 ///                          CADisplayLink 按帧率 → 逐步截取 → textStorage 增量更新
 /// ```
@@ -83,17 +83,23 @@ public final class InkStreamRenderer {
   /// finish() 触发的最终解析是否已完成
   private var finalParseCompleted: Bool = false
 
-  /// 标记是否有待显示的新内容（避免无效帧处理）
-  private var hasPendingContent: Bool = false
-
   /// 上次记录的 textView 内容高度，用于检测高度变化
   private var lastContentHeight: CGFloat = 0
 
-  /// 解析版本号：每次后台解析完成递增，用于检测前缀样式是否变化
+  /// 解析版本号：每次后台解析完成递增，用于检测受影响范围是否需要刷新
   private var parseVersion: UInt64 = 0
 
   /// 上次应用到 textView 的解析版本
   private var lastAppliedParseVersion: UInt64 = 0
+
+  /// 本次解析产物中需要刷新的起点；稳定前缀无需重写 textStorage
+  private var preloadRefreshLocation: Int = 0
+
+  /// 渲染代次：reset/finish 后丢弃旧后台解析结果，避免过期任务回写
+  private var renderGeneration: UInt64 = 0
+
+  /// 后台队列独占访问的增量渲染缓存
+  private var incrementalRenderer = InkIncrementalMarkdownRenderer()
 
   // MARK: - Init
 
@@ -144,18 +150,31 @@ public final class InkStreamRenderer {
   /// 内部将在后台队列异步解析，不阻塞主线程。
   public func append(_ chunk: String) {
     buffer += chunk
-    hasPendingContent = true
 
     // buffer 超过阈值后停止解析——最终 warmUp 也只渲染 50K，流式中超出部分无意义
     guard buffer.count <= Self.maxParseLength else { return }
 
     let currentBuffer = buffer
     let config = configuration
+    let generation = currentRenderGeneration()
     parseQueue.async { [weak self] in
-      let rendered = InkAttributedRenderer.render(currentBuffer, configuration: config)
       guard let self = self else { return }
+      let result: InkIncrementalMarkdownRenderer.Result
+      if config.sourceFilter == nil {
+        result = self.incrementalRenderer.append(chunk, configuration: config)
+      } else {
+        result = InkIncrementalMarkdownRenderer.Result(
+          content: InkAttributedRenderer.render(currentBuffer, configuration: config),
+          refreshLocation: 0
+        )
+      }
       self.preloadLock.lock()
-      self.preloadContent = rendered
+      guard self.renderGeneration == generation else {
+        self.preloadLock.unlock()
+        return
+      }
+      self.preloadContent = result.content
+      self.preloadRefreshLocation = result.refreshLocation
       self.parseVersion += 1
       self.preloadLock.unlock()
     }
@@ -167,13 +186,21 @@ public final class InkStreamRenderer {
     buffer = source
     displayIndex = 0
     isFinished = false
-    finalParseCompleted = false
-    hasPendingContent = false
-    parseVersion = 0
     lastAppliedParseVersion = 0
+
+    preloadLock.lock()
+    renderGeneration += 1
+    let generation = renderGeneration
+    finalParseCompleted = false
+    parseVersion = 0
+    preloadRefreshLocation = 0
+    preloadLock.unlock()
 
     let config = configuration
     if source.isEmpty {
+      parseQueue.async { [weak self] in
+        self?.incrementalRenderer.reset()
+      }
       preloadLock.lock()
       preloadContent = NSAttributedString()
       preloadLock.unlock()
@@ -183,12 +210,25 @@ public final class InkStreamRenderer {
       onUpdate?(NSAttributedString())
     } else {
       parseQueue.async { [weak self] in
-        let rendered = InkAttributedRenderer.render(source, configuration: config)
         guard let self = self else { return }
+        let result: InkIncrementalMarkdownRenderer.Result
+        if config.sourceFilter == nil {
+          result = self.incrementalRenderer.replaceSource(source, configuration: config)
+        } else {
+          self.incrementalRenderer.reset()
+          result = InkIncrementalMarkdownRenderer.Result(
+            content: InkAttributedRenderer.render(source, configuration: config),
+            refreshLocation: 0
+          )
+        }
         self.preloadLock.lock()
-        self.preloadContent = rendered
+        guard self.renderGeneration == generation else {
+          self.preloadLock.unlock()
+          return
+        }
+        self.preloadContent = result.content
+        self.preloadRefreshLocation = result.refreshLocation
         self.preloadLock.unlock()
-        self.hasPendingContent = true
         DispatchQueue.main.async { [weak self] in
           self?.startDisplayLink()
         }
@@ -205,13 +245,23 @@ public final class InkStreamRenderer {
     }
     let config = configuration
     isFinished = true
+    preloadLock.lock()
+    renderGeneration += 1
+    let generation = renderGeneration
     finalParseCompleted = false
+    preloadLock.unlock()
 
     parseQueue.async { [weak self] in
+      self?.incrementalRenderer.reset()
       let rendered = InkAttributedRenderer.render(currentBuffer, configuration: config)
       guard let self = self else { return }
       self.preloadLock.lock()
+      guard self.renderGeneration == generation else {
+        self.preloadLock.unlock()
+        return
+      }
       self.preloadContent = rendered
+      self.preloadRefreshLocation = 0
       self.parseVersion += 1
       self.finalParseCompleted = true
       self.preloadLock.unlock()
@@ -224,6 +274,13 @@ public final class InkStreamRenderer {
     let content = preloadContent
     preloadLock.unlock()
     return content
+  }
+
+  private func currentRenderGeneration() -> UInt64 {
+    preloadLock.lock()
+    let generation = renderGeneration
+    preloadLock.unlock()
+    return generation
   }
 
   // MARK: - Display Link
@@ -250,19 +307,25 @@ public final class InkStreamRenderer {
     preloadLock.lock()
     let content = preloadContent
     let parseVersion = self.parseVersion
+    let refreshLocation = min(preloadRefreshLocation, content.length)
+    let finalParseCompleted = self.finalParseCompleted
     preloadLock.unlock()
 
     let totalLength = content.length
 
     // 解析后长度可能缩短（如链接/图片语法解析后只保留可见文本），
-    // 或解析版本变化导致前缀样式重排——全量刷新 textView
+    // 或当前开放块样式变化——只刷新受影响范围
     if totalLength < displayIndex || parseVersion != lastAppliedParseVersion {
       displayIndex = min(displayIndex, totalLength)
       lastAppliedParseVersion = parseVersion
       if let tv = textView {
         let showLength = min(displayIndex, totalLength)
-        let displayed = content.attributedSubstring(from: NSRange(location: 0, length: showLength))
-        tv.textStorage.setAttributedString(displayed)
+        let start = min(refreshLocation, tv.textStorage.length, showLength)
+        let replacement = content.attributedSubstring(from: NSRange(location: start, length: showLength - start))
+        tv.textStorage.replaceCharacters(
+          in: NSRange(location: start, length: tv.textStorage.length - start),
+          with: replacement
+        )
       }
       onUpdate?(content.attributedSubstring(from: NSRange(location: 0, length: displayIndex)))
       notifyHeightChangeIfNeeded()
@@ -343,6 +406,215 @@ public final class InkStreamRenderer {
     displayIndex = totalLength
     onUpdate?(content)
   }
+}
+
+// MARK: - Incremental Markdown Rendering
+
+struct InkIncrementalMarkdownRenderer {
+  struct Result {
+    let content: NSAttributedString
+    let refreshLocation: Int
+  }
+
+  private struct FenceMarker {
+    let character: Character
+    let count: Int
+  }
+
+  private var source = ""
+  private var stableCharacterCount = 0
+  private var stableContent = NSMutableAttributedString()
+
+  init() {}
+
+  mutating func reset() {
+    source = ""
+    stableCharacterCount = 0
+    stableContent = NSMutableAttributedString()
+  }
+
+  mutating func replaceSource(_ source: String, configuration: InkConfiguration) -> Result {
+    reset()
+    return append(source, configuration: configuration)
+  }
+
+  mutating func append(_ chunk: String, configuration: InkConfiguration) -> Result {
+    source += chunk
+
+    let oldStableLength = stableContent.length
+    let boundary = Self.stableBoundary(in: source, from: stableCharacterCount)
+    if boundary > stableCharacterCount {
+      let start = source.index(source.startIndex, offsetBy: stableCharacterCount)
+      let end = source.index(source.startIndex, offsetBy: boundary)
+      appendStable(String(source[start..<end]), configuration: configuration)
+      stableCharacterCount = boundary
+    }
+
+    let result = NSMutableAttributedString(attributedString: stableContent)
+    let tailStart = source.index(source.startIndex, offsetBy: stableCharacterCount)
+    let tail = String(source[tailStart...])
+    if !tail.isEmpty {
+      if result.length > 0 {
+        result.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
+      }
+      result.append(InkAttributedRenderer.render(tail, configuration: configuration))
+    }
+
+    return Result(content: result, refreshLocation: oldStableLength)
+  }
+
+  private mutating func appendStable(_ markdown: String, configuration: InkConfiguration) {
+    let rendered = InkAttributedRenderer.render(markdown, configuration: configuration)
+    guard rendered.length > 0 else { return }
+    if stableContent.length > 0 {
+      stableContent.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
+    }
+    stableContent.append(rendered)
+  }
+
+  static func stableBoundary(in source: String, from startOffset: Int = 0) -> Int {
+    var index = source.index(source.startIndex, offsetBy: startOffset)
+    var openFence: FenceMarker?
+    var lastSafeOffset = startOffset
+
+    while index < source.endIndex {
+      guard let newline = source[index...].firstIndex(of: "\n") else { break }
+      let line = source[index..<newline]
+      let lineEnd = source.index(after: newline)
+      let trimmed = line.trimmingCharacters(in: .whitespaces)
+      let offset = source.distance(from: source.startIndex, to: lineEnd)
+
+      if let fence = openFence {
+        if let closingFence = closingCodeFenceMarker(in: trimmed),
+           closingFence.character == fence.character,
+           closingFence.count >= fence.count {
+          openFence = nil
+          lastSafeOffset = offset
+        }
+      } else if let openingFence = openingCodeFenceMarker(in: trimmed) {
+        openFence = openingFence
+      } else if isATXHeading(trimmed) || InkLineClassifier.classify(trimmed) == .thematicBreak {
+        // ponytail: blank lines are not stable; list/blockquote containers can continue after them.
+        lastSafeOffset = offset
+      }
+
+      index = lineEnd
+    }
+
+    return lastSafeOffset
+  }
+
+  private static func openingCodeFenceMarker(in trimmedLine: String) -> FenceMarker? {
+    guard let first = trimmedLine.first, first == "`" || first == "~" else { return nil }
+    let count = trimmedLine.prefix(while: { $0 == first }).count
+    guard count >= 3 else { return nil }
+    return FenceMarker(character: first, count: count)
+  }
+
+  private static func closingCodeFenceMarker(in trimmedLine: String) -> FenceMarker? {
+    guard let marker = openingCodeFenceMarker(in: trimmedLine) else { return nil }
+    guard trimmedLine.dropFirst(marker.count).isEmpty else { return nil }
+    return marker
+  }
+
+  private static func isATXHeading(_ trimmedLine: String) -> Bool {
+    let markerCount = trimmedLine.prefix(while: { $0 == "#" }).count
+    guard (1...6).contains(markerCount) else { return false }
+    guard trimmedLine.count == markerCount || trimmedLine.dropFirst(markerCount).first == " " else { return false }
+    return true
+  }
+}
+
+// MARK: - Streaming Performance Benchmark
+
+/// 流式 Markdown 渲染性能基准工具。
+@_spi(Performance) public enum InkStreamingPerformanceBenchmark {
+  /// 一次流式渲染性能测量的结果。
+  public struct Result {
+    /// 分片数量。
+    public let chunkCount: Int
+
+    /// 每次追加后全量渲染的耗时。
+    public let fullRenderSeconds: TimeInterval
+
+    /// 使用增量渲染的耗时。
+    public let incrementalRenderSeconds: TimeInterval
+
+    /// 增量渲染最终可见文本是否与全量渲染一致。
+    public let outputMatches: Bool
+
+    /// 增量渲染的最终结果，用于示例页预览。
+    public let preview: NSAttributedString
+  }
+
+  /// 生成示例 App 和测试共用的流式 Markdown 分片。
+  public static func makeChunks() -> [String] {
+    let source = Array(repeating: benchmarkSection, count: 24).joined()
+    return stride(from: 0, to: source.count, by: 48).map { offset in
+      let start = source.index(source.startIndex, offsetBy: offset)
+      let length = min(48, source.distance(from: start, to: source.endIndex))
+      let end = source.index(start, offsetBy: length)
+      return String(source[start..<end])
+    }
+  }
+
+  /// 每次追加分片后重新渲染完整 Markdown。
+  public static func renderFullyAfterEachChunk(_ chunks: [String], configuration: InkConfiguration = .standard) -> NSAttributedString {
+    var buffer = ""
+    var result = NSAttributedString()
+    for chunk in chunks {
+      buffer += chunk
+      result = InkAttributedRenderer.render(buffer, configuration: configuration)
+    }
+    return result
+  }
+
+  /// 使用增量渲染处理全部分片。
+  public static func renderIncrementally(_ chunks: [String], configuration: InkConfiguration = .standard) -> NSAttributedString {
+    var renderer = InkIncrementalMarkdownRenderer()
+    var result = NSAttributedString()
+    for chunk in chunks {
+      result = renderer.append(chunk, configuration: configuration).content
+    }
+    return result
+  }
+
+  /// 测量全量重渲染和增量渲染的耗时。
+  public static func measure(chunks: [String] = makeChunks(), configuration: InkConfiguration = .standard) -> Result {
+    let fullStart = CACurrentMediaTime()
+    let fullResult = renderFullyAfterEachChunk(chunks, configuration: configuration)
+    let fullSeconds = CACurrentMediaTime() - fullStart
+
+    let incrementalStart = CACurrentMediaTime()
+    let incrementalResult = renderIncrementally(chunks, configuration: configuration)
+    let incrementalSeconds = CACurrentMediaTime() - incrementalStart
+
+    return Result(
+      chunkCount: chunks.count,
+      fullRenderSeconds: fullSeconds,
+      incrementalRenderSeconds: incrementalSeconds,
+      outputMatches: fullResult.string == incrementalResult.string,
+      preview: incrementalResult
+    )
+  }
+
+  private static let benchmarkSection = """
+  ## 流式输出段落
+
+  AI 正在生成一段包含 **强调**、`inline code` 和 [链接](https://example.com) 的 Markdown 内容。
+
+  - 第一条包含中文和 English text
+  - 第二条继续补充上下文
+  - 第三条用于扩大解析体量
+
+  ```swift
+  let value = "streaming markdown"
+  print(value)
+  ```
+
+  > 引用块也会出现在实际回答里。
+
+  """
 }
 
 // MARK: - DisplayLink Target (避免循环引用)

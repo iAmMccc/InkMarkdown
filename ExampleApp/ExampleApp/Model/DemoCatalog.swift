@@ -69,6 +69,7 @@ enum DemoCatalog {
         footer: "模拟 AI 对话场景的实时渲染。",
         rows: [
           .scenario(.sseStreaming),
+          .scenario(.streamingPerformance),
         ]
       ),
     ]
