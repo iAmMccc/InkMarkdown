@@ -9,17 +9,13 @@
 ```
 InkMarkdown/
 ├── Package.swift              # SPM 包定义（swift-tools-version: 6.2）
-├── Sources/InkMarkdown/       # 库源码主目录
-│   └── InkMarkdown.swift
-├── Tests/InkMarkdownTests/    # 单元测试
-│   └── InkMarkdownTests.swift
+├── Sources/InkMarkdown/       # Parser / Configuration / Rendering
+├── Tests/InkMarkdownTests/    # 语义、快照骨架与流式性能测试
 ├── ExampleApp/                # 示例 App（UIKit）
 │   ├── ExampleApp.xcodeproj
 │   └── ExampleApp/            # AppDelegate / SceneDelegate / ViewController
-├── Packages/Caches/           # SPM 本地依赖缓存（不提交 Git）
-│   ├── swift-markdown
-│   ├── swift-cmark
-│   └── SmartCodable
+├── Packages/                  # 本地依赖拉取脚本；Caches/ 不提交 Git
+├── docs/                      # 状态、路线、贡献者指南、规范、参考
 ├── Package.resolved
 └── .gitignore
 ```
@@ -42,73 +38,42 @@ InkMarkdown/
 
 ## 依赖管理
 
-本项目采用 **SPM 本地缓存**策略，所有三方库源码下载到 [Packages/Caches/](Packages/Caches/) 后通过 `path:` 方式引用，**绕过 Xcode 的网络限制**。
+项目的目标开发策略是使用 **SPM 本地缓存**：三方源码下载到
+[Packages/Caches/](Packages/Caches/) 并通过 `path:` 引用，以绕过 Xcode 网络限制。
+当前 `Package.swift` 仍引用远程 swift-markdown `main` 分支；本地拉取脚本已存在，但
+manifest 尚未统一切换。此差异记录在 [docs/current-status.md](docs/current-status.md)，不要把目标策略写成已落地事实。
 
 | 依赖 | 用途 | 引用方式 |
 |------|------|---------|
-| swift-markdown | Apple 官方 Markdown 解析器 | `path: "Packages/Caches/swift-markdown"` |
-| SmartCodable | 增强型 Codable 编解码 | `path: "Packages/Caches/SmartCodable"` |
+| swift-markdown | Apple 官方 Markdown 解析器 | 当前远程；目标为 `path: "Packages/Caches/swift-markdown"` |
+| SmartCodable | 早期规划依赖 | 当前 manifest 与源码未使用；引入前需确认用途 |
 
 > ⚠️ `Packages/Caches/` 已在 [.gitignore](.gitignore) 中忽略，三方库源码**不提交到仓库**。新克隆仓库后需要重新拉取依赖到本地。
 
-相关技能：使用 `spm-local` 技能管理本地依赖。
+本地依赖的准备方法见[开发指南](docs/contributor-guide/04-development.md#准备-swift-markdown-依赖)。
 
 ## 知识库（重要）
 
-项目 [docs/](docs/) 已按性质分为两类，互不重复：
+项目 [docs/](docs/) 按读者任务与知识性质分层：
 
 ```
 docs/
-├── references/   # 三方库 API / 架构速查（实现时查 API 用）
-│   ├── swift-markdown-api-guide.md
-│   ├── swift-markdown-ui-guide.md
-│   └── textual-guide.md
-└── spec/         # Markdown 语法规范本身（设计渲染语义、对外文档用）
-    ├── README.md
-    └── common-syntax.md            # CommonMark 严格集（已完成）
-    # extended-syntax.md / custom-syntax.md（待写）
+├── README.md             # 文档入口、学习路径、权威层级
+├── current-status.md     # 可验证的当前交付状态与已知漂移
+├── roadmap.md            # 未来优先级与退出标准
+├── learning-path/        # 从 Markdown 基础到项目实战的初学者教程
+├── contributor-guide/    # 架构、原理、开发、模块与 FAQ
+├── references/           # 三方依赖 API 速查
+└── spec/                 # Markdown 渲染语义规范
 ```
 
 **查阅原则**：
+- 涉及"当前到底做到哪" → 查 [docs/current-status.md](docs/current-status.md)
+- 涉及"架构为什么这样 / 怎么开发" → 查 [docs/contributor-guide/](docs/contributor-guide/README.md)
 - 涉及"解析层 API / 三方库怎么用" → 查 [docs/references/](docs/references/)
 - 涉及"Markdown 该渲染什么 / 各语法语义" → 查 [docs/spec/](docs/spec/)
 
-### 📘 [docs/references/swift-markdown-api-guide.md](docs/references/swift-markdown-api-guide.md) — 底层解析引擎
-
-**对象**：Apple swift-markdown（**InkMarkdown 的直接依赖**）
-
-**包含**：
-- 60+ public 类型 API 全景表（Block / Inline / Container / Visitor / Walker / Rewriter / Infrastructure）
-- Markup 不可变树 + 写时复制（COW）架构
-- 5 个典型用例完整代码（解析、遍历、链接提取、Rewriter 改写、HTML 渲染）
-- ParseOptions（5 项）+ MarkupFormatter.Options（13 项）
-- Visitor / Walker / Rewriter 决策流程
-- **第 7 节明确给出 InkMarkdown 应封装 / 不应封装的 API 清单**
-
-### 📗 [docs/references/swift-markdown-ui-guide.md](docs/references/swift-markdown-ui-guide.md) — SwiftUI 同类库参考
-
-**对象**：swift-markdown-ui（MarkdownUI，**仅架构借鉴，不作依赖**）
-
-**关键认知**：
-- 已进入维护模式，作者迁移至 Textual
-- SwiftUI 渲染管线参考价值有限（InkMarkdown 不做 SwiftUI），但**架构抽象层**值得学习
-- **可借鉴**：Theme 分层（`TextStyle` + `BlockStyle`）、Block→自定义 UIView 路由、`MarkdownContent` 预解析缓存
-- **不应照搬**：自定义 AST enum、直接调 cmark-gfm、SwiftUI View 实现细节
-
-### 📙 [docs/references/textual-guide.md](docs/references/textual-guide.md) — SwiftUI 下一代参考
-
-**对象**：Textual（MarkdownUI 作者新作，**仅架构借鉴，不作依赖**）
-
-**关键认知**：
-- 不是 MarkdownUI 的升级，而是**设计范式转变**——从"Markdown 渲染库"变成"SwiftUI 文本渲染引擎"
-- 中间模型换成 Foundation `AttributedString` + `PresentationIntent`
-- **可借鉴**：
-  - `TextProperty` 组合式样式（比 MarkdownUI 的 TextStyle 更灵活）
-  - `MarkupParser` 协议（解析与渲染彻底解耦，可插自定义格式）
-  - 行内/块级双类型分离的渲染抽象
-- **不应照搬**：放弃 Markup 树、绑死 SwiftUI、iOS 18+ 门槛
-
-### 架构决策原则（三份文档综合结论）
+### 目标架构原则
 
 ```
 解析：100% 用 swift-markdown（三代库中能力最强）
@@ -136,8 +101,6 @@ docs/
 3. 回到 Claude Code 时，**抽样核对** 2-3 个关键章节对照源码确认准确率
 4. 基于已核对的文档做架构决策与代码实现
 
-**已用此流程产出 3 份高质量文档**（`docs/swift-markdown-*.md` + `docs/textual-guide.md`），抽样验证准确率高。
-
 ### Claude Code 留给：
 - 跨步骤连贯思考（架构决策、API 设计）
 - 实际写代码 / 修改代码
@@ -149,13 +112,13 @@ docs/
 ### 构建
 
 ```bash
-swift build
+xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' build
 ```
 
 ### 测试
 
 ```bash
-swift test
+xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' test
 ```
 
 ### 清理构建产物
@@ -187,13 +150,14 @@ open ExampleApp/ExampleApp.xcodeproj
 
 ## 当前状态
 
-项目处于初始化阶段：
-- ✅ SPM 包结构已搭建
-- ✅ swift-markdown / SmartCodable 本地依赖已就绪
-- ✅ ExampleApp 工程框架已创建
-- ✅ 三方库参考文档已沉淀（[docs/references/](docs/references/)：swift-markdown / MarkdownUI / Textual 三份）
-- ✅ Markdown 通用语法规范已沉淀（[docs/spec/common-syntax.md](docs/spec/common-syntax.md)，CommonMark 0.31 严格集）
-- ⏳ [InkMarkdown.swift](Sources/InkMarkdown/InkMarkdown.swift) 主入口待实现
-- ⏳ Style / Theme 配置体系待设计
-- ⏳ AttributedString 渲染器待实现（核心差异化能力）
-- ⏳ 单元测试待补充
+项目已越过初始化阶段，当前处于 **v1.0 前的实现完善与发布准备阶段**：
+
+- ✅ `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer` 已实现
+- ✅ `InkAppearance` / `InkConfiguration` 与行内、块级扩展点已实现
+- ✅ 代码块、表格、分割线 UIKit 组件与 ExampleApp 已实现
+- ✅ 32 个 iOS Simulator 测试覆盖行高、样式上下文、流式边界、性能一致性与快照骨架
+- ✅ contributor guide、渲染语义规范和 swift-markdown API 参考已建立
+- ⏳ 完整语义测试矩阵、公开 API 审计、CI、CHANGELOG 与稳定版本待补
+- ⚠️ 当前 manifest / 平台声明与目标依赖策略、目标平台矩阵仍有差异
+
+完整且可维护的状态基线见 [docs/current-status.md](docs/current-status.md)。

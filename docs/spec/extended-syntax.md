@@ -6,7 +6,7 @@ swift-markdown 底层是 **cmark-gfm**，能解析 GFM 扩展；本库只渲染�
 
 ## 表格 `Table`（已渲）
 
-```
+```markdown
 | 名称 | 数量 |
 | --- | ---: |
 | A | 1 |
@@ -22,7 +22,7 @@ swift-markdown 底层是 **cmark-gfm**，能解析 GFM 扩展；本库只渲染�
 
 ## 任务列表（已渲）
 
-```
+```markdown
 - [ ] 待办
 - [x] 已完成
 ```
@@ -49,7 +49,7 @@ swift-markdown 底层是 **cmark-gfm**，能解析 GFM 扩展；本库只渲染�
 | `@Directive` | `BlockDirective` | 可用 `InkBlockHandler` |
 | `CustomInline` | 同左 | 用 `InkInlineSyntax` |
 
-## 小结
+## 扩展支持矩阵
 
 | 扩展 | 状态 |
 | --- | --- |

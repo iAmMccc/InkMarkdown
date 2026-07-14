@@ -1,8 +1,11 @@
 # 二、架构设计
 
+本页解释解析、富文本、块路由和流式渲染怎样分层，以及扩展点为什么位于这些边界。
+
 解析交给 swift-markdown。渲染分两条路：能塞进富文本的走 `NSAttributedString`，塞不进去的走 `UIView` 块。流式是前两者的增量版，外加双缓冲。
 
-演进（见 [roadmap](../roadmap.md)）：v2 在解析和渲染之间插入 **InkIR + 可选 Transformer**；UIKit 是第一后端，SwiftUI 是第二后端。v1 仍是 Markup 直接渲染。
+演进（见 [roadmap](../roadmap.md)）：v2 在解析和渲染之间插入
+**InkIR + 可选 Transformer**，用于让复杂语义变换可组合、可测试。渲染后端仍然只有 UIKit。v1 仍是 Markup 直接渲染。
 
 文本绘制默认 **TextKit 1**（`InkMarkdownLayoutManager`），不是 TextKit 2。
 
@@ -75,9 +78,9 @@
 | 渲染行内 | `InkInlineSyntax` | 单端、扫纯文本（如简单 @） |
 | 渲染块 | `InkBlockHandler` | 整块换成 UIView |
 | 点击 | `linkTapHandler` | 拦截链接 |
-| **v2 渲染前** | **`InkTransformer`（IR）** | 多规则语义、双端共用、可单测改树 |
+| **v2 渲染前** | **`InkTransformer`（IR）** | 多规则语义、可组合变换、可单测改树 |
 
-规则少、只一端：上面四项够用。多规则 / 双端：中端（路线图 Phase B）。
+规则少：上面四项够用。多规则或需要独立测试语义变换：使用路线图 Phase B 的中端。
 
 ## 实现约束
 

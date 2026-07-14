@@ -1,13 +1,16 @@
 # 六、FAQ
 
+本页按症状给出第一检查点和权威文档入口。需要完整操作步骤时，继续阅读对应的开发指南或语义规范。
+
 ## 1. 旧文档和代码对不上？
 
-以 **源码 + 本 guide** 为准。
+先看[当前状态](../current-status.md)。产品范围以根目录协作文件为准；已交付能力以
+`Package.swift`、源码和通过的测试为证据。
 
 | 旧说法 | 现状 |
 | --- | --- |
-| 本地 `path:` + SmartCodable | 远程 `swiftlang/swift-markdown`，无 SmartCodable |
-| iOS / macOS / tvOS / watchOS | 仅 `.iOS(.v14)` |
+| 本地 `path:` + SmartCodable | 这是目标依赖策略；当前 manifest 仍是远程 swift-markdown，且未使用 SmartCodable |
+| iOS / macOS / tvOS / watchOS | 目标平台矩阵尚未全部落地；当前只验证 `.iOS(.v14)` |
 | `customTableBlockFactory` / `InkTableStyleConfig` | `InkBlockHandler` + `InkAppearance.Table` |
 
 ## 2. 表格变成一堆 `|`？
@@ -55,7 +58,8 @@ for b in blocks { stack.addArrangedSubview(b.makeView()) }
 
 ## 9. 为何文档写过多平台、Package 只有 iOS？
 
-早期规划。当前**只承诺 iOS 14+**。多平台是远期试探（[roadmap](../roadmap.md) Phase D），不默认进正式支持。
+这是“目标平台矩阵”和“已验证交付平台”的区别。当前源码直接依赖 UIKit，
+`Package.swift` 也只声明 `.iOS(.v14)`，因此对外只宣称 iOS 14+。其它平台必须完成条件编译与验证后才能标记为已支持，见[当前状态](../current-status.md)。
 
 ## 10. 会不会改成只支持 TextKit 2？
 
@@ -65,10 +69,9 @@ for b in blocks { stack.addArrangedSubview(b.makeView()) }
 
 ## 11. 拉不动依赖 / 离线构建？
 
-```bash
-./Packages/scripts/fetch-packages.sh
-# Package.swift → path: "Packages/Caches/swift-markdown"
-```
+运行 `./Packages/scripts/fetch-packages.sh` 可准备 `Packages/Caches/`。当前 manifest
+尚未统一切换为 `path:`，不要把个人临时修改作为项目标准提交；依赖策略差异记录在
+[当前状态](../current-status.md)。
 
 ## 12. 左右对不齐 / 无水平边距？
 
@@ -89,3 +92,6 @@ InkAttributedRenderer.render(markups: [node])
 // 或看 InkBlockRenderer 是否命中 handler
 // attributes(at:effectiveRange:) 查样式
 ```
+
+完整测试必须指定 iOS Simulator；不要在 macOS host 上直接运行 `swift test`。命令见
+[开发指南](04-development.md#构建与测试)。

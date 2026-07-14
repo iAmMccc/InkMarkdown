@@ -1,5 +1,7 @@
 # 五、模块详解
 
+本页是源码定位 Reference。按公开入口、解析、配置、富文本、块路由、组件和流式模块查找类型与职责。
+
 对照 `Sources/InkMarkdown/` 读。
 
 ## 依赖关系（简图）
@@ -14,7 +16,7 @@ InkMarkdown.swift  (@_exported Markdown)
   └─ Stream: InkStreamRenderer → IncrementalMarkdownRenderer → Attributed
 ```
 
-## 入口
+## 公开入口
 
 **`InkMarkdown.swift`**：`@_exported import Markdown`。渲染入口在各 Renderer，不在这个文件。
 
