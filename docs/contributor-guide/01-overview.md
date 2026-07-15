@@ -59,7 +59,7 @@ v2 起多一步：Markup → **InkIR** →（可选 Transformer）→ 各后端�
 
 - Swift 6.2+，语言模式 `.v5`
 - **当前可构建目标：iOS 14+**（Package 只声明这一项）
-- 当前 manifest：远程 `swiftlang/swift-markdown`；目标依赖策略见[当前状态](../current-status.md)
+- 当前 manifest：远程 `swiftlang/swift-markdown` **revision pin**（ADR-001）；可选本地缓存见[当前状态](../current-status.md)
 - 测试：Swift Testing；快照基建在 `Tests/.../Snapshots`
 - 库内富文本自定义绘制：**TextKit 1**（`InkMarkdownLayoutManager`）
 

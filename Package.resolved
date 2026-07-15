@@ -1,5 +1,5 @@
 {
-  "originHash" : "74c8f84e9200d24c4b73905f5792d191f056255129b80bd90bc95d57b82b46e5",
+  "originHash" : "a69961cae0b51ffbcdb167d2ab0dd77e66c9eef23cb06327536387ac7a3239c7",
   "pins" : [
     {
       "identity" : "swift-cmark",
@@ -15,7 +15,6 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-markdown.git",
       "state" : {
-        "branch" : "main",
         "revision" : "07ebc9c071b22a5d021031b798c3a84b76281213"
       }
     }

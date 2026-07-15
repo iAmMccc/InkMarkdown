@@ -38,17 +38,19 @@ InkMarkdown/
 
 ## 依赖管理
 
-项目的目标开发策略是使用 **SPM 本地缓存**：三方源码下载到
-[Packages/Caches/](Packages/Caches/) 并通过 `path:` 引用，以绕过 Xcode 网络限制。
-当前 `Package.swift` 仍引用远程 swift-markdown `main` 分支；本地拉取脚本已存在，但
-manifest 尚未统一切换。此差异记录在 [docs/current-status.md](docs/current-status.md)，不要把目标策略写成已落地事实。
+**默认依赖策略（ADR-001）**：`Package.swift` 以 **固定 git revision** 引用
+`swift-markdown`（当前 revision 见 `Package.swift` / `Package.resolved`），保证可重复构建。
+
+**可选离线策略**：本机网络受限时，可用 [Packages/scripts/fetch-packages.sh](Packages/scripts/fetch-packages.sh)
+把源码拉到 [Packages/Caches/](Packages/Caches/)，再在本地临时 `path:` 覆盖；
+**不要把 path 当作默认发布 manifest**。细节见 [docs/decisions/ADR-001-swift-markdown-dependency-pinning.md](docs/decisions/ADR-001-swift-markdown-dependency-pinning.md)。
 
 | 依赖 | 用途 | 引用方式 |
 |------|------|---------|
-| swift-markdown | Apple 官方 Markdown 解析器 | 当前远程；目标为 `path: "Packages/Caches/swift-markdown"` |
+| swift-markdown | Apple 官方 Markdown 解析器 | 远程 **revision pin**（默认）；`Packages/Caches` 可选离线 |
 | SmartCodable | 早期规划依赖 | 当前 manifest 与源码未使用；引入前需确认用途 |
 
-> ⚠️ `Packages/Caches/` 已在 [.gitignore](.gitignore) 中忽略，三方库源码**不提交到仓库**。新克隆仓库后需要重新拉取依赖到本地。
+> ⚠️ `Packages/Caches/` 已在 [.gitignore](.gitignore) 中忽略，三方库源码**不提交到仓库**。
 
 本地依赖的准备方法见[开发指南](docs/contributor-guide/04-development.md#准备-swift-markdown-依赖)。
 
