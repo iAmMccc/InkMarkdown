@@ -106,20 +106,32 @@ open ExampleApp/ExampleApp.xcodeproj
 
 ## 准备 swift-markdown 依赖
 
-当前 `Package.swift` 使用远程依赖：
+默认（ADR-001）：`Package.swift` **固定 revision** 引用远程 swift-markdown：
 
 ```swift
-.package(url: "https://github.com/swiftlang/swift-markdown.git", branch: "main")
+.package(
+    url: "https://github.com/swiftlang/swift-markdown.git",
+    revision: "07ebc9c071b22a5d021031b798c3a84b76281213"
+)
 ```
 
-项目的目标开发策略是使用 `Packages/Caches/` 中的本地依赖。拉取缓存：
+升级依赖：改 revision → `swift package resolve` / Xcode resolve → 更新 `Package.resolved` →
+iOS Simulator 全量测试（或推送触发 CI）。
+
+可选离线（网络受限本机）：
 
 ```bash
 ./Packages/scripts/fetch-packages.sh   # → Packages/Caches/
 ```
 
-当前 manifest 尚未切到 `path:`，这是已记录的知识 / 配置漂移，见
-[当前状态](../current-status.md)。不要在个人改动中临时改 manifest 后提交；应通过独立变更统一依赖策略并验证。`Packages/Caches/` 已 gitignore，不要提交。
+然后在**本地临时**改为 `path:` 覆盖；不要把 path 当作默认发布 manifest 提交。
+`Packages/Caches/` 已 gitignore，不要提交。
+
+## CI 与本机工具链
+
+- **权威门禁**：`.github/workflows/ci.yml` 钉死的 Xcode / 模拟器（见文件顶部 `env`）。
+- **本机**：推荐 Xcode 26.x，最低需能处理 tools 6.2 并在 iOS Simulator 上测试；不必与 CI 补丁号完全一致。
+- **排坑**（本机绿 CI 红、升级钉死版本、开源协作影响）：[07-ci-and-toolchain-pitfalls.md](07-ci-and-toolchain-pitfalls.md)。
 
 ## 遵守代码与提交规范
 

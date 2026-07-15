@@ -10,6 +10,7 @@
 | 修改渲染核心 | [核心原理](03-principles.md) → [模块详解](05-modules.md) |
 | 增加功能或扩展 | [开发指南](04-development.md) → [渲染语义规范](../spec/README.md) |
 | 构建或运行测试 | [开发指南：构建与测试](04-development.md#构建与测试) |
+| CI 红 / 本机与 CI Xcode 不一致 | [CI 与工具链排坑](07-ci-and-toolchain-pitfalls.md) |
 | 排查显示问题 | [FAQ](06-faq.md) → [开发指南](04-development.md) |
 | 确认某个 API 或模块位置 | [模块详解](05-modules.md) → [swift-markdown API 速查](../references/swift-markdown-api-guide.md) |
 
@@ -25,6 +26,7 @@
 | `04-development.md` | How-to | 怎样构建、测试、扩展和调试？ |
 | `05-modules.md` | Reference | 某个类型、模块或扩展点在哪里？ |
 | `06-faq.md` | Troubleshooting | 遇到常见症状时先检查什么？ |
+| `07-ci-and-toolchain-pitfalls.md` | Troubleshooting | CI 钉死版本、本机差异、失败原因？ |
 
 单篇文档只承担一个主要阅读目的。需要跨类型内容时，保留摘要并链接到负责该主题的页面，不复制整段规则。
 

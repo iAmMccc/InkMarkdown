@@ -1,0 +1,164 @@
+# InkMarkdown CI — 钉死工具链的 iOS Simulator 测试门禁。
+#
+# 设计原则（与 Alamofire / Kingfisher / pointfreeco TCA 一致）：
+# - 不读开发者本机 Xcode；只在 GitHub Hosted runner 上跑。
+# - 不“选最新 Xcode”；路径与模拟器 OS 写死在 env 里。
+# - 合并以本 workflow 绿灯为准；本地可用更新的 Xcode 开发，但勿用本机结果否定 CI。
+#
+# 升级工具链时：改下方 env → 对照
+# https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md
+# → 本地用同版本验证 → 更新 docs/contributor-guide/07-ci-and-toolchain-pitfalls.md
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # ---- 钉死的权威工具链（改这里 = 升级 CI）----
+  # runner-images macos-26 (image 20260630.0213.1 及同代)：
+  #   Xcode 26.6 → /Applications/Xcode_26.6.app (Build 17F113)
+  #   iOS Simulator 26.5 含 iPhone 17 Pro
+  RUNNER_OS_IMAGE: macos-26
+  XCODE_VERSION: "26.6"
+  XCODE_APP: /Applications/Xcode_26.6.app
+  XCODE_BUILD: "17F113"
+  # destination 必须同时钉 name + OS，避免同名设备跨 runtime 漂移
+  IOS_SIM_NAME: iPhone 17 Pro
+  IOS_SIM_OS: "26.5"
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+jobs:
+  test-ios:
+    # Job name 不能可靠引用 env context；版本以下方 Select/Verify 日志与 workflow env 为准。
+    name: iOS Simulator Tests (pinned toolchain)
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select pinned Xcode
+        run: |
+          set -euo pipefail
+          if [[ ! -d "${XCODE_APP}" ]]; then
+            echo "::error::Pinned Xcode not found: ${XCODE_APP}"
+            echo "Installed Xcode apps:"
+            ls -1 /Applications | grep -i '^Xcode' || true
+            echo "See runner-images macos-26-arm64-Readme.md Xcode table."
+            echo "Update env.XCODE_* in .github/workflows/ci.yml when the image changes."
+            exit 1
+          fi
+          sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
+          sudo xcodebuild -license accept || true
+          echo "DEVELOPER_DIR=${DEVELOPER_DIR}"
+          xcodebuild -version
+          swift --version
+
+      - name: Verify pinned Xcode build
+        run: |
+          set -euo pipefail
+          ACTUAL_VERSION=$(xcodebuild -version | awk '/Xcode /{print $2}')
+          ACTUAL_BUILD=$(xcodebuild -version | awk '/Build version/{print $3}')
+          echo "Actual: Xcode ${ACTUAL_VERSION} (${ACTUAL_BUILD})"
+          echo "Expect: Xcode ${XCODE_VERSION} (${XCODE_BUILD})"
+          if [[ "${ACTUAL_VERSION}" != "${XCODE_VERSION}" ]]; then
+            echo "::error::Xcode version mismatch (pinned ${XCODE_VERSION}, got ${ACTUAL_VERSION})"
+            exit 1
+          fi
+          if [[ "${ACTUAL_BUILD}" != "${XCODE_BUILD}" ]]; then
+            echo "::error::Xcode build mismatch (pinned ${XCODE_BUILD}, got ${ACTUAL_BUILD})."
+            echo "Runner image may have replaced the app in place; update env.XCODE_BUILD after confirming."
+            exit 1
+          fi
+
+      - name: Resolve Swift packages
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies \
+            -scheme InkMarkdown \
+            -clonedSourcePackagesDirPath SourcePackages
+
+      - name: Verify pinned simulator exists
+        run: |
+          set -euo pipefail
+          DEST="platform=iOS Simulator,name=${IOS_SIM_NAME},OS=${IOS_SIM_OS}"
+          echo "Checking destination: ${DEST}"
+          python3 <<'PY'
+          import json, os, subprocess, sys
+
+          name = os.environ["IOS_SIM_NAME"]
+          os_ver = os.environ["IOS_SIM_OS"]
+          raw = subprocess.check_output(
+              ["xcrun", "simctl", "list", "devices", "available", "-j"],
+              text=True,
+          )
+          data = json.loads(raw)
+          matched = []
+          for runtime, devices in data.get("devices", {}).items():
+              # runtime: com.apple.CoreSimulator.SimRuntime.iOS-26-5
+              if "iOS" not in runtime:
+                  continue
+              for device in devices:
+                  if not device.get("isAvailable", True):
+                      continue
+                  if device.get("name") != name:
+                      continue
+                  # Map runtime suffix 26-5 / 26-5-0 → compare major.minor with IOS_SIM_OS
+                  suffix = runtime.rsplit(".iOS-", 1)[-1].replace("-", ".")
+                  # Accept 26.5 matching 26.5 or 26.5.x prefix
+                  if suffix == os_ver or suffix.startswith(os_ver + "."):
+                      matched.append((runtime, device.get("udid"), suffix))
+                  # Also accept when runtime encodes same numbers (26-5 vs 26.5)
+                  compact = os_ver.replace(".", "-")
+                  if runtime.endswith(f".iOS-{compact}") or f".iOS-{compact}-" in runtime:
+                      matched.append((runtime, device.get("udid"), suffix))
+
+          # Dedupe
+          matched = list({m[1]: m for m in matched}.values())
+          if not matched:
+              print(f"::error::Pinned simulator not available: name={name!r} OS={os_ver!r}", file=sys.stderr)
+              print("Available iPhone devices:", file=sys.stderr)
+              for runtime, devices in data.get("devices", {}).items():
+                  if "iOS" not in runtime:
+                      continue
+                  for device in devices:
+                      if "iPhone" in device.get("name", "") and device.get("isAvailable", True):
+                          print(f"  - {device.get('name')} @ {runtime}", file=sys.stderr)
+              print("Update env.IOS_SIM_NAME / env.IOS_SIM_OS in ci.yml", file=sys.stderr)
+              sys.exit(1)
+
+          runtime, udid, suffix = matched[0]
+          print(f"Found: {name} udid={udid} runtime={runtime} (parsed OS~{suffix})")
+          PY
+
+      - name: Test (pinned iOS Simulator)
+        run: |
+          set -euo pipefail
+          DEST="platform=iOS Simulator,name=${IOS_SIM_NAME},OS=${IOS_SIM_OS}"
+          echo "Using destination: ${DEST}"
+          set -o pipefail
+          xcodebuild test \
+            -scheme InkMarkdown \
+            -destination "${DEST}" \
+            -clonedSourcePackagesDirPath SourcePackages \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee xcodebuild-test.log
+
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-failure-logs
+          path: |
+            xcodebuild-test.log
+            TestResults.xcresult
+          if-no-files-found: ignore

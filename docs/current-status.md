@@ -16,8 +16,9 @@ swift-markdown Markup
 - 产品范围：UIKit only；不提供 SwiftUI 后端。
 - 当前可构建平台：`Package.swift` 只声明 iOS 14+。
 - 工具链：Swift tools 6.2，包内使用 Swift 5 language mode。
-- 当前依赖：`swift-markdown` 的远程 `main` 分支。
-- 验证状态：2026-07-13，`InkMarkdown` scheme 在 iPhone 17 Pro / iOS 26.5 Simulator 上通过 32 项测试，0 项失败。
+- 当前依赖：`swift-markdown` **固定 revision** `07ebc9c071b22a5d021031b798c3a84b76281213`（ADR-001；见 `Package.swift` / `Package.resolved`）。
+- CI：`.github/workflows/ci.yml` **钉死** `macos-26` + **Xcode 26.6**（Build `17F113`）+ **iPhone 17 Pro / iOS 26.5**；详见 [CI 排坑](contributor-guide/07-ci-and-toolchain-pitfalls.md)。
+- 验证状态：2026-07-15，依赖 pin 后本地 `xcodebuild test -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`：**32 tests passed，0 failed**（`TEST SUCCEEDED`）。
 
 ## 已落地能力
 
@@ -45,7 +46,7 @@ swift-markdown Markup
 | 自定义背景绘制 | 行内代码背景与引用竖线依赖库提供的 TextKit 1 布局管理器 / block view |
 | 超长流式输入 | `maxParseLength` 当前硬编码为 50,000 |
 | 测试覆盖 | 已有 32 个测试，但完整 CommonMark/GFM 语义矩阵尚未覆盖 |
-| 发布工程 | 尚无 CI、CHANGELOG 和稳定版本标签 |
+| 发布工程 | 已有 iOS Simulator CI；尚无 CHANGELOG 与稳定版本标签 |
 
 ## 决策与仓库现状的差异
 
@@ -55,7 +56,11 @@ swift-markdown Markup
 | --- | --- | --- | --- |
 | UI 范围 | UIKit only，不做 SwiftUI | 源码全部走 UIKit；已一致 | 文档持续保持 UIKit 定位 |
 | 平台矩阵 | iOS 14+、macOS 11+、tvOS 14+、watchOS 7+ | `Package.swift` 只声明 iOS 14+，源码直接依赖 UIKit | 在完成条件编译与逐平台验证前，只对外宣称 iOS 14+ |
-| 依赖策略 | 开发环境优先使用 `Packages/Caches/` 本地缓存 | 当前 manifest 使用远程 `swift-markdown` `main`；本地拉取脚本已存在 | 统一 manifest 策略并补离线验证 |
+| 依赖策略 | **ADR-001**：对外固定 revision；本地 `Packages/Caches` 仅可选离线 | **已 pin** `swift-markdown` revision；传递依赖 `swift-cmark` 仍随上游 manifest 的 `gfm` 分支 + resolved revision；脚本与缓存仍可选 | 升级依赖时改 revision 并跑 CI/本地测试 |
+| 平台矩阵 | **ADR-002**：v1.0 对外仅 iOS 14+；多平台为路线图 | `Package.swift` 仅 iOS 14+；源码 UIKit | 文档避免把目标矩阵写成已支持 |
+| 图片 / 删除线 | **ADR-004**：v1 仅占位 / 不承诺删除线样式 | 与实现对齐 | 不阻塞 v1.0；实现时补 spec+测试 |
+| 流式长度 | **ADR-005**：`maxParseLength` 可配置，默认 50_000 | 仍硬编码于 `InkStreamRenderer` | 后续改配置面并补测试 |
+| CI | 建立 iOS Simulator 自动测试 | **已钉死** Xcode 26.6 + iPhone 17 Pro/OS 26.5（见 workflow `env`） | 镜像升级时显式改 `env` 并更新排坑文档 |
 | SmartCodable | 早期知识中列为依赖 | 当前 manifest 和源码均未使用 | 若无明确用途，从项目依赖说明中移除；否则在引入时补设计说明 |
 | 项目阶段 | 早期文档写“初始化” | 核心实现、ExampleApp 与测试已存在 | 统一改为 v1.0 前完善阶段 |
 
@@ -71,10 +76,10 @@ swift-markdown Markup
 
 1. 补齐 CommonMark 与已支持 GFM 的语义断言。
 2. 审计 public API，并为公开 API 补齐中文文档注释。
-3. 固化依赖策略，避免远程 `main` 带来不可重复构建。
-4. 建立 iOS Simulator CI。
+3. ~~固化依赖策略~~ → 已 pin revision（ADR-001）；后续按需升级 revision。
+4. ~~建立 iOS Simulator CI~~ → 已添加 `.github/workflows/ci.yml`。
 5. 增加 CHANGELOG、版本策略和稳定 tag。
-6. 明确图片与删除线的 v1 行为契约。
+6. 明确图片与删除线的 v1 行为契约（决策见 ADR-004；实现仍可后置）。
 
 详细里程碑见 [roadmap.md](roadmap.md)。开发者学习路径见 [文档首页](README.md)。
 

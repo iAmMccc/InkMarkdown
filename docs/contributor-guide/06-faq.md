@@ -9,7 +9,7 @@
 
 | 旧说法 | 现状 |
 | --- | --- |
-| 本地 `path:` + SmartCodable | 这是目标依赖策略；当前 manifest 仍是远程 swift-markdown，且未使用 SmartCodable |
+| 本地 `path:` + SmartCodable | 默认 manifest 已 **pin swift-markdown revision**（ADR-001）；`Packages/Caches` + `path:` 仅为可选离线手段。SmartCodable 未使用 |
 | iOS / macOS / tvOS / watchOS | 目标平台矩阵尚未全部落地；当前只验证 `.iOS(.v14)` |
 | `customTableBlockFactory` / `InkTableStyleConfig` | `InkBlockHandler` + `InkAppearance.Table` |
 
@@ -60,6 +60,14 @@ for b in blocks { stack.addArrangedSubview(b.makeView()) }
 
 这是“目标平台矩阵”和“已验证交付平台”的区别。当前源码直接依赖 UIKit，
 `Package.swift` 也只声明 `.iOS(.v14)`，因此对外只宣称 iOS 14+。其它平台必须完成条件编译与验证后才能标记为已支持，见[当前状态](../current-status.md)。
+
+## CI 红了但本机绿？
+
+先看 [CI 与工具链排坑](07-ci-and-toolchain-pitfalls.md)。摘要：
+
+- CI **不读**你本机 Xcode；合并以钉死环境为准（当前 Xcode 26.6 + iPhone 17 Pro / iOS 26.5）。
+- 本机用 Xcode 27 开发可以，但新 API / 更严诊断可能导致「本地过、CI 不过」——按 CI 修或显式抬高 CI 版本。
+- 常见失败：钉死的 Xcode 路径在 runner 镜像中消失、模拟器 OS 变更、`Package.resolved` / revision、误用 macOS destination。
 
 ## 10. 会不会改成只支持 TextKit 2？
 
