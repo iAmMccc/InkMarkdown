@@ -234,6 +234,36 @@ let source = "# Hello"
 2. 在第一段加入行内代码。
 3. 在引用里加入一个链接。
 
+<details>
+<summary>参考答案</summary>
+
+完成三个改动后，源文本大致会变成这样（具体文字可以不同，结构改动才是重点）：
+
+````markdown
+## 今日计划
+
+先阅读 `InkAttributedRenderer` 渲染的 **InkMarkdown** 文档，再查看 [swift-markdown](https://github.com/swiftlang/swift-markdown)。
+
+- [x] 认识块级结构
+- [ ] 认识 Markup 树
+
+> 不需要一次记住所有语法，可以参考 [CommonMark 交互式教程](https://commonmark.org/help/tutorial/)。
+
+```swift
+let source = "# Hello"
+```
+````
+
+对应到结构上：
+
+- 第 1 步：标题的 `#` 从 1 个变成 2 个，标题本身仍然是一个独立的块级结构，只是级别从 1 变成 2。
+- 第 2 步：第一段里多了一对反引号包住的 `` `InkAttributedRenderer` ``，它和加粗、普通文字一样，仍然是这一个段落内的行内结构，不会拆成新的块。
+- 第 3 步：引用符号 `>` 后面的文字里多了一个 `[文字](地址)`，链接仍然属于引用这个块级容器内部，不会跳到引用外面。
+
+如果改完之后标题变成了两个独立块，或者链接跑到了引用之外，说明对块级 / 行内边界的理解需要回到 1.3 节再确认一次。
+
+</details>
+
 ## 完成标准
 
 不看上文，尝试回答：

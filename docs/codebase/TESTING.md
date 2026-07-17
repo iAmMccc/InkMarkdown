@@ -50,8 +50,9 @@ xcodebuild -scheme InkMarkdown \
 | 固定行高与 baselineOffset | 完整 CommonMark / GFM 语义矩阵 |
 | 流式稳定前缀 / 未闭合 fence / 列表续行 | 删除线语义契约测试 |
 | 增量与全量输出一致性 + 性能闸门 | 图片策略契约（仅占位） |
-| 快照脚手架可用性 | CI 上自动跑 iOS 测试 |
-| appearance 默认数值 | ExampleApp UI 自动化（库测试未覆盖） |
+| 快照脚手架可用性 | ExampleApp UI 自动化（库测试未覆盖） |
+| appearance 默认数值 | — |
+| CI 上自动跑 iOS 测试（`.github/workflows/ci.yml`，push/PR 钉死 Xcode 26.6 + iOS Simulator 26.5，见 CONCERNS.md High-2 Done） | — |
 
 ### 6) Performance Testing Notes
 
@@ -64,4 +65,6 @@ xcodebuild -scheme InkMarkdown \
 - `Tests/InkMarkdownTests/**/*.swift`
 - `Sources/InkMarkdown/Rendering/InkStreamRenderer.swift`（`InkStreamingPerformanceBenchmark`）
 - `docs/current-status.md`
-- `docs/codebase/.codebase-scan.txt`（PERFORMANCE & TESTING 段：无独立 perf 配置文件）
+- `docs/codebase/.codebase-scan.txt`（PERFORMANCE & TESTING 段：无独立 perf 配置文件；CI/CD PIPELINES 段：`.github/workflows/ci.yml` 已核实存在）
+- `.github/workflows/ci.yml`（push/PR 自动跑 iOS Simulator 测试）
+- `docs/codebase/CONCERNS.md`（Top Risks：~~High~~ Done「无 CI」）

@@ -16,7 +16,35 @@
 
 InkMarkdown 直接依赖 UIKit。不要在 macOS host 上用 `swift build` 或 `swift test` 判断库是否可用；它们会因缺少 UIKit 失败。请在 iOS Simulator 上验证。
 
-### 使用 XcodeBuildMCP
+### 原生 xcodebuild：任何人都能跑的基线路径
+
+这条路径不依赖任何 AI 客户端或 MCP 服务，`git clone` 之后就能独立跑通，是本项目构建与测试的基线方式。
+
+```bash
+git clone <本仓库地址>
+cd InkMarkdown
+xcrun simctl list devices available   # 确认本机可用的 iOS Simulator 名称
+```
+
+构建：
+
+```bash
+xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' build
+```
+
+测试：
+
+```bash
+xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' test
+```
+
+本机若没有 `iPhone 17 Pro` 这个模拟器，把 `name=` 换成上一步 `xcrun simctl list devices available` 列出的任意可用设备名，`OS=latest` 保持不变即可。
+
+改核心代码前后都跑一遍测试。这两条命令也是 `.github/workflows/ci.yml` 门禁的本地对照（见下文「CI 与本机工具链」）。
+
+### 使用 XcodeBuildMCP（AI 客户端可用时的加速路径）
+
+当前 AI 客户端若已注册 XcodeBuildMCP 工具，可以用它代替上面的手动命令：自动发现 project / scheme / simulator，并把结果整理成结构化摘要，省去手动拼 `destination` 字符串。
 
 按以下顺序运行：
 
@@ -26,7 +54,7 @@ InkMarkdown 直接依赖 UIKit。不要在 macOS host 上用 `swift build` 或 `
 4. 运行 simulator tests。
 5. 记录实际 scheme、destination、测试数量和失败摘要。
 
-如果 XcodeBuildMCP 成功完成测试，到这里结束。不要再重复运行原生命令。
+这条路径跑出的结果应该和上面的原生 `xcodebuild test` 一致。如果 XcodeBuildMCP 当前不可用、报错，或你就是想要人可读的原始命令行输出，直接改用上面的原生命令即可，不必先排查 MCP 为什么不可用。
 
 ### 修复 XcodeBuildMCP 加载问题
 
@@ -40,25 +68,7 @@ xcodebuildmcp --version
 - 找不到二进制：按 [XcodeBuildMCP 官网](https://www.xcodebuildmcp.com/)说明安装并注册 MCP 服务。
 - 二进制存在：检查客户端是否以 `xcodebuildmcp mcp` 启动服务，然后重载客户端或新建会话。
 
-### 回退到原生 xcodebuild
-
-只有以下情况可以回退：
-
-- 当前 MCP 客户端没有暴露 SwiftPM package test workflow。
-- XcodeBuildMCP 返回 scheme 未配置 test action 等结构化诊断。
-- 正在诊断 XcodeBuildMCP 本身。
-
-先从项目根目录查询本机可用 simulator，再替换命令中的名称：
-
-```bash
-xcrun simctl list devices available
-xcodebuild \
-  -scheme InkMarkdown \
-  -destination 'platform=iOS Simulator,name=<simulator-name>,OS=latest' \
-  test
-```
-
-回退后记录原因，不要把这条命令写成默认流程。
+排查无果或不想排查时，直接用上一节的原生 `xcodebuild` 命令，不影响后续开发。
 
 ### 最近验证记录
 
@@ -140,6 +150,12 @@ iOS Simulator 全量测试（或推送触发 CI）。
 - 内部注释写「为什么」
 - 公开行为变更时，同步 README 中英与本目录文档
 - 不要提交 `.build/`、`Packages/Caches/`、`DerivedData/`、`xcuserdata/`
+
+## 最小第一次改动
+
+在动手写自定义 `InkInlineSyntax` 或 `InkBlockHandler` 之前，先做能最快看到效果的小改动：渲染一段字符串，或者调一个 `InkAppearance` 的值（比如 `InkAppearance.shared.text.fontSize`），在 ExampleApp 里确认真的生效了。跑通「改一个值 → 在 ExampleApp 里看到变化」这条最短链路后，再看下面的扩展点示例写自定义 handler / syntax，遇到问题也更容易判断是扩展点写错了还是环境没搭对。
+
+具体步骤见[第一次运行](../learning-path/00-first-run.md)。
 
 ## 添加渲染扩展
 

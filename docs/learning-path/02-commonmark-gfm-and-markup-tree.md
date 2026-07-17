@@ -244,6 +244,32 @@ InkMarkdown 当前渲染链没有默认插入 Rewriter。初学阶段先掌握�
 
 然后使用 `InkParser.parse` 和 `debugDescription()` 对照。节点顺序或拆分与手画略有不同很正常，以真实解析结果为准。
 
+<details>
+<summary>参考答案</summary>
+
+```mermaid
+graph TD
+  D["Document"] --> H["Heading level=2"]
+  H --> T1["Text：计划"]
+  D --> P["Paragraph"]
+  P --> T2["Text：阅读 "]
+  P --> E["Emphasis"]
+  E --> T3["Text：渲染器"]
+  P --> T4["Text：和 "]
+  P --> L["Link destination=https://commonmark.org"]
+  L --> T5["Text：规范"]
+  P --> T6["Text：。"]
+```
+
+要点：
+
+- `Heading` 的 `level` 是 2，因为源文本用了 `##`。
+- `Emphasis`（斜体）和 `Link` 都是 `Paragraph` 的子节点，彼此是兄弟关系，不是嵌套关系。
+- `Link` 自己也有子节点 `Text："规范"`，这是链接的可见文字；目标地址 `https://commonmark.org` 是 `Link` 节点的字段，不是单独的文字节点。
+- 中文字符、空格和句号仍然是普通 `Text`，只是被 `Emphasis`、`Link` 前后的普通文字拆成了多段（"阅读 "、"和 "、"。"）。这种拆分与真实 `debugDescription()` 的具体切法可能略有出入，但角色关系应当一致。
+
+</details>
+
 ## 完成标准
 
 你能回答以下问题即可继续：

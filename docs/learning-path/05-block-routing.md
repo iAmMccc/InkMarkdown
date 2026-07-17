@@ -115,6 +115,29 @@ sequenceDiagram
 
 ## 5.5 在 UIKit 中装配 block
 
+前面两节分别讲了「怎么选 handler」和「怎么冲刷 pendingMarkup」，下面这张图把两者接到最后一步——`blocks` 数组怎么变成屏幕上的视图：
+
+```mermaid
+flowchart TD
+  A["document.children 的下一个 Markup 节点"] --> B["按 blockHandlers 顺序找第一个 canHandle == true 的 handler"]
+  B --> C{"命中 handler 且 makeBlock 返回非 nil？"}
+  C -->|"否（无匹配 或 makeBlock 为 nil）"| D["加入 pendingMarkup"]
+  C -->|"是"| E["flushPendingAsAttributed()"]
+  E --> F{"pendingMarkup 非空？"}
+  F -->|"是"| G["InkAttributedRenderer.render(markups:) → InkAttributedTextBlock"]
+  G --> H["追加进 blocks"]
+  F -->|"否"| H
+  H --> I["追加 handler 返回的 block（InkCodeBlock / InkTableBlock / InkThematicBreakBlock）"]
+  D --> J{"还有下一个顶层节点？"}
+  I --> J
+  J -->|"是"| A
+  J -->|"否"| K["遍历结束，最终调用一次 flushPendingAsAttributed()"]
+  K --> L["blocks: [InkRenderableBlock]"]
+  L --> M["for block in blocks { stackView.addArrangedSubview(block.makeView()) }"]
+```
+
+`InkBlockRenderer.render` 只负责产出 `blocks` 数组（图中到 L 为止）；从 `blocks` 到屏幕的最后一步（图中 M）由调用方决定容器，最小实现如下。
+
 最小装配代码可以放在一个已有约束的竖向 `UIStackView` 中。
 
 ```swift

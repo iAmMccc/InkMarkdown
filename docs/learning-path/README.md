@@ -8,14 +8,25 @@
 
 ## 10 分钟获得第一个成功结果
 
-先不改代码，用 ExampleApp 确认项目能正常解析和显示 Markdown。
+先不改代码，用 ExampleApp 确认项目能正常解析和显示 Markdown。有两条等价路径，任选其一：
+
+**路径 A：手动用 Xcode（没有 AI 客户端 / MCP 工具时用这条）**
+
+1. 双击打开 `ExampleApp/ExampleApp.xcodeproj`（或终端执行 `open ExampleApp/ExampleApp.xcodeproj`），等待 Xcode 解析完 Swift Package 依赖。
+2. 确认 Scheme 选择器里选中的是 `ExampleApp`，运行目标选一个可用的 iOS 模拟器。
+3. 按 Cmd-R 运行。
+
+**路径 B：AI 编程客户端 + XcodeBuildMCP（可选，效率优化）**
 
 1. 按[开发指南](../contributor-guide/04-development.md#运行-exampleapp)使用 XcodeBuildMCP 发现并运行 `ExampleApp/ExampleApp.xcodeproj`。
+
+两条路径殊途同归，跑起来之后：
+
 2. 在 App 中进入“Markdown 标准样式”→“一级标题 H1”。
 3. 在渲染页和源码页之间切换，对照 `#` 源文本与标题显示结果。
 4. 返回后打开“粗体”和“表格”，确认行内富文本与独立 UIKit 块都能显示。
 
-成功标志：你能在 Simulator 中看到标题、粗体和网格表格，并能切换到对应 Markdown 源文本。如果没有成功，先按[构建与测试排查流程](../contributor-guide/04-development.md#排查问题)修复环境，再开始第 1 章。
+成功标志：你能在 Simulator 中看到标题、粗体和网格表格，并能切换到对应 Markdown 源文本。如果没有成功，先按[构建与测试排查流程](../contributor-guide/04-development.md#排查常见渲染问题)修复环境，再开始第 1 章。手把手的详细步骤（含亲手调用一次渲染 API）见[第 0 章：先跑起来](00-first-run.md)。
 
 ## 学完后你能做什么
 
@@ -46,10 +57,11 @@ flowchart LR
 
 | 阶段 | 章节 | 你会得到什么 | 建议用时 |
 | --- | --- | --- | --- |
+| 0 | [先跑起来](00-first-run.md) | 亲手用 Xcode 跑通 ExampleApp，并调用一次 `InkAttributedRenderer.render(_:)` 看到真实输出 | 20 分钟 |
 | 1 | [Markdown 从哪里开始](01-markdown-foundations.md) | 能读写最常见语法，知道“标记”不是最终 UI | 45 分钟 |
 | 2 | [CommonMark、GFM 与 Markup 树](02-commonmark-gfm-and-markup-tree.md) | 能把源文本画成一棵节点树 | 60 分钟 |
 | 3 | [NSAttributedString 与 TextKit 1](03-nsattributedstring-and-textkit.md) | 能解释文字、样式、范围、布局的关系 | 60 分钟 |
-| 4 | [完整渲染管线](04-inkmarkdown-render-pipeline.md) | 能跟踪普通段落、标题、链接的源码路径 | 75 分钟 |
+| 4 | [完整渲染管线](04-inkmarkdown-render-pipeline.md) | 能跟踪普通段落、标题、链接的源码路径 | 100 分钟 |
 | 5 | [块路由与 UIKit 装配](05-block-routing.md) | 能跟踪 handler、pending flush 和 UIView block 装配 | 50 分钟 |
 | 6 | [流式 Markdown 状态管线](06-streaming-rendering.md) | 能解释稳定前缀、UTF-16 显示进度和当前实现边界 | 75 分钟 |
 | 7 | [跟练：调试、测试与第一次贡献](07-guided-debugging-and-exercises.md) | 能独立定位节点、检查 attribute、验证修改 | 90 分钟 |

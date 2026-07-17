@@ -19,6 +19,30 @@
 
 完成[第 5 章](05-block-routing.md)，并知道 `NSAttributedString.length` 与人眼看到的字符数不一定相同。如果这个区别还不清楚，先回看[第 3 章的 NSRange](03-nsattributedstring-and-textkit.md#34-nsrange只把它当作位置--长度)。
 
+## 先睹为快：用户逐帧看到什么
+
+在进入内部实现和边界条款之前，先建立一个直觉：流式渲染在界面上到底长什么样。完整可运行示例见 6.10，这里先用同一段输入，看用户视角会经历什么。
+
+假设依次追加三段内容，`charactersPerFrame = 2`（每帧推进 2 个富文本字符）：
+
+```text
+1. "## 标题\n"
+2. "正在生成 **更多"
+3. "内容**。"
+```
+
+下表是示意，用来建立直觉，不代表真实精确的帧号（真实帧数取决于后台解析速度和系统调度）：
+
+| 阶段 | 用户在 `UITextView` 里看到的文字 | 背后发生了什么 |
+| --- | --- | --- |
+| ① | （空白） | 第 1 段刚 append，后台还在解析，尚未显示 |
+| ② | `标` | `CADisplayLink` 开始按 `charactersPerFrame` 逐字吐出 |
+| ③ | `标题`（换行） | 第一段标题吐完，`ATX` 标题行让稳定前缀往前推进一截 |
+| ④ | `标题`\n`正在生成 更多` | 第 2 段到达；`**` 尚未闭合，所以“更多”两个字先以普通文本出现，看不到粗体 |
+| ⑤ | `标题`\n`正在生成 **更多**内容。`（“更多”已变粗体） | 第 3 段补上闭合 `**` 后，已经显示过的“更多”被重新渲染成粗体 |
+
+阶段 ④→⑤ 是本章后面所有条款要解释的核心现象：**已经显示在屏幕上的文字，样式还会被后续 chunk 改写**。6.2 会说明这是靠两套独立的进度（解析进度、显示进度）实现的，6.4/6.5 会说明“稳定前缀 vs 活跃后缀”和 `refreshLocation` 具体如何决定哪一段要被重写。完整可运行示例见 6.10。
+
 ## 6.1 网络 chunk 不是 Markdown 块
 
 假设服务端分三次发送一段内容：
@@ -47,6 +71,40 @@ flowchart LR
 ```
 
 `currentAttributedString()` 读取已预解析的完整结果，它可能比当前界面已显示的部分更长。
+
+### 完整双缓冲流程（把上面的方框展开）
+
+上面的方框图只画了大方向，下面这张时序图把双缓冲设计的四个关键点串在一起：chunk 如何在 `buffer` 里累积、后台解析如何产出 `preloadContent`、稳定前缀/活跃后缀边界如何决定 `preloadRefreshLocation`，以及 `CADisplayLink` 如何按 `charactersPerFrame` 推进 `displayIndex`。图中方法名和字段名与 [InkStreamRenderer.swift](../../Sources/InkMarkdown/Rendering/InkStreamRenderer.swift) 一致：
+
+```mermaid
+sequenceDiagram
+  participant Net as 网络 / SSE
+  participant App as append(_:)（主线程）
+  participant Buf as buffer（Swift Character，≤ maxParseLength 50_000）
+  participant BG as parseQueue（后台串行队列）
+  participant Inc as InkIncrementalMarkdownRenderer
+  participant Pre as preloadContent + preloadRefreshLocation
+  participant DL as CADisplayLink.onDisplayFrame（主线程）
+  participant TV as UITextView.textStorage
+
+  Net->>App: chunk
+  App->>Buf: buffer += chunk
+  Note over App,Buf: buffer.count 超过 50_000 后<br/>停止为超出部分生成新预解析结果
+  App->>BG: parseQueue.async（带上 renderGeneration）
+  BG->>Inc: append(chunk, configuration:)
+  Inc->>Inc: stableBoundary(in:from:) 找到新的稳定终点
+  Inc->>Inc: [stableCharacterCount..<boundary] 冻结进 stableContent
+  Inc->>Inc: 剩余 tail 每次整体重新渲染
+  Inc-->>BG: Result(content, refreshLocation = oldStableLength)
+  BG->>Pre: 写入 preloadContent / preloadRefreshLocation<br/>（仅当 renderGeneration 未变）
+  loop 每帧（约 60fps）
+    DL->>Pre: 读取 preloadContent.length 与 preloadRefreshLocation
+    DL->>DL: displayIndex = min(displayIndex + charactersPerFrame, totalLength)
+    DL->>TV: 用 refreshLocation..<displayIndex 替换 textStorage
+  end
+```
+
+这张图对应两条独立的时间线：**解析时间线**（`Net → App → Buf → BG → Inc → Pre`，由 chunk 到达和后台队列速度决定）和**显示时间线**（`DL` 那个 loop，由 `CADisplayLink` 帧率和 `charactersPerFrame` 决定）。`preloadContent` 是连接两条时间线的唯一缓冲区：解析线只管往里写最新结果，显示线只管按自己的节奏从里面读、往外吐字，两者互不阻塞。
 
 ## 6.3 先分清计数单位
 

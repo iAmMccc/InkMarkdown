@@ -88,6 +88,21 @@ InkMarkdown 直接依赖 UIKit。macOS host 上的 `swift test` 可能报 `no su
 
 不要一开始就单步进入 swift-markdown 的 cmark 实现。先确认项目边界上的输入输出，只有解析树本身不正确时才深入依赖。
 
+<details>
+<summary>参考答案：各断点预期观察到什么</summary>
+
+| 位置 | 预期观察 |
+| --- | --- |
+| `InkParser.parse(_:)` | `source` 就是 `"你好，**UIKit**。"`，未经任何改写 |
+| render 入口 | 如果调用方没有传 `configuration`，这里的 `configuration` 等于 `.standard` |
+| block dispatch | `Document.children` 只有一个节点，且它是 `Paragraph`（源文本没有空行分段） |
+| inline dispatch | 依次进入 `Text("你好，")`、`Strong`（内部是 `Text("UIKit")`）、`Text("。")`；处理 `Strong` 时会先执行一次 `context.addingTrait(.traitBold)`，再把新 context 传给它的子节点 |
+| `Text` 叶子 | 处理 `"UIKit"` 时，当前 context 的字体已经带有 bold trait；处理 `"你好，"` 和 `"。"` 时字体不带 bold trait |
+
+最终产物：`"你好，UIKit。"` 中 `"UIKit"` 对应的字符范围有粗体字体，其余范围是不带 bold trait 的默认正文字体。如果实际观察到 `Strong` 的子节点在到达 `Text` 叶子前就丢失了 bold 标记，说明问题出在 context 下传链路，而不是解析树本身。
+
+</details>
+
 ## 7.4 第二次断点跟踪：表格为什么走另一条路
 
 测试输入：
@@ -113,6 +128,18 @@ InkMarkdown 直接依赖 UIKit。macOS host 上的 `swift test` 可能报 `no su
 - 最终 block 是否为 `InkTableBlock`。
 
 如果直接调用 `InkAttributedRenderer.render`，这些 handler 断点不会命中。这正是入口选择造成的行为差异。
+
+<details>
+<summary>参考答案：各断点预期观察到什么</summary>
+
+- `Document.children` 中确实出现一个 `Markdown.Table` 节点，并且它是唯一的顶层子节点（源文本只有一张表格，没有多余段落）。
+- 默认 `blockHandlers` 顺序是 `[InkCodeBlockHandler, InkTableBlockHandler, InkThematicBreakHandler]`（`InkConfiguration.defaultBlockHandlers`）。对着 `Table` 节点，`InkCodeBlockHandler.canHandle` 返回 `false`，`InkTableBlockHandler.canHandle` 返回 `true`，所以最先命中的是 `InkTableBlockHandler`。
+- 命中前 `pendingMarkup` 是空数组：因为 `Table` 是 `Document.children` 里的第一个也是唯一一个节点，前面没有其他普通段落需要累积。
+- 最终 `InkBlockRenderer.render` 返回的 blocks 只有 1 个元素，类型是 `InkTableBlock`。
+
+如果直接调用 `InkAttributedRenderer.render(_:configuration:)` 而不是 `InkBlockRenderer.render`，上面这些 handler 断点都不会命中——这正好验证 5.5 节“先选静态渲染入口”的结论。
+
+</details>
 
 ## 7.5 第三次断点跟踪：流式尾部为什么会刷新
 
@@ -142,6 +169,28 @@ renderer.finish()
 - `preloadContent.length`
 
 目标不是记住数值，而是确认两条进度不同：解析可以领先，显示按帧追赶；活跃尾部的旧 attributes 也可能被替换。
+
+<details>
+<summary>参考答案：预期观察到什么</summary>
+
+这三个 chunk 都不包含换行符 `\n`。`InkIncrementalMarkdownRenderer.stableBoundary(in:from:)` 只在“已换行结束”的 ATX 标题行、分割线行或代码围栏闭合行处才会推进边界；找不到任何换行时，循环第一次就 `break`，`lastSafeOffset` 保持在起始位置不变。因此三次 `append` 期间 `stableCharacterCount` 会一直停在 `0`：
+
+- 第 1 次 `append` 后：`source = "正文 **尚未"`；因为没有换行，`stableCharacterCount` 仍是 `0`；`tail` 等于整个 `source`；`refreshLocation`（即 `oldStableLength`）为 `0`。这段 `**尚未` 未闭合，`InkAttributedRenderer.render` 大概率把两个 `*` 当作字面文字保留。
+- 第 2 次 `append` 后：`source = "正文 **尚未结束**，再看 [文"`；仍然没有换行，`stableCharacterCount` 依旧是 `0`，`tail` 依旧是整个 `source`，`refreshLocation` 依旧是 `0`。这次粗体已经闭合（`**尚未结束**`），但链接只写了一半 `[文`，通常会被当作普通方括号文字。
+- 第 3 次 `append` 后：`source` 变成完整的 `"正文 **尚未结束**，再看 [文档](https://example.com)。"`，仍无换行，`stableCharacterCount` 还是 `0`。
+- `finish()` 调用后：无论 `stableBoundary` 算出什么，`finish()` 都会直接对整个 `buffer` 执行一次 `InkAttributedRenderer.render` 全量渲染，并把 `refreshLocation` 强制设为 `0`。
+
+第二次和第三次相比，链接对应的字符范围会从“普通文字”变成“带 `.link` 的可点击文字”——这是最明显会变化的 attributes；由于 `refreshLocation` 全程为 `0`，理论上整段内容都可能被重新计算，不止链接这一小段。
+
+有一个容易漏掉的陷阱：本练习的代码只调用了 `append` 和 `finish`，**没有**调用 `bindTextView(_:)`，也没有用非空字符串调用过 `reset(to:)`。而 `CADisplayLink` 只在这两个方法内部被启动。所以即使后台已经解析完成、`preloadContent` 在不断更新，`displayIndex` 也会一直停留在初始值 `0`，`onUpdate` 不会被调用，`onFinishDisplay` 也不会触发。想看到真正的逐帧显示效果，需要像 6.10 节一样先 `bindTextView(textView)`。
+
+三个问题的参考回答：
+
+1. 因为 `**尚未` 这一段还没有确定的换行边界，且当前实现只在换行结束的标题、分割线、代码围栏闭合行处才冻结前缀；普通文字段落没有触发冻结条件，所以不能提前永久缓存。
+2. 链接 `[文档](https://example.com)` 从“未闭合的普通文字”变成“完整链接”，对应字符范围的 `.link`（以及可能的 `.foregroundColor`）会改变。
+3. 因为 `sourceFilter` 可以改写任意早期内容，渲染器无法证明旧的稳定前缀依然有效，所以配置了 `sourceFilter` 后，代码会显式把 `refreshLocation` 写死为 `0`，每次都让显示层从头考虑新结果。
+
+</details>
 
 ## 7.6 用代码检查 attributes，而不是只看截图
 

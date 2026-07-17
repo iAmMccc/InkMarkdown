@@ -19,7 +19,19 @@
 
 ## 3.1 NSAttributedString 是什么
 
-普通 `String` 只保存文字。`NSAttributedString` 还会记录某段字符应该使用哪些属性。
+普通 `String` 只保存字符序列。`NSAttributedString` 保存字符序列，以及每个字符范围关联的 attribute（属性）。这使同一段文字能在不同位置呈现不同的外观和行为，是它成为 UIKit 富文本主要载体的原因。
+
+一个 attribute 不只有“样式”。常见类别如下：
+
+| 类别 | 常见 attribute | 它解决的问题 |
+| --- | --- | --- |
+| 字形与颜色 | `.font`、`.foregroundColor`、`.kern`、`.baselineOffset` | 用什么字体、颜色、字距和基线位置显示字符 |
+| 修饰与背景 | `.underlineStyle`、`.strikethroughStyle`、`.backgroundColor` | 下划线、删除线和普通矩形背景 |
+| 段落排版 | `.paragraphStyle` | 行高、对齐、缩进、换行和段前段后距离 |
+| 行为与嵌入内容 | `.link`、`.attachment` | 链接目标，或在文字中嵌入图片等对象 |
+| 自定义语义 | 项目自定义 key | 告诉后续组件“这段是句中代码”或“这里要画引用竖线” |
+
+attribute 的值并不一定是颜色或数字。`.font` 的值是 `UIFont`，`.paragraphStyle` 的值是段落样式对象，`.link` 的值通常是 `URL`。因此，`NSAttributedString` 更准确的模型是“字符范围到信息的映射”。
 
 可以把它想成一条透明胶带：
 
@@ -36,17 +48,6 @@ flowchart TD
   C --> E
   D --> E
 ```
-
-常见 attribute 包括：
-
-- `.font`
-- `.foregroundColor`
-- `.paragraphStyle`
-- `.link`
-- `.underlineStyle`
-- `.strikethroughStyle`
-- `.attachment`
-- 项目自定义 key
 
 ### 不要和 Swift AttributedString 混淆
 
@@ -169,17 +170,75 @@ InkMarkdown 同时设置最小和最大行高，把行盒锁定为固定高度�
 
 ## 3.6 NSAttributedString 不负责真正布局
 
-富文本只是内容和属性。它本身不知道可用宽度，也不会决定在哪里折行或画到屏幕哪个位置。
+先把三个容易混淆的词分开：
 
-TextKit 负责文本存储、字形布局和绘制。InkMarkdown 当前正式使用 TextKit 1 路径。
+- **文本内容**：你要表达的字符，例如 `"你好 UIKit"`。这里的“内容”和日常所说的“文本”没有本质差别，前者强调字符本身和语义，后者是更宽泛的叫法。
+- **富文本**：文本内容加上“哪段文字有什么 attribute”。`NSAttributedString` 是 UIKit/Foundation 中承载富文本的一种具体类型，而不是“富文本”这个概念本身。HTML、RTF 和 Swift `AttributedString` 也能表示富文本。
+- **文本存储**：TextKit 1 中的 `NSTextStorage`。它保存可变富文本，并把修改通知给布局系统；它不是另一份不同的“内容”。
+
+因此，`NSAttributedString` 本身不知道可用宽度，也不会决定在哪里折行或画到屏幕哪个位置。TextKit 1 让 `NSTextStorage`、`NSLayoutManager` 和 `NSTextContainer` 分工完成这些事；`UITextView` 把这条链包装成可显示、选择和交互的视图。
+
+InkMarkdown 当前正式使用 TextKit 1 路径。下面的类图描述对象关系；箭头表示主要持有或连接关系，不表示所有对象都直接继承彼此。
 
 ```mermaid
-flowchart LR
-  A["NSTextStorage\n保存富文本"] --> B["NSLayoutManager\n字符、glyph、行片段与绘制"]
-  B --> C["NSTextContainer\n提供可布局区域"]
-  C --> D["UITextView\n承载交互与显示"]
-  D -. "公开 textStorage / layoutManager / textContainer" .-> A
+classDiagram
+  class NSTextStorage {
+    +attributedText
+    +edited()
+  }
+  class NSLayoutManager {
+    +layoutGlyphs()
+    +drawGlyphs()
+  }
+  class NSTextContainer {
+    +size
+    +lineFragmentPadding
+  }
+  class UITextView {
+    +textStorage
+    +layoutManager
+  }
+  class InkMarkdownLayoutManager {
+    +drawBackground()
+    +fillBackgroundRectArray()
+  }
+
+  NSTextStorage "1" --> "1" NSLayoutManager : notifies
+  NSLayoutManager "1" --> "1" NSTextContainer : lays out in
+  UITextView "1" --> "1" NSTextContainer : uses
+  InkMarkdownLayoutManager --|> NSLayoutManager
 ```
+
+### 一次显示是怎样发生的
+
+`NSLayoutManager` 会把字符映射为 glyph（字形）。glyph 是排版和绘制使用的形状单位，不等于“一个 Swift `Character`”：一个字符可能由多个 glyph 组成，也可能和相邻字符共同形成一个 glyph。
+
+一个具体例子：把重音字母 “é” 写成分解形式，即字母 `e`（U+0065）后面紧跟一个组合尖音符（COMBINING ACUTE ACCENT，U+0301）。这两个 Unicode 标量在 Swift 里会被识别成同一个 extended grapheme cluster，所以 `"e\u{0301}".count == 1`——只有 1 个 Swift `Character`，`NSString` 长度也只是 2 个 UTF-16 code unit（`e` 和组合符号各占 1 个，都在 BMP 内，不涉及 surrogate pair）。但排版时，多数系统字体仍然要用 2 个 glyph 才能画出它：一个是字母 `e` 本身的字形，另一个是叠放在其上方、由 mark positioning 定位的重音符号字形。也就是说，这里是“1 个 Character 对应 2 个 glyph”；换成更复杂的组合 Emoji 序列（例如带 ZWJ 连接的家庭表情），实际 glyph 数量还会因字体是否支持该组合而变化，甚至可能回退成好几个独立 glyph 并排显示。
+
+它再把能放进同一行的一段 glyph 放进一个 **行片段**（line fragment）。行片段可以理解为排版系统分配给某一行的矩形区域；其中的 `usedRect` 是该行文字实际占用的部分。短行右侧的空白仍属于行片段，但不属于 `usedRect`。
+
+```mermaid
+sequenceDiagram
+  participant App as App code
+  participant View as UITextView
+  participant Storage as NSTextStorage
+  participant Layout as InkMarkdownLayoutManager
+  participant Container as NSTextContainer
+  participant Context as UIKit drawing context
+  participant CA as Core Animation
+
+  App->>Storage: set attributed text or edit attributes
+  Storage->>Layout: content changed notification
+  View->>Layout: request layout for current bounds
+  Layout->>Container: ask available layout area
+  Layout->>Layout: map characters to glyphs and line fragments
+  View->>Layout: request drawing for visible glyph range
+  Layout->>Context: draw backgrounds, quote bars, and glyphs
+  Context-->>CA: UIKit records layer contents in commit
+  CA-->>View: render server composites frame on screen
+```
+
+这里的“绘制”指 UIKit/TextKit 在当前绘图上下文中执行画字形、填背景等操作。它不是“先给文字做一个标记，等 RunLoop 再绘制”的同义词：attribute 是更早的描述数据，布局管理器在需要显示时读取它。通常在本轮 RunLoop 的提交阶段，Core Animation 会把视图更新提交给渲染服务完成合成并显示。日常讨论中常把整个过程都叫“渲染”；本章刻意把“布局”“绘制”“合成显示”分开，排查问题时会更准确。
 
 ### `NSTextStorage`
 
@@ -227,7 +286,13 @@ let textView = UITextView(frame: .zero, textContainer: textContainer)
 
 ## 3.8 为什么项目需要自定义 attribute
 
-UIKit 内建的 `.backgroundColor` 能请求普通矩形背景，但 InkMarkdown 的行内代码需要圆角、横向扩展和可选固定高度。引用还需要沿多行文字画竖线。
+先定义一个术语：**句中代码**是嵌在普通句子中的短代码，例如“调用 `render()`”。Markdown 与 Apple 文档通常称它为 *inline code*；本章后面优先使用“句中代码”，以便和独占一整块区域的“围栏代码块”区分。
+
+UIKit 内建的 `.backgroundColor` 能请求普通矩形背景，但 InkMarkdown 的句中代码需要圆角、左右内边距和可选固定高度。引用还需要沿多行文字画竖线。
+
+“左右内边距”就是原文“横向扩展”的准确含义：背景矩形的左、右边缘各向外延伸 `insets` 点，文字不会紧贴背景边缘。它不改变代码字符串的宽度，也不让文本横向缩放。圆角指背景色区域的四角，而不是字形本身；`InkMarkdownLayoutManager` 用 `UIBezierPath(roundedRect:)` 画它。
+
+你在 ExampleApp 里看到的独立代码块，和句中代码不是同一条实现路径。独立代码块由 `InkCodeBlockView` 创建 `UIView` 容器并应用 `InkAppearance.CodeBlock.cornerRadius`；句中代码由 `InkMarkdownLayoutManager` 在文本行中绘制。两者默认圆角都是 `4`，但由于尺寸、颜色和屏幕缩放，视觉上可能看起来接近直角，也都可分别配置。
 
 项目先把“应该怎样画”的信息挂在文字范围上：
 
@@ -248,7 +313,37 @@ flowchart LR
   C --> D["绘制圆角背景或引用竖线"]
 ```
 
-这是一种“先描述，后绘制”的设计：渲染器不直接拿 `CGContext` 画图，布局管理器也不重新猜测哪个文本是代码。
+这是一种“先描述，后绘制”的设计。渲染器在没有宽度、换行结果和绘图上下文时，只写入“这段是句中代码，背景参数是这些”；布局管理器在拿到实际行片段和 `CGContext` 后，再按这个信息绘制。布局管理器不需要从字体或字符串内容猜测“哪段是代码”。
+
+### 为什么不用其他设计
+
+| 设计 | 最小示例 | 优点 | 局限 |
+| --- | --- | --- | --- |
+| 只使用系统背景 | `text.addAttribute(.backgroundColor, value: color, range: range)` | 代码少；标准 `UITextView` 就能显示 | 只能得到系统矩形背景，不能可靠画圆角、左右内边距或引用竖线 |
+| 渲染器直接 `CGContext` 绘制 | `context.fill(rect)` | 看起来直接 | 渲染器阶段没有视图宽度、换行结果和 UIKit 绘图上下文；它还会把语义转换和视图绘制耦合在一起 |
+| 给每个代码片段放一个 `UIView` | `stackView.addArrangedSubview(codeView)` | 独立代码块很好做，也适合按钮等独立组件 | 句中代码需要与文字一起自动换行、选择和复制；把它拆成 View 会破坏连续文本布局 |
+| **自定义 attribute + LayoutManager** | 下例 | 保留连续富文本和 TextKit 的换行/选择；能按实际行片段定制绘制 | 需要维护一个自定义 `NSLayoutManager`，且要通过项目的 TextKit 1 链显示 |
+
+下面两段代码展示差别。第一段只使用系统能力，任何 `UITextView` 都能显示，但背景是普通矩形：
+
+```swift
+import UIKit
+
+let text = NSMutableAttributedString(string: "调用 render()")
+let codeRange = (text.string as NSString).range(of: "render()")
+text.addAttribute(.backgroundColor, value: UIColor.secondarySystemFill, range: codeRange)
+```
+
+第二段是项目使用的语义标记。只有把结果交给 `InkAttributedTextBlock` 的 TextKit 1 链后，`InkMarkdownLayoutManager` 才会读取 `.inkInlineCodeBackground` 并按行片段画圆角背景：
+
+```swift
+import UIKit
+import InkMarkdown
+
+let rendered = InkAttributedRenderer.render("调用 `render()`")
+let block = InkAttributedTextBlock(attributedText: rendered)
+let textView = block.makeView() as! UITextView
+```
 
 ## 3.9 区分项目当前实现与 Apple 通用要求
 
@@ -258,7 +353,9 @@ flowchart LR
 
 ## 3.10 如何检查一段富文本的 attributes
 
-调试时不要只看最终 UI。可以直接枚举每个 run：
+这个章节用于验证“渲染器是否写对了数据”。最终 UI 正确不一定代表 attributes 正确：例如系统默认颜色碰巧和链接色相同，或者你把富文本放进了没有自定义布局管理器的 `UITextView`，标准样式仍会显示，但句中代码的自定义绘制会丢失。枚举 attributes 能把问题定位在“渲染数据”“TextKit 布局”还是“视图交互”三层中的哪一层。
+
+调试时可以直接枚举每个 run：
 
 ```swift
 let result = InkAttributedRenderer.render("你好，**UIKit**")
@@ -270,7 +367,29 @@ result.enumerateAttributes(in: fullRange) { attributes, range, _ in
 }
 ```
 
-预期能看到普通文字和粗体文字至少具有不同字体属性。控制台具体字典内容会随系统版本变化，因此测试应验证关键语义，不要依赖完整 `description` 字符串。
+预期能看到普通文字和粗体文字至少具有不同字体属性。项目测试也用这个方式确认句中代码同时保留自定义背景标记和等宽字体：
+
+```swift
+import Testing
+import UIKit
+@testable import InkMarkdown
+
+@Test func inlineCode_hasCustomBackgroundMarker() {
+  let result = InkAttributedRenderer.render("列表中的 `config`")
+  let range = NSRange(location: 0, length: result.length)
+  var foundCodeMarker = false
+
+  result.enumerateAttributes(in: range) { attributes, _, _ in
+    if attributes[.inkInlineCodeBackground] is InkInlineCodeBackgroundInfo {
+      foundCodeMarker = true
+    }
+  }
+
+  #expect(foundCodeMarker)
+}
+```
+
+“不要依赖完整 `description` 字符串”是指不要写出这种脆弱测试：`#expect(result.description == "...")`，或比较 `print(attributes)` 得到的一整行日志。`description` 只是调试用的文字表示，字典键的顺序、颜色对象的打印格式和系统附加的内部属性都可能随 SDK 或系统版本变化。测试应该只断言你真正关心的语义，例如“代码范围有 `.inkInlineCodeBackground`”“链接范围有正确的 URL”“标题范围使用预期字号”。
 
 ## 3.11 常见误区
 
@@ -300,6 +419,26 @@ result.enumerateAttributes(in: fullRange) { attributes, range, _ in
 
 然后回答：如果要给“链接”加蓝色，应该改字符串、改 attribute，还是改 TextKit 容器宽度？正确答案是 attribute。
 
+<details>
+<summary>参考答案</summary>
+
+按步骤操作后，`enumerateAttributes` 应该打印出 3 个 run（对照 3.3 节的 run 表格）：
+
+| run | 文字 | 关键 attributes |
+| --- | --- | --- |
+| 1 | `普通 ` | `.font`：默认系统字体（未特别设置时的初始字体） |
+| 2 | `粗体 ` | `.font`：`UIFont.boldSystemFont` |
+| 3 | `链接` | `.link`：你设置的 URL；`.foregroundColor`：你设置的颜色（例如 `.systemBlue`） |
+
+要点：
+
+- 只要“粗体”和“链接”各自的字体/颜色/link 值和相邻文字不同，`enumerateAttributes` 就会在这两处产生新的 run 边界，因此至少切出 3 段。
+- 如果“粗体”只设置了 `.font` 而没有改颜色，它的 `.foregroundColor` 会保持和“普通 ”一样——这正常，run 的切分看的是**完整属性字典**是否相同，不要求每个属性都不同。
+- 显示到 `UITextView` 后，界面上蓝色链接文字的范围应该和控制台打印的第 3 个 run 范围一致；如果两者对不上，通常是 attribute 设置的 `range` 算错了，可以回看 3.4 节的 `NSRange` 用法。
+- 最后一个问题的答案是 **attribute**：字符串内容和 TextKit 容器宽度都不负责颜色，颜色只由 `.foregroundColor` 这个 attribute 决定。
+
+</details>
+
 ## 完成标准
 
 你能用自己的话说明：
@@ -309,20 +448,30 @@ result.enumerateAttributes(in: fullRange) { attributes, range, _ in
 - `NSTextStorage`、`NSLayoutManager`、`NSTextContainer`、`UITextView` 各做什么？
 - InkMarkdown 的自定义 attribute 为什么需要 LayoutManager 配合？
 
-## 官方资料
-
-- [Apple：NSAttributedString](https://developer.apple.com/documentation/foundation/nsattributedstring)
-- [Apple：AttributedString](https://developer.apple.com/documentation/foundation/attributedstring)
-- [Apple：UITextView](https://developer.apple.com/documentation/uikit/uitextview)
-- [Apple：NSTextStorage](https://developer.apple.com/documentation/uikit/nstextstorage)
-- [Apple：NSLayoutManager](https://developer.apple.com/documentation/uikit/nslayoutmanager)
-- [Apple：NSTextContainer](https://developer.apple.com/documentation/uikit/nstextcontainer)
-- [Apple：TextKit](https://developer.apple.com/documentation/uikit/textkit)
-- [Apple 归档：Attributed String Programming Guide](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/AttributedStrings/AttributedStrings.html)
-- [项目：Apple 文本系统 API 速查](../references/apple-text-system-api-guide.md)
-
 ## 下一步
 
 - 继续[第 4 章：完整渲染管线](04-inkmarkdown-render-pipeline.md)。
 - 如果还会混淆内容与布局，回看 [3.6 的 TextKit 图](#36-nsattributedstring-不负责真正布局)。
 - 需要精确类型、可用版本或排查路径时，查 [Apple 文本系统 API 速查](../references/apple-text-system-api-guide.md)。
+
+## 参考资料
+
+### Apple 官方文档
+
+- [NSAttributedString](https://developer.apple.com/documentation/foundation/nsattributedstring)
+- [AttributedString](https://developer.apple.com/documentation/foundation/attributedstring)
+- [UITextView](https://developer.apple.com/documentation/uikit/uitextview)
+- [NSTextStorage](https://developer.apple.com/documentation/uikit/nstextstorage)
+- [NSLayoutManager](https://developer.apple.com/documentation/uikit/nslayoutmanager)
+- [NSTextContainer](https://developer.apple.com/documentation/uikit/nstextcontainer)
+- [TextKit](https://developer.apple.com/documentation/uikit/textkit)
+- [Attributed String Programming Guide（归档）](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/AttributedStrings/AttributedStrings.html)
+
+### 项目资料与实现
+
+- [Apple 文本系统 API 速查](../references/apple-text-system-api-guide.md)
+- [`InkMarkdownLayoutManager.swift`](../../Sources/InkMarkdown/Rendering/Components/InkMarkdownLayoutManager.swift)
+- [`InkAttributedTextBlock.swift`](../../Sources/InkMarkdown/Rendering/Block/InkAttributedTextBlock.swift)
+- [`InkAttributedRenderer.swift`](../../Sources/InkMarkdown/Rendering/AttributedString/InkAttributedRenderer.swift)
+- [`InkCodeBlockView.swift`](../../Sources/InkMarkdown/Rendering/Components/InkCodeBlockView.swift)
+- [`InkMarkdownTests.swift`](../../Tests/InkMarkdownTests/InkMarkdownTests.swift)

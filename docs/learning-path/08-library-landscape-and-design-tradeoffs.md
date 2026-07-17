@@ -109,6 +109,24 @@ flowchart TD
 
 从 [iOS Markdown 库定位对比](../references/ios-markdown-ecosystem.md) 选两个库，分别写出输入、中间模型、公开输出和更新方式。
 
+<details>
+<summary>参考答案：以 MarkdownUI 为例</summary>
+
+架构卡不要求你选的两个库和下面一致，这里只演示怎么填，帮助你核对自己的格式和颗粒度是否合适。
+
+```text
+库：MarkdownUI
+输入：Markdown 字符串
+解析：库自身完成 GFM 解析
+中间模型：MarkdownContent 与块序列
+公开输出：只读 SwiftUI `Markdown` view
+更新方式：常规整体渲染，不是专用流式管线
+```
+
+对照对比表可以看到，这五项分别对应“主要职责”“中间模型”“公开显示边界”“流式定位”几列。如果你选的是 InkMarkdown，公开输出这一项应该同时写 `NSAttributedString` 和 `InkRenderableBlock` / `UIView`，因为它有两条公开通道，不是只有一种。
+
+</details>
+
 ### 练习 B：为场景选边界
 
 为下列场景选择“需要的类型”，再查找符合边界的库：
@@ -120,9 +138,39 @@ flowchart TD
 
 参考思路依次是：UIKit 富文本与 block 边界、SwiftUI Markdown view、Markup 遍历、SwiftUI 流式管线。
 
+<details>
+<summary>参考答案：场景对应的库</summary>
+
+| 场景 | 需要的类型 | 对应的库 | 理由 |
+| --- | --- | --- | --- |
+| 1. UIKit + `UITableViewCell` + 自定义表格 `UIView` | UIKit 富文本与 block 边界 | InkMarkdown | 它是当前对比里唯一向 UIKit 宿主直接公开 `NSAttributedString` / `InkRenderableBlock` / `UIView` 的库，表格可以走 block handler 路由成自定义 `UIView` |
+| 2. SwiftUI 只读文档 + 主题定制 | SwiftUI Markdown view | MarkdownUI | 公开的是只读 SwiftUI `Markdown` view，并通过 `Theme` 等 API 支持分层定制 |
+| 3. 只统计链接，不显示 UI | Markup 遍历 | swift-markdown | 不需要任何渲染器，直接用 `MarkupWalker` 遍历 `Markup` 树统计链接即可 |
+| 4. SwiftUI 聊天页 + LLM 流式 + 数学公式 | SwiftUI 流式管线 | SwiftStreamingMarkdown | 专门面向 LLM 响应的流式渲染，公开 `StreamedMarkdownSource` / `StreamedMarkdownView`，并支持数学公式 |
+
+注意第 1 项不要因为“也支持 Markdown”就选 MarkdownUI 或 Textual——它们的公开边界都是 SwiftUI view，UIKit 宿主拿不到可以自定义的 `UIView`。
+
+</details>
+
 ### 练习 C：追溯一条结论
 
 在对比页中选择一条外部结论，点开对应仓库来源，找到支持结论的 README、DocC 或源码。这一步能防止把二手摘要当成永不变的 API 契约。
+
+<details>
+<summary>参考答案：追溯流程示例</summary>
+
+这里不给某一条结论的“标准答案”，因为你可以任选一条；下面演示追溯的步骤，供你核对自己的方法是否到位。
+
+以对比页“MarkdownUI：SwiftUI Markdown 渲染器”一节里的结论——“主要扩展边界是 `Theme`、`markdownTextStyle`、`markdownBlockStyle` 和 `CodeSyntaxHighlighter`”——为例：
+
+1. 在对比页底部“来源与局限”里找到对应链接：[MarkdownUI README](https://github.com/gonzalezreal/swift-markdown-ui/blob/main/README.md) 和 [`Markdown` view 源码](https://github.com/gonzalezreal/swift-markdown-ui/blob/main/Sources/MarkdownUI/Views/Markdown.swift)。
+2. 打开链接，确认 README 或源码里确实出现 `Theme`、`markdownTextStyle`、`markdownBlockStyle`、`CodeSyntaxHighlighter` 这几个名字，而不是仅凭对比页的转述。
+3. 记录你查看时的版本或日期（对比页本身标注了“核对日期：2026-07-14”），因为三方库的公开 API 会随版本变化。
+4. 如果发现结论和最新仓库不一致，先不要直接改学习路径文档——按对比页末尾“维护规则”，先更新对比页，再回来复查第 8 章。
+
+追溯别的结论时，方法是一样的：找引用来源 → 打开原始 README / DocC / 源码 → 核对具体 API 名称是否存在 → 记录核对时间。
+
+</details>
 
 ## 完成标准
 

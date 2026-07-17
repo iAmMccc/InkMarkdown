@@ -248,8 +248,12 @@ let package = Package(
         ),
     ],
     dependencies: [
-        // Apple 官方 Markdown 解析器（远程依赖，供其他端拉取使用）
-        .package(url: "https://github.com/swiftlang/swift-markdown.git", branch: "main"),
+        // Apple 官方 Markdown 解析器：固定 revision，保证可重复构建（ADR-001）
+        // 升级时：改 revision → 更新 Package.resolved → iOS Simulator 全量测试
+        .package(
+            url: "https://github.com/swiftlang/swift-markdown.git",
+            revision: "07ebc9c071b22a5d021031b798c3a84b76281213"
+        ),
     ],
     targets: [
         .target(
@@ -390,7 +394,8 @@ Top 10 largest files:
 .build/arm64-apple-macosx/debug/index/store/v5/records/LH/arm64e-apple-macos.swiftinterface-1D97FSPU8YXLH: 1446.7KB
 
 === CI/CD PIPELINES ===
-No CI/CD pipelines detected.
+Found: .github/workflows/ci.yml（GitHub Actions，钉死 Xcode 26.6 / iOS Simulator 26.5 工具链，push/PR/workflow_dispatch 触发 iOS Simulator 测试，见 High-2）
+（此条为手工核对后更正；本节其余数值未重新扫描，完整重扫见报告说明）
 
 === CONTAINERS & ORCHESTRATION ===
 No containerization configs detected.
