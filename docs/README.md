@@ -6,13 +6,12 @@
 
 | 你想做什么 | 推荐阅读 |
 | --- | --- |
-| 完全不懂 Markdown，从 UIKit 经验开始学习 | [零基础学习路径](learning-path/README.md) |
 | 了解现在已经做到哪 | [当前状态](current-status.md) |
 | 查为什么做了某项工程决策 | [架构决策 ADR](decisions/README.md) |
 | Agent / 快速建立仓库工程事实（栈、结构、风险） | [Codebase 证据基线](codebase/README.md) |
 | 30 分钟建立项目全貌 | [贡献者文档](contributor-guide/README.md) → [项目概述](contributor-guide/01-overview.md) → [架构设计](contributor-guide/02-architecture.md) |
 | 修改渲染核心 | [核心原理](contributor-guide/03-principles.md) → [模块详解](contributor-guide/05-modules.md) |
-| 对比主流 iOS Markdown 库与项目定位 | [对比学习章](learning-path/08-library-landscape-and-design-tradeoffs.md) → [生态 Reference](references/ios-markdown-ecosystem.md) |
+| 对比主流 iOS Markdown 库与项目定位 | [生态 Reference](references/ios-markdown-ecosystem.md) |
 | 排查常见问题 | [FAQ](contributor-guide/06-faq.md) |
 | CI 失败 / 本机 Xcode 与 CI 不一致 | [CI 与工具链排坑](contributor-guide/07-ci-and-toolchain-pitfalls.md) |
 | 查询 swift-markdown API | [依赖 API 参考](references/README.md) |
@@ -24,7 +23,6 @@
 | 层级 | 回答的问题 | 主要文件 |
 | --- | --- | --- |
 | 项目约束 | 定位、平台和协作规则是什么 | 根目录 `AGENTS.md` / `CLAUDE.md` |
-| 入门课程 | Markdown、Markup 树、富文本和渲染管线怎样串起来 | [learning-path/](learning-path/README.md) |
 | 当前事实 | 仓库现在真正交付了什么 | [current-status.md](current-status.md)、`Package.swift`、公开 API、测试 |
 | 工程证据基线 | 栈、目录、架构摘要、约定、测试方式、风险（可核验短文档） | [codebase/](codebase/README.md) |
 | 决策记录 | 为什么选定某方案、否决了什么 | [decisions/](decisions/README.md) |
@@ -39,12 +37,11 @@
 
 | 类型 | 入口 | 适合的问题 |
 | --- | --- | --- |
-| Tutorial | [零基础学习路径](learning-path/README.md) | 我想循序学习并完成练习 |
 | How-to | [开发指南](contributor-guide/04-development.md) | 我想完成一次构建、扩展或调试任务 |
 | Explanation | [架构与原理](contributor-guide/02-architecture.md) | 我想理解设计原因和约束 |
 | Reference | [API 速查](references/README.md)、[语义规范](spec/README.md) | 我需要准确查找类型、参数和行为 |
 
-`current-status.md` 和 `roadmap.md` 是项目事实记录与计划记录，不属于四类教程页面。学习路径是 Tutorial 系列；为了让初学者保持连续阅读，其中会嵌入必要的概念解释，但 API 细节仍以 Reference 为准。
+`current-status.md` 和 `roadmap.md` 是项目事实记录与计划记录。
 
 出现冲突时，不要简单用“源码永远正确”掩盖问题：
 
@@ -60,8 +57,7 @@
 - 修改 README 时，同时更新 `README.md` 与 `README.zh-CN.md`。
 - 新增渲染行为时，更新 `spec/` 并补语义测试。
 - 新增核心抽象时，更新架构、模块地图和对应 FAQ。
-- 解析器、TextKit 路径或三条渲染入口变化时，复查 `learning-path/` 中的示例和图。
-- Apple 文本 API 或外部 Markdown 库的公开边界变化时，先更新 `references/`，再复查学习章节。
+- Apple 文本 API 或外部 Markdown 库的公开边界变化时，先更新 `references/`。
 - 新增文档时，把它加入对应目录的 README 或本页入口；不要留下只能通过文件搜索找到的页面。
 - 栈、依赖、公开入口、测试方式或高风险点变化时，更新 [codebase/](codebase/README.md) 对应文件（可重跑 `acquire-codebase-knowledge` 扫描）。
 - `Sources/InkMarkdown/Rendering/Components/TABLE_INTEGRATION_GUIDE.md` 使用旧 API，仅可作为历史材料；当前接入方式以 contributor guide 和公开 API 为准。
