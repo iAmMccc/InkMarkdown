@@ -36,7 +36,7 @@ playground.xcworkspace
 #
 # Xcode automatically generates this directory with a .xcworkspacedata file and xcuserdata
 # hence it is not needed unless you have added a package configuration file to your project
-# .swiftpm
+.swiftpm/
 
 .build/
 
@@ -72,6 +72,10 @@ fastlane/test_output
 
 # SPM 本地缓存（三方库源码不提交）
 Packages/Caches/
+ExampleApp/Packages/Caches/
 
 # codebase-memory-mcp 本地代码索引
 .codebase-memory/
+
+# Xcode DerivedData
+DerivedData/
