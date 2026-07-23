@@ -35,11 +35,11 @@ InkMarkdown.swift  (@_exported Markdown)
 
 | 字段 | 说明 |
 | --- | --- |
-| `appearance` | 默认 `InkAppearance.shared` |
-| `inlineSyntaxes` | 行内扩展，默认 `[]` |
-| `sourceFilter` | 解析前预处理 |
-| `blockHandlers` | 块路由，有序匹配 |
-| `linkTapHandler` | 链接点击 |
+| `appearance` | 默认 `InkAppearance.shared`（保存字号、颜色、行高等基础样式） |
+| `inlineSyntaxes` | 自定义行内语法扩展，默认 `[]`（通过正则匹配自定义并截获行内文本，如 @用户、#话题 等） |
+| `sourceFilter` | 解析前预处理（对原始 Markdown 源码字符串进行清洗过滤） |
+| `blockHandlers` | 块路由，有序匹配（将代码块、表格等块级元素路由至自定义的 UIView 组件） |
+| `linkTapHandler` | 链接点击（宿主响应富文本链接点击时的业务回调） |
 
 `defaultBlockHandlers`：Code / Table / ThematicBreak。`standard` = `.init()`。
 
@@ -71,7 +71,7 @@ InkMarkdown.swift  (@_exported Markdown)
 - 引用对非段落子节点不全 range 盖段落样式，只叠缩进
 - 图片：`[🖼 plainText|source|image]`
 - `InlineHTML`：`<br>` → 换行；自定义空标签丢弃；其余空串
-- `Strikethrough`：无专门分支 → default 渲子节点 → **无删除线样式**
+- `Strikethrough`：有专门 case，`context.striking()` 派生删除线标志下传；叶子（`renderText` / `renderInlineCode` / `renderImage`）读 `isStrikethrough` 挂 `.strikethroughStyle`。范式 A 的叶子遗漏风险见 [03 §3.2](03-principles.md)
 - 代码块在本通道是 fallback；真 UI 走 `InkCodeBlock`
 
 ### `InkTextContext`（internal）

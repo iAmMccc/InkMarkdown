@@ -20,7 +20,7 @@ InkMarkdown **不**内置网络、鉴权或后端。宿主通过 public API 集�
 | `InkBlockRenderer.render` → `makeView()` | 列表/滚动容器中的块 UI | `InkRenderableBlock` |
 | `InkStreamRenderer` + `bindTextView` | SSE / 聊天流式 | `InkStreamRenderer` |
 | `InkStreamTableView` | 流式场景表格 | `Components/InkStreamTableView.swift` |
-| `InkConfiguration` 扩展点 | 预处理、行内、块、链接 | `InkConfiguration.swift` |
+| `InkConfiguration` 自定义扩展点 | 预处理、自定义行内语法扩展、块路由、链接点击回调 | `InkConfiguration.swift` |
 | `InkMarkdownLayoutManager` | 行内代码背景 / 引用竖线绘制 | `Components/InkMarkdownLayoutManager.swift` |
 
 示例宿主：`ExampleApp`（含 Mock SSE：`Detail/SSE/MockSSEService.swift`）。

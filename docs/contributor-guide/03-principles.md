@@ -40,12 +40,47 @@ baselineOffset = max(0, (fixedLineHeight - font.lineHeight) / 2)
 | `addingTrait(.traitBold/.traitItalic)` | **叠加** trait，保留字号 / family |
 | `monospaced()` | **重置**为等宽 + regular，只保留 pointSize |
 | `coloring` / `linking` / `withFont` | 改色 / 挂 URL / 换字体 |
+| `striking()` | 置删除线标志（叶子读 `isStrikethrough` 挂 `.strikethroughStyle`） |
 
 `monospaced()` 和 trait 叠加语义相反，顺序无关：strong 里的 inline code 始终是 regular 等宽。
 
 颜色不进 `monospaced()`：要不要回落环境色，由 `renderInlineCode` + `appearance.inlineCode` 决定。
 
-相关测试：`headingInlineCode_*`、`blockquoteLink_*`、`strongInlineCode_*`。
+相关测试：`headingInlineCode_*`、`blockquoteLink_*`、`strongInlineCode_*`、`strikethrough_*`。
+
+### 范式 A 的痛点：叶子必须逐个读 context
+
+当前 context 下传是**范式 A**（accumulator 下传 + 叶子收集挂属性）：每个叶子（`renderText` / `renderInlineCode` / `renderImage`）都要**显式**读取 context 里每个相关标志，再一次性 emit 成 attributes。
+
+这带来一个结构性维护税：**每新增一个样式标志，就得记得在每个叶子补一段读取**。漏一个叶子，该叶子覆盖的子树就丢样式。历史案例：删除线初版只补了 `renderText`，导致 `~~`code`~~` 的代码部分无线（后用 `.underlineStyle` 误写又导致变下划线）——都是范式 A 的典型遗漏症状，不是逻辑错误。
+
+### 什么时候可以用「后置 range 装饰」（范式 B）
+
+范式 B 指先递归子树拿到结果，再对整段 `addAttribute` 一次性叠加。本仓库已有先例：`renderBlockQuote` 末尾对整段挂 `.inkBlockquoteBar`。
+
+不是所有属性都能走 B。判据：
+
+> 属性 X 可以后置，当且仅当**没有子节点会根据 X 决策自己的渲染外观**，且叠加 X 不会覆盖子节点已设的同 key 值。
+
+| 属性 | 可否后置 | 理由 |
+| --- | --- | --- |
+| `.strikethroughStyle` | ✅ | 子节点从不读、从不据其决策 |
+| `.link`（URL） | ✅ | 子节点只平移、不据其决策（但链接**颜色**不行，inlineCode 要据其回落） |
+| `.inkBlockquoteBar` | ✅ | 已是后置先例 |
+| `.foregroundColor` / `.font` / `obliqueness` | ❌ | 叶子深度依赖，后置会覆盖叶子自己的决策 |
+
+删除线走 B 能根治「叶子遗漏」，但会让「所有行内样式用同一种机制」的一致性出现破例。**当前选 A 是和 MarkdownUI、苹果 Foundation 一致的主流选型**（见下），不轻率切 B。
+
+### 行业对标：主流库都用范式 A
+
+- [MarkdownUI](https://github.com/gonzalezreal/swift-markdown-ui)：删除线是实现 `TextStyle` 协议的 `StrikethroughStyle`，递归时 `merge` 进下传的累加 `AttributeContainer`，叶子读取后一次性挂上。
+- 苹果 Foundation `AttributedString(markdown:)`：cmark-gfm 的 strikethrough 扩展解析出 span 后，直接映射到对应 run 的 `strikethroughStyle` attribute。
+
+两者都用「累加 style 下传 + 叶子收集」，没有采用「先出结果再对 range 叠加」。原因：复合样式（如 `~~**bold**~~`）在叶子收集时保证落在同一 run，run 边界对齐更安全；且所有行内样式共用一套机制，扩展性来自协议抽象。
+
+### 演进方向（v2，见 [roadmap](../roadmap.md) Phase B）
+
+根治「叶子遗漏」的方向**不是切范式 B**，而是把 context 里的离散标志（`isStrikethrough`、`linkURL`、`obliqueness`…）收敛成一个**可收集的 TextStyle 容器**——类似 MarkdownUI 的 `_collectAttributes(inout:)`：叶子不再逐个手写 `if`，而是接收一个已收集好所有样式的容器直接 apply。这是范式 A 的成熟形态。v1 维持现状 + 人工补齐叶子即可。
 
 ## 3.3 双通道 + 块路由
 
@@ -74,7 +109,7 @@ public protocol InkBlockHandler {
 | 类型 | 范围 |
 | --- | --- |
 | `InkAppearance` | 视觉参数；`shared` 全局，或每次渲染单独实例 |
-| `InkConfiguration` | 单次渲染的全部可插拔要素（appearance + 扩展点） |
+| `InkConfiguration` | 单次渲染的全部可插拔要素（appearance + 自定义扩展点） |
 
 `Text.blockInsets` 默认 `.zero`：库不占水平边距。垂直间距靠元素下间距 + 尾部哨兵字符。
 

@@ -157,7 +157,7 @@ iOS Simulator 全量测试（或推送触发 CI）。
 
 具体步骤见[第一次运行](../learning-path/00-first-run.md)。
 
-## 添加渲染扩展
+## 添加自定义语法与组件路由扩展
 
 ### 行内：`InkInlineSyntax`
 
@@ -177,7 +177,7 @@ let config = InkConfiguration(inlineSyntaxes: [TagInlineSyntax()])
 let attr = InkAttributedRenderer.render(source, configuration: config)
 ```
 
-`nil` = 交给下一个扩展或默认。基于 `context.baseFont` / `textColor`，才能跟容器匹配。
+`nil` = 交给下一个自定义行内语法扩展或默认。基于 `context.baseFont` / `textColor`，才能跟容器匹配。
 
 ### 块：`InkBlockHandler`
 

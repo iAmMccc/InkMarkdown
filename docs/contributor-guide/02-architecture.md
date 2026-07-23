@@ -1,6 +1,6 @@
 # 二、架构设计
 
-本页解释解析、富文本、块路由和流式渲染怎样分层，以及扩展点为什么位于这些边界。
+本页解释解析、富文本、块路由和流式渲染怎样分层，以及自定义扩展点为什么位于这些边界。
 
 解析交给 swift-markdown。渲染分两条路：能塞进富文本的走 `NSAttributedString`，塞不进去的走 `UIView` 块。流式是前两者的增量版，外加双缓冲。
 
@@ -50,7 +50,7 @@
 | `Rendering/Block/` | 块路由 + `InkRenderableBlock` |
 | `Rendering/Components/` | LayoutManager、代码块/表格/分割线/流式表 |
 | `Rendering/InkTextContext.swift` | 行内样式 context（internal） |
-| `Rendering/InkInlineSyntax.swift` | 行内扩展点 |
+| `Rendering/InkInlineSyntax.swift` | 自定义行内语法扩展点 |
 | `Rendering/InkStreamRenderer.swift` | 流式 + 增量解析 + SPI 基准 |
 
 ## 数据流（`InkBlockRenderer.render`）
@@ -60,12 +60,12 @@
 3. 对每个 child：handler 命中则出 UIView 块，否则进 pending
 4. pending 交给 `InkAttributedRenderer.render(markups:)` → `InkAttributedTextBlock`
 
-## 扩展点
+## 自定义扩展点
 
 | 点 | 类型 | 挂在哪 |
 | --- | --- | --- |
-| 行内语法 | `InkInlineSyntax` | `inlineSyntaxes` |
-| 块路由 | `InkBlockHandler` | `blockHandlers` |
+| 自定义行内语法 | `InkInlineSyntax` | `inlineSyntaxes` |
+| 自定义块级组件路由 | `InkBlockHandler` | `blockHandlers` |
 | 源预处理 | `(String) -> String` | `sourceFilter` |
 | 链接点击 | `(URL, UIView) -> Bool` | `linkTapHandler`（`true` = 已处理） |
 | 样式 | `InkAppearance` | `appearance` / `shared` |

@@ -122,6 +122,11 @@ v1 发布可信  →  v2 InkIR + Transformer  →  UIKit 能力补全  →  TK2 
 | B6 | 扩展点决策树 | sourceFilter / Transformer / InlineSyntax / BlockHandler 何时用哪个 |
 | B7 | 删除线；图片策略 | 契约 + 示例 |
 | B8 | 流式接 IR 或证明兼容 | 一致性测试绿 |
+| B9 | `InkTextContext` → TextStyle 容器化 | 见下 |
+
+**B9 背景**：v1 的 context 下传（范式 A）要求每个叶子显式读取每个样式标志，漏一个叶子就丢样式（删除线初版遗漏 `renderInlineCode` 即此症状）。这是范式 A 的结构性维护税，不是逻辑 bug。主流库（[MarkdownUI](https://github.com/gonzalezreal/swift-markdown-ui)、苹果 Foundation）同选范式 A，但用 `TextStyle` 协议 + `_collectAttributes(inout:)` 把离散标志收敛成可收集容器，叶子接收已收集好的容器直接 apply，从根本上消除「逐叶子补 if」。
+
+**B9 退出标准**：`InkTextContext` 的离散标志（`isStrikethrough` / `linkURL` / `obliqueness` 等）被一个可合并的样式容器取代；新增样式只需实现协议，无需改任何叶子；现有语义测试零回归。详细权衡见 [03-principles §3.2](contributor-guide/03-principles.md)。v1 维持现状 + 人工补齐叶子即可，不提前重构。
 
 对外说法：规则多、需要可测试的语义变换时再挂 transformers；轻量场景继续用现有扩展点。
 

@@ -19,7 +19,7 @@
 | Debt item | Why it exists | Where | Risk if ignored | Suggested fix |
 |-----------|---------------|-------|-----------------|---------------|
 | 删除线：内容保留但未做 GFM strikethrough 样式 | 行内 switch 无 `Strikethrough` 专用分支（default 透传） | `InkAttributedRenderer.renderInline` | 用户以为支持 `~~del~~` 样式 | 明确 v1 契约或补样式 + 测试 |
-| 图片仅占位 | 产品范围不含下载/附件 | `renderImage` | 宿主期望内置图片 | 文档写清；扩展点由宿主做 |
+| 图片仅占位 | 产品范围不含下载/附件 | `renderImage` | 宿主期望内置图片 | 文档写清；自定义扩展点由宿主实现 |
 | 过时 TABLE 指南仍在树内 | 历史材料 | `Components/TABLE_INTEGRATION_GUIDE.md`（已 exclude） | Agent 误读旧 API | 入口已警告；考虑移出 Sources 或标 deprecated |
 | ExampleApp TODO | 演示未完全切到库渲染器 | `MarkdownDetailViewController.swift:137` | 示例与库能力不一致 | 跟进 example plan 或删过时 TODO |
 | 本地缓存仍是可选路径 | ADR-001：默认 revision，不默认 path | `Packages/` vs `Package.swift` | 离线开发需自行 path 覆盖 | 文档写清可选流程即可 |

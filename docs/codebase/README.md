@@ -38,7 +38,7 @@
 出现以下变化时，应重扫并更新本目录（至少相关文件）：
 
 - `Package.swift` 平台 / 依赖 / Swift 模式变化
-- 公开 Renderer / Configuration / 扩展点变化
+- 公开 Renderer / Configuration / 自定义扩展点变化
 - 测试框架或验证命令变化
 - 发现新的高 churn 热点或硬编码限制
 

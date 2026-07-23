@@ -48,9 +48,9 @@ for b in blocks { stack.addArrangedSubview(b.makeView()) }
 - 自定义 `InkInlineSyntax`，或改 attributed 行内分支
 - 或 `sourceFilter` 预处理图片语法
 
-## 7. 怎么加行内 / 块扩展？
+## 7. 怎么加自定义行内语法扩展 / 块级组件路由？
 
-见 [04 扩展](04-development.md)。
+见 [04 开发与自定义扩展](04-development.md)。
 
 ## 8. 改 appearance 默认值测试红了？
 

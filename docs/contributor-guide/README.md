@@ -23,7 +23,7 @@
 | `01-overview.md` | Explanation | 项目解决什么问题，边界在哪里？ |
 | `02-architecture.md` | Explanation | 为什么采用双通道和这些层次？ |
 | `03-principles.md` | Explanation | 固定行高、Context 和流式边界为什么这样设计？ |
-| `04-development.md` | How-to | 怎样构建、测试、扩展和调试？ |
+| `04-development.md` | How-to | 怎样构建、测试、进行自定义语法/组件扩展与调试？ |
 | `05-modules.md` | Reference | 某个类型、模块或扩展点在哪里？ |
 | `06-faq.md` | Troubleshooting | 遇到常见症状时先检查什么？ |
 | `07-ci-and-toolchain-pitfalls.md` | Troubleshooting | CI 钉死版本、本机差异、失败原因？ |

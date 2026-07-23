@@ -17,7 +17,7 @@ Markup tree and turns it into native UI:
 - `NSAttributedString` for rich text.
 - Block `UIView`s for tables, code blocks, and thematic breaks.
 - Incremental rendering for streaming Markdown.
-- Host extension points for inline syntax, block routing, source filtering,
+- Host custom extension points for custom inline syntax, block routing, source filtering,
   appearance, and link handling.
 
 ## Why InkMarkdown
@@ -26,9 +26,9 @@ Markup tree and turns it into native UI:
 | --- | --- | --- |
 | `swift-markdown` | Parsing + Markup AST | Adds a UIKit-native **render layer** on top. |
 | MarkdownUI / Textual | Mature **SwiftUI** rendering | Focuses on UIKit instead of duplicating their SwiftUI scope. |
-| Microsoft SwiftStreamingMarkdown | Streaming + SwiftUI-oriented product features | Pure native stack with **block routing**, fixed line height, and host-pluggable handlers—built for embedding in existing UIKit apps first. |
+| Microsoft SwiftStreamingMarkdown | Streaming + SwiftUI-oriented product features | Pure native stack with **block routing**, fixed line height, and host-pluggable custom handlers—built for embedding in existing UIKit apps first. |
 | HTML / WebView renderers | HTML or embedded web | Native text + views; no WebView required for core content. |
-| Simple attributed-string helpers | Inline rich text | Block routing (tables / code), streaming, and extension points. |
+| Simple attributed-string helpers | Inline rich text | Block routing (tables / code), streaming, and custom extension points. |
 
 ## Requirements
 

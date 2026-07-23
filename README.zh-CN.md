@@ -15,7 +15,7 @@ InkMarkdown 明确不提供 SwiftUI 渲染器。MarkdownUI 与 Textual 已覆盖
 - `NSAttributedString` 富文本。
 - 用于表格、代码块和分割线的块级 `UIView`。
 - 面向流式 Markdown 的增量渲染。
-- 行内语法、块路由、源过滤、外观和链接处理扩展点。
+- 自定义行内语法、块级组件路由、源清洗过滤、外观设计和链接点击等自定义扩展点。
 
 ## 为什么需要 InkMarkdown
 
@@ -23,9 +23,9 @@ InkMarkdown 明确不提供 SwiftUI 渲染器。MarkdownUI 与 Textual 已覆盖
 | --- | --- | --- |
 | `swift-markdown` | 解析 + Markup AST | 在 AST 之上补 UIKit 原生**渲染层**。 |
 | MarkdownUI / Textual | 成熟的 **SwiftUI** 渲染 | 专注 UIKit，不重复其 SwiftUI 范围。 |
-| Microsoft SwiftStreamingMarkdown | 流式 + 偏 SwiftUI 的产品能力 | 原生栈 + **块路由**、固定行高、宿主可插拔扩展——先服务可嵌入的 UIKit App。 |
+| Microsoft SwiftStreamingMarkdown | 流式 + 偏 SwiftUI 的产品能力 | 原生栈 + **块路由**、固定行高、宿主自定义可插拔扩展——先服务可嵌入的 UIKit App。 |
 | HTML / WebView 渲染 | HTML 或内嵌网页 | 核心内容走原生文本与视图，不依赖 WebView。 |
-| 简单富文本助手 | 行内富文本 | 另有块路由（表格/代码）、流式与扩展点。 |
+| 简单富文本助手 | 行内富文本 | 另有块路由（表格/代码）、流式与自定义扩展点。 |
 
 ## 要求
 
