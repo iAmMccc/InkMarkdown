@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-本目录记录**已接受的工程决策**（为什么这样定、否决了什么）。实现细节与当前交付状态仍以源码、`current-status.md` 为准。
+本目录记录已确定的工程决策（说明背景与否决方案）。实现细节与交付状态以源码和 `current-status.md` 为准。
 
 | ADR | 标题 | 状态 |
 | --- | --- | --- |
@@ -10,4 +10,4 @@
 | [ADR-004](ADR-004-v1-image-and-strikethrough-contract.md) | v1 图片与删除线行为契约 | Accepted |
 | [ADR-005](ADR-005-stream-max-parse-length-configurable.md) | 流式 `maxParseLength` 可配置 | Accepted |
 
-编号只增不删；决策变更时写新 ADR 并标记旧条目为 Superseded。
+编号递增且只增不删；决策变更时补充新 ADR 并将旧条目标记为 Superseded。

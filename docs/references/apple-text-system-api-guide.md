@@ -1,67 +1,61 @@
 # Apple 文本系统 API 速查
 
-本页是 Reference，用于查找 InkMarkdown 涉及的 Foundation 与 UIKit 文本 API。概念入门可另查个人知识库中的 TextKit 教程；贡献本库时以本页与源码为准。
+用于查找 InkMarkdown 使用的 Foundation 与 UIKit 文本 API。以本文档与源码实现为准。
 
-> 核对日期：2026-07-14。类型概要与可用版本由 Apple Developer Documentation 核对；InkMarkdown 的采用方式以当前源码为准。
+> 核对日期：2026-07-14。基于 Apple Developer Documentation 与 InkMarkdown 当前源码。
 
-## 按任务查 API
+## 常用 API 清单
 
-先根据任务选择类型，再进入 Apple 的完整 API 页。
-
-| 任务 | 主要类型 | Apple 的定位 | 最低 iOS |
+| 任务 | 主要类型 | 职责描述 | 最低 iOS |
 | --- | --- | --- | --- |
-| 保存按范围分配的文字与属性 | `NSAttributedString` | 管理字符范围上的数据、排版信息和样式信息 | 3.2 |
-| 追加文字或修改属性 | `NSMutableAttributedString` | 可修改的富文本字符串 | 3.2 |
-| 使用 Swift 值语义富文本 | `AttributedString` | 带属性的 Swift 值类型，支持从 Markdown 创建 | 15.0 |
-| 表示一段位置和长度 | `NSRange` | 描述序列中的一部分 | 2.0 |
-| 显示可滚动、可选择的多行文本 | `UITextView` | 可滚动的多行文本区域 | 2.0 |
-| 在 TextKit 1 中保存并通知富文本变更 | `NSTextStorage` | TextKit 的基础存储机制 | 7.0 |
-| 在 TextKit 1 中布局和绘制字形 | `NSLayoutManager` | 协调文字字符的布局与显示 | 7.0 |
-| 限定文字可使用的布局区域 | `NSTextContainer` | 文字发生布局的区域 | 7.0 |
+| 保存带样式的文本 | `NSAttributedString` | 管理字符范围、排版与样式属性 | 3.2 |
+| 追加文本或修改属性 | `NSMutableAttributedString` | 可变的富文本字符串 | 3.2 |
+| 使用 Swift 值语义富文本 | `AttributedString` | 带属性的 Swift 值类型，支持从 Markdown 构建 | 15.0 |
+| 表示范围与长度 | `NSRange` | 描述字符范围 | 2.0 |
+| 多行可滚动文本显示 | `UITextView` | 可滚动的多行文本视图 | 2.0 |
+| TextKit 1 富文本存储与变更通知 | `NSTextStorage` | TextKit 基础存储组件 | 7.0 |
+| TextKit 1 字符排版与字形绘制 | `NSLayoutManager` | 协调字符布局与显示绘制 | 7.0 |
+| 限定文本布局区域 | `NSTextContainer` | 定义文本排版的几何区域 | 7.0 |
 
-## 区分两种 AttributedString
+## NSAttributedString 与 Swift AttributedString
 
-`NSAttributedString` 和 Swift `AttributedString` 都能表示富文本，但它们的可用版本和使用方式不同。
-
-| 对比 | `NSAttributedString` | `AttributedString` |
+| 维度 | `NSAttributedString` | `AttributedString` |
 | --- | --- | --- |
 | 类型模型 | Foundation 引用类型 | Swift 值类型 |
-| 可用版本 | iOS 3.2+ | iOS 15+ |
-| 常用范围 | `NSRange` | `AttributedString.Index` / Swift 范围 |
-| UIKit 接入 | `UITextView.attributedText` 直接接收 | 需根据宿主 API 转换或使用对应的 SwiftUI 路径 |
-| InkMarkdown | 当前公开输出 | 不是当前公开输出 |
+| 最低版本 | iOS 3.2+ | iOS 15+ |
+| 范围表示 | `NSRange` | `AttributedString.Index` / Swift Range |
+| UIKit 结合 | `UITextView.attributedText` 直接支持 | 需要转换为 `NSAttributedString` 或用于 SwiftUI |
+| InkMarkdown | 当前公开导出类型 | 未作为公开导出类型 |
 
-InkMarkdown 支持 iOS 14，公开渲染边界又是 UIKit，因此选择 `NSAttributedString` 是项目约束，不是对 Swift `AttributedString` 的通用优劣判断。
+由于 InkMarkdown 支持 iOS 14 并原生适配 UIKit，因此选用 `NSAttributedString` 作为核心输出形态。
 
-## TextKit 1 对象关系
+## TextKit 1 架构与对象关系
 
-TextKit 1 把存储、布局区域和字形绘制分给不同对象。
+TextKit 1 将数据存储、几何区域与字形绘制解耦管理：
 
 ```mermaid
 flowchart LR
-  A["NSTextStorage\n文字与 attributes"] --> B["NSLayoutManager\n字符、glyph、行片段与绘制"]
-  B --> C["NSTextContainer\n可布局区域"]
-  C --> D["UITextView\n显示与交互"]
+  A["NSTextStorage\n文本与属性"] --> B["NSLayoutManager\n字符、Glyph、行片段与绘制"]
+  B --> C["NSTextContainer\n布局区域"]
+  C --> D["UITextView\n视图与交互"]
   D -. "公开 textStorage / layoutManager / textContainer" .-> A
 ```
 
-`UITextView` 同时提供 `layoutManager` 和 `textLayoutManager` 等访问点。这表明系统有 TextKit 1 与 TextKit 2 路径，不代表应用已自动采用项目需要的自定义布局管理器。
+`UITextView` 同时公开 `layoutManager` 与 `textLayoutManager`。虽然系统包含 TextKit 1 与 TextKit 2 路径，但默认自动构建的 `UITextView` 不会自动挂载项目的自定义布局管理器。
 
-InkMarkdown 在 `InkAttributedTextBlock.makeView()` 中显式组装 `InkMarkdownLayoutManager`。宿主若只把渲染结果赋给任意 `UITextView.attributedText`，标准属性仍可显示，但项目自定义的行内代码圆角背景和引用竖线不保证出现。
+InkMarkdown 在 `InkAttributedTextBlock.makeView()` 中显式组装 `InkMarkdownLayoutManager`。若直接将渲染结果赋给标准 `UITextView.attributedText`，基本文本样式正常显示，但行内代码圆角背景与引用块竖线依赖自定义 LayoutManager 的绘制逻辑。
 
-## 常用查找路径
+## 常见排查路径
 
-使用下表快速缩小问题范围。
-
-| 现象 | 先查 | 再查 InkMarkdown |
+| 现象 | 排查重点 | InkMarkdown 代码位置 |
 | --- | --- | --- |
-| 文字内容正确，字体或颜色错误 | `NSAttributedString` attributes | `InkTextContext` 与行内叶子渲染 |
-| 行高、缩进或段后距错误 | `NSParagraphStyle` | `applyFixedLineHeight` |
-| 自定义背景形状错误 | `NSLayoutManager` 绘制回调 | `InkMarkdownLayoutManager` |
-| 换行区域或边距错误 | `NSTextContainer` | block view 的 container 配置 |
-| 链接无法点击 | `UITextView` 选择、delegate 与 `.link` | `InkAttributedBlockTextView` 与 `linkTapHandler` |
+| 字体或颜色异常 | `NSAttributedString` 属性 | `InkTextContext` 与行内叶节点渲染 |
+| 行高、缩进或段间距异常 | `NSParagraphStyle` | `applyFixedLineHeight` |
+| 背景圆角或图形绘制异常 | `NSLayoutManager` 绘制回调 | `InkMarkdownLayoutManager` |
+| 换行或边距异常 | `NSTextContainer` | 块视图 container 配置 |
+| 链接点击无响应 | `UITextView` 手势、Delegate 与 `.link` 属性 | `InkAttributedBlockTextView` 与 `linkTapHandler` |
 
-## Apple 官方来源
+## Apple 官方 API 链接
 
 - [`NSAttributedString`](https://developer.apple.com/documentation/foundation/nsattributedstring)
 - [`NSMutableAttributedString`](https://developer.apple.com/documentation/foundation/nsmutableattributedstring)
@@ -75,4 +69,4 @@ InkMarkdown 在 `InkAttributedTextBlock.makeView()` 中显式组装 `InkMarkdown
 
 ## 维护规则
 
-当项目的最低 iOS 版本、公开富文本类型或 TextKit 路径变化时，同步核对本页和[架构文档](../contributor-guide/02-architecture.md)。
+最低支持 iOS 版本、公开富文本接口或 TextKit 机制变更时，同步更新本文档与[架构文档](../contributor-guide/02-architecture.md)。

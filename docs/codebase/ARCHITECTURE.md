@@ -1,75 +1,75 @@
-# Architecture
+# 架构设计
 
-## Core Sections (Required)
+## 核心架构
 
-### 1) Architectural Style
+### 1) 架构风格与模式
 
-- Primary style: **分层渲染管线**（parse → style config → dual-channel render）+ **策略扩展点**（block handlers / inline syntax）
-- Why this classification:
-  - 解析与渲染分离；解析 100% 委托 swift-markdown（`InkParser` 仅 8 行包装）
-  - 渲染按“能否进入 `NSAttributedString`”分为富文本通道与 UIView 块通道
-  - 流式是双通道之上的增量编排（解析缓冲 + 显示缓冲），不是第三条语义后端
-- Primary constraints:
-  - **UIKit only**；不做 SwiftUI 渲染器（产品决策）
-  - 固定行高 + baseline 居中（混排字体一致性）
-  - v1：**Markup 直接渲染**，无独立 IR（roadmap 规划 v2 `InkIR`）
+- **分层渲染管线**：解析（parse） → 样式配置（style config） → 双通道渲染（dual-channel render），配合策略扩展点（block handlers / inline syntax）。
+- **分层逻辑**：
+  - 解析与渲染解耦：解析由 `swift-markdown` 处理（`InkParser` 作为轻量包装）。
+  - 渲染通道分离：根据元素能否构建为 `NSAttributedString`，划分为富文本通道与 `UIView` 块级通道。
+  - 流式增量渲染：作为双通道上的控制编排机制（解析缓冲与显示缓冲），不新增第三套语义后端。
+- **架构约束**：
+  - **纯 UIKit 架构**：不提供 SwiftUI 渲染器。
+  - **固定行高机制**：固定行高结合 baseline 居中对齐，保证混排字体排版一致。
+  - **v1 阶段直接渲染**：直接由 `Markup` 渲染，无独立 IR 中端（`InkIR` 规划于 v2）。
 
-### 2) System Flow
+### 2) 系统数据流
 
 ```text
-Markdown source
-  → optional sourceFilter (InkConfiguration)
-  → InkParser.parse → Document / Markup tree (swift-markdown)
-  → path A: InkAttributedRenderer (+ InkTextContext) → NSAttributedString
-  → path B: InkBlockRenderer + blockHandlers → [InkRenderableBlock] → UIView
-  → path C: InkStreamRenderer (append/finish) → background parse queue
-             → preloadContent → CADisplayLink flush → UITextView.textStorage
+Markdown 源码
+  → sourceFilter (可选预处理)
+  → InkParser.parse → Document / Markup 语法树 (swift-markdown)
+  → 路径 A: InkAttributedRenderer (+ InkTextContext) → NSAttributedString
+  → 路径 B: InkBlockRenderer + blockHandlers → [InkRenderableBlock] → UIView
+  → 路径 C: InkStreamRenderer (append/finish) → 后台解析队列
+             → preloadContent → CADisplayLink 刷新 → UITextView.textStorage
 ```
 
-步骤（证据）：
+**执行流程说明：**
 
-1. **配置**：`InkConfiguration` 聚合 appearance、inlineSyntaxes、blockHandlers、sourceFilter、linkTapHandler（`Configuration/InkConfiguration.swift`）。
-2. **解析**：`InkParser.parse` → `Document(parsing:)`（`Parser/InkParser.swift`）。
-3. **富文本**：`InkAttributedRenderer` 递归 Markup；样式经 `InkTextContext` **向下传递**，叶子一次生成 run；后处理只加 paragraphStyle / baselineOffset（文件头注释）。
-4. **块路由**：`InkBlockRenderer` 遍历 document children；handler 命中则 flush 待渲染 markup 为 attributed block，再追加自定义 block（`Block/InkBlockRenderer.swift`）。
-5. **流式**：`append` 累积 buffer（硬上限 50_000）；后台 `InkIncrementalMarkdownRenderer` 增量解析；主线程 CADisplayLink 按帧吐字（`InkStreamRenderer.swift` 架构注释）。
+1. **配置组装**：`InkConfiguration` 聚合 `appearance`、`inlineSyntaxes`、`blockHandlers`、`sourceFilter` 与 `linkTapHandler`（`Configuration/InkConfiguration.swift`）。
+2. **文本解析**：`InkParser.parse` 转换为 `Document(parsing:)`（`Parser/InkParser.swift`）。
+3. **富文本渲染**：`InkAttributedRenderer` 递归遍历 `Markup` 语法树。样式通过 `InkTextContext` 向下传递，叶子节点直接生成属性区块，后处理统一应用 `paragraphStyle` 与 `baselineOffset`。
+4. **块级路由**：`InkBlockRenderer` 遍历文档子节点；命中自定义 Handler 时冲刷待渲染 Markup 为富文本块，并追加自定义 `UIView` 块（`Block/InkBlockRenderer.swift`）。
+5. **流式渲染**：`append` 积累缓存（硬上限 50,000 字符）；后台 `InkIncrementalMarkdownRenderer` 执行增量解析；主线程使用 `CADisplayLink` 逐帧更新视图（`InkStreamRenderer.swift`）。
 
-### 3) Layer/Module Responsibilities
+### 3) 模块职责界定
 
-| Layer or module | Owns | Must not own | Evidence |
+| 模块 | 职责范围 | 排除职责 | 验证依据 |
 |-----------------|------|--------------|----------|
-| Parser | Markup 树获取；行分类辅助 | 样式、UIKit 布局 | `Parser/` |
-| Configuration | 外观默认值、一次渲染的可插拔列表 | 解析语义、网络/图片加载 | `Configuration/` |
-| AttributedString render | 固定行高、行内/块级富文本映射 | 表格网格、下载资源 | `InkAttributedRenderer.swift` |
-| Block routing | 将特定 Markup 交给 handler → UIView 块 | 重写解析器 | `Block/*` |
-| Components | CodeBlock / Table / ThematicBreak / LayoutManager 视图实现 | 业务导航 | `Components/` |
-| Stream | 增量边界、双缓冲、主线程约束 | 持久化、网络 SSE 本身 | `InkStreamRenderer.swift` |
-| ExampleApp | 演示与手动验收 | 库语义真相源 | `ExampleApp/` |
+| Parser | Markup 语法树构建与行分类 | 样式计算与 UIKit 布局 | `Parser/` |
+| Configuration | 外观默认值及渲染可扩展项 | 解析语义与网络资源加载 | `Configuration/` |
+| AttributedString render | 固定行高计算及富文本映射 | 表格网格绘制与图片下载 | `InkAttributedRenderer.swift` |
+| Block routing | 路由特定 Markup 至 UIView 块 | 重写解析规则 | `Block/*` |
+| Components | 代码块、表格与分割线视图组件 | 业务逻辑与导航控制 | `Components/` |
+| Stream | 增量边界划分、双缓冲与主线程同步 | 数据持久化与网络请求 | `InkStreamRenderer.swift` |
+| ExampleApp | 功能演示与交互验证 | 库核心语义实现 | `ExampleApp/` |
 
-### 4) Reused Patterns
+### 4) 复用设计模式
 
-| Pattern | Where found | Why it exists |
+| 模式 | 应用位置 | 作用 |
 |---------|-------------|---------------|
-| Facade / thin parse wrapper | `InkParser` | 固定解析入口，便于替换测试或未来选项 |
-| Strategy / Open-Closed handlers | `InkBlockHandler` + 默认 code/table/break | 宿主扩展块类型而不改核心路由 |
-| Context object (downward) | `InkTextContext` | 避免“先渲染再 enumerate 覆盖”造成样式互相踩 |
-| Dual-buffer streaming | parse queue + CADisplayLink display | 解析抖动与吐字动画解耦 |
-| SPI for benchmarks | `@_spi(Performance) InkStreamingPerformanceBenchmark` | 性能闸门不污染常规 public API |
-| Re-export | `@_exported import Markdown` | 宿主扩展 Markup 时少链一个 target |
+| 外观模式 (Facade) | `InkParser` | 提供统一解析入口 |
+| 策略模式 (Strategy) | `InkBlockHandler` 及默认块（代码/表格/分割线） | 支持宿主扩展块级视图类型 |
+| 上下文下传 (Context Object) | `InkTextContext` | 解决覆盖二次遍历导致的样式覆盖问题 |
+| 双缓冲 (Dual-buffer) | 解析队列 + CADisplayLink 显示 | 解耦解析计算与渲染刷新 |
+| SPI 隔离 | `@_spi(Performance) InkStreamingPerformanceBenchmark` | 隔离性能基准测试与公共 API |
+| 重新导出 | `@_exported import Markdown` | 避免宿主二次依赖 Markup 模块 |
 
-### 5) Known Architectural Risks
+### 5) 潜在架构风险
 
-- **平台声明 vs 产品决策**：目标多平台，但实现与 manifest 绑定 UIKit/iOS（见 CONCERNS / STACK Intent vs Reality）。
-- **依赖升级仍需人工**：已 pin revision（ADR-001），但升级时必须重跑测试/CI。
-- **大文件复杂度**：`InkStreamRenderer`（~632 LOC）、`InkAttributedRenderer`（~583 LOC）为高认知负载热点。
-- **流式长度硬编码**：`maxParseLength = 50_000`，超限静默停解析 / 截断 finish。
-- **v1 无 IR**：复杂语义变换只能塞进 renderer 或 sourceFilter，可测可组合性受限（roadmap v2）。
+- **平台声明与范围**：底层与 Manifest 绑定 UIKit/iOS。
+- **依赖更新机制**：已锁定 Revision（ADR-001），升级需同步验证 CI 与测试集。
+- **核心文件体量**：`InkStreamRenderer`（约 632 行）与 `InkAttributedRenderer`（约 583 行）属于核心维护点。
+- **流式长度限制**：`maxParseLength = 50_000`，超限停止解析或截断处理。
+- **v1 中端缺失**：复杂语义变换需借由 Renderer 或 `sourceFilter` 处理（中端架构规划于 v2）。
 
-### 6) Evidence
+### 6) 验证依据
 
 - `Sources/InkMarkdown/InkMarkdown.swift`
 - `Sources/InkMarkdown/Configuration/InkConfiguration.swift`
 - `Sources/InkMarkdown/Rendering/AttributedString/InkAttributedRenderer.swift`
 - `Sources/InkMarkdown/Rendering/Block/InkBlockRenderer.swift`
 - `Sources/InkMarkdown/Rendering/InkStreamRenderer.swift`
-- `docs/contributor-guide/02-architecture.md`（设计叙述；实现以源码为准）
+- `docs/contributor-guide/02-architecture.md`

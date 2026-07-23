@@ -1,40 +1,39 @@
 # 发展方向与路线
 
-产品范围以根目录 `AGENTS.md` / `CLAUDE.md` 为准；已交付状态以
-[current-status.md](current-status.md)、`Package.swift`、源码和测试为证据。
+产品范围以根目录 `AGENTS.md` / `CLAUDE.md` 为准；已交付状态以 [current-status.md](current-status.md)、`Package.swift`、源码和测试为准。
 
-本文只答三件事：库最终长什么样、地基在哪、接下来做什么。
+本文记录目标形态、技术路线与版本规划。
 
-标注：
+分类定义：
 
-- **承诺**：有退出标准
-- **试探**：先做验证，失败就写进「不做」
-- **本阶段不做**：刻意砍掉的范围
+- **承诺**：具备明确退出标准。
+- **试探**：通过 PoC 验证，未达预期则移入「不做」。
+- **本阶段不做**：明确排除的功能范围。
 
 ## 1. 目标形态
 
-基于 swift-markdown 的 Apple 原生 Markdown **渲染**库：
+基于 swift-markdown 的 Apple 原生 Markdown 渲染库：
 
-- **现在**：UIKit。富文本塞进 `UITextView` / 列表；表格、代码块等走 `UIView`；AI 流式有测试兜着
-- **v2**：解析结果先落到中间模型 **InkIR**，可挂可选 Transformer
-- **更后**：继续完善 UIKit 渲染、扩展语义与平台验证，不增加 SwiftUI 后端
+- **当前**：UIKit。富文本使用 `UITextView` 与列表；表格、代码块等采用 `UIView`；具备流式渲染验证测试。
+- **v2**：解析结果生成中间模型 **InkIR**，支持挂载可选 Transformer。
+- **后续**：持续完善 UIKit 渲染、扩展语义与平台验证，不增加 SwiftUI 后端。
 
-### 给谁用
+### 适用场景
 
-| 优先级 | 场景 | 需要什么 |
+| 优先级 | 场景 | 核心需求 |
 | --- | --- | --- |
-| 高 | UIKit / 混合（IM、资讯、AI 对话） | 嵌进现有气泡和 Cell，不绑死 SwiftUI |
-| 高 | 流式 Markdown | 不越聊越卡、样式别乱跳、增量结果可测 |
-| 中 | 业务扩展 | @提及、特殊 fence 出卡片、链接消毒 |
-| 中 | 大型 UIKit 宿主 | 统一语义、可组合扩展、可控的性能与兼容性 |
+| 高 | UIKit / 混合界面（IM、资讯、AI 对话） | 嵌套至现有气泡与 Cell，解耦 SwiftUI |
+| 高 | 流式 Markdown 渲染 | 避免性能衰减与样式跳变，提供可测增量结果 |
+| 中 | 业务语法扩展 | 支持 `@提及`、自定义代码块卡片、链接过滤 |
+| 中 | 大型 UIKit 宿主应用 | 统一语义规范、可组合扩展能力、可控性能 |
 
-### 和别人比，靠什么
+### 核心特征
 
-1. **嵌进 UIKit**：`NSAttributedString` + 块级 `UIView`；固定行高；主路径不是 WebView
-2. **流式有规矩**：稳定前缀 / 活跃后缀 + 双缓冲；增量和全量有基准与一致性测试
-3. **扩展分两档**
-   - 轻量（已有）：`sourceFilter`、`InkInlineSyntax`、`InkBlockHandler`、`linkTapHandler`
-   - 进阶（v2）：InkIR + Transformer——规则多、需要稳定语义变换时再上，不是「没中端就不能用」
+1. **UIKit 整合**：基于 `NSAttributedString` 与块级 `UIView`，使用固定行高，非 WebView 架构。
+2. **流式渲染机制**：使用稳定前缀 / 活跃后缀与双缓冲结构，配置增量与全量测试基准。
+3. **分层扩展能力**
+   - 轻量层（已有）：`sourceFilter`、`InkInlineSyntax`、`InkBlockHandler`、`linkTapHandler`
+   - 进阶层（v2）：InkIR + Transformer（用于复杂规则与多级语义转换）
 
 ### 目标管线
 
@@ -47,129 +46,129 @@ Markdown
   → UIKit 后端（富文本 + 块 + 流式）
 ```
 
-| 阶段 | 对外形态 |
+| 阶段 | 接口形态 |
 | --- | --- |
-| v1 | 仍可直接 Markup → 渲染；不强制公开 IR |
-| v2 | IR 成为中端；UIKit 渲染吃 IR |
+| v1 | 支持直接通过 Markup 渲染，无需公开 IR |
+| v2 | IR 作为中端，UIKit 渲染基于 IR |
 
-### 做 / 不做
+### 功能边界
 
-| 做 | 不做 |
+| 包含 | 不包含 |
 | --- | --- |
-| CommonMark + 实用 GFM | 完整 HTML 浏览器、编辑器、高亮引擎本体 |
-| UIKit 渲染 + 流式 | WebView 主路径 |
-| 扩展点；v2 再上 IR/Transformer | 把 TED 当默认流式引擎；对外吹 O(1) |
-| UIKit 渲染 + 可组合语义扩展 | SwiftUI 渲染器；和 MarkdownUI 抢主题生态 |
-| **TextKit 1** 为库内绘制默认 | 短期只交 TextKit 2 / 承诺 Bear 级长文 |
-| 图片、删除线按版本补 | 「解析器能 parse 的全都渲」 |
+| CommonMark + 实用 GFM | 完整 HTML 浏览器、编辑器、独立高亮引擎 |
+| UIKit 渲染 + 流式支持 | WebView 渲染主路径 |
+| 基础扩展点（v2 引入 IR/Transformer） | 将 TED 作为默认流式引擎 |
+| UIKit 渲染 + 可组合扩展 | SwiftUI 渲染器及 Theme 主题生态 |
+| **TextKit 1** 库内绘制默认 | 仅依赖 TextKit 2 或长文编辑器架构 |
+| 补全图片与删除线契约 | 强制渲染所有解析节点 |
 
-### 文本引擎：TextKit 1 默认，TextKit 2 只试探
+### 文本引擎选型：TextKit 1 为默认，TextKit 2 保持试探
 
-| | TextKit 1 | TextKit 2 |
+| 维度 | TextKit 1 | TextKit 2 |
 | --- | --- | --- |
-| 是什么 | UIKit 旧文本排版机 | 新排版机；不是另一套 UI 框架 |
-| 本库 | 在用：`InkMarkdownLayoutManager` 画代码底、引用竖线 | 未用 |
-| 聊天气泡 / 中短文 | 够用 | 没必要当默认 |
-| 万行长文档编辑 | 上限弱 | 理论上更合适（另一类产品） |
+| 定位 | UIKit 原生文本排版引擎 | 新一代排版引擎（非 UI 框架） |
+| 库内状态 | 使用中：`InkMarkdownLayoutManager` 绘制代码背景与引用竖线 | 未使用 |
+| 场景契合 | 满足对话气泡与中短文需求 | 无需作为默认引擎 |
+| 极端长文 | 性能上限受限 | 理论更适合超长文本（属于不同产品定位） |
 
-**v1–v2 正式路径 = TextKit 1。**
+**v1–v2 默认路径为 TextKit 1。**
 
-库内 text view / block 走 TK1。宿主只把 `NSAttributedString` 塞进自己的 `UITextView`，基础属性两边都能显示；圆角代码底等自定义绘制，要用库提供的 text view / block。
+库内 text view 与 block 使用 TextKit 1。宿主仅将 `NSAttributedString` 传入自带 `UITextView` 时可显示基础属性；若需圆角代码背景等自定义绘制，需使用库提供的 text view / block。
 
-TextKit 2 只做远期试探（fragment 能否复现代码底/竖线、长文是否真有收益）；失败就公开写进「不做」。
+TextKit 2 仅作为远期试探（验证 Fragment 机制是否满足自定义绘制及长文收益）；若不可行将移入「不做」。
 
-### 版本怎么切
+### 版本划分
 
 | 版本 | 定义 |
 | --- | --- |
-| **v1.0** | 能信的 UIKit 库：契约测试、CI、API 干净、文档诚实；**不强制公开 IR** |
-| **v2.0** | InkIR + Transformer + 扩展决策树 + 删除线/图片策略；渲染吃 IR |
-| **v2.x** | 图片 / 删除线等语义补全、可访问性与性能完善 |
-| **v3+** | 平台兼容落地；TextKit 2 试探；TED 仅研究，没收益就归档 |
+| **v1.0** | 可靠的 UIKit 渲染库：包含契约测试、CI、规范 API 与完整文档；**不强制公开 IR** |
+| **v2.0** | 引入 InkIR + Transformer + 扩展决策树 + 删除线/图片策略；渲染依赖 IR |
+| **v2.x** | 补全图片与删除线语义，完善可访问性与性能 |
+| **v3+** | 多平台兼容落地；TextKit 2 试探；TED 机制研究 |
 
-## 2. 路线
+## 2. 路线规划
 
-当前已经交付的能力、限制和配置漂移只在 [current-status.md](current-status.md) 维护。本页从该基线向后安排版本，不复制现状表。
+已交付能力、限制与配置项保持在 [current-status.md](current-status.md) 维护。
 
 ```text
-v1 发布可信  →  v2 InkIR + Transformer  →  UIKit 能力补全  →  TK2 / 平台验证 / TED 试探
+v1 发布  →  v2 InkIR + Transformer  →  UIKit 能力补全  →  TK2 / 平台验证 / TED 试探
 ```
 
-依赖关系：没有 v1 快照护栏，不上 IR；没有稳定 IR，不扩展复杂语义变换。
+依赖关系：缺乏 v1 快照护栏时不引入 IR；缺乏稳定 IR 时不扩展复杂语义转换。
 
 ### Phase A → v1.0.0（承诺）
 
 | ID | 事项 | 退出标准 |
 | --- | --- | --- |
-| A1 | 建立可信知识基线 | README、当前状态、roadmap 与 contributor guide 分层清楚且相互一致 |
-| A2 | CommonMark + 已支持 GFM 快照补全 | 每类元素至少 1 条语义断言 |
-| A3 | 公开 API 审计 | 有清单；内部用 `internal`/`@_spi`；核心 API 有中文 `///` |
-| A4 | CI | PR 上 iOS Simulator 测试不过不能合 |
-| A5 | CHANGELOG + `1.0.0` | 写清 API 与限制（图片/删除线/仅 iOS/TK1） |
-| A6 | ExampleApp | 富文本 / 块表 / 流式 / 自定义 handler 各有入口 |
+| A1 | 建立知识基线 | README、当前状态、roadmap 与贡献者指南内容一致 |
+| A2 | 快照测试补全 | CommonMark 与支持的 GFM 元素均包含语义断言 |
+| A3 | 公开 API 审计 | 内部符号标记 `internal`/`@_spi`，公开 API 补充中文注释 |
+| A4 | CI 建设 | PR 需通过 iOS Simulator 测试 |
+| A5 | 发布 준비 | 补充 CHANGELOG，明确 API 与限制（图片/删除线/iOS/TK1） |
+| A6 | ExampleApp 补全 | 提供富文本、块、流式及自定义 handler 示例 |
 
-**v1 本阶段不做：** 公开 InkIR、Transformer、TextKit 2、TED、多平台正式支持、Theme 协议。SwiftUI 不属于任何阶段。
+**v1 阶段不包含：** 公开 InkIR、Transformer、TextKit 2、TED、多平台正式支持、Theme 协议。SwiftUI 不在此路线中。
 
 ### Phase B → v2.0.0（架构跃迁）
 
 | ID | 事项 | 退出标准 |
 | --- | --- | --- |
-| B1 | 最小 `InkBlock` / `InkInline` | 覆盖已渲节点；值类型 |
-| B2 | Markup → InkIR | 1:1 + 单测 |
-| B3 | UIKit 渲染吃 IR | 与 v1 快照零回归 |
-| B4 | `InkTransformer` + 配置挂载 | 空列表 = 旧行为 |
-| B5 | 两个真 demo | ① Mention ② LaTeX / 业务 fence |
-| B6 | 扩展点决策树 | sourceFilter / Transformer / InlineSyntax / BlockHandler 何时用哪个 |
-| B7 | 删除线；图片策略 | 契约 + 示例 |
-| B8 | 流式接 IR 或证明兼容 | 一致性测试绿 |
-| B9 | `InkTextContext` → TextStyle 容器化 | 见下 |
+| B1 | 基础 `InkBlock` / `InkInline` | 覆盖现有渲染节点，采用值类型 |
+| B2 | Markup → InkIR Lowering | 实现 1:1 转换并提供单测 |
+| B3 | 基于 IR 的 UIKit 渲染 | 与 v1 快照测试保持零回归 |
+| B4 | `InkTransformer` 配置挂载 | 空配置保持原有渲染行为 |
+| B5 | 示例扩充 | 提供 Mention 与自定义 Fence/LaTeX 示例 |
+| B6 | 扩展决策指南 | 明确 sourceFilter / Transformer / InlineSyntax / BlockHandler 的适用场景 |
+| B7 | 补全删除线与图片策略 | 提供契约文档与示例代码 |
+| B8 | 流式接入 IR | 通过流式一致性测试 |
+| B9 | `InkTextContext` 样式容器化 | 实现样式收集容器化重构 |
 
-**B9 背景**：v1 的 context 下传（范式 A）要求每个叶子显式读取每个样式标志，漏一个叶子就丢样式（删除线初版遗漏 `renderInlineCode` 即此症状）。这是范式 A 的结构性维护税，不是逻辑 bug。主流库（[MarkdownUI](https://github.com/gonzalezreal/swift-markdown-ui)、苹果 Foundation）同选范式 A，但用 `TextStyle` 协议 + `_collectAttributes(inout:)` 把离散标志收敛成可收集容器，叶子接收已收集好的容器直接 apply，从根本上消除「逐叶子补 if」。
+**B9 说明**：v1 的上下文下传范式要求每个叶子节点显式读取样式标志，漏掉节点会导致样式丢失。MarkdownUI 与 Apple Foundation 采用 `TextStyle` 协议 + `_collectAttributes(inout:)` 将离散标志收敛为可收集容器，叶子节点直接应用已收集容器。
 
-**B9 退出标准**：`InkTextContext` 的离散标志（`isStrikethrough` / `linkURL` / `obliqueness` 等）被一个可合并的样式容器取代；新增样式只需实现协议，无需改任何叶子；现有语义测试零回归。详细权衡见 [03-principles §3.2](contributor-guide/03-principles.md)。v1 维持现状 + 人工补齐叶子即可，不提前重构。
+**B9 退出标准**：`InkTextContext` 的离散标志替换为可合并样式容器；新增样式只需实现协议，无需修改叶子节点；语义测试零回归。设计对比详见 [03-principles §3.2](contributor-guide/03-principles.md)。v1 维持现有实现。
 
-对外说法：规则多、需要可测试的语义变换时再挂 transformers；轻量场景继续用现有扩展点。
+适用建议：存在复杂且可测试的语义变换需求时使用 Transformer；轻量扩展继续使用现有扩展接口。
 
 ### Phase C → UIKit 能力补全
 
 | ID | 事项 | 退出标准 |
 | --- | --- | --- |
-| C1 | 图片策略落地 | 明确异步加载、缓存与附件 / 独立块边界 |
-| C2 | 可访问性 | Dynamic Type、VoiceOver 与链接交互有验证 |
-| C3 | 大文档性能基线 | 给出适用长度、内存与滚动性能边界 |
-| C4 | UIKit 集成模板 | `UITextView`、列表 Cell、聊天气泡各有可运行示例 |
+| C1 | 图片策略实现 | 明确异步加载、缓存机制与附件/块边界 |
+| C2 | 可访问性适配 | 完成 Dynamic Type、VoiceOver 及链接交互验证 |
+| C3 | 大文档性能基线 | 给出适用长度、内存开销与滚动性能边界 |
+| C4 | UIKit 集成示例 | 提供 `UITextView`、列表 Cell 与聊天气泡使用示例 |
 
 ### Phase D → 可选试探
 
 | ID | 事项 | 规则 |
 | --- | --- | --- |
-| D1 | TextKit 2 | 非默认；PoC 失败 → 写入「不做」 |
-| D2 | 目标平台验证 | 按既定平台矩阵逐项解决条件编译并给出验证报告 |
-| D3 | 树编辑距离 | 对比现有稳定边界；无 >10% 收益则归档 |
-| D4 | `maxParseLength` 可配 + 截断回调 | 可并进 v2 |
+| D1 | TextKit 2 | 非默认方案；PoC 未达成预期则移入「不做」 |
+| D2 | 目标平台验证 | 逐项解决条件编译并输出验证报告 |
+| D3 | 树编辑距离算法 | 对比现有边界，性能/准确度无 >10% 提升则归档 |
+| D4 | `maxParseLength` 配置项 | 可并入 v2 实施 |
 
-## 3. 怎样算做成
+## 3. 验收标准
 
 | 里程碑 | 标准 |
 | --- | --- |
-| v1 | 30 秒能跑通 attributed / blocks / stream；CI 绿；限制写清楚；UIKit 聊天气泡能进生产 |
-| v2 | 1～2 个 Transformer 完成 mention + 特殊块，不改库源码；快照零回归 |
-| 长期 | UIKit 集成、流式渲染与语义扩展形成稳定契约，不扩张为 SwiftUI 主题库 |
+| v1 | 可运行 attributed / blocks / stream 示例；CI 通过；明确已知限制；支持 UIKit 聊天气泡集成 |
+| v2 | 无需修改库源码即可通过 Transformer 实现 mention 与自定义块；快照零回归 |
+| 长期 | UIKit 集成、流式渲染与语义扩展提供稳定契约 |
 
-## 4. 风险
+## 4. 风险控制
 
-| 风险 | 怎么挡 |
+| 风险点 | 规避方案 |
 | --- | --- |
-| 快照跨机字体漂移 | 语义属性断言（已定） |
-| IR 重构回归 | 先 A2 快照全集，再 B3 |
-| 中端与 handler 职责重叠 | B6 决策树 |
-| TK2 迁不动自定义绘制 | D1 试探，主线 TK1 |
-| 目标平台矩阵与当前 Package 不一致 | 当前状态明确只交付 iOS；按 D2 逐项验证后再宣称支持 |
+| 快照字体跨平台/设备漂移 | 使用语义属性断言验证 |
+| IR 重构引发渲染回归 | 先完成 A2 快照全集覆盖，再进行 B3 |
+| 中端与 Handler 职责重叠 | 遵循 B6 扩展决策指南 |
+| TextKit 2 无法兼容自定义绘制 | 执行 D1 试探，保留 TextKit 1 为主线 |
+| 平台支持与声明不符 | 在完成 D2 逐项验证前，仅声明支持 iOS |
 
-## 5. 决策记录
+## 5. 变更历史
 
-- **2026-07-09**：确认 v1 雏形；当前目标是发 1.0，不是从零搭
-- **2026-07-09**：快照基建 + 流式 ratio 门槛落地
-- **2026-07-13**：恢复 UIKit-only 定位；SwiftUI 明确移出路线；中端与 IR 仍放 v2
-- **2026-07-09**：文本引擎默认 TextKit 1；TextKit 2 仅试探
-- **2026-07-13**：当前事实移到 `current-status.md`；本文只维护方向、优先级和退出标准
+- **2026-07-09**：确定 v1 目标为发布 1.0。
+- **2026-07-09**：完成快照测试基建与流式渲染比例阈值设置。
+- **2026-07-13**：确认纯 UIKit 定位；明确不包含 SwiftUI 后端；将 IR 移至 v2。
+- **2026-07-09**：确定文本引擎默认采用 TextKit 1，TextKit 2 仅作为试探。
+- **2026-07-13**：当前状态转移至 `current-status.md`；本文仅维护路线方向与验收标准。

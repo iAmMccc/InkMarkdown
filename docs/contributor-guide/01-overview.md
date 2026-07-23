@@ -7,8 +7,8 @@
 **InkMarkdown** 基于 [swift-markdown](https://github.com/swiftlang/swift-markdown)，做 Apple 平台上的 Markdown **渲染**。
 
 - **产品范围**：UIKit — `NSAttributedString` + 块级 `UIView` + 流式
-- **明确不做**：SwiftUI 渲染器；该场景由 MarkdownUI / Textual 覆盖
-- **解析**：全部交给 swift-markdown，不自写 cmark
+- **明确不做**：SwiftUI 渲染器；该场景由 MarkdownUI / Textual 负责
+- **解析**：全部交给 swift-markdown，不重写 cmark
 
 ```text
 Markdown 源文本
@@ -19,15 +19,15 @@ Markdown 源文本
       → 流式
 ```
 
-v2 起多一步：Markup → **InkIR** →（可选 Transformer）→ 各后端。
+v2 起增加步骤：Markup → **InkIR** →（可选 Transformer）→ 各后端。
 
 ## 定位
 
 | 做 | 不做 |
 | --- | --- |
-| UIKit 优先，能嵌 `UITextView` / 列表 | WebView 主路径 |
+| UIKit 优先，可嵌 `UITextView` / 列表 | WebView 主路径 |
 | 固定行高、块路由、可测的流式 | 编辑器、完整 HTML、高亮引擎本体 |
-| 轻量扩展点；v2 可选中端 Transformer | SwiftUI 渲染器；对外承诺 TED / O(1) 等数学口号 |
+| 轻量扩展点；v2 可选拆出中端 Transformer | SwiftUI 渲染器；对外承诺 TED / O(1) 等数学口号 |
 | TextKit 1 自定义绘制（库内 text view） | v1 只交 TextKit 2 |
 
 | 对比 | 对方 | 本库 |
@@ -63,5 +63,4 @@ v2 起多一步：Markup → **InkIR** →（可选 Transformer）→ 各后端�
 - 测试：Swift Testing；快照基建在 `Tests/.../Snapshots`
 - 库内富文本自定义绘制：**TextKit 1**（`InkMarkdownLayoutManager`）
 
-完整交付状态见[当前状态](../current-status.md)。上手见
-[04-development](04-development.md)，原理见 [03-principles](03-principles.md)。
+完整交付状态见[当前状态](../current-status.md)。上手见 [04-development](04-development.md)，原理见 [03-principles](03-principles.md)。

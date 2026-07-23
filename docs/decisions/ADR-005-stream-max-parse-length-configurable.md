@@ -11,14 +11,14 @@ Accepted
 ## Context
 
 - `InkStreamRenderer` 将 `maxParseLength` 硬编码为 `50_000`。
-- 超限时 `append` 直接 return；`finish` 截断后再解析——行为对宿主不透明，且不同产品（短聊 vs 长报告）阈值需求不同。
+- 超限时 `append` 直接返回；`finish` 截断后再解析——此行为对宿主不透明，且不同应用场景（对话与长报告）对上限要求不同。
 
 ## Decision
 
 1. **默认值保持 50_000**（兼容现有行为与性能假设）。
-2. **配置化**：阈值进入公开配置面（优先 `InkConfiguration` 或与流式强相关的明确字段），宿主可提高/降低。
-3. **文档契约**：写清超限语义（停止追加解析 / finish 截断），避免静默「丢字」误解。
-4. **实现可后续落地**；本 ADR 锁定 API 方向，不要求与本文同提交改代码。
+2. **配置化**：阈值进入公开配置面（优先 `InkConfiguration` 或流式配置字段），宿主可按需调整。
+3. **文档契约**：明确超限处理规则（停止追加解析与 finish 截断），避免出现截断误解。
+4. **实施计划**：本 ADR 确定 API 演进方向，代码改动后续单独提交。
 
 ## Alternatives Considered
 
@@ -26,21 +26,21 @@ Accepted
 
 - Pros: 实现简单  
 - Cons: 长文档场景无法扩展  
-- Rejected: 作为唯一策略
+- Rejected: 无法满足长文需求
 
 ### 取消上限
 
-- Pros: 最灵活  
-- Cons: 易在异常 SSE 下 OOM / 主线程压力  
-- Rejected: 默认无上限
+- Pros: 无长度限制  
+- Cons: 异常 SSE 数据易引发内存泄露或主线程卡顿  
+- Rejected: 不能作为默认方案
 
 ### 仅文档说明、不改 API
 
-- Pros: 零代码  
-- Cons: 宿主无法调  
-- Rejected: 作为最终态
+- Pros: 无需修改代码  
+- Cons: 宿主无法自定义阈值  
+- Rejected: 无法满足实际配置需求
 
 ## Consequences
 
-- 落地时应补：配置字段中文注释、超限行为测试、`current-status` / stream 文档一句说明。
-- 性能闸门数据集远小于 50k，默认值变更需重评基准注释。
+- 落地时补充：配置字段注释、超限行为测试、`current-status` 及流式相关说明。
+- 性能基准数据集小于 50k，默认值变更需重新评估性能基准。

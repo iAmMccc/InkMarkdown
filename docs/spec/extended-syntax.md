@@ -1,10 +1,10 @@
 # 扩展语法（GFM 等）
 
-状态：已渲 · 降级 · 未处理
+支持状态：已渲染 · 降级处理 · 未处理
 
-swift-markdown 底层是 **cmark-gfm**，能解析 GFM 扩展；本库只渲染其中一部分。
+swift-markdown 底层由 cmark-gfm 驱动，支持解析 GFM 扩展语法。本库对各类扩展语法的渲染规范如下：
 
-## 表格 `Table`（已渲）
+## 表格 `Table`（已渲染）
 
 ```markdown
 | 名称 | 数量 |
@@ -12,57 +12,57 @@ swift-markdown 底层是 **cmark-gfm**，能解析 GFM 扩展；本库只渲染�
 | A | 1 |
 ```
 
-- **只有块路由**产出 `InkTableBlock` → `InkTableBlockView`；纯 `InkAttributedRenderer` 会退化成管道符文本（预期行为）
-- 表头 / 表体样式区分；对齐跟分隔行 `:--` / `--:` / `:-:`
-- 列宽：量 attributed 内容宽 → 比例；`columnMaxWidthRatio` 封顶
-- `InkTableLayoutMode`：`.wrap` 折行铺满 · `.scroll` 横向滚
-- 单元格：子节点 `format()` 保留内联 Markdown，再 `renderInline`
-- 流式：`InkStreamTableView` 逐行追加
-- 样式：`InkAppearance.Table`
+- **渲染方式**：仅在块路由中产出 `InkTableBlock` → `InkTableBlockView`；若仅使用 `InkAttributedRenderer`，退化为管道符纯文本。
+- **表头与对齐**：支持表头/表体样式区分；基于 `:--` / `--:` / `:-:` 设置列对齐方式。
+- **列宽计算**：测量内容宽度并按比例分配；通过 `columnMaxWidthRatio` 设置最大比例上限。
+- **布局模式**：`InkTableLayoutMode` 支持 `.wrap`（换行适应宽度）与 `.scroll`（横向滚动）。
+- **单元格渲染**：子节点调用 `format()` 保留内联 Markdown，再执行 `renderInline`。
+- **流式渲染**：由 `InkStreamTableView` 实现逐行增量追加。
+- **主题配置**：读取 `InkAppearance.Table` 样式。
 
-## 任务列表（已渲）
+## 任务列表（已渲染）
 
 ```markdown
 - [ ] 待办
 - [x] 已完成
 ```
 
-- 节点：`ListItem.checkbox` → `.checked` / `.unchecked`
-- 展示 ☑ / ☐；**无内置切换交互**（状态归业务）
+- **AST 节点**：`ListItem.checkbox` 对应 `.checked` / `.unchecked`。
+- **显示形态**：渲染为 ☑ 或 ☐，无内置交互切换（交互状态由业务层管理）。
 
-## 删除线 `Strikethrough`（已渲）
+## 删除线 `Strikethrough`（已渲染）
 
-- 语法：`~~text~~`
-- `renderInline` 有专门 case，经 `context.striking()` 把删除线标志随 context 下传；叶子（`renderText` / `renderInlineCode` 含 margin / `renderImage`）读标志挂 `.strikethroughStyle = .single`
-- 嵌套组合正确：`~~**bold**~~` 同时有粗体与删除线（context 下传互不覆盖）
-- 机制与权衡见 [03-principles §3.2](../contributor-guide/03-principles.md)；范式 A 的叶子遗漏风险与 v2 容器化演进见 [roadmap B9](../roadmap.md)
+- **语法**：`~~text~~`
+- **渲染实现**：`renderInline` 拦截删除线节点，通过 `context.striking()` 向下传递删除线标记。叶子节点（`renderText` / `renderInlineCode` / `renderImage`）检查标记并应用 `.strikethroughStyle = .single`。
+- **样式嵌套**：支持 `~~**bold**~~` 等加粗与删除线叠加效果（Context 状态互相独立）。
+- **设计权衡**：参考 [03-principles §3.2](../contributor-guide/03-principles.md)；演进规划参考 [roadmap B9](../roadmap.md)。
 
 ### 已知限制
 
-- **`inlineSyntaxes` 命中时不继承删除线**：自定义行内语法（如 `@提及`、`$标签$`）在 `renderText` 内 early-return，跳过了挂删除线的代码路径；且 `InkInlineContext` 当前不透传删除线状态。因此 `~~@张三~~` 的 `@张三` 部分无删除线。
-  - 不在补删除线时顺手修，因为它牵涉公开扩展点 API（`InkInlineContext` 是否承载样式状态）的设计，应单独立项。
-  - 临时规避：自定义语法自行在产物上挂 `.strikethroughStyle`（若需要）。
-- 删除线颜色当前未接入 `InkAppearance`，使用 UIKit 默认（跟随文字前景色）。主题化配置留待后续。
+- **`inlineSyntaxes` 命中时不继承删除线**：自定义行内语法（如 `@提及`、`$标签$`）在 `renderText` 中触发 early-return，跳过删除线设置逻辑，且 `InkInlineContext` 未透传删除线状态。因此 `~~@张三~~` 中 `@张三` 缺少删除线。
+  - **因由与规划**：该问题涉及公开 API（`InkInlineContext` 样式透传机制）的设计调整，需独立改进。
+  - **变通方案**：如需要，自定义语法可在生成 `NSAttributedString` 时手动添加 `.strikethroughStyle`。
+- **颜色配置**：删除线颜色目前使用 UIKit 默认文字前景色，未接入 `InkAppearance`。后续版本补充主题配置。
 
-## 自动链接（已渲，走 `Link`）
+## 自动链接（已渲染，使用 `Link` 节点）
 
-- CommonMark：`<https://example.com>`
-- GFM 另有裸 URL 识别（cmark-gfm autolink extension）；解析结果仍是 `Link`，渲染与普通链接相同
+- CommonMark 标准：`<https://example.com>`
+- GFM 裸 URL 识别（cmark-gfm autolink 扩展）：解析产物仍为 `Link`，渲染逻辑与标准链接一致。
 
-## 未专门处理
+## 未独立处理语法
 
-| 语法 | 节点 | 说明 |
+| 语法 | AST 节点 | 建议处理方式 |
 | --- | --- | --- |
-| 脚注 | — | 超出范围 |
-| `@Directive` | `BlockDirective` | 可用 `InkBlockHandler` |
-| `CustomInline` | 同左 | 用 `InkInlineSyntax` |
+| 脚注 | — | 超出当前支持范围 |
+| `@Directive` 指令 | `BlockDirective` | 使用 `InkBlockHandler` 自定义扩展 |
+| `CustomInline` | `CustomInline` | 使用 `InkInlineSyntax` 自定义扩展 |
 
-## 扩展支持矩阵
+## 扩展语法矩阵
 
-| 扩展 | 状态 |
-| --- | --- |
-| 表格 | 块路由完整 |
-| 任务列表 | 只展示，不切换 |
-| 删除线 | 已渲（`inlineSyntaxes` 命中时不继承，见上） |
-| 自动链接 | 走 `Link` |
-| 脚注 / Directive | 未做 / 可扩展 |
+| 语法扩展 | 支持状态 | 渲染逻辑 |
+| --- | --- | --- |
+| 表格 | 已渲染 | 块路由完整支持 |
+| 任务列表 | 已渲染 | 仅展示状态，不包含交互控制 |
+| 删除线 | 已渲染 | 支持主要场景（行内自定义语法未继承，见限制说明） |
+| 自动链接 | 已渲染 | 统一路由至 `Link` 渲染路径 |
+| 脚注 / 指令 | 未处理 | 提供自定义扩展点 |

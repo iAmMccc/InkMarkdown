@@ -48,11 +48,11 @@ baselineOffset = max(0, (fixedLineHeight - font.lineHeight) / 2)
 
 相关测试：`headingInlineCode_*`、`blockquoteLink_*`、`strongInlineCode_*`、`strikethrough_*`。
 
-### 范式 A 的痛点：叶子必须逐个读 context
+### 范式 A 的缺点：叶子必须逐个读 context
 
-当前 context 下传是**范式 A**（accumulator 下传 + 叶子收集挂属性）：每个叶子（`renderText` / `renderInlineCode` / `renderImage`）都要**显式**读取 context 里每个相关标志，再一次性 emit 成 attributes。
+当前 context 下传是**范式 A**（accumulator 下传 + 叶子收集挂属性）：每个叶子（`renderText` / `renderInlineCode` / `renderImage`）都要显式读取 context 里每个相关标志，一次性挂载 attributes。
 
-这带来一个结构性维护税：**每新增一个样式标志，就得记得在每个叶子补一段读取**。漏一个叶子，该叶子覆盖的子树就丢样式。历史案例：删除线初版只补了 `renderText`，导致 `~~`code`~~` 的代码部分无线（后用 `.underlineStyle` 误写又导致变下划线）——都是范式 A 的典型遗漏症状，不是逻辑错误。
+带来的维护开销：**每新增一个样式标志，就必须在每个叶子补一段读取**。漏掉一个叶子，该叶子覆盖的子树就会丢样式。历史案例：删除线初版只补了 `renderText`，导致 `~~`code`~~` 的代码部分没有删除线（后改用 `.underlineStyle` 又错改成了下划线）——这是范式 A 的典型遗漏，并非逻辑错误。
 
 ### 什么时候可以用「后置 range 装饰」（范式 B）
 
@@ -69,9 +69,9 @@ baselineOffset = max(0, (fixedLineHeight - font.lineHeight) / 2)
 | `.inkBlockquoteBar` | ✅ | 已是后置先例 |
 | `.foregroundColor` / `.font` / `obliqueness` | ❌ | 叶子深度依赖，后置会覆盖叶子自己的决策 |
 
-删除线走 B 能根治「叶子遗漏」，但会让「所有行内样式用同一种机制」的一致性出现破例。**当前选 A 是和 MarkdownUI、苹果 Foundation 一致的主流选型**（见下），不轻率切 B。
+删除线走 B 能根治「叶子遗漏」，但会让「所有行内样式用同一种机制」的一致性出现破例。**当前采用范式 A，与 MarkdownUI 和苹果 Foundation 的做法一致**（见下），不轻率切 B。
 
-### 行业对标：主流库都用范式 A
+### 参考：主流库实现
 
 - [MarkdownUI](https://github.com/gonzalezreal/swift-markdown-ui)：删除线是实现 `TextStyle` 协议的 `StrikethroughStyle`，递归时 `merge` 进下传的累加 `AttributeContainer`，叶子读取后一次性挂上。
 - 苹果 Foundation `AttributedString(markdown:)`：cmark-gfm 的 strikethrough 扩展解析出 span 后，直接映射到对应 run 的 `strikethroughStyle` attribute。
@@ -80,11 +80,11 @@ baselineOffset = max(0, (fixedLineHeight - font.lineHeight) / 2)
 
 ### 演进方向（v2，见 [roadmap](../roadmap.md) Phase B）
 
-根治「叶子遗漏」的方向**不是切范式 B**，而是把 context 里的离散标志（`isStrikethrough`、`linkURL`、`obliqueness`…）收敛成一个**可收集的 TextStyle 容器**——类似 MarkdownUI 的 `_collectAttributes(inout:)`：叶子不再逐个手写 `if`，而是接收一个已收集好所有样式的容器直接 apply。这是范式 A 的成熟形态。v1 维持现状 + 人工补齐叶子即可。
+根治「叶子遗漏」的方向**不是切范式 B**，而是把 context 里的离散标志（`isStrikethrough`、`linkURL`、`obliqueness`…）收敛成一个**可收集的 TextStyle 容器**——类似 MarkdownUI 的 `_collectAttributes(inout:)`：叶子不再手写判断，而是接收已收集好所有样式的容器直接应用。这是范式 A 的成熟形态。v1 维持现状并补齐叶子即可。
 
 ## 3.3 双通道 + 块路由
 
-`NSAttributedString` 扛不住表格网格、代码块容器、可控分割线。抽象：
+`NSAttributedString` 无法承载表格网格、代码块容器、可控分割线。抽象：
 
 ```swift
 public protocol InkBlockHandler {
@@ -95,12 +95,12 @@ public protocol InkBlockHandler {
 
 返回 `nil` = 回落富文本。`defaultBlockHandlers`：代码块、表格、分割线。
 
-## 3.4 行内代码身份
+## 3.4 行内代码
 
 | 维度 | 规则 |
 | --- | --- |
 | 字体 | `monospacedSystemFont` + regular（不继承 bold/italic） |
-| 字号 | 跟环境（标题内 = 标题字号） |
+| 字号 | 跟随环境（标题内 = 标题字号） |
 | 颜色 | 默认环境前景色；可配 `inlineCode.textColor` |
 | 背景 | attribute `.inkInlineCodeBackground`，`InkMarkdownLayoutManager` 画圆角；高度小于行高 |
 

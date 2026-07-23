@@ -10,11 +10,11 @@ Accepted
 
 ## Context
 
-- 当前 `Package.swift` 使用 `swift-markdown` 远程 **`branch: main`**，`Package.resolved` 记录了某次 revision，但 branch 依赖仍可能随上游前进而不稳定。
+- 当前 `Package.swift` 使用 `swift-markdown` 远程 **`branch: main`**，`Package.resolved` 记录了某次 revision，但分支依赖易随上游更新变动。
 - 项目目标开发策略包含 `Packages/Caches/` + `path:`，以绕过 Xcode 网络限制；脚本与缓存目录已存在。
-- 库将作为 **SPM 远程产品** 被宿主拉取：若默认 `path:` 指向本地缓存，消费者无法解析。
+- 库作为 **SPM 依赖** 被宿主引入，若默认 `path:` 指向本地缓存，外部项目无法解析。
 
-需要同时满足：**可重复构建**、**开源消费友好**、**本机离线可开发**。
+需要同时满足：**可重复构建**、**外部依赖兼容**、**本地离线可开发**。
 
 ## Decision
 
@@ -26,9 +26,9 @@ Accepted
 
 ### 继续跟踪 `branch: main`
 
-- Pros: 总能拿到上游最新解析修复  
-- Cons: 渲染/测试不可重复；CI 与贡献者环境漂移  
-- Rejected: 库语义依赖解析稳定性
+- Pros: 能获取上游最新解析修复  
+- Cons: 渲染与测试不可重复；环境易漂移  
+- Rejected: 库渲染依赖解析稳定性
 
 ### 默认 `path: Packages/Caches/swift-markdown`
 
@@ -39,14 +39,14 @@ Accepted
 ### 仅靠 Package.resolved 不改 Package.swift
 
 - Pros: 改动小  
-- Cons: 声明仍是 branch；部分工具/干净解析仍可能取最新 tip  
-- Rejected: 不够明确
+- Cons: 声明仍是 branch；全新拉取仍可能使用最新提交  
+- Rejected: 无法确保持续稳定
 
 ## Consequences
 
 - 升级 swift-markdown 需显式改 revision 并跑 iOS Simulator 测试。
-- 文档中「本地缓存」表述改为：**可选离线手段**，不是当前默认 manifest 事实。
-- `docs/current-status.md` / `STACK.md` 的 Intent vs Reality 在落地 pin 后应收窄差异。
+- 文档中「本地缓存」表述调整为：**可选离线路径**，不属于默认 manifest。
+- `docs/current-status.md` 与 `STACK.md` 的现状记录在锁定版本后保持一致。
 
 ## Implementation note
 

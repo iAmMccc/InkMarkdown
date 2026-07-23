@@ -1,10 +1,10 @@
 # swift-markdown API 速查
 
-基于 [swiftlang/swift-markdown](https://github.com/swiftlang/swift-markdown)（解析器为 cmark-gfm）。InkMarkdown **不重写解析**，扩展点建在这些类型上。
+基于 [swiftlang/swift-markdown](https://github.com/swiftlang/swift-markdown)（解析器为 cmark-gfm）。InkMarkdown **不重写解析**，扩展点基于这些类型构建。
 
-本地可对读：`Packages/Caches/swift-markdown/`（有缓存时）。升级依赖后回写本页。
+本地参考：`Packages/Caches/swift-markdown/`（有缓存时）。升级依赖后同步本页。
 
-## 1. 在管线里的位置
+## 1. 渲染管线
 
 ```text
 Markdown 文本
@@ -56,20 +56,20 @@ let doc4 = Document([Paragraph(Text("x")), Heading(level: 2, Text("T"))])
 | `.parseMinimalDoxygen` | 最小 Doxygen；依赖 `.parseBlockDirectives` |
 | `.disableSourcePosOpts` | 关闭 cmark `CMARK_OPT_SOURCEPOS`（默认 **开启** sourcepos → `node.range` 通常有值） |
 
-默认 `[]`：标准 GFM + smart + sourcepos。InkMarkdown 默认不传额外选项。不要为了「省事」乱加 directive/doxygen——会产出本库未处理的节点。
+默认 `[]`：标准 GFM + smart + sourcepos。InkMarkdown 默认不传额外选项。不要随意开启 directive/doxygen，避免生成未经处理的节点。
 
-> 默认会记录 source location。要关掉须显式 `.disableSourcePosOpts`。
+> 默认包含 source location。需要关闭时显式指定 `.disableSourcePosOpts`。
 
-## 4. 遍历
+## 4. AST 遍历
 
 | 方式 | 协议 | Result | 场景 |
 | --- | --- | --- | --- |
-| 递归 `children` | — | — | 取属性、简单走树 |
-| Visitor | `MarkupVisitor` | 任意 | 收集 / 转换 |
-| Walker | `MarkupWalker` | `Void` | 副作用遍历 |
-| Rewriter | `MarkupRewriter` | `Markup?` | 改树；`nil` = 删除 |
+| 递归 `children` | — | — | 读取属性、简单遍历 |
+| Visitor | `MarkupVisitor` | 任意 | 收集或转换 |
+| Walker | `MarkupWalker` | `Void` | 带有副作用的遍历 |
+| Rewriter | `MarkupRewriter` | `Markup?` | 修改 AST 树；`nil` 表示删除节点 |
 
-`MarkupWalker.defaultVisit` **会** `descendInto`（递归）。自定义 `visitX` 若要继续下钻，自己调 `descendInto`。
+`MarkupWalker.defaultVisit` 会自动调用 `descendInto` 递归。自定义 `visitX` 如需继续深入下钻，需自行调用 `descendInto`。
 
 ```swift
 // children
@@ -97,41 +97,41 @@ struct Printer: MarkupWalker {
 }
 ```
 
-## 5. 节点 × InkMarkdown
+## 5. 节点支持情况
 
-状态：已渲 · 降级 · 未专门处理
+状态分类：已渲染 · 降级处理 · 未处理
 
-### 块
+### 块级节点
 
-| 类型 | 关键属性 | InkMarkdown |
+| 类型 | 关键属性 | InkMarkdown 状态 |
 | --- | --- | --- |
 | `Document` | children | 入口 |
-| `Paragraph` | 行内子节点 | 已渲 |
-| `Heading` | `level` 1…6 | 已渲（H1 与 H2–H6 两档字号） |
-| `BlockQuote` | 块子节点 | 已渲：竖线 + 缩进 |
-| `OrderedList` / `UnorderedList` | `ListItem` | 已渲 |
-| `ListItem` | `checkbox: Checkbox?` | 已渲：任务列表 |
-| `CodeBlock` | `code`、`language?` | 已渲：富文本 + UIView |
+| `Paragraph` | 行内子节点 | 已渲染 |
+| `Heading` | `level` 1…6 | 已渲染（区分 H1 与 H2–H6 字号） |
+| `BlockQuote` | 块子节点 | 已渲染：左侧竖线 + 缩进 |
+| `OrderedList` / `UnorderedList` | `ListItem` | 已渲染 |
+| `ListItem` | `checkbox: Checkbox?` | 已渲染：支持 Task List |
+| `CodeBlock` | `code`、`language?` | 已渲染：富文本 + UIView |
 | `ThematicBreak` | — | 已渲 |
-| `Table` / Head / Body / Row / Cell | 对齐、单元格 | 已渲：UIView 块；单元格经 `format()` 再渲内联 |
+| `Table` / Head / Body / Row / Cell | 对齐、单元格 | 已渲染：UIView 块；单元格调用 `format()` 渲染内联 |
 | `HTMLBlock` | literal | 忽略 |
-| `CustomBlock` / `BlockDirective` / `Doxygen*` | — | 未专门处理；可用 `InkBlockHandler` |
+| `CustomBlock` / `BlockDirective` / `Doxygen*` | — | 未独立处理；可通过 `InkBlockHandler` 扩展 |
 
-### 行内
+### 行内节点
 
-| 类型 | 关键属性 | InkMarkdown |
+| 类型 | 关键属性 | InkMarkdown 状态 |
 | --- | --- | --- |
-| `Text` | `string` | 已渲 + `InkInlineSyntax` 扫描 |
-| `Emphasis` / `Strong` | 行内子节点 | 已渲：italic / bold |
-| `Link` | `destination?`、`title?` | 已渲：色 + `linkTapHandler` |
-| `Image` | `source?`、alt 子节点 | 降级：`[🖼 …]` 占位 |
-| `InlineCode` | code | 已渲：等宽 + 背景 |
-| `Strikethrough` | 行内子节点 | 降级：有文本、无删除线样式 |
-| `LineBreak` / `SoftBreak` | — | 已渲：`\n` / 空格 |
-| `InlineHTML` | rawHTML | 降级：`<br>`→换行；空自定义标签丢弃；其余空 |
-| `CustomInline` / `SymbolLink` / `InlineAttributes` | — | 未专门处理 |
+| `Text` | `string` | 已渲染，支持 `InkInlineSyntax` 扫描 |
+| `Emphasis` / `Strong` | 行内子节点 | 已渲染：斜体 / 加粗 |
+| `Link` | `destination?`、`title?` | 已渲染：链接颜色 + `linkTapHandler` |
+| `Image` | `source?`、alt 子节点 | 降级：渲染为 `[🖼 …]` 占位 |
+| `InlineCode` | code | 已渲染：等宽字体 + 背景色 |
+| `Strikethrough` | 行内子节点 | 降级：仅保留文本，缺失删除线样式 |
+| `LineBreak` / `SoftBreak` | — | 已渲染：`\n` / 空格 |
+| `InlineHTML` | rawHTML | 降级：`<br>` 转换为换行；丢弃自定义标签 |
+| `CustomInline` / `SymbolLink` / `InlineAttributes` | — | 未独立处理 |
 
-## 6. 取值片段
+## 6. 提取内容
 
 ```swift
 (heading as? Heading)?.level
@@ -150,25 +150,25 @@ if let item = node as? ListItem, let box = item.checkbox {
 }
 ```
 
-容器没有 `.string` 时：
+当容器节点没有直接提供 `.string` 时：
 
 ```swift
-// 纯文本
+// 提取纯文本
 func plainText(of node: Markup) -> String {
   if let t = node as? Text { return t.string }
   return node.children.map { plainText(of: $0) }.joined()
 }
 
-// 保留 Markdown 标记（InkTableBlock 做法）
+// 保留 Markdown 标记（InkTableBlock 实现）
 cell.children.map { $0.format() }.joined()
 ```
 
-## 7. 格式化 / 改写
+## 7. 格式化与改写
 
 ```swift
 let md = doc.format()                       // MarkupFormatter
-let html = HTMLFormatter.format(doc)        // 静态方法，不是 HTMLFormatter().format
-print(doc.debugDescription())               // 树调试
+let html = HTMLFormatter.format(doc)        // 静态方法
+print(doc.debugDescription())               // 输出调试树
 ```
 
 ```swift
@@ -181,11 +181,11 @@ var rw = EmphasisToStrong()
 let newDoc = rw.visit(doc)   // Markup?
 ```
 
-本库渲染链路**没有**挂 Rewriter。需要时在调用 renderer 前自行 `visit`。路线图 v2 规划显式 `InkTransformer`。
+渲染管线默认未挂载 Rewriter。如需修改 AST，请在传入渲染器前处理。
 
-## 8. 接 InkMarkdown 扩展点
+## 8. 扩展点接入
 
-### `InkBlockHandler`（块 → UIView）
+### `InkBlockHandler`（块节点 → UIView）
 
 ```swift
 struct MyTableHandler: InkBlockHandler {
@@ -197,13 +197,12 @@ struct MyTableHandler: InkBlockHandler {
 }
 ```
 
-### `InkInlineSyntax`（纯文本片段，不是 Markup）
+### `InkInlineSyntax`（行内文本解析）
 
 ```swift
 struct MentionSyntax: InkInlineSyntax {
   func render(text: String, context: InkInlineContext) -> NSAttributedString? {
     guard text.contains("@") else { return nil }
-    // 用 context.baseFont / textColor
     return NSAttributedString(string: text, attributes: [
       .font: context.baseFont,
       .foregroundColor: context.textColor,
@@ -212,12 +211,12 @@ struct MentionSyntax: InkInlineSyntax {
 }
 ```
 
-`Image` 是行内节点：真图不要指望 `InkBlockHandler` 拦「块」，应改行内路径或预处理。
+注意：`Image` 为行内节点。渲染图片需通过行内路径或预处理，`InkBlockHandler` 无法拦截行内节点。
 
-## 9. 注意
+## 9. 注意事项
 
-1. **不可变 + COW**：改节点得到新树；遍历只读是安全的
-2. **身份**：不要用引用相等当稳定 ID
-3. **range**：默认解析通常有 `range`；`.disableSourcePosOpts` 可关
-4. **未知节点**：HTML / Doxygen / SymbolLink 等要降级或忽略，防止 silently 漏渲
-5. **版本**：跟 `Package.resolved` / 缓存副本走，升级后核对本表
+1. **不可变与 COW**：修改节点会返回新树，只读遍历在多线程下安全。
+2. **节点标识**：无法以引用相等作为唯一标识。
+3. **Source Location**：默认包含源码位置信息；可通过 `.disableSourcePosOpts` 关闭。
+4. **未知节点**：HTML / Doxygen / SymbolLink 等需做降级或忽略处理，防止漏渲染。
+5. **版本一致性**：依赖参照 `Package.resolved`，升级后需核对与更新本文档。

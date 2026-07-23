@@ -1,10 +1,8 @@
 # 五、模块详解
 
-本页是源码定位 Reference。按公开入口、解析、配置、富文本、块路由、组件和流式模块查找类型与职责。
+本文列出源码模块的类型与职责分配，作为代码查找参考。可结合 `Sources/InkMarkdown/` 目录查看。
 
-对照 `Sources/InkMarkdown/` 读。
-
-## 依赖关系（简图）
+## 模块依赖关系
 
 ```text
 InkMarkdown.swift  (@_exported Markdown)
@@ -18,79 +16,79 @@ InkMarkdown.swift  (@_exported Markdown)
 
 ## 公开入口
 
-**`InkMarkdown.swift`**：`@_exported import Markdown`。渲染入口在各 Renderer，不在这个文件。
+**`InkMarkdown.swift`**：重新导出模块（`@_exported import Markdown`）。渲染入口在各个 Renderer 中。
 
-## 解析 `Parser/`
+## 解析模块 (`Parser/`)
 
 | 类型 | 职责 |
 | --- | --- |
-| `InkParser` | `Document(parsing:)` 薄包装，预留统一钩子 |
+| `InkParser` | `Document(parsing:)` 封装，预留解析钩子 |
 | `InkLineClassifier` | 无状态行分类：`.text` / `.tableLine` / `.codeFenceOpen` / `.codeFenceClose` / `.thematicBreak` |
 
-分类器不持状态；是否在代码块内由流式状态机保证。`isDelimiterRow` 二次确认 GFM 表头分隔行。
+分类器本身无状态，代码块状态由流式状态机控制。`isDelimiterRow` 用于确认 GFM 表头分隔行。
 
-## 配置 `Configuration/`
+## 配置模块 (`Configuration/`)
 
 ### `InkConfiguration`
 
 | 字段 | 说明 |
 | --- | --- |
-| `appearance` | 默认 `InkAppearance.shared`（保存字号、颜色、行高等基础样式） |
-| `inlineSyntaxes` | 自定义行内语法扩展，默认 `[]`（通过正则匹配自定义并截获行内文本，如 @用户、#话题 等） |
-| `sourceFilter` | 解析前预处理（对原始 Markdown 源码字符串进行清洗过滤） |
-| `blockHandlers` | 块路由，有序匹配（将代码块、表格等块级元素路由至自定义的 UIView 组件） |
-| `linkTapHandler` | 链接点击（宿主响应富文本链接点击时的业务回调） |
+| `appearance` | 默认使用 `InkAppearance.shared` |
+| `inlineSyntaxes` | 自定义行内语法扩展，默认 `[]` |
+| `sourceFilter` | 源码预处理回调函数 |
+| `blockHandlers` | 块路由列表，按顺序匹配 |
+| `linkTapHandler` | 链接点击回调函数 |
 
-`defaultBlockHandlers`：Code / Table / ThematicBreak。`standard` = `.init()`。
+`defaultBlockHandlers` 包含 Code、Table 和 ThematicBreak。`standard` 等同于 `.init()`。
 
 ### `InkAppearance`
 
-子结构：`Text`、`Heading`、`Blockquote`、`List`、`CodeBlock`、`InlineCode`、`Table`、`ThematicBreak`、`Link`。
+配置子结构：`Text`、`Heading`、`Blockquote`、`List`、`CodeBlock`、`InlineCode`、`Table`、`ThematicBreak`、`Link`。
 
-- `shared`：可变全局单例
-- 正文默认：`fontSize = 17`、`lineHeight = 28`
-- `Heading.fontSize(forLevel:)`：**仅 H1 用 `h1FontSize`，其余 level 共用 `fontSize`**
-- `Text.blockInsets` 默认 `.zero`
+- `shared`：全局单例
+- 正文默认样式：`fontSize = 17`、`lineHeight = 28`
+- `Heading.fontSize(forLevel:)`：H1 使用 `h1FontSize`，其余等级共用 `fontSize`
+- `Text.blockInsets` 默认值为 `.zero`
 
-## 富文本通道
+## 富文本渲染模块
 
 ### `InkAttributedRenderer`
 
-| 入口 | 用途 |
+| 入口方法 | 用途 |
 | --- | --- |
-| `render(_:configuration:)` | 源文本 → 富文本 |
-| `render(document:)` | 已解析 Document |
-| `render(markups:)` | 块路由 flush 用；块间 `\n`，末尾 `0.1pt` 哨兵兑现下间距 |
-| `renderInline(...)` | 只行内、不挂段落样式（表格单元格） |
+| `render(_:configuration:)` | Markdown 源码转富文本 |
+| `render(document:)` | 解析好的 Document 转富文本 |
+| `render(markups:)` | 块路由刷新使用；处理块间换行与末尾 0.1pt 间距哨兵 |
+| `renderInline(...)` | 仅渲染行内样式，不应用段落样式（用于表格单元格） |
 
-私有 `InkRenderer`：`renderBlock` / `renderInline` 用 `switch` 分发（功能上等价 Visitor，未形式化为 `MarkupVisitor`）。唯一后处理：`applyFixedLineHeight`。
+内部使用 `InkRenderer` 分发 `renderBlock` 和 `renderInline` 分支。渲染完成后使用 `applyFixedLineHeight` 统一处理行高。
 
-实现上要注意：
+实现要点：
 
-- 列表 marker 用正文字重；悬挂缩进 `headIndent = maxMarkerWidth`
-- 引用对非段落子节点不全 range 盖段落样式，只叠缩进
-- 图片：`[🖼 plainText|source|image]`
-- `InlineHTML`：`<br>` → 换行；自定义空标签丢弃；其余空串
-- `Strikethrough`：有专门 case，`context.striking()` 派生删除线标志下传；叶子（`renderText` / `renderInlineCode` / `renderImage`）读 `isStrikethrough` 挂 `.strikethroughStyle`。范式 A 的叶子遗漏风险见 [03 §3.2](03-principles.md)
-- 代码块在本通道是 fallback；真 UI 走 `InkCodeBlock`
+- 列表 marker 使用正文字重，悬挂缩进设置 `headIndent = maxMarkerWidth`
+- 引用块对非段落子节点仅增加缩进，不应用全文段落样式
+- 图片使用占位符 `[🖼 plainText|source|image]`
+- `InlineHTML`：`<br>` 转换为换行符，其余 HTML 标签丢弃或替换为空串
+- `Strikethrough`：`context.striking()` 传向下级，由叶子节点应用 `.strikethroughStyle`
+- 代码块在富文本通道仅作为降级方案，UI 块渲染使用 `InkCodeBlockView`
 
 ### `InkTextContext`（internal）
 
-见 [03 §3.2](03-principles.md)。非公开 API。
+行内样式上下文管理，不对外暴露。详见 [03 §3.2](03-principles.md)。
 
 ### `InkInlineSyntax` / `InkInlineContext`
 
-扫描 `Text` 节点产出片段。与 `InkBlockHandler` 互补（行内 vs 整块 UIView）。
+通过正则匹配 `Text` 节点生成行内片段，与 `InkBlockHandler` 分别处理行内与块级扩展。
 
 ### `InkAttributedTextBlock`
 
-`UITextView` 兜底：`InkMarkdownLayoutManager`、不可编辑、可选中、不滚动。有 `linkTapHandler` 时关 `dataDetectorTypes`。
+`UITextView` 视图容器：基于 `InkMarkdownLayoutManager`，不可编辑，允许选中，禁用滚动。配置 `linkTapHandler` 时关闭 `dataDetectorTypes`。
 
-## 块路由
+## 块路由模块
 
 ### `InkBlockRenderer`
 
-遍历 children → handler 命中则 flush pending + append UIView 块；否则 pending。最后 `render(markups:)` 一次渲富文本。
+遍历 AST 子节点：匹配 handler 则刷新已积攒的富文本并追加 `UIView` 块，未匹配则加入 pending。最后调用 `render(markups:)` 一次性渲染富文本。
 
 ### `InkBlockHandler` / `InkRenderableBlock`
 
@@ -100,40 +98,40 @@ public protocol InkRenderableBlock {
 }
 ```
 
-`makeBlock` 必须透传 `configuration`（单元格二次渲染要同一套 syntax / link handler）。
+`makeBlock` 方法须向内传递 `configuration`，确保单元格等子元素使用相同的语法和链接回调。
 
-## 组件 `Rendering/Components/`
+## 组件模块 (`Rendering/Components/`)
 
 | 文件 | 职责 |
 | --- | --- |
-| `InkMarkdownLayoutManager` | 行内代码背景 + 引用竖线；公开 attribute key |
-| `InkCodeBlockView` | 圆角灰背 + 等宽 Label |
-| `InkThematicBreakBlock` | 顶线 + 下留白 |
-| `InkTableBlock` | 从 `Table` 构造；`cellMarkdownText` = `children.map { $0.format() }` |
-| `InkTableBlockView` | wrap / scroll 分流 |
-| `InkTableRenderHelper` | 行/格/量宽/分割线/复制纯文本（tab 分隔） |
-| `InkTableCellTextView` | 可点链接的只读 TextView（替代 UILabel） |
-| `InkStreamTableView` | 流式逐行；`referenceRows` 预估列宽；`onHeightChange` |
+| `InkMarkdownLayoutManager` | 绘制行内代码背景与引用竖线，提供公开 attribute key |
+| `InkCodeBlockView` | 代码块视图（圆角背景与等宽字体） |
+| `InkThematicBreakBlock` | 分割线视图 |
+| `InkTableBlock` | 解析 `Table` AST 节点生成表格结构 |
+| `InkTableBlockView` | 表格自动换行与横向滚动分流 |
+| `InkTableRenderHelper` | 表格行格测量、列宽计算、分隔线绘制及 Tab 分隔文本复制 |
+| `InkTableCellTextView` | 支持链接点击的只读 TextView |
+| `InkStreamTableView` | 流式逐行渲染表格，使用 `referenceRows` 预估列宽 |
 
-> `TABLE_INTEGRATION_GUIDE.md` 的 API 已过时，以源码为准。
+> 注意：`TABLE_INTEGRATION_GUIDE.md` 中的 API 已经过时，请以最新代码为准。
 
-## 流式 `InkStreamRenderer.swift`
+## 流式模块 (`InkStreamRenderer.swift`)
 
 | 类型 | 角色 |
 | --- | --- |
-| `InkStreamRenderer` | 主线程 API：`bind` / `append` / `reset` / `finish`；后台解析 + DisplayLink 显示 |
-| `InkIncrementalMarkdownRenderer` | 稳定边界增量 |
-| `InkStreamingPerformanceBenchmark` | `@_spi(Performance)` 全量 vs 增量 |
+| `InkStreamRenderer` | 主线程 API：`bind` / `append` / `reset` / `finish`；后台解析与 DisplayLink 刷新 |
+| `InkIncrementalMarkdownRenderer` | 基于稳定边界的增量解析渲染 |
+| `InkStreamingPerformanceBenchmark` | `@_spi(Performance)` 性能测试助手 |
 
-## 想改 X 看哪里
+## 代码修改指南
 
-| 想改 | 文件 |
+| 修改目标 | 相关文件 |
 | --- | --- |
-| 默认字号 / 色 / 间距 | `InkAppearance` + `appearance_defaultValues` |
-| 行高 | `applyFixedLineHeight` / `baselineOffset` |
-| 样式传递 | `InkTextContext` + 03 §3.2 |
-| 新块 / 新行内 | `InkBlockHandler` / `InkInlineSyntax` |
-| 表格 | `InkTableBlockView` + `InkTableRenderHelper` |
+| 默认字号、颜色、间距 | `InkAppearance` + `appearance_defaultValues` |
+| 行高计算 | `applyFixedLineHeight` / `baselineOffset` |
+| 样式传递逻辑 | `InkTextContext`（参考 03 §3.2） |
+| 自定义块或行内语法 | `InkBlockHandler` / `InkInlineSyntax` |
+| 表格渲染与布局 | `InkTableBlockView` + `InkTableRenderHelper` |
 | 代码块外观 | `InkCodeBlockView` |
-| 引用线 / 代码底 | `InkMarkdownLayoutManager` |
-| 流式 | `InkStreamRenderer` + 03 §3.7 |
+| 引用线与代码块背景 | `InkMarkdownLayoutManager` |
+| 流式渲染逻辑 | `InkStreamRenderer`（参考 03 §3.7） |

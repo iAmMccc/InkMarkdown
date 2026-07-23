@@ -1,58 +1,58 @@
-# Integrations
+# 外部集成
 
-## Core Sections (Required)
+## 核心集成点
 
-### 1) External Libraries (build-time)
+### 1) 编译期外部依赖库
 
-| Integration | Direction | Auth / config | Evidence |
+| 依赖库 | 集成方式 | 授权 / 配置 | 验证依据 |
 |-------------|-----------|---------------|----------|
-| swift-markdown (`Markdown` product) | 库依赖解析器 | SPM remote **revision pin**（见 `Package.swift` / `Package.resolved`） | `Package.swift` |
-| swift-cmark (transitive) | GFM cmark 实现 | 经 swift-markdown 拉取 `branch: gfm` | `Package.resolved` |
-| UIKit / Foundation | 系统框架 | 无密钥 | 源码 import |
+| swift-markdown (`Markdown` Product) | 核心解析引擎 | SPM 远程 **Revision 锁定**（详见 `Package.swift` / `Package.resolved`） | `Package.swift` |
+| swift-cmark (传递依赖) | cmark-gfm 解析基础 | 由 swift-markdown 传递引入分支 `gfm` | `Package.resolved` |
+| UIKit / Foundation | 系统框架依赖 | 无 | 源码 `import` |
 
-### 2) Host Application Integration Surface
+### 2) 宿主集成接口
 
-InkMarkdown **不**内置网络、鉴权或后端。宿主通过 public API 集成：
+InkMarkdown 不内置网络请求、身份验证或后端交互逻辑。宿主通过公开 API 进行集成：
 
-| Surface | Purpose | Evidence |
+| 接口 | 用途 | 验证依据 |
 |---------|---------|----------|
-| `InkAttributedRenderer.render` | 一次性富文本 | public API |
-| `InkBlockRenderer.render` → `makeView()` | 列表/滚动容器中的块 UI | `InkRenderableBlock` |
-| `InkStreamRenderer` + `bindTextView` | SSE / 聊天流式 | `InkStreamRenderer` |
-| `InkStreamTableView` | 流式场景表格 | `Components/InkStreamTableView.swift` |
-| `InkConfiguration` 自定义扩展点 | 预处理、自定义行内语法扩展、块路由、链接点击回调 | `InkConfiguration.swift` |
-| `InkMarkdownLayoutManager` | 行内代码背景 / 引用竖线绘制 | `Components/InkMarkdownLayoutManager.swift` |
+| `InkAttributedRenderer.render` | 单次生成富文本字符串 | 公开 API |
+| `InkBlockRenderer.render` → `makeView()` | 列表及滚动容器中的块级 View 渲染 | `InkRenderableBlock` |
+| `InkStreamRenderer` + `bindTextView` | SSE / AI 对话流式渲染 | `InkStreamRenderer` |
+| `InkStreamTableView` | 流式渲染场景下的表格处理 | `Components/InkStreamTableView.swift` |
+| `InkConfiguration` 扩展配置 | 包含源码预处理、自定义行内语法扩展、块级路由与链接点击回调 | `InkConfiguration.swift` |
+| `InkMarkdownLayoutManager` | 行内代码背景与引用竖线自定义绘制 | `Components/InkMarkdownLayoutManager.swift` |
 
-示例宿主：`ExampleApp`（含 Mock SSE：`Detail/SSE/MockSSEService.swift`）。
+集成示例见 `ExampleApp`（其中包含 Mock SSE 服务：`Detail/SSE/MockSSEService.swift`）。
 
-### 3) Services Not Present
+### 3) 未引入的服务类型
 
-| Category | Status | Evidence |
+| 服务类型 | 状态 | 验证依据 |
 |----------|--------|----------|
-| Database | 无 | 无 ORM / SQL 依赖 |
-| Auth / OAuth | 无 | 无 |
-| Analytics / APM | 无 | 无 |
-| Message queue | 无 | 无 |
-| Remote config | 无 | 无 |
-| Image CDN / download | **不做**；图片仅文本占位 | `renderImage` 输出 `"[🖼 …]"` |
+| 数据库 | 未使用 | 无 ORM / SQL 依赖 |
+| 身份认证 / OAuth | 未使用 | 无关联代码 |
+| 性能监控 / 统计分析 | 未使用 | 无关联代码 |
+| 消息队列 | 未使用 | 无关联代码 |
+| 远程配置 | 未使用 | 无关联代码 |
+| 图片下载 / CDN 缓存 | **未内置**（图片采用占位符处理） | `renderImage` 仅输出 `"[🖼 …]"` |
 
-### 4) Local Tooling Integrations
+### 4) 本地工具链集成
 
-| Tool | Role | Evidence |
+| 工具 | 用途 | 验证依据 |
 |------|------|----------|
-| `Packages/scripts/fetch-packages.sh` | 按 `packages.json` clone 到 `Packages/Caches/` | 脚本内容 |
-| `packages.json` | 记录依赖 URL / revision | `Packages/packages.json` |
-| XcodeBuildMCP | 推荐构建测试入口 | `AGENTS.md` |
-| codebase-memory（可选 MCP） | 代码结构查询 | `AGENTS.md`；`.codebase-memory/` 可能存在于本地 |
+| `Packages/scripts/fetch-packages.sh` | 依据 `packages.json` 克隆依赖至 `Packages/Caches/` | 脚本内容 |
+| `packages.json` | 记录第三方依赖的 URL 与 Revision | `Packages/packages.json` |
+| XcodeBuildMCP | 构建与测试环境 | `AGENTS.md` |
+| codebase-memory | 本地代码库架构辅助查询 | `AGENTS.md` |
 
-### 5) Credentials and Secrets
+### 5) 凭证与安全配置
 
-- 无 `.env.example`；库本身不需要 API key。
-- 代理仅影响开发者拉取 git 依赖的环境变量。
+- 项目无依赖 API Key，无需包含 `.env` 配置文件。
+- 网络代理环境变量仅影响本地依赖拉取过程。
 
-### 6) Evidence
+### 6) 验证依据
 
 - `Package.swift` / `Package.resolved`
-- `Sources/InkMarkdown/Rendering/AttributedString/InkAttributedRenderer.swift`（`renderImage`）
+- `Sources/InkMarkdown/Rendering/AttributedString/InkAttributedRenderer.swift`
 - `ExampleApp/ExampleApp/Detail/SSE/`
 - `Packages/scripts/fetch-packages.sh`
