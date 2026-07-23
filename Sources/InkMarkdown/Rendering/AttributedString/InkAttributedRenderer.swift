@@ -12,6 +12,11 @@ import Markdown
 ///    叶子节点一次性生成正确的 run，不再"先渲染子节点、父节点回头 enumerate 覆盖"。
 ///    后处理**仅**做两件事：施加段落级统一 `.paragraphStyle`、按 run 自身 font 派生 `.baselineOffset`——
 ///    二者都不改写任何 font/color/trait/自定义 attribute 的决定。
+///
+/// // 为什么 拆分 public struct 与 private InkRenderer：
+/// // InkAttributedRenderer 作为公开命名空间，提供纯函数风格的静态方法，对外屏蔽状态；
+/// // 内部的 InkRenderer 是实例类型，持有 configuration 及其解包的 appearance，
+/// // 避免在整个递归调用链中反复传递配置对象。
 public struct InkAttributedRenderer {
 
   /// 一把渲染完整文本。
@@ -49,6 +54,10 @@ public struct InkAttributedRenderer {
     }
 
     if !markups.isEmpty {
+      // // 为什么 需要尾部哨兵段落：
+      // 在块路由拼装场景中，相邻块之间通常只有换行，如果最后一块设置了 paragraphSpacing（段后距），
+      // TextKit 需要有一个后续段落作为参照物才能把这段间距渲染出来。
+      // 因此在结尾追加一个几乎不可见（高度 0.1pt）的占位段落，专门用来兑现最后一块的底部间距。
       let trailingPara = NSMutableParagraphStyle()
       trailingPara.minimumLineHeight = 0.1
       trailingPara.maximumLineHeight = 0.1
@@ -141,6 +150,9 @@ private struct InkRenderer {
     case let ul as UnorderedList:
       return renderList(items: Array(ul.listItems), ordered: false, start: 1, context: context)
     case let cb as Markdown.CodeBlock:
+      // // 为什么 不传 context：
+      // 围栏代码块和分割线在本通道仅作为富文本 fallback，它们内部的排版完全自给自足（等宽字体/背景色或横线），
+      // 不受外层容器（如引用、列表）的字号/颜色派生影响，因此不需要接收 context。
       return renderCodeBlock(cb)
     case is Markdown.ThematicBreak:
       return renderThematicBreak()
@@ -166,6 +178,8 @@ private struct InkRenderer {
       return renderInlineChildren(of: e, context: context.addingTrait(.traitItalic))
     case let s as Strong:
       return renderInlineChildren(of: s, context: context.addingTrait(.traitBold))
+    case let st as Strikethrough:
+      return renderInlineChildren(of: st, context: context.striking())
     case let l as Markdown.Link:
       return renderLink(l, context: context)
     case let img as Markdown.Image:
@@ -248,7 +262,9 @@ private struct InkRenderer {
       } else {
         // 非段落（嵌套 list / 代码块）：renderBlock 已设好各自的段落样式
         // （list 悬挂缩进、代码块行高），不再用 applyFixedLineHeight 全 range 覆盖——
-        // 否则会把这些样式抹平成引用块规格。仅在其既有缩进上叠加引用缩进。
+        // // 为什么 只叠缩进不盖段落样式：
+        // 否则会把子节点（如嵌套列表）特有的悬挂缩进、段后距等抹平成引用块的标准规格。
+        // 所以这里只在其既有缩进上叠加引用的左缩进，保持子节点原本的段落几何形态。
         part = NSMutableAttributedString(attributedString: renderBlock(child, context: quoteContext))
         let fullRange = NSRange(location: 0, length: part.length)
         part.enumerateAttribute(.paragraphStyle, in: fullRange, options: []) { value, range, _ in
@@ -447,12 +463,18 @@ private struct InkRenderer {
     if let url = context.linkURL {
       codeAttrs[.link] = url
     }
-    let codeStr = NSAttributedString(string: inlineCode.code, attributes: codeAttrs)
 
-    let marginAttrs: [NSAttributedString.Key: Any] = [
+    var marginAttrs: [NSAttributedString.Key: Any] = [
       .font: font,
       .kern: appearance.inlineCode.margin,
     ]
+
+    if context.isStrikethrogh {
+      codeAttrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+      marginAttrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+    }
+
+    let codeStr = NSAttributedString(string: inlineCode.code, attributes: codeAttrs)
     let leftMargin = NSAttributedString(string: "\u{200B}", attributes: marginAttrs)
     let rightMargin = NSAttributedString(string: "\u{200B}", attributes: marginAttrs)
 
@@ -460,11 +482,15 @@ private struct InkRenderer {
     result.append(leftMargin)
     result.append(codeStr)
     result.append(rightMargin)
+
     return result
   }
 
   private func renderText(_ textNode: Markdown.Text, context: InkTextContext) -> NSAttributedString {
     if !configuration.inlineSyntaxes.isEmpty {
+      // // 为什么 inline-syntax 优先：
+      // 赋予业务自定义扩展（如 $标签$、@提及）最高优先级去拦截并处理文本。
+      // 若某个扩展决定处理该片段并返回结果，就可以直接 early-return，不再走默认属性回落。
       // 用当前 context 的字体/颜色构造行内扩展上下文，使自定义组件与所在容器风格一致。
       let inlineContext = InkInlineContext(
         baseFont: context.font,
@@ -484,6 +510,11 @@ private struct InkRenderer {
     if let url = context.linkURL {
       attrs[.link] = url
     }
+
+    if context.isStrikethrogh {
+      attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+    }
+
     // 斜体兜底：字体无 italic 变体时以人工倾斜模拟（emphasis 内的普通字体）。
     if context.obliqueness != 0 {
       attrs[.obliqueness] = context.obliqueness

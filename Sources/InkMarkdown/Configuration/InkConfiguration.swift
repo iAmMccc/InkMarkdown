@@ -31,12 +31,16 @@ public struct InkConfiguration {
   public var sourceFilter: ((String) -> String)?
 
   /// 块级路由处理器列表，按顺序匹配。默认内置代码块和表格。
+  /// // 注意：本渲染器 (InkAttributedRenderer) 不会读取此配置。
+  /// // 这些 handler 专供 InkBlockRenderer (块路由通道) 消费，用于决定哪些节点被截获渲染为自定义 UIView。
   public var blockHandlers: [InkBlockHandler]
 
   /// 链接点击回调。
   ///
   /// 表格单元格用 `UITextView` 渲染时，命中 `.link` 属性会调用此回调，
   /// 由业务方决定如何处理（例如分发到自定义 Directive 跳转）。
+  /// // 注意：本渲染器只负责给文本挂上 `.link` 属性，并不负责事件拦截。
+  /// // 实际点击回调由显示层（如自定义的 TextView 或 InkAttributedTextBlock）读取该闭包并触发。
   /// - Parameters:
   ///   - url: 被点击链接的 URL。
   ///   - view: 触发点击的视图（业务方可沿其响应链定位当前 VC）。

@@ -9,6 +9,8 @@ import UIKit
 ///
 /// 纯值语义：所有派生方法返回新实例，不修改自身。
 struct InkTextContext {
+  /// 是否有下划线
+  var isStrikethrogh: Bool = false
 
   /// 当前基准字体：字号 / 字重 / traits / family 全部编码在内。
   var font: UIFont
@@ -84,6 +86,12 @@ struct InkTextContext {
   func withFont(_ newFont: UIFont) -> InkTextContext {
     var copy = self
     copy.font = newFont
+    return copy
+  }
+
+  func striking() -> InkTextContext {
+    var copy = self
+    copy.isStrikethrogh = true
     return copy
   }
 }

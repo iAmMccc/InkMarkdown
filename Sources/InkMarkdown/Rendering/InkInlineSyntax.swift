@@ -46,6 +46,10 @@ public protocol InkInlineSyntax {
   /// - Parameters:
   ///   - text: 当前 `Text` 节点的字面内容。
   ///   - context: 当前文本所处容器的渲染上下文（基准字体 / 颜色 / 完整样式）。
-  /// - Returns: 渲染好的片段；返回 `nil` 表示本扩展不处理该段文本。
+  /// - Returns: 渲染好的片段；
+  ///   // 为什么 用返回 nil 来交出控制权：
+  ///   // 因为行内扩展是一个责任链模型，返回 nil 明确表达了"虽然扫描了，但未命中我的规则"，
+  ///   // 渲染器据此知道应该继续询问链上的下一个扩展，或者回落到默认的普通文本渲染。
+  ///   返回 `nil` 表示本扩展不处理该段文本。
   func render(text: String, context: InkInlineContext) -> NSAttributedString?
 }

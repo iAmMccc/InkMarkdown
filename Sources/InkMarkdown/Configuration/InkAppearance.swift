@@ -96,6 +96,9 @@ public extension InkAppearance {
     public init() {}
 
     /// 取指定标题级别的字号。
+    /// // 为什么 H1 特殊、H2–H5 与正文同值：
+    /// // 默认设计上，仅 H1 作为主要大标题被着重放大；H2–H5 在字号上与正文保持一致（17pt），
+    /// // 通过字重（加粗）和上下文留白来区分层级，实现克制而精巧的排版。
     public func fontSize(forLevel level: Int) -> CGFloat {
       level == 1 ? h1FontSize : fontSize
     }
