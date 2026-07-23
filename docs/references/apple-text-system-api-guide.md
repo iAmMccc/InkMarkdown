@@ -1,6 +1,6 @@
 # Apple 文本系统 API 速查
 
-本页是 Reference，用于查找 InkMarkdown 涉及的 Foundation 与 UIKit 文本 API。学习概念时先读[第 3 章](../learning-path/03-nsattributedstring-and-textkit.md)。
+本页是 Reference，用于查找 InkMarkdown 涉及的 Foundation 与 UIKit 文本 API。概念入门可另查个人知识库中的 TextKit 教程；贡献本库时以本页与源码为准。
 
 > 核对日期：2026-07-14。类型概要与可用版本由 Apple Developer Documentation 核对；InkMarkdown 的采用方式以当前源码为准。
 
@@ -75,4 +75,4 @@ InkMarkdown 在 `InkAttributedTextBlock.makeView()` 中显式组装 `InkMarkdown
 
 ## 维护规则
 
-当项目的最低 iOS 版本、公开富文本类型或 TextKit 路径变化时，同步核对本页、[第 3 章](../learning-path/03-nsattributedstring-and-textkit.md)和[架构文档](../contributor-guide/02-architecture.md)。
+当项目的最低 iOS 版本、公开富文本类型或 TextKit 路径变化时，同步核对本页和[架构文档](../contributor-guide/02-architecture.md)。

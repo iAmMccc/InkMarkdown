@@ -155,7 +155,12 @@ iOS Simulator 全量测试（或推送触发 CI）。
 
 在动手写自定义 `InkInlineSyntax` 或 `InkBlockHandler` 之前，先做能最快看到效果的小改动：渲染一段字符串，或者调一个 `InkAppearance` 的值（比如 `InkAppearance.shared.text.fontSize`），在 ExampleApp 里确认真的生效了。跑通「改一个值 → 在 ExampleApp 里看到变化」这条最短链路后，再看下面的扩展点示例写自定义 handler / syntax，遇到问题也更容易判断是扩展点写错了还是环境没搭对。
 
-具体步骤见[第一次运行](../learning-path/00-first-run.md)。
+最短第一次运行：
+
+1. 打开 `ExampleApp/ExampleApp.xcodeproj`（或 `open ExampleApp/ExampleApp.xcodeproj`）。
+2. Scheme 选 `ExampleApp`，选一个可用的 iOS Simulator，Cmd-R 运行。
+3. 在 App 中打开任一标准样式样例，确认能看到渲染结果与源码页切换。
+4. 再改一处 `InkAppearance` / 渲染输入，热重跑确认变化可见。
 
 ## 添加自定义语法与组件路由扩展
 

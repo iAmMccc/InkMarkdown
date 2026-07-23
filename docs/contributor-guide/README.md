@@ -32,10 +32,11 @@
 
 ## 与其他文档的边界
 
-- 想从 Markdown 零基础开始：看[学习路径](../learning-path/README.md)。
 - 想确认某种语法应该怎样显示：看[渲染语义规范](../spec/README.md)。
 - 想查 swift-markdown 的类型和遍历 API：看[API 速查](../references/swift-markdown-api-guide.md)。
 - 想确认仓库当前是否真的支持某项能力：看[当前状态](../current-status.md)。
+- 想跑通 ExampleApp 做第一次小改动：看[开发指南](04-development.md)。
+- 零基础 Markdown / TextKit Tutorial 不在本仓；维护者个人跟练材料见 PersonalDocument 的 `iOS/InkMarkdown/learning-path/`。
 
 ## 修改文档时的最小检查
 

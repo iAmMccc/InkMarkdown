@@ -87,4 +87,4 @@ Context7 本次没有正确解析 `johnxnguyen/Down`，而是返回了同名 Rub
 
 ## 维护规则
 
-外部库的公开 UI 边界、解析依赖、最低平台或流式 API 变化时，更新本页，再复查[学习路径第 8 章](../learning-path/08-library-landscape-and-design-tradeoffs.md)与[项目概述](../contributor-guide/01-overview.md)。
+外部库的公开 UI 边界、解析依赖、最低平台或流式 API 变化时，更新本页，再复查[项目概述](../contributor-guide/01-overview.md)。

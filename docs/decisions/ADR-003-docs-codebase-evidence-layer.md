@@ -10,7 +10,7 @@ Accepted
 
 ## Context
 
-- 已有 `contributor-guide`、`spec`、`learning-path`、`current-status` 等人类向知识库。
+- 已有 `contributor-guide`、`spec`、`current-status` 等人类向知识库（零基础 Tutorial 已迁出本仓）。
 - Agent 需要短、可核验、与源码绑定的栈/结构/风险摘要，避免与长文解释抢「单一真相」。
 - `acquire-codebase-knowledge` 产出七件套到 `docs/codebase/`。
 

@@ -60,14 +60,17 @@ InkMarkdown/
 
 ```
 docs/
-├── README.md             # 文档入口、学习路径、权威层级
+├── README.md             # 文档入口、权威层级
 ├── current-status.md     # 可验证的当前交付状态与已知漂移
 ├── roadmap.md            # 未来优先级与退出标准
-├── learning-path/        # 从 Markdown 基础到项目实战的初学者教程
+├── decisions/            # ADR 架构决策
+├── codebase/             # 工程证据基线（短、可核验）
 ├── contributor-guide/    # 架构、原理、开发、模块与 FAQ
 ├── references/           # 三方依赖 API 速查
 └── spec/                 # Markdown 渲染语义规范
 ```
+
+> 零基础 Tutorial（Markdown / TextKit 跟练）已迁至个人知识库 `PersonalDocument/DocumentLibrary/iOS/InkMarkdown/learning-path/`，不进本开源仓。
 
 **查阅原则**：
 - 涉及"当前到底做到哪" → 查 [docs/current-status.md](docs/current-status.md)

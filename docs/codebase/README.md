@@ -10,7 +10,6 @@
 | [`docs/current-status.md`](../current-status.md) | 产品交付状态、能力矩阵、已知限制 | **“现在交付了什么”** 的人类可读基线 |
 | [`docs/contributor-guide/`](../contributor-guide/) | 设计意图、原理、模块地图、开发 How-to | **为什么这样设计、怎么改** |
 | [`docs/spec/`](../spec/) | Markdown 渲染语义契约 | **应渲染成什么** |
-| [`docs/learning-path/`](../learning-path/) | 教程路径 | 教学向，不替代实现事实 |
 | [`docs/references/`](../references/) | 三方 API 速查 | 依赖边界，不描述本库实现 |
 | [`docs/roadmap.md`](../roadmap.md) | 计划 | 未交付能力不得写进 codebase 的“已支持” |
 
