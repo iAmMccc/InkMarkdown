@@ -20,6 +20,7 @@ enum MarkdownComponent: String, CaseIterable {
   case emphasis
   case inlineCode
   case link
+  case strikethrough
   case image
   case escapeAndEntity
 
@@ -41,6 +42,7 @@ enum MarkdownComponent: String, CaseIterable {
     case .inlineCode: return "行内代码"
     case .link: return "链接"
     case .image: return "图片"
+    case .strikethrough: return "删除线"
     case .escapeAndEntity: return "转义与实体"
     }
   }
@@ -62,6 +64,7 @@ enum MarkdownComponent: String, CaseIterable {
     case .emphasis: return "斜体强调"
     case .inlineCode: return "行内代码片段"
     case .link: return "行内 / 引用 / 自动链接"
+    case .strikethrough: return "删除线"
     case .image: return "图片与 alt 文本"
     case .escapeAndEntity: return "反斜杠转义与 HTML 实体"
     }
@@ -101,6 +104,8 @@ enum MarkdownComponent: String, CaseIterable {
       return "用反引号包裹的行内代码，内容不解析 Markdown 语法。"
     case .link:
       return "支持行内式 [text](url)、引用式 [text][ref] 与尖括号自动链接 <url>。"
+    case .strikethrough:
+      return "GFM 删除线 ~~这是一段删除线文本~~"
     case .image:
       return "语法与链接类似，前缀加 !。alt 文本用于无障碍与加载失败时的占位。"
     case .escapeAndEntity:
@@ -219,6 +224,17 @@ enum MarkdownComponent: String, CaseIterable {
 
       自动链接：<https://www.apple.com>
       """
+    case .strikethrough:
+      return """
+      普通文字与 ~~删除线~~ 混排。
+      
+      嵌套组合：
+      
+      - ~~纯删除线~~
+      - **~~粗体 + 删除线~~**
+      - ~~*斜体 + 删除线*~~
+      - ~~`行内代码 + 删除线`~~
+      """
     case .image:
       return "![InkMarkdown 示意图](https://via.placeholder.com/160x48.png?text=InkMarkdown \"示例 title\")"
     case .escapeAndEntity:
@@ -245,15 +261,25 @@ enum MarkdownComponent: String, CaseIterable {
 
   /// 结构类组件列表。
   static let structuralComponents: [MarkdownComponent] = [
-    .headingH1, .headingH2, .headingH3,
-    .paragraph, .blockquote,
-    .unorderedList, .orderedList,
-    .codeBlock, .thematicBreak,
+    .headingH1,
+    .headingH2,
+    .headingH3,
+    .paragraph,
+    .blockquote,
+    .unorderedList,
+    .orderedList,
+    .codeBlock,
+    .thematicBreak,
   ]
 
   /// Section 2 行内组件列表。
   static let inlineComponents: [MarkdownComponent] = [
-    .strong, .emphasis, .inlineCode,
-    .link, .image, .escapeAndEntity,
+    .strong,
+    .emphasis,
+    .inlineCode,
+    .link,
+    .strikethrough,
+    .image,
+    .escapeAndEntity,
   ]
 }
