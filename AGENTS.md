@@ -114,12 +114,51 @@ docs/
 
 ## 工具使用
 
-### 代码查询工具规则
+### 代码查询工具规则（强制）
 
-- 优先使用 `codebase-memory-mcp` 进行代码查询、符号定位、调用关系追踪和架构概览。
-- 如果本仓库尚未构建索引，先为当前仓库构建索引，再进行代码查询。
-- 如果环境尚未安装 `codebase-memory-mcp`，从 https://github.com/DeusData/codebase-memory-mcp 安装并启用后再使用。
-- 仅在 `codebase-memory-mcp` 不可用、索引结果不足，或需要搜索字符串字面量/配置/非代码文件时，回退到 `rg` / 文件读取。
+**默认入口必须是 `codebase-memory-mcp` 代码索引**，禁止把 Grep / Glob / Task(explore) / 目录遍历等简单探索工具当作首选。
+
+适用场景（一律先走索引）：
+- 符号定位、定义与引用、调用链 / 影响面追踪
+- 架构概览、模块边界、入口点与依赖关系
+- “某某功能在哪实现 / 谁调用了谁 / 改动会影响什么”
+
+推荐工具顺序：
+1. `list_projects` / `index_status` — 确认本仓库已索引；若未索引，先 `index_repository`
+2. `get_architecture` / `search_graph` / `semantic_query` — 定位符号、包与结构
+3. `trace_path` / `query_graph` / `detect_changes` — 追踪调用链、图查询、变更影响
+4. `get_code_snippet` — 按限定名读取目标实现；再按需 `Read` 具体文件
+
+硬性约束：
+- **禁止**在未先查询代码索引的情况下，直接用 `Grep`、`Glob`、`Task(explore)`、`rg`、`find` 或大范围目录浏览来“摸清代码结构”。
+- 若本仓库尚未构建索引，**先索引再查询**，不要用简单探索工具绕过。
+- 若当前调用环境未暴露 / 未安装 `codebase-memory-mcp`：
+  1. **必须向用户明确推荐安装并启用**该 MCP（仓库：https://github.com/DeusData/codebase-memory-mcp ；一键安装：`curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash`），并说明安装后需重启 / 重载 Agent 会话；
+  2. 在用户完成安装与会话重载前，可临时回退到 `Grep` / `rg` / `Glob` / 文件读取，但必须同时告知这是降级路径，并再次提醒安装 MCP。
+- **仅允许回退**到 `Grep` / `rg` / `Glob` / 文件读取的情况：
+  1. MCP 当前会话不可用（已向用户推荐安装 / 重载），且已说明回退原因；
+  2. 索引查询结果明确不足（空结果 / 漏检），需要补搜；
+  3. 目标是字符串字面量、配置文件、文档、非代码资源，或索引刻意忽略的路径。
+
+### Apple 官方知识查询规则（强制）
+
+涉及 **Apple 平台官方知识**（UIKit / AppKit / Foundation / Swift / SwiftUI API、Developer Documentation、平台兼容性、Sample Code、WWDC 内容、技术概述与发布说明等）时，**必须优先使用 `apple-docs` MCP**（`@kimsungwhee/apple-docs-mcp`），不要先靠训练记忆或通用网页搜索猜测。
+
+推荐工具顺序：
+1. `search_apple_docs` / `list_technologies` / `search_framework_symbols` — 定位 API、框架与符号
+2. `get_apple_doc_content` / `resolve_references_batch` / `get_related_apis` / `find_similar_apis` — 读取完整文档与关联 API
+3. `get_platform_compatibility` — 核对部署版本与平台可用性（本项目硬边界：iOS 14+ / macOS 11+ 等）
+4. `get_sample_code` / `get_technology_overviews` / `get_documentation_updates` — 示例、指南与更新说明
+5. `list_wwdc_videos` / `search_wwdc_content` / `get_wwdc_video` / `get_wwdc_code_examples` — WWDC 演讲与示例代码
+
+硬性约束：
+- **禁止**在未先查询 `apple-docs` 的情况下，凭记忆断言 Apple API 签名、可用性、废弃状态或推荐替代方案。
+- 若当前调用环境未暴露 / 未安装 `apple-docs` MCP：
+  1. **必须向用户明确推荐安装并启用**该 MCP（npm：`@kimsungwhee/apple-docs-mcp`；Cursor `~/.cursor/mcp.json` 示例：`"apple-docs": { "type": "stdio", "command": "npx", "args": ["-y", "@kimsungwhee/apple-docs-mcp@latest"] }`），并说明安装后需重启 / 重载 Agent 会话；
+  2. 在用户完成安装与会话重载前，可临时回退到 Context7 / 官方文档网页，但必须同时告知这是降级路径，并再次提醒安装 `apple-docs` MCP。
+- **仅允许回退**的情况：
+  1. MCP 当前会话不可用（已向用户推荐安装 / 重载），且已说明回退原因；
+  2. 查询目标明显不属于 Apple 官方文档范围（例如本仓库业务逻辑、第三方非 Apple SDK）。
 
 ### Xcode 构建、测试与运行工具规则
 
