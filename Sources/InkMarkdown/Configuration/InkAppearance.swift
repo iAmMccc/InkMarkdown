@@ -44,6 +44,8 @@ public struct InkAppearance {
   public var thematicBreak: ThematicBreak = .init()
   /// 链接样式。
   public var link: Link = .init()
+  /// 图片渲染配置。
+  public var imageRendering: InkImageRendering = .init()
 
   public init() {}
 }
