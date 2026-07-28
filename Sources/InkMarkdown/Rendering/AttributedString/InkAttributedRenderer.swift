@@ -112,6 +112,24 @@ private struct InkRenderer {
 
   private var appearance: InkAppearance { configuration.appearance }
 
+  private final class LoaderCache {
+    var loader: (any InkImageLoading)?
+  }
+
+  private let loaderCache = LoaderCache()
+
+  private func resolveLoader() -> any InkImageLoading {
+    if let loader = appearance.imageRendering.loader {
+      return loader
+    }
+    if let cached = loaderCache.loader {
+      return cached
+    }
+    let loader = DefaultURLSessionImageLoader(securityPolicy: appearance.imageRendering.securityPolicy)
+    loaderCache.loader = loader
+    return loader
+  }
+
   /// 正文基准上下文：正文字号系统字体 + 正文色。块级递归的起点。
   var bodyContext: InkTextContext {
     InkTextContext(
@@ -532,16 +550,94 @@ private struct InkRenderer {
   }
 
   private func renderImage(_ image: Markdown.Image, context: InkTextContext) -> NSAttributedString {
-    let display = image.plainText.isEmpty ? (image.source ?? "image") : image.plainText
-    var attrs: [NSAttributedString.Key: Any] = [
-      .font: UIFont.systemFont(ofSize: context.font.pointSize),
-      .foregroundColor: appearance.text.secondaryColor,
-    ]
-    // 处于链接内（[![img](src)](url)）时占位串也可点击。
-    if let url = context.linkURL {
-      attrs[.link] = url
+    let rendering = appearance.imageRendering
+
+    guard rendering.isEnabled,
+          let urlString = image.source,
+          let url = URL(string: urlString) else {
+      let display = image.plainText.isEmpty ? (image.source ?? "image") : image.plainText
+      var attrs: [NSAttributedString.Key: Any] = [
+        .font: UIFont.systemFont(ofSize: context.font.pointSize),
+        .foregroundColor: appearance.text.secondaryColor,
+      ]
+      if let url = context.linkURL {
+        attrs[.link] = url
+      }
+      return NSAttributedString(string: "[\u{1F5BC} \(display)]", attributes: attrs)
     }
-    return NSAttributedString(string: "[\u{1F5BC} \(display)]", attributes: attrs)
+
+    let source = ImageSource(
+      url: url,
+      stripsQuery: rendering.securityPolicy.stripsQuery,
+      stripsFragment: rendering.securityPolicy.stripsFragment
+    )
+
+    if checkSecurityPolicy(source: source, rendering: rendering) != nil {
+      let display = image.plainText.isEmpty ? (image.source ?? "image") : image.plainText
+      return NSAttributedString(
+        string: "[\u{1F5BC} \(display)]",
+        attributes: [
+          .font: UIFont.systemFont(ofSize: context.font.pointSize),
+          .foregroundColor: appearance.text.secondaryColor,
+        ]
+      )
+    }
+
+    return MainActor.assumeIsolated {
+      let store = InkImageStore.shared
+      let attachment = InkImageAttachment(source: source, store: store, rendering: rendering)
+
+      let loader = resolveLoader()
+      let scale = UIScreen.main.scale
+      let maxWidth = rendering.sizing.maxInlineImageWidth ?? 300
+      let display = DisplayContext(
+        maxPixelWidth: maxWidth * scale,
+        scale: scale,
+        contentMode: .fit
+      )
+      attachment.materialize(display: display, loader: loader)
+
+      let result = NSMutableAttributedString(attachment: attachment)
+      result.addAttribute(.baselineOffset, value: 0, range: NSRange(location: 0, length: result.length))
+
+      if let linkURL = context.linkURL {
+        result.addAttribute(.link, value: linkURL, range: NSRange(location: 0, length: result.length))
+      }
+
+      return result
+    }
+  }
+
+  private func checkSecurityPolicy(source: ImageSource, rendering: InkImageRendering) -> ImageRejectReason? {
+    let policy = rendering.securityPolicy
+
+    guard policy.allowedSchemes.contains(source.scheme) else {
+      return .schemeNotAllowed(String(describing: source.scheme))
+    }
+
+    if source.scheme == .http || source.scheme == .https {
+      if let host = source.rawURL.host {
+        if policy.allowedHosts.isEmpty {
+          switch policy.emptyHostPolicy {
+          case .rejectAll:
+            return .hostNotAllowed(host)
+          case .allowAll:
+            break
+          }
+        } else if !policy.allowedHosts.contains(host) {
+          return .hostNotAllowed(host)
+        }
+      }
+    }
+
+    if source.scheme == .data {
+      let dataSize = source.rawURL.absoluteString.count
+      if dataSize > InkImageStore.Configuration().maxDataURLBytes {
+        return .payloadTooLarge(dataSize)
+      }
+    }
+
+    return nil
   }
 
   private func renderInlineHTML(_ inlineHTML: InlineHTML) -> NSAttributedString {
@@ -606,9 +702,30 @@ private struct InkRenderer {
 
     // 仅派生：baselineOffset 是 run 自身 font 的纯函数，不改写 font/color 决定。
     mutable.enumerateAttribute(.font, in: fullRange, options: []) { value, range, _ in
+      // 图片 attachment 由 renderImage 固定 baselineOffset=0，跳过文本居中偏移。
+      var skipForImageAttachment = false
+      mutable.enumerateAttribute(.attachment, in: range, options: []) { att, _, stop in
+        if att is InkImageAttachment {
+          skipForImageAttachment = true
+          stop.pointee = true
+        }
+      }
+      if skipForImageAttachment { return }
+
       let font = (value as? UIFont) ?? UIFont.systemFont(ofSize: appearance.text.fontSize)
       let offset = baselineOffset(for: font, in: lineHeight)
       mutable.addAttribute(.baselineOffset, value: offset, range: range)
+    }
+
+    mutable.enumerateAttribute(.attachment, in: fullRange, options: []) { value, range, _ in
+      guard let imgAttachment = value as? InkImageAttachment else { return }
+      mutable.addAttribute(.baselineOffset, value: CGFloat(0), range: range)
+      if imgAttachment.bounds.height > lineHeight {
+        let para = NSMutableParagraphStyle()
+        para.minimumLineHeight = lineHeight
+        para.maximumLineHeight = max(lineHeight, imgAttachment.bounds.height)
+        mutable.addAttribute(.paragraphStyle, value: para, range: range)
+      }
     }
   }
 }

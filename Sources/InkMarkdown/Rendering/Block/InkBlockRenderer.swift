@@ -32,8 +32,14 @@ public enum InkBlockRenderer {
       }
     }
 
+    var handlers = configuration.blockHandlers
+    if configuration.appearance.imageRendering.isEnabled
+      && configuration.appearance.imageRendering.promotesToBlock {
+      handlers.insert(InkImageBlockHandler(), at: 0)
+    }
+
     for child in document.children {
-      let handled = configuration.blockHandlers
+      let handled = handlers
         .first { $0.canHandle(child) }?
         .makeBlock(from: child, configuration: configuration)
 
