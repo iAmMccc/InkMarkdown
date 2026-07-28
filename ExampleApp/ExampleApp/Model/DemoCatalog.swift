@@ -57,6 +57,13 @@ enum DemoCatalog {
           .component(.table),
         ]
       ),
+      DemoSection(
+        title: "图片渲染",
+        footer: "网络图、本地 Asset、Base64、块通道、行内混排、全屏预览等场景。",
+        rows: [
+          .scenario(.imageRenderingDemo),
+        ]
+      ),
     ]
   }
 

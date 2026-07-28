@@ -90,6 +90,8 @@ final class CategoryListViewController: DemoListViewController {
       return SSEChatViewController()
     case .streamingPerformance:
       return StreamingPerformanceViewController()
+    case .imageRenderingDemo:
+      return ImageDemoViewController()
     }
   }
 }

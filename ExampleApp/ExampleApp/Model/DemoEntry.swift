@@ -25,6 +25,7 @@ enum Scenario {
   case serverJSON
   case sseStreaming
   case streamingPerformance
+  case imageRenderingDemo
 
   var title: String {
     switch self {
@@ -33,6 +34,7 @@ enum Scenario {
     case .serverJSON: return "服务端 JSON"
     case .sseStreaming: return "SSE 流式吐字"
     case .streamingPerformance: return "增量渲染性能对比"
+    case .imageRenderingDemo: return "图片渲染 Demo"
     }
   }
 
@@ -43,6 +45,7 @@ enum Scenario {
     case .serverJSON: return "从 API 响应字段渲染"
     case .sseStreaming: return "对话发送，边收边逐字渲染"
     case .streamingPerformance: return "对比每片全量解析与增量解析"
+    case .imageRenderingDemo: return "10 个场景：网络图、Asset、Base64、块通道等"
     }
   }
 }
