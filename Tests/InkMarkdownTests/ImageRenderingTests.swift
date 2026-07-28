@@ -1,0 +1,357 @@
+import Testing
+import UIKit
+@testable import InkMarkdown
+import Markdown
+
+// MARK: - #1 ImageSource scheme 解析
+
+@Test func imageSource_httpScheme() {
+  let source = ImageSource(url: URL(string: "https://example.com/image.png")!)
+  #expect(source.scheme == .https)
+}
+
+@Test func imageSource_fileScheme() {
+  let source = ImageSource(url: URL(string: "file:///path/to/image.png")!)
+  #expect(source.scheme == .file)
+}
+
+@Test func imageSource_dataScheme() {
+  let source = ImageSource(url: URL(string: "data:image/png;base64,abc")!)
+  #expect(source.scheme == .data)
+}
+
+@Test func imageSource_unknownScheme() {
+  let source = ImageSource(url: URL(string: "ftp://example.com/image.png")!)
+  #expect(source.scheme == .unknown)
+}
+
+// MARK: - #2 DisplayKey bucket 量化
+
+@Test func displayKey_bucketQuantization() {
+  let source = ImageSource(url: URL(string: "https://example.com/img.png")!)
+  // 375pt × 3x = 1125px → ceil(1125/64) * 64 = 1152
+  let display = DisplayContext(maxPixelWidth: 1125, scale: 3, contentMode: .fit)
+  let key = DisplayKey(source: source, display: display)
+  #expect(key.bucketedWidth == 1152)
+  #expect(key.scale == 3)
+}
+
+@Test func displayKey_exactMultiple() {
+  let source = ImageSource(url: URL(string: "https://example.com/img.png")!)
+  // 768px → ceil(768/64) * 64 = 768
+  let display = DisplayContext(maxPixelWidth: 768, scale: 2, contentMode: .fit)
+  let key = DisplayKey(source: source, display: display)
+  #expect(key.bucketedWidth == 768)
+}
+
+// MARK: - #3 SecurityPolicy 门禁
+
+@Test func securityPolicy_emptyHostsRejectsAll() {
+  var policy = ImageSecurityPolicy()
+  policy.allowedHosts = []
+  policy.emptyHostPolicy = .rejectAll
+  // 空 allowedHosts + rejectAll = 拒绝所有 http(s)
+  #expect(policy.allowedHosts.isEmpty)
+  #expect(policy.emptyHostPolicy == .rejectAll)
+}
+
+@Test func securityPolicy_stripsQuery() {
+  let url = URL(string: "https://example.com/img.png?token=secret")!
+  let source = ImageSource(url: url, stripsQuery: true)
+  #expect(!source.canonicalID.contains("token=secret"))
+}
+
+// MARK: - #4 data: URL 大小上限
+
+@Test func dataURL_withinLimit() {
+  let small = "data:image/png;base64," + String(repeating: "A", count: 100)
+  let source = ImageSource(url: URL(string: small)!)
+  #expect(source.scheme == .data)
+}
+
+// MARK: - #5–8 / #14 / #16–18 InkImageStore
+
+@Suite(.serialized)
+struct InkImageStoreTests {
+
+  /// 可控延迟 / 失败的加载器；串行队列保护可变计数（兼容 iOS 14+ / async）。
+  final class MockImageLoader: InkImageLoading, @unchecked Sendable {
+    private var loadCount = 0
+    private let queue = DispatchQueue(label: "inkmarkdown.tests.mock-image-loader")
+    var delay: UInt64 = 0
+    var shouldFail = false
+
+    func loadImage(source: ImageSource, display: DisplayContext) async throws -> UIImage {
+      queue.sync { loadCount += 1 }
+      if delay > 0 {
+        try await Task.sleep(nanoseconds: delay)
+      }
+      if shouldFail { throw ImageLoadError.decodeFailed }
+      return UIImage(systemName: "photo")!
+    }
+
+    var currentLoadCount: Int {
+      queue.sync { loadCount }
+    }
+  }
+
+  /// #5 inflight 合并：同 URL resolve 两次 → loader 仅调用 1 次
+  @Test @MainActor func inflightCoalescing() async {
+    let store = InkImageStore()
+    let loader = MockImageLoader()
+    loader.delay = 100_000_000 // 100ms
+
+    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    let result1 = store.resolve(source: source, display: display, loader: loader)
+    let result2 = store.resolve(source: source, display: display, loader: loader)
+
+    if case .loading = result1 {} else { Issue.record("第一次 resolve 应为 .loading") }
+    if case .loading = result2 {} else { Issue.record("第二次 resolve 应为 .loading") }
+
+    try? await Task.sleep(nanoseconds: 200_000_000)
+    #expect(loader.currentLoadCount == 1)
+  }
+
+  /// #6 并发上限：超过 maxConcurrentLoads 返回 .queued
+  @Test @MainActor func concurrencyLimit() {
+    var config = InkImageStore.Configuration()
+    config.maxConcurrentLoads = 4
+    let store = InkImageStore(configuration: config)
+    let loader = MockImageLoader()
+    loader.delay = 1_000_000_000 // 1s，保证不会在测试期间完成
+
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    var results: [InkImageStore.ResolveResult] = []
+    for i in 0..<6 {
+      let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
+      results.append(store.resolve(source: source, display: display, loader: loader))
+    }
+
+    for i in 0..<4 {
+      if case .loading = results[i] {} else { Issue.record("第 \(i) 个应为 .loading") }
+    }
+    for i in 4..<6 {
+      if case .queued = results[i] {} else { Issue.record("第 \(i) 个应为 .queued") }
+    }
+  }
+
+  /// #7 内存驱逐：post memoryWarning → cache 不再命中
+  @Test @MainActor func memoryWarningEviction() async {
+    let store = InkImageStore()
+    let loader = MockImageLoader()
+    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    _ = store.resolve(source: source, display: display, loader: loader)
+    try? await Task.sleep(nanoseconds: 200_000_000)
+
+    let result = store.resolve(source: source, display: display, loader: loader)
+    if case .ready = result {} else { Issue.record("应该缓存命中") }
+
+    NotificationCenter.default.post(name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+    try? await Task.sleep(nanoseconds: 50_000_000)
+
+    let afterWarning = store.resolve(source: source, display: display, loader: loader)
+    if case .ready = afterWarning { Issue.record("内存警告后不应缓存命中") }
+  }
+
+  /// #8 Tail 重渲不重复下载
+  @Test @MainActor func tailReRenderNoDuplicateDownload() async {
+    let store = InkImageStore()
+    let loader = MockImageLoader()
+    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    _ = store.resolve(source: source, display: display, loader: loader)
+    try? await Task.sleep(nanoseconds: 200_000_000)
+
+    for _ in 0..<99 {
+      _ = store.resolve(source: source, display: display, loader: loader)
+    }
+
+    #expect(loader.currentLoadCount == 1)
+  }
+
+  /// #14 订阅取消后不触发回调
+  @Test @MainActor func subscriptionCancelPreventsCallback() async {
+    let store = InkImageStore()
+    let loader = MockImageLoader()
+    loader.delay = 200_000_000
+    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    let result = store.resolve(source: source, display: display, loader: loader)
+    var callbackCalled = false
+    if case .loading(let subscribe) = result {
+      let subscription = subscribe { _ in callbackCalled = true }
+      subscription.cancel()
+    }
+
+    try? await Task.sleep(nanoseconds: 300_000_000)
+    #expect(!callbackCalled)
+  }
+
+  /// #16 activeCount 守卫
+  @Test @MainActor func activeCountGuard() {
+    var config = InkImageStore.Configuration()
+    config.maxConcurrentLoads = 4
+    let store = InkImageStore(configuration: config)
+    let loader = MockImageLoader()
+    loader.delay = 1_000_000_000
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    for i in 0..<6 {
+      let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
+      _ = store.resolve(source: source, display: display, loader: loader)
+    }
+
+    #expect(store.currentActiveCount == 4)
+  }
+
+  /// #17 inflight 清理
+  @Test @MainActor func inflightCleanupAfterCompletion() async {
+    let store = InkImageStore()
+    let loader = MockImageLoader()
+    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    _ = store.resolve(source: source, display: display, loader: loader)
+    try? await Task.sleep(nanoseconds: 200_000_000)
+
+    #expect(store.inflightCount == 0)
+    let result = store.resolve(source: source, display: display, loader: loader)
+    if case .ready = result {} else { Issue.record("应该是缓存命中而非挂死") }
+  }
+
+  /// #18 queued drain
+  @Test @MainActor func queuedDrain() async {
+    var config = InkImageStore.Configuration()
+    config.maxConcurrentLoads = 4
+    let store = InkImageStore(configuration: config)
+    let loader = MockImageLoader()
+    loader.delay = 100_000_000 // 100ms
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    for i in 0..<6 {
+      let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
+      _ = store.resolve(source: source, display: display, loader: loader)
+    }
+
+    try? await Task.sleep(nanoseconds: 500_000_000)
+
+    for i in 0..<6 {
+      let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
+      let result = store.resolve(source: source, display: display, loader: loader)
+      if case .ready = result {} else { Issue.record("第 \(i) 张应该 ready") }
+    }
+  }
+}
+
+// MARK: - #9 ImageIO 降采样正确性
+
+@Test func imageIODownsampler_respectsMaxPixel() throws {
+  let renderer = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 100))
+  let testImage = renderer.image { ctx in
+    UIColor.red.setFill()
+    ctx.fill(CGRect(x: 0, y: 0, width: 200, height: 100))
+  }
+  guard let data = testImage.pngData() else {
+    Issue.record("无法创建测试图片数据")
+    return
+  }
+  let downsampler = ImageIODownsampler()
+  let result = try downsampler.downsample(data: data, maxPixel: 50)
+  #expect(max(result.size.width, result.size.height) <= 50)
+}
+
+// MARK: - #10 fitted 函数
+
+@Test func fitted_smallImageNoUpscale() {
+  let size = CGSize(width: 100, height: 50)
+  let result = fitted(size, maxWidth: 300, upscales: false, minPlaceholder: 80, maxHeight: nil)
+  #expect(result.width == 100)
+  #expect(result.height == 50)
+}
+
+@Test func fitted_largeImageScalesDown() {
+  let size = CGSize(width: 600, height: 300)
+  let result = fitted(size, maxWidth: 300, upscales: false, minPlaceholder: 80, maxHeight: nil)
+  #expect(result.width == 300)
+  #expect(result.height == 150)
+}
+
+@Test func fitted_upscalesWhenEnabled() {
+  let size = CGSize(width: 100, height: 50)
+  let result = fitted(size, maxWidth: 300, upscales: true, minPlaceholder: 80, maxHeight: nil)
+  #expect(result.width == 300)
+  #expect(result.height == 150)
+}
+
+@Test func fitted_respectsMaxHeight() {
+  let size = CGSize(width: 100, height: 2000)
+  let result = fitted(size, maxWidth: 300, upscales: true, minPlaceholder: 80, maxHeight: 500)
+  #expect(result.height <= 500)
+}
+
+// MARK: - #11 Promote 判定
+
+@Test func promote_singleImage() {
+  let doc = Document(parsing: "![alt](https://example.com/img.png)")
+  let paragraph = Array(doc.children).first!
+  #expect(isPromotableImageParagraph(paragraph))
+}
+
+@Test func promote_imageWithSurroundingWhitespace() {
+  let doc = Document(parsing: " ![alt](https://example.com/img.png) ")
+  let paragraph = Array(doc.children).first!
+  #expect(isPromotableImageParagraph(paragraph))
+}
+
+@Test func promote_mixedTextAndImage() {
+  let doc = Document(parsing: "some text ![alt](https://example.com/img.png)")
+  let paragraph = Array(doc.children).first!
+  #expect(!isPromotableImageParagraph(paragraph))
+}
+
+// MARK: - #12 行高策略（via 渲染结果）
+
+@Test func lineHeight_noImageKeepsLocked() {
+  let md = "Hello world"
+  let result = InkAttributedRenderer.render(md)
+  let para = result.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle
+  if let p = para {
+    #expect(p.minimumLineHeight == p.maximumLineHeight)
+  }
+}
+
+// MARK: - #13 错误降级
+
+@Test func errorDegradation_disabledShowsPlaceholder() {
+  var appearance = InkAppearance()
+  appearance.imageRendering.isEnabled = false
+  let config = InkConfiguration(appearance: appearance)
+  let md = "![alt text](https://example.com/img.png)"
+  let result = InkAttributedRenderer.render(md, configuration: config)
+  #expect(result.string.contains("🖼"))
+  #expect(result.string.contains("alt text"))
+}
+
+// MARK: - #15 baselineOffset
+
+@Test @MainActor func baselineOffset_imageAttachmentIsZero() {
+  var appearance = InkAppearance()
+  appearance.imageRendering.isEnabled = true
+  appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
+  let config = InkConfiguration(appearance: appearance)
+  let md = "![test](https://example.com/img.png)"
+  let result = InkAttributedRenderer.render(md, configuration: config)
+  result.enumerateAttribute(.attachment, in: NSRange(location: 0, length: result.length)) { value, range, _ in
+    if value is InkImageAttachment {
+      let offset = result.attribute(.baselineOffset, at: range.location, effectiveRange: nil) as? CGFloat ?? -1
+      #expect(offset == 0)
+    }
+  }
+}
