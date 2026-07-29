@@ -95,8 +95,23 @@ public final class InkImageStore {
   }
 
   /// 将 ``InkImageRendering/storeConfiguration`` 应用到 Store，并在解析前调用。
+  ///
+  /// 缓存与 data URL 上限始终跟随 rendering；并发上限仅在 rendering 显式偏离默认值时覆盖，
+  /// 避免 ``configure(containerWidth:loader:)`` 把注入 Store 的 tight limit 重置为默认 4/32。
   public func prepareForRendering(_ rendering: InkImageRendering) {
-    updateConfiguration(rendering.storeConfiguration)
+    var merged = configuration
+    let incoming = rendering.storeConfiguration
+    let defaults = Configuration()
+    merged.totalCostLimit = incoming.totalCostLimit
+    merged.countLimit = incoming.countLimit
+    merged.maxDataURLBytes = incoming.maxDataURLBytes
+    if incoming.maxConcurrentLoads != defaults.maxConcurrentLoads {
+      merged.maxConcurrentLoads = incoming.maxConcurrentLoads
+    }
+    if incoming.maxPendingLoads != defaults.maxPendingLoads {
+      merged.maxPendingLoads = incoming.maxPendingLoads
+    }
+    updateConfiguration(merged)
   }
 
   /// 获取渲染配置对应的加载器：自定义 loader 优先，否则复用 Store 持有的默认实例。

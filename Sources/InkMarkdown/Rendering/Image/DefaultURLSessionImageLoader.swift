@@ -69,7 +69,7 @@ public final class DefaultURLSessionImageLoader: InkImageLoading, @unchecked Sen
       }
       return try downsampleHelper.downsample(image: image, maxPixel: display.maxPixelWidth)
 
-    case .relative, .unknown:
+    case .generated, .relative, .unknown:
       throw ImageLoadError.unsupportedScheme
     }
   }
