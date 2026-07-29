@@ -10,5 +10,6 @@
 | [ADR-004](ADR-004-v1-image-and-strikethrough-contract.md) | v1 图片与删除线行为契约 | Amended（默认占位；真图见 ADR-006） |
 | [ADR-005](ADR-005-stream-max-parse-length-configurable.md) | 流式 `maxParseLength` 可配置 | Accepted |
 | [ADR-006](ADR-006-opt-in-image-rendering.md) | opt-in 图片真图渲染（默认保持占位） | Accepted |
+| [ADR-007](ADR-007-local-generated-diagrams-and-formulas.md) | LaTeX / Mermaid 本地生成图复用统一 Image Store | Accepted |
 
 编号递增且只增不删；决策变更时补充新 ADR；部分变更时将旧 ADR 标记为 Amended 或 Superseded。

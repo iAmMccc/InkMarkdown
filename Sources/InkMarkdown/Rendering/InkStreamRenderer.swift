@@ -474,7 +474,10 @@ struct InkIncrementalMarkdownRenderer {
     let result = NSMutableAttributedString(attributedString: stableContent)
     let tailStart = source.index(source.startIndex, offsetBy: stableCharacterCount)
     let tail = String(source[tailStart...])
-    if !tail.isEmpty {
+    if !tail.isEmpty,
+       !Self.hasUnclosedLaTeXBlock(tail),
+       !Self.hasUnclosedLaTeXInlineDelimiter(tail),
+       !Self.hasUnclosedMermaidFence(tail) {
       if result.length > 0 {
         result.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
       }
@@ -482,6 +485,133 @@ struct InkIncrementalMarkdownRenderer {
     }
 
     return Result(content: result, refreshLocation: oldStableLength)
+  }
+
+  /// 追加阶段不显示未闭合 `$$` 块；finish() 会走完整解析并稳定地以文本降级。
+  private static func hasUnclosedLaTeXBlock(_ source: String) -> Bool {
+    latexDelimiterState(in: source).blockDollarOpen
+  }
+
+  /// 追加阶段不显示未闭合 `$...$` 或 `\\(...\\)`；完整配对、转义符号和代码区域不受影响。
+  private static func hasUnclosedLaTeXInlineDelimiter(_ source: String) -> Bool {
+    let state = latexDelimiterState(in: source)
+    return state.inlineDollarOpen || state.inlineParenthesesOpen
+  }
+
+  private struct LaTeXDelimiterState {
+    var blockDollarOpen = false
+    var inlineDollarOpen = false
+    var inlineParenthesesOpen = false
+    var inlineCodeTickCount: Int?
+    var fencedCode: FenceMarker?
+  }
+
+  /// 最小流式状态机：只判断是否应保留活动尾部，不改变最终 Markdown / LaTeX 解析语义。
+  private static func latexDelimiterState(in source: String) -> LaTeXDelimiterState {
+    var state = LaTeXDelimiterState()
+    let lines = source.split(separator: "\n", omittingEmptySubsequences: false)
+
+    for (lineIndex, line) in lines.enumerated() {
+      let lineString = String(line)
+      let trimmed = lineString.trimmingCharacters(in: .whitespaces)
+      if let fence = state.fencedCode {
+        if let closing = closingCodeFenceMarker(in: trimmed),
+           closing.character == fence.character,
+           closing.count >= fence.count {
+          state.fencedCode = nil
+        }
+        continue
+      }
+      if let opening = openingCodeFenceMarker(in: trimmed) {
+        state.fencedCode = opening
+        continue
+      }
+
+      scanLaTeXDelimiters(in: lineString, state: &state)
+      // `$...$` 不允许跨行；只有最后一个尚未完成的行内片段需要继续等待分片。
+      if lineIndex < lines.count - 1 {
+        state.inlineDollarOpen = false
+      }
+    }
+    return state
+  }
+
+  private static func scanLaTeXDelimiters(in line: String, state: inout LaTeXDelimiterState) {
+    var index = line.startIndex
+    while index < line.endIndex {
+      let character = line[index]
+      if character == "`" {
+        let tickCount = line[index...].prefix(while: { $0 == "`" }).count
+        if let open = state.inlineCodeTickCount {
+          if open == tickCount { state.inlineCodeTickCount = nil }
+        } else {
+          state.inlineCodeTickCount = tickCount
+        }
+        index = line.index(index, offsetBy: tickCount)
+        continue
+      }
+      if state.inlineCodeTickCount != nil {
+        index = line.index(after: index)
+        continue
+      }
+      if line[index...].hasPrefix("$$"), !isEscaped(line, at: index) {
+        state.blockDollarOpen.toggle()
+        index = line.index(index, offsetBy: 2)
+        continue
+      }
+      guard !state.blockDollarOpen else {
+        index = line.index(after: index)
+        continue
+      }
+      if line[index...].hasPrefix("\\("), !isEscaped(line, at: index) {
+        state.inlineParenthesesOpen.toggle()
+        index = line.index(index, offsetBy: 2)
+        continue
+      }
+      if line[index...].hasPrefix("\\)"), !isEscaped(line, at: index), state.inlineParenthesesOpen {
+        state.inlineParenthesesOpen = false
+        index = line.index(index, offsetBy: 2)
+        continue
+      }
+      if character == "$", !isEscaped(line, at: index) {
+        state.inlineDollarOpen.toggle()
+      }
+      index = line.index(after: index)
+    }
+  }
+
+  private static func isEscaped(_ source: String, at index: String.Index) -> Bool {
+    var slashCount = 0
+    var cursor = index
+    while cursor > source.startIndex {
+      let previous = source.index(before: cursor)
+      guard source[previous] == "\\" else { break }
+      slashCount += 1
+      cursor = previous
+    }
+    return !slashCount.isMultiple(of: 2)
+  }
+
+  /// Mermaid 围栏未闭合时保留在活动 buffer，避免 append 阶段暴露围栏符号或重复生成图片。
+  private static func hasUnclosedMermaidFence(_ source: String) -> Bool {
+    var fence: FenceMarker?
+    for line in source.split(separator: "\n", omittingEmptySubsequences: false) {
+      let trimmed = line.trimmingCharacters(in: .whitespaces)
+      if let open = fence {
+        if let closing = closingCodeFenceMarker(in: trimmed),
+           closing.character == open.character,
+           closing.count >= open.count {
+          fence = nil
+        }
+        continue
+      }
+      guard let opening = openingCodeFenceMarker(in: trimmed) else { continue }
+      let language = trimmed.dropFirst(opening.count).trimmingCharacters(in: .whitespacesAndNewlines)
+      if InkMermaidFence.isMermaid(language: String(language)) {
+        fence = opening
+      }
+    }
+    return fence != nil
   }
 
   private mutating func appendStable(_ markdown: String, configuration: InkConfiguration) {

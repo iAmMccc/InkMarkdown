@@ -46,6 +46,10 @@ public struct InkAppearance {
   public var link: Link = .init()
   /// 图片渲染配置。
   public var imageRendering: InkImageRendering = .init()
+  /// Mermaid 围栏生成图片的配置；默认关闭以保留代码块行为。
+  public var mermaidRendering: InkMermaidRendering = .init()
+  /// LaTeX 行内/块级公式配置；默认关闭以保持原始文本降级。
+  public var latexRendering: InkLaTeXRendering = .init()
 
   public init() {}
 }

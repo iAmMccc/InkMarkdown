@@ -16,6 +16,7 @@ InkMarkdown 明确不提供 SwiftUI 渲染器。MarkdownUI 与 Textual 已覆盖
 - 用于表格、代码块和分割线的块级 `UIView`。
 - 面向流式 Markdown 的增量渲染。
 - 自定义行内语法、块级组件路由、源清洗过滤、外观设计和链接点击等自定义扩展点。
+- 可选的本地 LaTeX 图片与离线 Mermaid 图表块，二者复用统一图片 Store。
 
 ## 为什么需要 InkMarkdown
 
@@ -85,6 +86,19 @@ let configuration = InkConfiguration(
 let attributed = InkAttributedRenderer.render(markdown, configuration: configuration)
 ```
 
+启用本地生成图片（默认均关闭）：
+
+```swift
+var configuration = InkConfiguration()
+configuration.enableLaTeXRendering()       // 行内 $...$ 与 \\(...\\)
+configuration.appearance.mermaidRendering.isEnabled = true
+let blocks = InkBlockRenderer.render(markdown, configuration: configuration)
+```
+
+`$$...$$` 和 `mermaid` 围栏只在 `InkBlockRenderer` 中生成 UIKit 块；纯富文本 API 对块内容保持既有文本降级。
+
+生成型 source 必须注入对应本地 renderer，绝不会回退到网络 URL loader；图片 Store 也会限制等待队列，保护流式宿主。
+
 ## 当前 Markdown 支持情况
 
 | 能力 | 状态 |
@@ -137,8 +151,7 @@ InkMarkdown 直接依赖 UIKit，因此在 macOS host 上执行 `swift build` / 
 SwiftPM package test workflow，按[开发指南](docs/contributor-guide/04-development.md#回退到原生-xcodebuild)
 使用原生命令回退。
 
-最近验证记录：2026-07-13，`InkMarkdown` scheme，iPhone 17 Pro / iOS 26.5，
-32 项通过，0 项失败。
+修改渲染行为后应重新运行模拟器测试；本 README 不记录最新本地测试结果。
 
 ```bash
 open ExampleApp/ExampleApp.xcodeproj

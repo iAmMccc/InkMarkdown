@@ -37,6 +37,12 @@ public enum InkBlockRenderer {
       && configuration.appearance.imageRendering.promotesToBlock {
       handlers.insert(InkImageBlockHandler(), at: 0)
     }
+    if configuration.appearance.mermaidRendering.isEnabled {
+      handlers.insert(InkMermaidBlockHandler(), at: 0)
+    }
+    if configuration.appearance.latexRendering.isEnabled {
+      handlers.insert(InkLaTeXBlockHandler(), at: 0)
+    }
 
     for child in document.children {
       let handled = handlers

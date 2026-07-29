@@ -19,6 +19,7 @@ Markup tree and turns it into native UI:
 - Incremental rendering for streaming Markdown.
 - Host custom extension points for custom inline syntax, block routing, source filtering,
   appearance, and link handling.
+- Opt-in local LaTeX images and offline Mermaid diagram blocks, both sharing the image store.
 
 ## Why InkMarkdown
 
@@ -88,6 +89,21 @@ let configuration = InkConfiguration(
 let attributed = InkAttributedRenderer.render(markdown, configuration: configuration)
 ```
 
+Enable local generated images (all remain off by default):
+
+```swift
+var configuration = InkConfiguration()
+configuration.enableLaTeXRendering()       // inline $...$ and \\(...\\)
+configuration.appearance.mermaidRendering.isEnabled = true
+let blocks = InkBlockRenderer.render(markdown, configuration: configuration)
+```
+
+`$$...$$` and fenced `mermaid` render as UIKit blocks only. The attributed-only API
+keeps its existing text fallback for block content.
+
+Generated sources require their matching local renderer. They never fall back to a
+network URL loader; the image store also bounds pending work to protect streaming hosts.
+
 ## Current Markdown Support
 
 | Area | Status |
@@ -142,8 +158,8 @@ the simulator tests. If the current MCP client does not expose SwiftPM package
 testing, use the native fallback documented in the
 [development guide](docs/contributor-guide/04-development.md#回退到原生-xcodebuild).
 
-Latest verification: 32 tests passed, 0 failed, using the `InkMarkdown` scheme
-on iPhone 17 Pro / iOS 26.5 (July 13, 2026).
+Run the simulator test suite after changing rendering behavior; do not treat this
+README as a record of the latest local test result.
 
 ```bash
 open ExampleApp/ExampleApp.xcodeproj

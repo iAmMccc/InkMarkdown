@@ -17,6 +17,8 @@ public final class InkImageStore {
     public var countLimit: Int = 100
     /// 同时进行中的加载任务数上限。
     public var maxConcurrentLoads: Int = 4
+    /// 等待队列最大条目数，防止慢速 loader 下无限积压。
+    public var maxPendingLoads: Int = 32
     /// Data URL 允许的最大编码字节数（供 loader 校验参考）。
     public var maxDataURLBytes: Int = 2 * 1024 * 1024
 
@@ -33,9 +35,9 @@ public final class InkImageStore {
 
   private let cache = NSCache<NSString, UIImage>()
 
-  // MARK: - Inflight（按 sourceID 合并）
+  // MARK: - Inflight（按 sourceID + DisplayKey 合并）
 
-  private var inflight: [String: Task<UIImage, Error>] = [:]
+  private var inflight: [NSString: Task<UIImage, Error>] = [:]
   private var activeCount: Int = 0
   private var pendingLoads: [PendingLoad] = []
 
@@ -46,9 +48,18 @@ public final class InkImageStore {
     let key: DisplayKey
   }
 
+  /// 生成 source 缺少专用 renderer 时的安全哨兵。禁止落入 URLSession loader。
+  private struct MissingGeneratedImageLoader: InkImageLoading {
+    let owner: String
+
+    func loadImage(source: ImageSource, display: DisplayContext) async throws -> UIImage {
+      throw ImageLoadError.generatedLoaderUnavailable(owner: owner)
+    }
+  }
+
   // MARK: - 订阅
 
-  private var subscribers: [String: [(id: UUID, callback: (UIImage?) -> Void)]] = [:]
+  private var subscribers: [NSString: [(id: UUID, callback: (UIImage?) -> Void)]] = [:]
 
   /// 按安全策略复用的内置 URLSession 加载器，避免 renderer / block 各自泄漏 session。
   private var defaultLoaders: [ImageSecurityPolicy: DefaultURLSessionImageLoader] = [:]
@@ -89,7 +100,10 @@ public final class InkImageStore {
   }
 
   /// 获取渲染配置对应的加载器：自定义 loader 优先，否则复用 Store 持有的默认实例。
-  public func loader(for rendering: InkImageRendering) -> InkImageLoading {
+  public func loader(for rendering: InkImageRendering, source: ImageSource? = nil) -> InkImageLoading {
+    if let generatedRequest = source?.generatedRequest {
+      return rendering.generatedLoader ?? MissingGeneratedImageLoader(owner: generatedRequest.owner)
+    }
     if let custom = rendering.loader {
       return custom
     }
@@ -124,26 +138,36 @@ public final class InkImageStore {
       return .ready(cached)
     }
 
-    let subscribe = makeSubscribeClosure(sourceID: source.canonicalID, onLoad: onLoad)
+    let subscribe = makeSubscribeClosure(cacheKey: key.cacheKey, onLoad: onLoad)
 
-    if inflight[source.canonicalID] != nil {
+    if inflight[key.cacheKey] != nil {
       if let onLoad {
-        _ = makeSubscription(sourceID: source.canonicalID, callback: onLoad)
+        _ = makeSubscription(cacheKey: key.cacheKey, callback: onLoad)
       }
       return .loading(subscribe: subscribe)
     }
 
+    if pendingLoads.contains(where: { $0.key.cacheKey == key.cacheKey }) {
+      if let onLoad {
+        _ = makeSubscription(cacheKey: key.cacheKey, callback: onLoad)
+      }
+      return .queued(subscribe: subscribe)
+    }
+
     guard activeCount < configuration.maxConcurrentLoads else {
+      guard pendingLoads.count < max(0, configuration.maxPendingLoads) else {
+        return .rejected(.pendingQueueFull(limit: max(0, configuration.maxPendingLoads)))
+      }
       pendingLoads.append(PendingLoad(source: source, display: display, loader: loader, key: key))
       if let onLoad {
-        _ = makeSubscription(sourceID: source.canonicalID, callback: onLoad)
+        _ = makeSubscription(cacheKey: key.cacheKey, callback: onLoad)
       }
       return .queued(subscribe: subscribe)
     }
 
     startLoad(source: source, display: display, loader: loader, key: key)
     if let onLoad {
-      _ = makeSubscription(sourceID: source.canonicalID, callback: onLoad)
+      _ = makeSubscription(cacheKey: key.cacheKey, callback: onLoad)
     }
     return .loading(subscribe: subscribe)
   }
@@ -177,7 +201,7 @@ public final class InkImageStore {
       defer {
         if !completedOnMain {
           Task { @MainActor [weak self] in
-            self?.completeLoad(sourceID: source.canonicalID)
+            self?.completeLoad(cacheKey: key.cacheKey)
           }
         }
       }
@@ -186,27 +210,27 @@ public final class InkImageStore {
         await MainActor.run { [weak self] in
           guard let self else { return }
           self.cache.setObject(image, forKey: key.cacheKey, cost: image.memoryCost)
-          self.broadcast(source: source, image: image)
-          self.subscribers.removeValue(forKey: source.canonicalID)
-          self.completeLoad(sourceID: source.canonicalID)
+          self.broadcast(cacheKey: key.cacheKey, image: image)
+          self.subscribers.removeValue(forKey: key.cacheKey)
+          self.completeLoad(cacheKey: key.cacheKey)
         }
         completedOnMain = true
         return image
       } catch {
         await MainActor.run { [weak self] in
           guard let self else { return }
-          self.broadcastFailure(source: source, error: error)
-          self.completeLoad(sourceID: source.canonicalID)
+          self.broadcastFailure(cacheKey: key.cacheKey, error: error)
+          self.completeLoad(cacheKey: key.cacheKey)
         }
         completedOnMain = true
         throw error
       }
     }
-    inflight[source.canonicalID] = task
+    inflight[key.cacheKey] = task
   }
 
-  private func completeLoad(sourceID: String) {
-    guard inflight.removeValue(forKey: sourceID) != nil else { return }
+  private func completeLoad(cacheKey: NSString) {
+    guard inflight.removeValue(forKey: cacheKey) != nil else { return }
     activeCount = max(0, activeCount - 1)
     drainPendingLoads()
   }
@@ -215,8 +239,8 @@ public final class InkImageStore {
     while activeCount < configuration.maxConcurrentLoads, !pendingLoads.isEmpty {
       let pending = pendingLoads.removeFirst()
       if let cached = cache.object(forKey: pending.key.cacheKey) {
-        broadcast(source: pending.source, image: cached)
-        subscribers.removeValue(forKey: pending.source.canonicalID)
+        broadcast(cacheKey: pending.key.cacheKey, image: cached)
+        subscribers.removeValue(forKey: pending.key.cacheKey)
         continue
       }
       startLoad(
@@ -231,42 +255,52 @@ public final class InkImageStore {
   // MARK: - 订阅管理
 
   private func makeSubscribeClosure(
-    sourceID: String,
+    cacheKey: NSString,
     onLoad: ((UIImage?) -> Void)?
   ) -> (@escaping (UIImage?) -> Void) -> ImageLoadSubscription {
     { [weak self] callback in
-      self?.makeSubscription(sourceID: sourceID, callback: callback)
+      self?.makeSubscription(cacheKey: cacheKey, callback: callback)
         ?? ImageLoadSubscription(cancel: {})
     }
   }
 
   private func makeSubscription(
-    sourceID: String,
+    cacheKey: NSString,
     callback: @escaping (UIImage?) -> Void
   ) -> ImageLoadSubscription {
     let id = UUID()
-    if subscribers[sourceID] == nil {
-      subscribers[sourceID] = []
+    if subscribers[cacheKey] == nil {
+      subscribers[cacheKey] = []
     }
-    subscribers[sourceID]?.append((id: id, callback: callback))
+    subscribers[cacheKey]?.append((id: id, callback: callback))
     return ImageLoadSubscription(cancel: { [weak self] in
-      self?.subscribers[sourceID]?.removeAll { $0.id == id }
+      guard let self else { return }
+      self.subscribers[cacheKey]?.removeAll { $0.id == id }
+      if self.subscribers[cacheKey]?.isEmpty != false {
+        self.subscribers.removeValue(forKey: cacheKey)
+        self.removeQueuedLoad(cacheKey: cacheKey)
+      }
     })
   }
 
-  private func broadcast(source: ImageSource, image: UIImage) {
-    guard let subs = subscribers[source.canonicalID] else { return }
+  /// 只有排队项可以因无人订阅取消；active/inflight 继续运行以便复用和写入缓存。
+  private func removeQueuedLoad(cacheKey: NSString) {
+    pendingLoads.removeAll { $0.key.cacheKey == cacheKey }
+  }
+
+  private func broadcast(cacheKey: NSString, image: UIImage) {
+    guard let subs = subscribers[cacheKey] else { return }
     for sub in subs {
       sub.callback(image)
     }
   }
 
-  private func broadcastFailure(source: ImageSource, error: Error) {
-    guard let subs = subscribers[source.canonicalID] else { return }
+  private func broadcastFailure(cacheKey: NSString, error: Error) {
+    guard let subs = subscribers[cacheKey] else { return }
     for sub in subs {
       sub.callback(nil)
     }
-    subscribers.removeValue(forKey: source.canonicalID)
+    subscribers.removeValue(forKey: cacheKey)
   }
 
   // MARK: - 配置应用
@@ -288,4 +322,7 @@ public final class InkImageStore {
 
   /// 当前活跃加载数（测试用）。
   public var currentActiveCount: Int { activeCount }
+
+  /// 当前等待队列长度（测试和诊断用）。
+  public var pendingLoadCount: Int { pendingLoads.count }
 }

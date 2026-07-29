@@ -14,16 +14,20 @@ public struct DisplayKey: Hashable, Sendable {
   /// 屏幕 scale factor 的整数表示（1 / 2 / 3）。
   public let scale: Int
 
+  /// 内容模式同样影响生成型图片输出，必须参与缓存身份。
+  public let contentMode: DisplayContext.ContentMode
+
   /// 由来源与显示上下文构造缓存键。
   public init(source: ImageSource, display: DisplayContext) {
     self.sourceID = source.canonicalID
     self.bucketedWidth = Int((display.maxPixelWidth / 64).rounded(.up)) * 64
     self.scale = Int(display.scale)
+    self.contentMode = display.contentMode
   }
 
   /// 供 `NSCache` 使用的字符串键。
   var cacheKey: NSString {
-    "\(sourceID)|\(bucketedWidth)|\(scale)" as NSString
+    "\(sourceID)|\(bucketedWidth)|\(scale)|\(contentMode)" as NSString
   }
 }
 

@@ -72,6 +72,10 @@ public struct InkImageRendering {
   /// 自定义图片加载器。`nil` 时 Store 使用内置 `DefaultURLSessionImageLoader`。
   public var loader: (any InkImageLoading)?
 
+  /// 本地生成型图片的 loader。仅当 ``ImageSource/generatedRequest`` 非空时使用。
+  /// 其结果仍进入同一个 ``InkImageStore``，不会创建独立缓存。
+  public var generatedLoader: (any InkImageLoading)?
+
   /// 内存缓存配置。
   public var storeConfiguration: InkImageStore.Configuration = .init()
 

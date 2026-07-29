@@ -25,6 +25,28 @@ import Markdown
   #expect(source.scheme == .unknown)
 }
 
+@Test func generatedImageSource_hasBoundedStableIdentity() {
+  let source = ImageSource(generated: InkGeneratedImageRequest(
+    owner: "test",
+    rendererVersion: "v1",
+    source: String(repeating: "x", count: 10_000),
+    styleIdentity: "light"
+  ))
+  #expect(source.scheme == .generated)
+  #expect(source.generatedRequest?.source.count == 10_000)
+  #expect(!source.canonicalID.contains(String(repeating: "x", count: 32)))
+}
+
+@Test func generatedImageSource_usesSHA256Identity() {
+  let base = InkGeneratedImageRequest(owner: "test", rendererVersion: "v1", source: "a", styleIdentity: "light")
+  let changed = InkGeneratedImageRequest(owner: "test", rendererVersion: "v1", source: "b", styleIdentity: "light")
+  let prefix = "ink-generated://sha256/"
+  #expect(base.stableID.hasPrefix(prefix))
+  #expect(base.stableID.dropFirst(prefix.count).count == 64)
+  #expect(base.stableID.dropFirst(prefix.count).allSatisfy { $0.isHexDigit })
+  #expect(base.stableID != changed.stableID)
+}
+
 // MARK: - #2 DisplayKey bucket 量化
 
 @Test func displayKey_bucketQuantization() {
@@ -42,6 +64,49 @@ import Markdown
   let display = DisplayContext(maxPixelWidth: 768, scale: 2, contentMode: .fit)
   let key = DisplayKey(source: source, display: display)
   #expect(key.bucketedWidth == 768)
+}
+
+@Test func displayKey_distinguishesContentMode() {
+  let source = ImageSource(generated: InkGeneratedImageRequest(owner: "test", rendererVersion: "v1", source: "a", styleIdentity: "b"))
+  let fit = DisplayKey(source: source, display: DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit))
+  let fill = DisplayKey(source: source, display: DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fill))
+  #expect(fit != fill)
+}
+
+@Test func displayContext_sanitizesNonFiniteAndNonPositiveInputs() {
+  let invalidWidths: [CGFloat] = [.nan, .infinity, -.infinity, 0, -1]
+  let invalidScales: [CGFloat] = [.nan, .infinity, -.infinity, 0, -1, 0.5]
+
+  for width in invalidWidths {
+    #expect(DisplayContext(maxPixelWidth: width, scale: 2).maxPixelWidth == DisplayContext.minimumMaxPixelWidth)
+  }
+  for scale in invalidScales {
+    #expect(DisplayContext(maxPixelWidth: 300, scale: scale).scale == DisplayContext.minimumScale)
+  }
+  let source = ImageSource(url: URL(string: "https://example.com/img.png")!)
+  #expect(DisplayKey(source: source, display: DisplayContext(maxPixelWidth: 300, scale: 0.5)).scale == 1)
+}
+
+@Test func displayContext_clampsOverlargeInputsBeforeDisplayKeyConversion() {
+  let context = DisplayContext(maxPixelWidth: .greatestFiniteMagnitude, scale: .greatestFiniteMagnitude)
+  let source = ImageSource(url: URL(string: "https://example.com/img.png")!)
+  let key = DisplayKey(source: source, display: context)
+
+  #expect(context.maxPixelWidth == DisplayContext.maximumMaxPixelWidth)
+  #expect(context.scale == DisplayContext.maximumScale)
+  #expect(key.bucketedWidth == Int(DisplayContext.maximumMaxPixelWidth))
+  #expect(key.scale == Int(DisplayContext.maximumScale))
+}
+
+@Test func displayContext_preservesNormalInputsAndExistingDisplayKey() {
+  let context = DisplayContext(maxPixelWidth: 1125, scale: 3, contentMode: .fit)
+  let source = ImageSource(url: URL(string: "https://example.com/img.png")!)
+  let key = DisplayKey(source: source, display: context)
+
+  #expect(context.maxPixelWidth == 1125)
+  #expect(context.scale == 3)
+  #expect(key.bucketedWidth == 1152)
+  #expect(key.scale == 3)
 }
 
 // MARK: - #3 SecurityPolicy 门禁
@@ -247,6 +312,72 @@ struct InkImageStoreTests {
     }
     for i in 4..<6 {
       if case .queued = results[i] {} else { Issue.record("第 \(i) 个应为 .queued") }
+    }
+  }
+
+  @Test @MainActor func generatedSourceWithoutLoaderFailsWithoutURLFallback() async {
+    let store = InkImageStore()
+    let source = ImageSource(generated: InkGeneratedImageRequest(
+      owner: "test-renderer", rendererVersion: "v1", source: "diagram", styleIdentity: "light"
+    ))
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
+    let loader = store.loader(for: InkImageRendering(), source: source)
+
+    do {
+      _ = try await loader.loadImage(source: source, display: display)
+      Issue.record("生成 source 缺 renderer 时不应调用 URL loader")
+    } catch let error as ImageLoadError {
+      guard case .generatedLoaderUnavailable(let owner) = error else {
+        Issue.record("应返回 generated loader 缺失错误，实际为 \(error)")
+        return
+      }
+      #expect(owner == "test-renderer")
+    } catch {
+      Issue.record("应返回 ImageLoadError，实际为 \(error)")
+    }
+  }
+
+  @Test @MainActor func pendingQueueHasBoundedCapacity() async {
+    var configuration = InkImageStore.Configuration()
+    configuration.maxConcurrentLoads = 1
+    configuration.maxPendingLoads = 1
+    let store = InkImageStore(configuration: configuration)
+    let loader = MockImageLoader()
+    loader.delay = 200_000_000
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
+
+    _ = store.resolve(source: ImageSource(url: URL(string: "https://example.com/active.png")!), display: display, loader: loader)
+    let queued = store.resolve(source: ImageSource(url: URL(string: "https://example.com/queued.png")!), display: display, loader: loader)
+    let rejected = store.resolve(source: ImageSource(url: URL(string: "https://example.com/rejected.png")!), display: display, loader: loader)
+
+    if case .queued = queued {} else { Issue.record("第二项应进入等待队列") }
+    if case .rejected(.pendingQueueFull(let limit)) = rejected {
+      #expect(limit == 1)
+    } else {
+      Issue.record("等待队列满时应明确拒绝")
+    }
+    #expect(store.pendingLoadCount == 1)
+    try? await Task.sleep(nanoseconds: 450_000_000)
+  }
+
+  @Test @MainActor func cancellingLastQueuedSubscriptionRemovesPendingLoad() {
+    var configuration = InkImageStore.Configuration()
+    configuration.maxConcurrentLoads = 1
+    configuration.maxPendingLoads = 1
+    let store = InkImageStore(configuration: configuration)
+    let loader = MockImageLoader()
+    loader.delay = 1_000_000_000
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
+
+    _ = store.resolve(source: ImageSource(url: URL(string: "https://example.com/active.png")!), display: display, loader: loader)
+    let queued = store.resolve(source: ImageSource(url: URL(string: "https://example.com/queued.png")!), display: display, loader: loader)
+    if case .queued(let subscribe) = queued {
+      let subscription = subscribe { _ in }
+      #expect(store.pendingLoadCount == 1)
+      subscription.cancel()
+      #expect(store.pendingLoadCount == 0)
+    } else {
+      Issue.record("第二项应进入等待队列")
     }
   }
 

@@ -487,7 +487,7 @@ private struct InkRenderer {
   }
 
   private func renderText(_ textNode: Markdown.Text, context: InkTextContext) -> NSAttributedString {
-    if !configuration.inlineSyntaxes.isEmpty {
+    if !configuration.inlineSyntaxes.isEmpty || configuration.appearance.latexRendering.isEnabled {
       // // 为什么 inline-syntax 优先：
       // 赋予业务自定义扩展（如 $标签$、@提及）最高优先级去拦截并处理文本。
       // 若某个扩展决定处理该片段并返回结果，就可以直接 early-return，不再走默认属性回落。
@@ -501,6 +501,13 @@ private struct InkRenderer {
         if let rendered = syntax.render(text: textNode.string, context: inlineContext) {
           return rendered
         }
+      }
+      // LaTeX 是由配置开启的内置语法，而非在 enable 时捕获的一份样式快照。
+      // 放在业务自定义语法之后，保留既有扩展点的优先级约定。
+      if configuration.appearance.latexRendering.isEnabled,
+         let rendered = InkLaTeXInlineSyntax(rendering: configuration.appearance.latexRendering)
+           .render(text: textNode.string, context: inlineContext) {
+        return rendered
       }
     }
     var attrs: [NSAttributedString.Key: Any] = [

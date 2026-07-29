@@ -61,6 +61,14 @@ public struct InkConfiguration {
     self.linkTapHandler = linkTapHandler
   }
 
+  /// 启用内置 LaTeX 渲染。
+  ///
+  /// 行内语法由渲染器在每次 render 时根据当前 `appearance.latexRendering` 注入，
+  /// 因此调用此方法后仍可安全修改 `inlineStyle` / `isEnabled`，无需重复注册语法。
+  public mutating func enableLaTeXRendering() {
+    appearance.latexRendering.isEnabled = true
+  }
+
   /// 核心库内置的默认块级路由（代码块 + 表格 + 分割线）。
   public static let defaultBlockHandlers: [InkBlockHandler] = [
     InkCodeBlockHandler(),

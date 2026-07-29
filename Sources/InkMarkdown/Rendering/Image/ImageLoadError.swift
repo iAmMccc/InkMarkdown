@@ -18,6 +18,8 @@ public enum ImageLoadError: Error, Sendable {
   case timeout
   /// 任务被取消。
   case cancelled
+  /// 生成型图片未注入匹配的本地 renderer；绝不会降级为 URL 加载。
+  case generatedLoaderUnavailable(owner: String)
 }
 
 /// 图片请求被安全策略拒绝的原因（不抛出，供宿主展示或日志）。
@@ -34,4 +36,6 @@ public enum ImageRejectReason: Sendable {
   case noBaseURL
   /// 重定向被策略拦截。
   case redirectBlocked
+  /// 等待队列达到 Store 配置的上限。
+  case pendingQueueFull(limit: Int)
 }

@@ -193,7 +193,7 @@ public final class InkImageAttachment: NSTextAttachment {
       scale: scale,
       contentMode: .fit
     )
-    let loader = store.loader(for: rendering)
+    let loader = store.loader(for: rendering, source: source)
     materialize(display: display, loader: loader)
   }
 

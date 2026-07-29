@@ -103,7 +103,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     switch source.scheme {
     case .http, .https, .file:
       UIApplication.shared.open(source.rawURL)
-    case .data, .asset, .bundle, .relative, .unknown:
+    case .data, .asset, .bundle, .relative, .generated, .unknown:
       break
     }
   }
@@ -118,7 +118,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   @MainActor
   private func configureIfNeeded() {
     store.prepareForRendering(rendering)
-    let loader = store.loader(for: rendering)
+    let loader = store.loader(for: rendering, source: source)
     configure(containerWidth: bounds.width, loader: loader)
   }
 

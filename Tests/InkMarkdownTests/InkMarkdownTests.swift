@@ -253,6 +253,46 @@ import UIKit
   #expect(activeFence.refreshLocation == 0)
 }
 
+@Test func streamRenderer_buffersUnclosedInlineDollarUntilPaired() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  let config = InkConfiguration.standard
+
+  let partial = renderer.append("公式 $x", configuration: config)
+  #expect(!partial.content.string.contains("$x"))
+
+  let completed = renderer.append("$ 完成", configuration: config)
+  #expect(completed.content.string.contains("$x$"))
+}
+
+@Test func streamRenderer_buffersUnclosedInlineParenthesesAndHonorsEscapesAndCode() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  let config = InkConfiguration.standard
+
+  let partial = renderer.append("公式 \\(x", configuration: config)
+  #expect(!partial.content.string.contains("\\(x"))
+  let completed = renderer.append("\\) 完成", configuration: config)
+  #expect(completed.content.string.contains("\\(x\\)"))
+
+  renderer.reset()
+  let escaped = renderer.append("\\$notLatex", configuration: config)
+  #expect(escaped.content.string.contains("$notLatex"))
+  renderer.reset()
+  let code = renderer.append("`$notLatex", configuration: config)
+  #expect(code.content.string.contains("$notLatex"))
+}
+
+@Test func streamRenderer_finishDegradesIncompleteInlineLatexToText() async throws {
+  let renderer = InkStreamRenderer()
+  renderer.append("$x")
+  #expect(!renderer.currentAttributedString().string.contains("$x"))
+
+  renderer.finish()
+  for _ in 0..<50 where !renderer.currentAttributedString().string.contains("$x") {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+  #expect(renderer.currentAttributedString().string.contains("$x"))
+}
+
 @Test func streamRenderer_doesNotFreezeListBeforeIndentedContinuation() async throws {
   var renderer = InkIncrementalMarkdownRenderer()
   let config = InkConfiguration.standard

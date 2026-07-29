@@ -19,6 +19,9 @@ public struct ImageSource: Hashable, Sendable {
   /// 规范化标识：与 ``requestURL`` 的 `absoluteString` 一致，用于缓存去重。
   public let canonicalID: String
 
+  /// 本地生成图片的可重建请求；普通 URL 图片为 `nil`。
+  public let generatedRequest: InkGeneratedImageRequest?
+
   /// 图片 URL 的 scheme 分类。
   public enum ImageScheme: Hashable, Sendable {
     case http
@@ -28,6 +31,7 @@ public struct ImageSource: Hashable, Sendable {
     case asset
     case bundle
     case relative
+    case generated
     case unknown
   }
 
@@ -55,6 +59,18 @@ public struct ImageSource: Hashable, Sendable {
       self.requestURL = url
     }
     self.canonicalID = requestURL.absoluteString
+    self.generatedRequest = nil
+  }
+
+  /// 创建由库内 renderer 生成的图片来源。
+  ///
+  /// 原文不会进入 URL 或缓存键；最终缓存键仍由 `canonicalID + DisplayKey` 组成。
+  public init(generated request: InkGeneratedImageRequest) {
+    self.rawURL = URL(string: request.stableID)!
+    self.requestURL = rawURL
+    self.scheme = .generated
+    self.canonicalID = request.stableID
+    self.generatedRequest = request
   }
 
   private static func imageScheme(for url: URL) -> ImageScheme {
@@ -68,6 +84,7 @@ public struct ImageSource: Hashable, Sendable {
     case "data": return .data
     case "asset": return .asset
     case "bundle": return .bundle
+    case "ink-generated": return .generated
     default: return .unknown
     }
   }
