@@ -16,6 +16,9 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   private var loadToken: UUID = UUID()
   private var subscription: InkImageStore.ImageLoadSubscription?
   private var isConfigured = false
+  private var configuredMaxWidth: CGFloat = 0
+  private var failureContentView: UIView?
+  private var cachedFailureContentHeight: CGFloat = 0
 
   private let imageView: UIImageView = {
     let iv = UIImageView()
@@ -136,6 +139,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     loadToken = currentToken
 
     let effectiveWidth = min(containerWidth, rendering.sizing.maxBlockImageWidth ?? containerWidth)
+    configuredMaxWidth = effectiveWidth
     let scale = UIScreen.main.scale
     let display = DisplayContext(
       maxPixelWidth: effectiveWidth * scale,
@@ -187,6 +191,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   @MainActor
   private func showImage(_ img: UIImage, token: UUID, maxWidth: CGFloat) {
     guard token == loadToken else { return }
+    clearFailureContent()
     placeholderView.isHidden = true
     imageView.isHidden = false
     let sizing = rendering.sizing
@@ -204,16 +209,98 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   }
 
   private func showPlaceholder() {
+    clearFailureContent()
     placeholderView.isHidden = false
     imageView.isHidden = true
   }
 
   private func showError() {
-    placeholderView.isHidden = false
+    showFailureFallback(maxWidth: resolvedMaxWidth())
+  }
+
+  private func resolvedMaxWidth() -> CGFloat {
+    if configuredMaxWidth > 0 { return configuredMaxWidth }
+    if bounds.width > 0 { return bounds.width }
+    return max(rendering.sizing.maxBlockImageWidth ?? 0, 1)
+  }
+
+  private func clearFailureContent() {
+    failureContentView?.removeFromSuperview()
+    failureContentView = nil
+    cachedFailureContentHeight = 0
+  }
+
+  private func showFailureFallback(maxWidth: CGFloat) {
+    clearFailureContent()
     imageView.isHidden = true
+
+    guard let fallback = rendering.failureFallback else {
+      placeholderView.isHidden = false
+      frame.size = CGSize(width: maxWidth, height: rendering.placeholderHeight)
+      invalidateIntrinsicContentSize()
+      return
+    }
+
+    placeholderView.isHidden = true
+
+    switch fallback {
+    case .sourceCode(let code, let language):
+      let view = InkCodeBlockViewFactory.makeView(
+        code: code,
+        language: language,
+        config: rendering.failureCodeBlockStyle
+      )
+      installFailureContentView(view, maxWidth: maxWidth)
+    }
+  }
+
+  private func installFailureContentView(_ view: UIView, maxWidth: CGFloat) {
+    view.translatesAutoresizingMaskIntoConstraints = false
+    addSubview(view)
+    NSLayoutConstraint.activate([
+      view.topAnchor.constraint(equalTo: topAnchor),
+      view.leadingAnchor.constraint(equalTo: leadingAnchor),
+      view.trailingAnchor.constraint(equalTo: trailingAnchor),
+    ])
+    failureContentView = view
+    relayoutFailureContent(maxWidth: maxWidth)
+  }
+
+  private func relayoutFailureContent(maxWidth: CGFloat) {
+    guard let failureContentView else { return }
+    let height = measuredFailureContentHeight(maxWidth: maxWidth)
+    cachedFailureContentHeight = height
+    failureContentView.frame = CGRect(x: 0, y: 0, width: maxWidth, height: height)
+    frame.size = CGSize(width: maxWidth, height: height)
+    invalidateIntrinsicContentSize()
+  }
+
+  private func measuredFailureContentHeight(maxWidth: CGFloat) -> CGFloat {
+    guard let failureContentView else { return rendering.placeholderHeight }
+    let savedFrame = failureContentView.frame
+    failureContentView.bounds = CGRect(x: 0, y: 0, width: maxWidth, height: 0)
+    failureContentView.setNeedsLayout()
+    failureContentView.layoutIfNeeded()
+    let height = failureContentView.systemLayoutSizeFitting(
+      CGSize(width: maxWidth, height: UIView.layoutFittingCompressedSize.height),
+      withHorizontalFittingPriority: .required,
+      verticalFittingPriority: .fittingSizeLevel
+    ).height
+    failureContentView.frame = savedFrame
+    return max(1, height)
+  }
+
+  private func updateFrameForFailureContent(maxWidth: CGFloat) {
+    relayoutFailureContent(maxWidth: maxWidth)
   }
 
   public override var intrinsicContentSize: CGSize {
+    if failureContentView != nil {
+      let maxWidth = resolvedMaxWidth()
+      if maxWidth > 0, cachedFailureContentHeight > 0 {
+        return CGSize(width: maxWidth, height: cachedFailureContentHeight)
+      }
+    }
     if let img = imageView.image {
       let maxW = rendering.sizing.maxBlockImageWidth ?? bounds.width
       return fitted(
@@ -238,8 +325,10 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     subscription?.cancel()
     isConfigured = false
     loadToken = UUID()
+    configuredMaxWidth = 0
     imageView.image = nil
     imageView.isHidden = true
+    clearFailureContent()
     placeholderView.isHidden = false
   }
 

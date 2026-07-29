@@ -60,6 +60,10 @@ public struct InkMermaidBlockHandler: InkBlockHandler {
     var imageRendering = configuration.appearance.imageRendering
     imageRendering.isEnabled = true
     imageRendering.generatedLoader = InkMermaidGeneratedImageLoader(limits: mermaid.limits)
-    return InkImageBlock(source: source, rendering: imageRendering)
+    imageRendering.failureFallback = .sourceCode(code.code, language: code.language)
+    imageRendering.failureCodeBlockStyle = configuration.appearance.codeBlock
+    return MainActor.assumeIsolated {
+      InkImageBlock(source: source, store: .shared, rendering: imageRendering)
+    }
   }
 }

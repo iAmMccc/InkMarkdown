@@ -17,13 +17,21 @@ public struct InkCodeBlock: InkRenderableBlock {
   }
 
   public func makeView() -> UIView {
+    InkCodeBlockViewFactory.makeView(code: code, language: language, config: config)
+  }
+}
+
+// MARK: - 内部工厂
+
+enum InkCodeBlockViewFactory {
+  static func makeView(code: String, language: String?, config: InkAppearance.CodeBlock) -> UIView {
     InkCodeBlockViewImpl(code: code, language: language, config: config)
   }
 }
 
 // MARK: - 内部实现
 
-private final class InkCodeBlockViewImpl: UIView {
+final class InkCodeBlockViewImpl: UIView {
 
   private let code: String
   private let language: String?

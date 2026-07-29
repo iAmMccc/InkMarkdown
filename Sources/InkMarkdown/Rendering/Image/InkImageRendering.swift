@@ -58,6 +58,18 @@ public enum AnimatedImagePolicy: Sendable, Hashable {
   case playOnce
 }
 
+// MARK: - InkImageFailureFallback
+
+/// 块级图片加载失败时的可选备用展示（模块内 API）。
+///
+/// 采用值类型而非闭包，避免破坏 ``InkImageRendering`` 在配置层的值语义，
+/// 也无需让公开配置承担 `@Sendable` 闭包约束；具体集成方（如 Mermaid handler）
+/// 在创建 ``InkImageBlock`` 前注入即可。
+enum InkImageFailureFallback: Hashable {
+  /// 以围栏代码块样式展示原始源码，便于复制与审查。
+  case sourceCode(String, language: String?)
+}
+
 // MARK: - InkImageRendering
 
 /// 图片渲染的完整公开配置。
@@ -105,6 +117,12 @@ public struct InkImageRendering {
 
   /// 相对路径基准 URL（v1.0 预留，当前未生效）
   public var baseURL: URL? = nil
+
+  /// 块级通道加载失败（含 Store rejected）时的备用展示；`nil` 时维持灰色占位。
+  var failureFallback: InkImageFailureFallback?
+
+  /// ``failureFallback`` 为源码代码块时使用的外观；Mermaid 等 handler 注入前应显式赋值。
+  var failureCodeBlockStyle: InkAppearance.CodeBlock = .init()
 
   public init() {}
 }
