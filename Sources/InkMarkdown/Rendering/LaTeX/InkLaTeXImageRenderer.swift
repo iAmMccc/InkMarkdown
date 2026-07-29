@@ -80,7 +80,7 @@ public struct InkLaTeXImageRenderer {
     label.displayErrorInline = false
     label.mode = request.mode == .inline ? .text : .display
     label.fontSize = request.style.fontSize
-    label.textColor = request.style.color.uiColor
+    label.textColor = (request.style.color ?? InkLaTeXColor(.label)).uiColor
     label.latex = request.latex
 
     if let error = label.error {
@@ -114,6 +114,10 @@ public struct InkLaTeXImageRenderer {
     let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
       label.layer.render(in: context.cgContext)
     }
-    return InkLaTeXRenderResult(image: image, stableID: request.stableID, size: size)
+    return InkLaTeXRenderResult(
+      image: image,
+      stableID: request.stableID(resolvedColor: request.style.color ?? InkLaTeXColor(.label)),
+      size: size
+    )
   }
 }

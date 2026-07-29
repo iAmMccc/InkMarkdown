@@ -5,6 +5,7 @@ import XCTest
 final class InkLaTeXImageRendererTests: XCTestCase {
 
   func testStableIDChangesWithContentDisplayAndStyle() {
+    let resolvedBlack = InkLaTeXColor(red: 0, green: 0, blue: 0)
     let base = makeRequest(latex: "x^2")
     let same = makeRequest(latex: " x^2\r\n")
     let changedContent = makeRequest(latex: "x^3")
@@ -12,7 +13,7 @@ final class InkLaTeXImageRendererTests: XCTestCase {
       latex: "x^2",
       mode: .inline,
       display: DisplayContext(maxPixelWidth: 480, scale: 2),
-      style: .init()
+      style: .init(color: resolvedBlack)
     )
     let changedStyle = InkLaTeXRenderRequest(
       latex: "x^2",
@@ -21,10 +22,10 @@ final class InkLaTeXImageRendererTests: XCTestCase {
       style: .init(color: .init(red: 255, green: 0, blue: 0))
     )
 
-    XCTAssertEqual(base.stableID, same.stableID)
-    XCTAssertNotEqual(base.stableID, changedContent.stableID)
-    XCTAssertNotEqual(base.stableID, changedDisplay.stableID)
-    XCTAssertNotEqual(base.stableID, changedStyle.stableID)
+    XCTAssertEqual(base.stableID(resolvedColor: resolvedBlack), same.stableID(resolvedColor: resolvedBlack))
+    XCTAssertNotEqual(base.stableID(resolvedColor: resolvedBlack), changedContent.stableID(resolvedColor: resolvedBlack))
+    XCTAssertNotEqual(base.stableID(resolvedColor: resolvedBlack), changedDisplay.stableID(resolvedColor: resolvedBlack))
+    XCTAssertNotEqual(base.stableID(resolvedColor: resolvedBlack), changedStyle.stableID(resolvedColor: .init(red: 255, green: 0, blue: 0)))
   }
 
   func testRendererRejectsOversizedAndUnbalancedInputBeforeUIWork() async {
@@ -70,7 +71,7 @@ final class InkLaTeXImageRendererTests: XCTestCase {
 
     XCTAssertGreaterThan(result.image.size.width, 0)
     XCTAssertGreaterThan(result.image.size.height, 0)
-    XCTAssertEqual(result.stableID, makeRequest(latex: "x^2 + y^2").stableID)
+    XCTAssertEqual(result.stableID, makeRequest(latex: "x^2 + y^2").stableID(resolvedColor: InkLaTeXColor(red: 0, green: 0, blue: 0)))
   }
 
   private func makeRequest(latex: String, scale: CGFloat = 2) -> InkLaTeXRenderRequest {
@@ -78,7 +79,7 @@ final class InkLaTeXImageRendererTests: XCTestCase {
       latex: latex,
       mode: .inline,
       display: DisplayContext(maxPixelWidth: 320, scale: scale),
-      style: .init()
+      style: .init(color: .init(red: 0, green: 0, blue: 0))
     )
   }
 

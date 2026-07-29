@@ -15,12 +15,21 @@ public struct InkInlineContext {
   /// 当前上下文的基准文字颜色。
   public let textColor: UIColor
 
+  /// 已在 trait 快照下解析的前景色 RGBA，后台 LaTeX 等路径只消费此值。
+  public let resolvedTextColor: InkLaTeXColor
+
   /// 完整样式配置，供扩展读取其它样式项（如 `link.color`）。
   public let appearance: InkAppearance
 
-  public init(baseFont: UIFont, textColor: UIColor, appearance: InkAppearance) {
+  public init(
+    baseFont: UIFont,
+    textColor: UIColor,
+    resolvedTextColor: InkLaTeXColor,
+    appearance: InkAppearance
+  ) {
     self.baseFont = baseFont
     self.textColor = textColor
+    self.resolvedTextColor = resolvedTextColor
     self.appearance = appearance
   }
 }

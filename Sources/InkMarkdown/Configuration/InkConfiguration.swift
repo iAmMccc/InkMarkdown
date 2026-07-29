@@ -35,6 +35,9 @@ public struct InkConfiguration {
   /// // 这些 handler 专供 InkBlockRenderer (块路由通道) 消费，用于决定哪些节点被截获渲染为自定义 UIView。
   public var blockHandlers: [InkBlockHandler]
 
+  /// 主线程捕获的 trait 快照，供流式后台解析解析动态色；未设置时仅在主线程同步渲染路径自动补全。
+  public var renderEnvironment: InkRenderEnvironment = .init()
+
   /// 链接点击回调。
   ///
   /// 表格单元格用 `UITextView` 渲染时，命中 `.link` 属性会调用此回调，
@@ -61,10 +64,13 @@ public struct InkConfiguration {
     self.linkTapHandler = linkTapHandler
   }
 
-  /// 启用内置 LaTeX 渲染。
+  /// 启用内置 LaTeX 渲染总开关。
   ///
+  /// 开启后默认识别 `\\(...\\)`、`$$...$$` 与 `\\[...\\]`；`$...$` 行内分隔符
+  /// 需额外设置 ``InkLaTeXRendering/allowsInlineDollarDelimiter``。
   /// 行内语法由渲染器在每次 render 时根据当前 `appearance.latexRendering` 注入，
-  /// 因此调用此方法后仍可安全修改 `inlineStyle` / `isEnabled`，无需重复注册语法。
+  /// 因此调用此方法后仍可安全修改样式或 opt-in 选项，无需重复注册语法。
+  /// 块级公式须由宿主在终态调用 ``InkBlockRenderer`` 渲染。
   public mutating func enableLaTeXRendering() {
     appearance.latexRendering.isEnabled = true
   }

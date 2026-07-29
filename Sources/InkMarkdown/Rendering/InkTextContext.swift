@@ -16,6 +16,8 @@ struct InkTextContext {
   var font: UIFont
   /// 当前前景色。
   var foregroundColor: UIColor
+  /// 已在 trait 快照下解析的前景色 RGBA。
+  var resolvedForegroundColor: InkLaTeXColor
   /// 若非 nil，表示当前处于某个链接内，叶子应挂 `.link`。随 context 下传，
   /// 使 `[**加粗**](url)`、`[`代码`](url)` 里的子节点都能带上链接目标。
   var linkURL: URL?
@@ -25,13 +27,24 @@ struct InkTextContext {
   var obliqueness: CGFloat
   /// 完整样式配置，供叶子读取其它样式项（如 inlineCode / link 色）。
   let appearance: InkAppearance
+  /// 解析动态色时使用的 trait 快照。
+  let renderEnvironment: InkRenderEnvironment
 
-  init(font: UIFont, foregroundColor: UIColor, linkURL: URL? = nil, obliqueness: CGFloat = 0, appearance: InkAppearance) {
+  init(
+    font: UIFont,
+    foregroundColor: UIColor,
+    linkURL: URL? = nil,
+    obliqueness: CGFloat = 0,
+    appearance: InkAppearance,
+    renderEnvironment: InkRenderEnvironment
+  ) {
     self.font = font
     self.foregroundColor = foregroundColor
+    self.resolvedForegroundColor = InkLaTeXColor(resolving: foregroundColor, environment: renderEnvironment)
     self.linkURL = linkURL
     self.obliqueness = obliqueness
     self.appearance = appearance
+    self.renderEnvironment = renderEnvironment
   }
 
   // MARK: - 派生
@@ -72,6 +85,7 @@ struct InkTextContext {
   func coloring(_ color: UIColor) -> InkTextContext {
     var copy = self
     copy.foregroundColor = color
+    copy.resolvedForegroundColor = InkLaTeXColor(resolving: color, environment: renderEnvironment)
     return copy
   }
 
