@@ -2,16 +2,21 @@ import Foundation
 
 /// Markdown 图片节点的规范化来源描述。
 ///
-/// 将原始 URL 解析为 scheme 分类与去重用的 `canonicalID`，供缓存键与安全策略共用。
+/// 将原始 URL 解析为 scheme 分类、实际请求 URL 与去重用的 `canonicalID`，供缓存键与安全策略共用。
 public struct ImageSource: Hashable, Sendable {
 
   /// 原始 URL（Markdown 解析结果或经 `baseURL` 解析后的绝对地址）。
   public let rawURL: URL
 
+  /// 按安全策略剥离 query / fragment 后用于网络与本地读取的实际 URL。
+  ///
+  /// Loader 与缓存键均以此为准，保证「请求什么就缓存什么」。
+  public let requestURL: URL
+
   /// 根据 URL scheme 推导的来源类型。
   public let scheme: ImageScheme
 
-  /// 规范化标识：按配置剥离 query / fragment 后的 `absoluteString`，用于缓存去重。
+  /// 规范化标识：与 ``requestURL`` 的 `absoluteString` 一致，用于缓存去重。
   public let canonicalID: String
 
   /// 图片 URL 的 scheme 分类。
@@ -26,12 +31,12 @@ public struct ImageSource: Hashable, Sendable {
     case unknown
   }
 
-  /// 从 URL 构建图片来源，并生成规范化 ID。
+  /// 从 URL 构建图片来源，并生成请求 URL 与规范化 ID。
   ///
   /// - Parameters:
   ///   - url: 原始 URL。
-  ///   - stripsQuery: 为 `true` 时从 `canonicalID` 中移除 query 组件。
-  ///   - stripsFragment: 为 `true` 时从 `canonicalID` 中移除 fragment 组件。
+  ///   - stripsQuery: 为 `true` 时从 ``requestURL`` 中移除 query 组件。
+  ///   - stripsFragment: 为 `true` 时从 ``requestURL`` 中移除 fragment 组件。
   public init(url: URL, stripsQuery: Bool = true, stripsFragment: Bool = true) {
     self.rawURL = url
     self.scheme = Self.imageScheme(for: url)
@@ -44,11 +49,12 @@ public struct ImageSource: Hashable, Sendable {
       if stripsFragment {
         components?.fragment = nil
       }
-      // 相对 URL 可能没有 base，`url` 回退保证 canonicalID 始终可用。
-      self.canonicalID = (components?.url ?? url).absoluteString
+      // 相对 URL 可能没有 base，`url` 回退保证 requestURL 始终可用。
+      self.requestURL = components?.url ?? url
     } else {
-      self.canonicalID = url.absoluteString
+      self.requestURL = url
     }
+    self.canonicalID = requestURL.absoluteString
   }
 
   private static func imageScheme(for url: URL) -> ImageScheme {

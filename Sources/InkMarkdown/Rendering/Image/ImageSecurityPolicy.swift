@@ -1,5 +1,5 @@
 /// 图片加载的安全与 URL 规范化策略。
-public struct ImageSecurityPolicy: Sendable {
+public struct ImageSecurityPolicy: Sendable, Hashable {
 
   /// 允许加载的 URL scheme 集合。
   public var allowedSchemes: Set<ImageSource.ImageScheme> = [.http, .https, .file, .asset, .bundle]
@@ -9,10 +9,13 @@ public struct ImageSecurityPolicy: Sendable {
   /// - `.allowAll`：空集 = 允许所有主机
   public var allowedHosts: Set<String> = []
 
-  /// 生成 `canonicalID` 时是否剥离 query 组件。
-  public var stripsQuery: Bool = true
+  /// 是否从实际请求地址（``ImageSource/requestURL``）与 `canonicalID` 中剥离 query 组件。
+  ///
+  /// 默认 `false`，以兼容带签名或尺寸参数的 URL（如 `?token=...`）；开启后同时作用于网络请求 URL 与缓存键。
+  /// 在 AI / LLM 场景需防范 prompt-injection 经 query 外泄数据时，建议显式设为 `true`（host allowlist 仍是主防线）。
+  public var stripsQuery: Bool = false
 
-  /// 生成 `canonicalID` 时是否剥离 fragment 组件。
+  /// 是否从实际请求地址（``ImageSource/requestURL``）与 `canonicalID` 中剥离 fragment 组件。
   public var stripsFragment: Bool = true
 
   /// 允许的最大 HTTP 重定向次数。

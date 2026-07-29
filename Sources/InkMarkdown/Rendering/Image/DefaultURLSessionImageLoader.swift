@@ -27,10 +27,14 @@ public final class DefaultURLSessionImageLoader: InkImageLoading, @unchecked Sen
     )
   }
 
+  deinit {
+    session.invalidateAndCancel()
+  }
+
   public func loadImage(source: ImageSource, display: DisplayContext) async throws -> UIImage {
     switch source.scheme {
     case .http, .https:
-      let (data, response) = try await session.inkData(from: source.rawURL)
+      let (data, response) = try await session.inkData(from: source.requestURL)
       guard let httpResponse = response as? HTTPURLResponse,
             (200...299).contains(httpResponse.statusCode) else {
         throw ImageLoadError.invalidResponse
@@ -41,25 +45,25 @@ public final class DefaultURLSessionImageLoader: InkImageLoading, @unchecked Sen
       return try downsampleHelper.downsample(data: data, maxPixel: display.maxPixelWidth)
 
     case .file:
-      let data = try Data(contentsOf: source.rawURL)
+      let data = try Data(contentsOf: source.requestURL)
       return try downsampleHelper.downsample(data: data, maxPixel: display.maxPixelWidth)
 
     case .data:
-      guard let dataString = source.rawURL.absoluteString.components(separatedBy: ",").last,
+      guard let dataString = source.requestURL.absoluteString.components(separatedBy: ",").last,
             let data = Data(base64Encoded: dataString) else {
         throw ImageLoadError.invalidBase64
       }
       return try downsampleHelper.downsample(data: data, maxPixel: display.maxPixelWidth)
 
     case .asset:
-      let name = source.rawURL.host ?? source.rawURL.lastPathComponent
+      let name = source.requestURL.host ?? source.requestURL.lastPathComponent
       guard let image = UIImage(named: name) else {
         throw ImageLoadError.assetNotFound(name)
       }
       return image
 
     case .bundle:
-      let path = source.rawURL.path
+      let path = source.requestURL.path
       guard let image = UIImage(contentsOfFile: path) else {
         throw ImageLoadError.bundleNotFound(path)
       }
