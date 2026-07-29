@@ -38,6 +38,9 @@ public struct InkAttributedTextBlock: InkRenderableBlock {
     textView.backgroundColor = UIColor.clear
     textView.isScrollEnabled = false
     textView.textContainerInset = insets
+    MainActor.assumeIsolated {
+      InkImageAttachment.bindAttachments(in: textStorage, layoutManager: layoutManager)
+    }
     return textView
   }
 }

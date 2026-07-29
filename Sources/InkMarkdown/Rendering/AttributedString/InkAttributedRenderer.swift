@@ -112,24 +112,6 @@ private struct InkRenderer {
 
   private var appearance: InkAppearance { configuration.appearance }
 
-  private final class LoaderCache {
-    var loader: (any InkImageLoading)?
-  }
-
-  private let loaderCache = LoaderCache()
-
-  private func resolveLoader() -> any InkImageLoading {
-    if let loader = appearance.imageRendering.loader {
-      return loader
-    }
-    if let cached = loaderCache.loader {
-      return cached
-    }
-    let loader = DefaultURLSessionImageLoader(securityPolicy: appearance.imageRendering.securityPolicy)
-    loaderCache.loader = loader
-    return loader
-  }
-
   /// 正文基准上下文：正文字号系统字体 + 正文色。块级递归的起点。
   var bodyContext: InkTextContext {
     InkTextContext(
@@ -583,29 +565,16 @@ private struct InkRenderer {
       )
     }
 
-    return MainActor.assumeIsolated {
-      let store = InkImageStore.shared
-      let attachment = InkImageAttachment(source: source, store: store, rendering: rendering)
+    let attachment = InkImageAttachment(source: source, rendering: rendering, store: nil)
 
-      let loader = resolveLoader()
-      let scale = UIScreen.main.scale
-      let maxWidth = rendering.sizing.maxInlineImageWidth ?? 300
-      let display = DisplayContext(
-        maxPixelWidth: maxWidth * scale,
-        scale: scale,
-        contentMode: .fit
-      )
-      attachment.materialize(display: display, loader: loader)
+    let result = NSMutableAttributedString(attachment: attachment)
+    result.addAttribute(.baselineOffset, value: 0, range: NSRange(location: 0, length: result.length))
 
-      let result = NSMutableAttributedString(attachment: attachment)
-      result.addAttribute(.baselineOffset, value: 0, range: NSRange(location: 0, length: result.length))
-
-      if let linkURL = context.linkURL {
-        result.addAttribute(.link, value: linkURL, range: NSRange(location: 0, length: result.length))
-      }
-
-      return result
+    if let linkURL = context.linkURL {
+      result.addAttribute(.link, value: linkURL, range: NSRange(location: 0, length: result.length))
     }
+
+    return result
   }
 
   private func checkSecurityPolicy(source: ImageSource, rendering: InkImageRendering) -> ImageRejectReason? {
@@ -632,7 +601,7 @@ private struct InkRenderer {
 
     if source.scheme == .data {
       let dataSize = source.rawURL.absoluteString.count
-      if dataSize > InkImageStore.Configuration().maxDataURLBytes {
+      if dataSize > rendering.storeConfiguration.maxDataURLBytes {
         return .payloadTooLarge(dataSize)
       }
     }

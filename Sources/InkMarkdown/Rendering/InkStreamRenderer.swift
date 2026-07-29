@@ -127,6 +127,7 @@ public final class InkStreamRenderer {
       if showLength > 0 {
         let displayed = content.attributedSubstring(from: NSRange(location: 0, length: showLength))
         tv.textStorage.setAttributedString(displayed)
+        bindImageAttachmentsIfNeeded()
       }
     }
 
@@ -318,6 +319,7 @@ public final class InkStreamRenderer {
     if totalLength < displayIndex || parseVersion != lastAppliedParseVersion {
       displayIndex = min(displayIndex, totalLength)
       lastAppliedParseVersion = parseVersion
+      var bindRange: NSRange?
       if let tv = textView {
         let showLength = min(displayIndex, totalLength)
         let start = min(refreshLocation, tv.textStorage.length, showLength)
@@ -326,8 +328,10 @@ public final class InkStreamRenderer {
           in: NSRange(location: start, length: tv.textStorage.length - start),
           with: replacement
         )
+        bindRange = NSRange(location: start, length: showLength - start)
       }
       onUpdate?(content.attributedSubstring(from: NSRange(location: 0, length: displayIndex)))
+      bindImageAttachmentsIfNeeded(in: bindRange)
       notifyHeightChangeIfNeeded()
       if isFinished && finalParseCompleted && displayIndex >= totalLength {
         stopDisplayLink()
@@ -368,6 +372,7 @@ public final class InkStreamRenderer {
     displayIndex = newDisplayIndex
     onUpdate?(content.attributedSubstring(from: NSRange(location: 0, length: newDisplayIndex)))
 
+    bindImageAttachmentsIfNeeded(in: appendRange)
     notifyHeightChangeIfNeeded()
 
     // 流结束且最终解析完成且显示追上 → 停止并通知
@@ -389,6 +394,21 @@ public final class InkStreamRenderer {
     }
   }
 
+  private func bindImageAttachmentsIfNeeded(in range: NSRange? = nil) {
+    MainActor.assumeIsolated {
+      guard let tv = textView else { return }
+      let layoutManager = tv.layoutManager
+      InkImageAttachment.bindAttachments(
+        in: tv.textStorage,
+        layoutManager: layoutManager,
+        onHeightChange: { [weak self] in
+          self?.notifyHeightChangeIfNeeded()
+        },
+        range: range
+      )
+    }
+  }
+
   // MARK: - Flush
 
   /// 立即将所有已解析内容显示完毕
@@ -402,6 +422,7 @@ public final class InkStreamRenderer {
 
     if let tv = textView {
       tv.textStorage.setAttributedString(content)
+      bindImageAttachmentsIfNeeded()
     }
     displayIndex = totalLength
     onUpdate?(content)

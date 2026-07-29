@@ -32,6 +32,9 @@ final class InkTableCellTextView: UITextView, UITextViewDelegate {
     dataDetectorTypes = []
     linkTextAttributes = [.foregroundColor: linkColor]
     delegate = self
+    MainActor.assumeIsolated {
+      InkImageAttachment.bindAttachments(in: storage, layoutManager: layoutManager)
+    }
   }
 
   @available(*, unavailable)
