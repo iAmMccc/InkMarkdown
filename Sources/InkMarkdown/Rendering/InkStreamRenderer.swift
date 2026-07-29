@@ -16,12 +16,21 @@ import Markdown
 /// - 显示侧每帧开销恒定 O(1)：只做 attributedSubstring 截取 + textStorage append
 /// - 支持暂停/恢复显示（用户滑动时暂停）
 ///
+/// ## 块级 LaTeX / Mermaid 的终态职责
+///
+/// 本渲染器只产出 `NSAttributedString`，**不能**承载块级 LaTeX（`$$...$$`、`\\[...\\]`）
+/// 或 Mermaid 围栏对应的 `UIView`。流结束时调用 ``finish()`` 仅对 attributed-string
+/// 通道做最终全量解析；若需把独占段落的块级公式或 Mermaid 图渲染为图片块，
+/// 宿主须在收到完整源文本后另行调用 ``InkBlockRenderer/render(_:configuration:)``。
+///
 /// ### 使用方式
 /// ```swift
 /// let renderer = InkStreamRenderer(configuration: .standard)
 /// renderer.bindTextView(textView)
 /// renderer.append("## 标题\n")     // SSE 每收到分片就 append
-/// renderer.finish()                // 流结束
+/// renderer.finish()                // 流结束（仅 finalized attributed string）
+/// // 块级 LaTeX / Mermaid（需保留完整源文本）：
+/// let blocks = InkBlockRenderer.render(fullSource, configuration: config)
 /// ```
 /// 流式渲染器：所有公开 API（append/finish/bindTextView/unbindTextView）必须在主线程调用。
 public final class InkStreamRenderer {
@@ -156,7 +165,7 @@ public final class InkStreamRenderer {
     guard buffer.count <= Self.maxParseLength else { return }
 
     let currentBuffer = buffer
-    let config = configuration
+    let config = configuration.capturingRenderEnvironmentForBackgroundParse()
     let generation = currentRenderGeneration()
     parseQueue.async { [weak self] in
       guard let self = self else { return }
@@ -197,7 +206,7 @@ public final class InkStreamRenderer {
     preloadRefreshLocation = 0
     preloadLock.unlock()
 
-    let config = configuration
+    let config = configuration.capturingRenderEnvironmentForBackgroundParse()
     if source.isEmpty {
       parseQueue.async { [weak self] in
         self?.incrementalRenderer.reset()
@@ -238,13 +247,17 @@ public final class InkStreamRenderer {
   }
 
   /// 标记流结束。displayLink 会继续逐字吐完剩余内容，全部完成后触发 onFinishDisplay。
+  ///
+  /// 此方法仅 finalized 当前 buffer 的 **attributed-string 通道**结果；
+  /// 块级 LaTeX（`$$...$$`、`\\[...\\]`）与 Mermaid 围栏不会被转为 `UIView`。
+  /// 若宿主需要块级图片渲染，请在流结束后对完整源文本调用 ``InkBlockRenderer/render(_:configuration:)``。
   public func finish() {
     var currentBuffer = buffer
     if currentBuffer.count > Self.maxParseLength {
       let endIndex = currentBuffer.index(currentBuffer.startIndex, offsetBy: Self.maxParseLength)
       currentBuffer = String(currentBuffer[..<endIndex])
     }
-    let config = configuration
+    let config = configuration.capturingRenderEnvironmentForBackgroundParse()
     isFinished = true
     preloadLock.lock()
     renderGeneration += 1
@@ -474,9 +487,10 @@ struct InkIncrementalMarkdownRenderer {
     let result = NSMutableAttributedString(attributedString: stableContent)
     let tailStart = source.index(source.startIndex, offsetBy: stableCharacterCount)
     let tail = String(source[tailStart...])
+    let latex = configuration.appearance.latexRendering
     if !tail.isEmpty,
-       !Self.hasUnclosedLaTeXBlock(tail),
-       !Self.hasUnclosedLaTeXInlineDelimiter(tail),
+       !Self.hasUnclosedLaTeXBlock(tail, latex: latex),
+       !Self.hasUnclosedLaTeXInlineDelimiter(tail, latex: latex),
        !Self.hasUnclosedMermaidFence(tail) {
       if result.length > 0 {
         result.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
@@ -487,19 +501,23 @@ struct InkIncrementalMarkdownRenderer {
     return Result(content: result, refreshLocation: oldStableLength)
   }
 
-  /// 追加阶段不显示未闭合 `$$` 块；finish() 会走完整解析并稳定地以文本降级。
-  private static func hasUnclosedLaTeXBlock(_ source: String) -> Bool {
-    latexDelimiterState(in: source).blockDollarOpen
+  /// 追加阶段不显示未闭合 `$$` / `\\[` 块；finish() 会走完整解析并稳定地以文本降级。
+  private static func hasUnclosedLaTeXBlock(_ source: String, latex: InkLaTeXRendering) -> Bool {
+    guard latex.isEnabled else { return false }
+    let state = latexDelimiterState(in: source, latex: latex)
+    return state.blockDollarOpen || state.blockBracketsOpen
   }
 
   /// 追加阶段不显示未闭合 `$...$` 或 `\\(...\\)`；完整配对、转义符号和代码区域不受影响。
-  private static func hasUnclosedLaTeXInlineDelimiter(_ source: String) -> Bool {
-    let state = latexDelimiterState(in: source)
-    return state.inlineDollarOpen || state.inlineParenthesesOpen
+  private static func hasUnclosedLaTeXInlineDelimiter(_ source: String, latex: InkLaTeXRendering) -> Bool {
+    guard latex.isEnabled else { return false }
+    let state = latexDelimiterState(in: source, latex: latex)
+    return state.inlineParenthesesOpen || (latex.allowsInlineDollarDelimiter && state.inlineDollarOpen)
   }
 
   private struct LaTeXDelimiterState {
     var blockDollarOpen = false
+    var blockBracketsOpen = false
     var inlineDollarOpen = false
     var inlineParenthesesOpen = false
     var inlineCodeTickCount: Int?
@@ -507,7 +525,7 @@ struct InkIncrementalMarkdownRenderer {
   }
 
   /// 最小流式状态机：只判断是否应保留活动尾部，不改变最终 Markdown / LaTeX 解析语义。
-  private static func latexDelimiterState(in source: String) -> LaTeXDelimiterState {
+  private static func latexDelimiterState(in source: String, latex: InkLaTeXRendering) -> LaTeXDelimiterState {
     var state = LaTeXDelimiterState()
     let lines = source.split(separator: "\n", omittingEmptySubsequences: false)
 
@@ -527,7 +545,7 @@ struct InkIncrementalMarkdownRenderer {
         continue
       }
 
-      scanLaTeXDelimiters(in: lineString, state: &state)
+      scanLaTeXDelimiters(in: lineString, latex: latex, state: &state)
       // `$...$` 不允许跨行；只有最后一个尚未完成的行内片段需要继续等待分片。
       if lineIndex < lines.count - 1 {
         state.inlineDollarOpen = false
@@ -536,7 +554,8 @@ struct InkIncrementalMarkdownRenderer {
     return state
   }
 
-  private static func scanLaTeXDelimiters(in line: String, state: inout LaTeXDelimiterState) {
+  private static func scanLaTeXDelimiters(in line: String, latex: InkLaTeXRendering, state: inout LaTeXDelimiterState) {
+    guard latex.isEnabled else { return }
     var index = line.startIndex
     while index < line.endIndex {
       let character = line[index]
@@ -554,12 +573,35 @@ struct InkIncrementalMarkdownRenderer {
         index = line.index(after: index)
         continue
       }
-      if line[index...].hasPrefix("$$"), !isEscaped(line, at: index) {
-        state.blockDollarOpen.toggle()
+      if !state.blockDollarOpen,
+         line[index...].hasPrefix("$$"),
+         !isEscaped(line, at: index) {
+        state.blockDollarOpen = true
         index = line.index(index, offsetBy: 2)
         continue
       }
-      guard !state.blockDollarOpen else {
+      if state.blockDollarOpen {
+        if line[index...].hasPrefix("$$"), !isEscaped(line, at: index) {
+          state.blockDollarOpen = false
+          index = line.index(index, offsetBy: 2)
+          continue
+        }
+        index = line.index(after: index)
+        continue
+      }
+      if !state.blockBracketsOpen,
+         line[index...].hasPrefix("\\["),
+         !isEscaped(line, at: index) {
+        state.blockBracketsOpen = true
+        index = line.index(index, offsetBy: 2)
+        continue
+      }
+      if state.blockBracketsOpen {
+        if line[index...].hasPrefix("\\]"), !isEscaped(line, at: index) {
+          state.blockBracketsOpen = false
+          index = line.index(index, offsetBy: 2)
+          continue
+        }
         index = line.index(after: index)
         continue
       }
@@ -573,7 +615,8 @@ struct InkIncrementalMarkdownRenderer {
         index = line.index(index, offsetBy: 2)
         continue
       }
-      if character == "$", !isEscaped(line, at: index) {
+      if latex.allowsInlineDollarDelimiter,
+         character == "$", !isEscaped(line, at: index) {
         state.inlineDollarOpen.toggle()
       }
       index = line.index(after: index)

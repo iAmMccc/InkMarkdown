@@ -179,6 +179,12 @@ import UIKit
   #expect(para.paragraphSpacing == 12)
 }
 
+@Test func appearance_initDoesNotRecursivelyTrap() {
+  let appearance = InkAppearance()
+  #expect(appearance.codeBlock.fontSize == 14)
+  #expect(appearance.imageRendering.isEnabled == false)
+}
+
 @Test func appearance_defaultValues() async throws {
   let a = InkAppearance()
   #expect(a.text.fontSize == 17)
@@ -255,23 +261,43 @@ import UIKit
 
 @Test func streamRenderer_buffersUnclosedInlineDollarUntilPaired() async throws {
   var renderer = InkIncrementalMarkdownRenderer()
-  let config = InkConfiguration.standard
+  var appearance = InkAppearance()
+  appearance.latexRendering.isEnabled = true
+  appearance.latexRendering.allowsInlineDollarDelimiter = true
+  let config = InkConfiguration(appearance: appearance)
 
   let partial = renderer.append("公式 $x", configuration: config)
   #expect(!partial.content.string.contains("$x"))
 
   let completed = renderer.append("$ 完成", configuration: config)
-  #expect(completed.content.string.contains("$x$"))
+  #expect(completed.content.string.contains("完成"))
+  var foundAttachment = false
+  completed.content.enumerateAttribute(.attachment, in: NSRange(location: 0, length: completed.content.length), options: []) { value, _, _ in
+    if value is InkImageAttachment { foundAttachment = true }
+  }
+  #expect(foundAttachment)
+}
+
+@Test func streamRenderer_doesNotBufferBareDollarWithoutOptIn() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  var appearance = InkAppearance()
+  appearance.latexRendering.isEnabled = true
+  let config = InkConfiguration(appearance: appearance)
+
+  let partial = renderer.append("价格是 $5", configuration: config)
+  #expect(partial.content.string.contains("$5"))
 }
 
 @Test func streamRenderer_buffersUnclosedInlineParenthesesAndHonorsEscapesAndCode() async throws {
   var renderer = InkIncrementalMarkdownRenderer()
-  let config = InkConfiguration.standard
+  var appearance = InkAppearance()
+  appearance.latexRendering.isEnabled = true
+  let config = InkConfiguration(appearance: appearance)
 
   let partial = renderer.append("公式 \\(x", configuration: config)
-  #expect(!partial.content.string.contains("\\(x"))
+  #expect(!partial.content.string.contains("(x"))
   let completed = renderer.append("\\) 完成", configuration: config)
-  #expect(completed.content.string.contains("\\(x\\)"))
+  #expect(completed.content.string.contains("完成"))
 
   renderer.reset()
   let escaped = renderer.append("\\$notLatex", configuration: config)
@@ -281,8 +307,44 @@ import UIKit
   #expect(code.content.string.contains("$notLatex"))
 }
 
+@Test func streamRenderer_buffersUnclosedBlockBracketsWhenLaTeXEnabled() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  var appearance = InkAppearance()
+  appearance.latexRendering.isEnabled = true
+  let config = InkConfiguration(appearance: appearance)
+
+  let partial = renderer.append("\\[E = mc", configuration: config)
+  #expect(!partial.content.string.contains("\\[E"))
+
+  let completed = renderer.append("^2\\]", configuration: config)
+  #expect(completed.content.string.contains("E = mc^2"))
+}
+
+@Test func streamRenderer_releasesCompleteBlockBracketsInSingleChunk() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  var appearance = InkAppearance()
+  appearance.latexRendering.isEnabled = true
+  let config = InkConfiguration(appearance: appearance)
+
+  let completed = renderer.append("\\[E = mc^2\\]", configuration: config)
+  #expect(completed.content.string.contains("E = mc^2"))
+}
+
+@Test func streamRenderer_releasesCompleteBlockDollarInSingleChunk() async throws {
+  var renderer = InkIncrementalMarkdownRenderer()
+  var appearance = InkAppearance()
+  appearance.latexRendering.isEnabled = true
+  let config = InkConfiguration(appearance: appearance)
+
+  let completed = renderer.append("$$E = mc^2$$", configuration: config)
+  #expect(completed.content.string.contains("$$E = mc^2$$"))
+}
+
 @Test func streamRenderer_finishDegradesIncompleteInlineLatexToText() async throws {
-  let renderer = InkStreamRenderer()
+  var appearance = InkAppearance()
+  appearance.latexRendering.isEnabled = true
+  appearance.latexRendering.allowsInlineDollarDelimiter = true
+  let renderer = InkStreamRenderer(configuration: InkConfiguration(appearance: appearance))
   renderer.append("$x")
   #expect(!renderer.currentAttributedString().string.contains("$x"))
 
@@ -291,6 +353,20 @@ import UIKit
     try? await Task.sleep(nanoseconds: 10_000_000)
   }
   #expect(renderer.currentAttributedString().string.contains("$x"))
+}
+
+@Test func streamRenderer_finishDegradesIncompleteParenthesesLatexToText() async throws {
+  var appearance = InkAppearance()
+  appearance.latexRendering.isEnabled = true
+  let renderer = InkStreamRenderer(configuration: InkConfiguration(appearance: appearance))
+  renderer.append("公式 \\(x")
+  #expect(!renderer.currentAttributedString().string.contains("\\(x"))
+
+  renderer.finish()
+  for _ in 0..<50 where !renderer.currentAttributedString().string.contains("\\(x") {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+  #expect(renderer.currentAttributedString().string.contains("\\(x"))
 }
 
 @Test func streamRenderer_doesNotFreezeListBeforeIndentedContinuation() async throws {

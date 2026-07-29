@@ -24,9 +24,10 @@ public struct InkAttributedRenderer {
     _ source: String,
     configuration: InkConfiguration = .standard
   ) -> NSAttributedString {
-    let filtered = configuration.sourceFilter?(source) ?? source
+    let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
+    let filtered = effectiveConfiguration.sourcePreparedForParsing(source)
     let document = InkParser.parse(filtered)
-    let renderer = InkRenderer(configuration: configuration)
+    let renderer = InkRenderer(configuration: effectiveConfiguration)
     return renderer.renderDocument(document)
   }
 
@@ -35,7 +36,8 @@ public struct InkAttributedRenderer {
     document: Document,
     configuration: InkConfiguration = .standard
   ) -> NSAttributedString {
-    let renderer = InkRenderer(configuration: configuration)
+    let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
+    let renderer = InkRenderer(configuration: effectiveConfiguration)
     return renderer.renderDocument(document)
   }
 
@@ -44,7 +46,8 @@ public struct InkAttributedRenderer {
     markups: [Markup],
     configuration: InkConfiguration = .standard
   ) -> NSAttributedString {
-    let renderer = InkRenderer(configuration: configuration)
+    let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
+    let renderer = InkRenderer(configuration: effectiveConfiguration)
     let result = NSMutableAttributedString()
     for (index, markup) in markups.enumerated() {
       result.append(renderer.renderBlock(markup, context: renderer.bodyContext))
@@ -81,15 +84,22 @@ public struct InkAttributedRenderer {
     baseFont: UIFont,
     textColor: UIColor
   ) -> NSAttributedString {
-    let document = InkParser.parse(text)
+    let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
+    let prepared = effectiveConfiguration.sourcePreparedForParsing(text)
+    let document = InkParser.parse(prepared)
     guard let paragraph = document.children.first(where: { $0 is Paragraph }) as? Paragraph else {
       return NSAttributedString(string: text, attributes: [
         .font: baseFont,
         .foregroundColor: textColor,
       ])
     }
-    let renderer = InkRenderer(configuration: configuration)
-    let context = InkTextContext(font: baseFont, foregroundColor: textColor, appearance: configuration.appearance)
+    let renderer = InkRenderer(configuration: effectiveConfiguration)
+    let context = InkTextContext(
+      font: baseFont,
+      foregroundColor: textColor,
+      appearance: effectiveConfiguration.appearance,
+      renderEnvironment: effectiveConfiguration.renderEnvironment
+    )
     let result = NSMutableAttributedString()
     for child in paragraph.children {
       result.append(renderer.renderInline(child, context: context))
@@ -117,7 +127,8 @@ private struct InkRenderer {
     InkTextContext(
       font: UIFont.systemFont(ofSize: appearance.text.fontSize),
       foregroundColor: appearance.text.color,
-      appearance: appearance
+      appearance: appearance,
+      renderEnvironment: configuration.renderEnvironment
     )
   }
 
@@ -216,7 +227,8 @@ private struct InkRenderer {
     let headingContext = InkTextContext(
       font: UIFont.systemFont(ofSize: size, weight: .bold),
       foregroundColor: appearance.heading.color,
-      appearance: appearance
+      appearance: appearance,
+      renderEnvironment: configuration.renderEnvironment
     )
     let mutable = NSMutableAttributedString(attributedString: renderInlineChildren(of: h, context: headingContext))
     applyFixedLineHeight(to: mutable, lineHeight: lh, spacingAfter: spacing)
@@ -495,6 +507,7 @@ private struct InkRenderer {
       let inlineContext = InkInlineContext(
         baseFont: context.font,
         textColor: context.foregroundColor,
+        resolvedTextColor: context.resolvedForegroundColor,
         appearance: appearance
       )
       for syntax in configuration.inlineSyntaxes {
@@ -510,6 +523,9 @@ private struct InkRenderer {
         return rendered
       }
     }
+    let plainText = configuration.appearance.latexRendering.isEnabled
+      ? InkLaTeXSourcePreservation.restoreBracketDelimiters(in: textNode.string)
+      : textNode.string
     var attrs: [NSAttributedString.Key: Any] = [
       .font: context.font,
       .foregroundColor: context.foregroundColor,
@@ -526,7 +542,7 @@ private struct InkRenderer {
     if context.obliqueness != 0 {
       attrs[.obliqueness] = context.obliqueness
     }
-    return NSAttributedString(string: textNode.string, attributes: attrs)
+    return NSAttributedString(string: plainText, attributes: attrs)
   }
 
   private func renderLink(_ link: Markdown.Link, context: InkTextContext) -> NSAttributedString {
@@ -703,5 +719,27 @@ private struct InkRenderer {
         mutable.addAttribute(.paragraphStyle, value: para, range: range)
       }
     }
+  }
+}
+
+extension InkConfiguration {
+  /// 主线程同步渲染时，若尚未注入 trait 快照则自动捕获当前环境。
+  func withResolvedRenderEnvironmentIfNeeded() -> InkConfiguration {
+    guard renderEnvironment.userInterfaceStyle == .unspecified else { return self }
+    guard Thread.isMainThread else { return self }
+    var copy = self
+    copy.renderEnvironment = InkRenderEnvironment(
+      userInterfaceStyle: UITraitCollection.current.userInterfaceStyle
+    )
+    return copy
+  }
+
+  /// 流式渲染在主线程调用，显式捕获 trait 快照供后台 parse 使用。
+  func capturingRenderEnvironmentForBackgroundParse() -> InkConfiguration {
+    var copy = self
+    copy.renderEnvironment = InkRenderEnvironment(
+      userInterfaceStyle: UITraitCollection.current.userInterfaceStyle
+    )
+    return copy
   }
 }

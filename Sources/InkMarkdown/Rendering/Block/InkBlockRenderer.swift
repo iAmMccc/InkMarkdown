@@ -14,7 +14,7 @@ public enum InkBlockRenderer {
     _ source: String,
     configuration: InkConfiguration = .standard
   ) -> [InkRenderableBlock] {
-    let filtered = configuration.sourceFilter?(source) ?? source
+    let filtered = configuration.sourcePreparedForParsing(source)
     let document = InkParser.parse(filtered)
     var blocks: [InkRenderableBlock] = []
     var pendingMarkup: [Markup] = []
