@@ -139,8 +139,9 @@ final class ComponentPagerViewController: UIViewController {
   private func buildListViewControllers() -> [PagerListController] {
     let sample = component.standardSample
     var vcs: [PagerListController] = []
-    // 标准渲染放首位——一进来直接看到效果；自定义样式次之；源码放最后。
-    vcs.append(RenderedListViewController(source: sample, style: .standard))
+    // 主渲染样式放首位——一进来直接看到效果；自定义样式次之；源码放最后。
+    // 图片组件主样式为真图 opt-in（`.imageEnabled`），其余组件仍为 `.standard`。
+    vcs.append(RenderedListViewController(source: sample, style: component.primaryRenderStyle))
     for custom in component.customStyles {
       vcs.append(RenderedListViewController(source: sample, style: custom))
     }

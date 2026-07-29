@@ -170,12 +170,15 @@ public final class InkImageStore {
   ) {
     activeCount += 1
     let task = Task.detached { [weak self] in
+      // 成功/失败路径在同一 MainActor 临界区写 cache 并清理 inflight，
+      // 避免「cache 已就绪但 inflightCount 仍为 1」的观测窗口；
+      // defer 仅兜底取消等未走到上述路径的情况。
+      var completedOnMain = false
       defer {
-        Task { @MainActor [weak self] in
-          guard let self else { return }
-          self.activeCount -= 1
-          self.inflight.removeValue(forKey: source.canonicalID)
-          self.drainPendingLoads()
+        if !completedOnMain {
+          Task { @MainActor [weak self] in
+            self?.completeLoad(sourceID: source.canonicalID)
+          }
         }
       }
       do {
@@ -185,17 +188,27 @@ public final class InkImageStore {
           self.cache.setObject(image, forKey: key.cacheKey, cost: image.memoryCost)
           self.broadcast(source: source, image: image)
           self.subscribers.removeValue(forKey: source.canonicalID)
+          self.completeLoad(sourceID: source.canonicalID)
         }
+        completedOnMain = true
         return image
       } catch {
         await MainActor.run { [weak self] in
           guard let self else { return }
           self.broadcastFailure(source: source, error: error)
+          self.completeLoad(sourceID: source.canonicalID)
         }
+        completedOnMain = true
         throw error
       }
     }
     inflight[source.canonicalID] = task
+  }
+
+  private func completeLoad(sourceID: String) {
+    guard inflight.removeValue(forKey: sourceID) != nil else { return }
+    activeCount = max(0, activeCount - 1)
+    drainPendingLoads()
   }
 
   private func drainPendingLoads() {

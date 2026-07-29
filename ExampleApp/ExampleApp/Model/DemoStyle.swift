@@ -16,6 +16,8 @@ enum DemoStyle {
     case h1ActionCard
     /// 表格卡片：Markdown 表格替换成原生 UIView 表格，演示 Table Block 路由。
     case tableCard
+    /// 图片 opt-in：开启 `InkImageRendering.isEnabled`，演示真图行内 / 块通道。
+    case imageEnabled
 
     /// Segmented tab 标题。
     var displayName: String {
@@ -24,6 +26,7 @@ enum DemoStyle {
         case .brandedTheme: return "自定义主题"
         case .h1ActionCard: return "业务卡片"
         case .tableCard: return "表格卡片"
+        case .imageEnabled: return "真图"
         }
     }
 
@@ -37,6 +40,8 @@ enum DemoStyle {
             return .standard
         case .brandedTheme:
             return InkConfiguration(appearance: .demoBranded)
+        case .imageEnabled:
+            return InkConfiguration(appearance: .demoImageEnabled)
         }
     }
 }
@@ -51,6 +56,18 @@ extension InkAppearance {
         a.link.color = UIColor(red: 0.12, green: 0.44, blue: 0.92, alpha: 1)
         a.codeBlock.backgroundColor = UIColor(red: 0.93, green: 0.92, blue: 1.0, alpha: 1)
         a.inlineCode.backgroundColor = UIColor(red: 0.93, green: 0.92, blue: 1.0, alpha: 1)
+        return a
+    }
+
+    /// Demo 用图片 opt-in：开启真图渲染、块通道点击放大，并对演示 CDN 放开 host 限制。
+    ///
+    /// `onImageTap` 需在持有 presenting VC 处注入（见 ``RenderedListViewController``）。
+    static var demoImageEnabled: InkAppearance {
+        var a = InkAppearance()
+        a.imageRendering.isEnabled = true
+        a.imageRendering.promotesToBlock = true
+        a.imageRendering.tapAction = .callback
+        a.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
         return a
     }
 }

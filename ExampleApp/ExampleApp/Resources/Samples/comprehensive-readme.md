@@ -37,7 +37,7 @@ InkMarkdown/
 
 详见 [CommonMark Spec](https://spec.commonmark.org/0.31.2/) 与仓库内 `docs/spec/common-syntax.md`。
 
-![项目示意图](https://via.placeholder.com/200x48.png?text=InkMarkdown)
+![项目示意图](https://picsum.photos/seed/ink-block/1200/800)
 
 ## 待办
 

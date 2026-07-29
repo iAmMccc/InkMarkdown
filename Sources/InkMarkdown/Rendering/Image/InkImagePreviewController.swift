@@ -213,14 +213,16 @@ public final class InkImagePreviewController: UIViewController {
   private func loadHighResImage() {
     guard let loader else { return }
 
-    let originalSize = displayImage.size
+    let screenScale = UIScreen.main.scale
+    let screenBounds = UIScreen.main.bounds
+    let zoomCap = scrollView.maximumZoomScale
     let maxPixel = min(
-      max(originalSize.width, originalSize.height) * UIScreen.main.scale,
+      max(screenBounds.width, screenBounds.height) * screenScale * zoomCap,
       previewPolicy.maxPreviewPixel
     )
     let display = DisplayContext(
       maxPixelWidth: maxPixel,
-      scale: UIScreen.main.scale,
+      scale: screenScale,
       contentMode: .fit
     )
 

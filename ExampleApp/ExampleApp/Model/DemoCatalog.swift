@@ -21,7 +21,7 @@ enum DemoCategory: CaseIterable {
     case .markdownStandard: return "标准 Markdown 语法的默认渲染效果"
     case .customComponent: return "表格等业务自定义组件"
     case .streaming: return "SSE 逐字吐字渲染"
-    case .integration: return "综合长文、本地文件、服务端 JSON"
+    case .integration: return "综合长文、本地文件、服务端 JSON、图片渲染"
     }
   }
 }
@@ -93,6 +93,7 @@ enum DemoCatalog {
           .scenario(.comprehensiveReadme),
           .scenario(.localFile),
           .scenario(.serverJSON),
+          .scenario(.imageRendering),
         ]
       ),
     ]

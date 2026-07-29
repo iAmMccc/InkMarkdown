@@ -126,11 +126,11 @@
 			mainGroup = 9958A8852FBC445600BAE387;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F3AE376F2769F086B656D004 /* XCLocalSwiftPackageReference "InkMarkdown" */,
-				9BE79DE4459FA85D88CD2023 /* XCLocalSwiftPackageReference "SmartCodable" */,
-				DF119174817259714A1DAAF1 /* XCLocalSwiftPackageReference "JXSegmentedView" */,
-				09798EB35C2E4D89CA532BC5 /* XCLocalSwiftPackageReference "JXPagingView" */,
-				D38F8A7106504E3C77F82AF7 /* XCLocalSwiftPackageReference "SnapKit" */,
+				F3AE376F2769F086B656D004 /* XCLocalSwiftPackageReference ".." */,
+				9BE79DE4459FA85D88CD2023 /* XCLocalSwiftPackageReference "Packages/Caches/SmartCodable" */,
+				DF119174817259714A1DAAF1 /* XCLocalSwiftPackageReference "Packages/Caches/JXSegmentedView" */,
+				09798EB35C2E4D89CA532BC5 /* XCLocalSwiftPackageReference "Packages/Caches/JXPagingView" */,
+				D38F8A7106504E3C77F82AF7 /* XCLocalSwiftPackageReference "Packages/Caches/SnapKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9958A88F2FBC445600BAE387 /* Products */;
@@ -372,23 +372,23 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		09798EB35C2E4D89CA532BC5 /* XCLocalSwiftPackageReference "JXPagingView" */ = {
+		09798EB35C2E4D89CA532BC5 /* XCLocalSwiftPackageReference "Packages/Caches/JXPagingView" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/Caches/JXPagingView;
 		};
-		9BE79DE4459FA85D88CD2023 /* XCLocalSwiftPackageReference "SmartCodable" */ = {
+		9BE79DE4459FA85D88CD2023 /* XCLocalSwiftPackageReference "Packages/Caches/SmartCodable" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/Caches/SmartCodable;
 		};
-		D38F8A7106504E3C77F82AF7 /* XCLocalSwiftPackageReference "SnapKit" */ = {
+		D38F8A7106504E3C77F82AF7 /* XCLocalSwiftPackageReference "Packages/Caches/SnapKit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/Caches/SnapKit;
 		};
-		DF119174817259714A1DAAF1 /* XCLocalSwiftPackageReference "JXSegmentedView" */ = {
+		DF119174817259714A1DAAF1 /* XCLocalSwiftPackageReference "Packages/Caches/JXSegmentedView" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/Caches/JXSegmentedView;
 		};
-		F3AE376F2769F086B656D004 /* XCLocalSwiftPackageReference "InkMarkdown" */ = {
+		F3AE376F2769F086B656D004 /* XCLocalSwiftPackageReference ".." */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ..;
 		};
@@ -397,27 +397,27 @@
 /* Begin XCSwiftPackageProductDependency section */
 		2D146DF8365BC373D85A7B22 /* SnapKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = D38F8A7106504E3C77F82AF7 /* XCLocalSwiftPackageReference "SnapKit" */;
+			package = D38F8A7106504E3C77F82AF7 /* XCLocalSwiftPackageReference "Packages/Caches/SnapKit" */;
 			productName = SnapKit;
 		};
 		50432D2B957FD0F6D01F4059 /* SmartCodable */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 9BE79DE4459FA85D88CD2023 /* XCLocalSwiftPackageReference "SmartCodable" */;
+			package = 9BE79DE4459FA85D88CD2023 /* XCLocalSwiftPackageReference "Packages/Caches/SmartCodable" */;
 			productName = SmartCodable;
 		};
 		AF528F36372CBC6E5E68064C /* JXPagingView */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 09798EB35C2E4D89CA532BC5 /* XCLocalSwiftPackageReference "JXPagingView" */;
+			package = 09798EB35C2E4D89CA532BC5 /* XCLocalSwiftPackageReference "Packages/Caches/JXPagingView" */;
 			productName = JXPagingView;
 		};
 		B80102C1FE644144E059F7B0 /* InkMarkdown */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F3AE376F2769F086B656D004 /* XCLocalSwiftPackageReference "InkMarkdown" */;
+			package = F3AE376F2769F086B656D004 /* XCLocalSwiftPackageReference ".." */;
 			productName = InkMarkdown;
 		};
 		C21F260C507C6395CB305FE7 /* JXSegmentedView */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = DF119174817259714A1DAAF1 /* XCLocalSwiftPackageReference "JXSegmentedView" */;
+			package = DF119174817259714A1DAAF1 /* XCLocalSwiftPackageReference "Packages/Caches/JXSegmentedView" */;
 			productName = JXSegmentedView;
 		};
 /* End XCSwiftPackageProductDependency section */

@@ -44,7 +44,7 @@ final class ImageDemoViewController: UIViewController {
   private func renderDemos() {
     let demos: [(title: String, markdown: String, configure: (inout InkAppearance) -> Void)] = [
       // 场景 1: 网络图 + 标准渲染
-      ("场景 1: 网络图片", "![风景](https://picsum.photos/400/300)", { appearance in
+      ("场景 1: 网络图片", "![风景](https://picsum.photos/seed/ink-medium/400/300)", { appearance in
         appearance.imageRendering.isEnabled = true
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
@@ -57,33 +57,32 @@ final class ImageDemoViewController: UIViewController {
         appearance.imageRendering.isEnabled = true
       }),
       // 场景 4: 独占段 promote → 块通道
-      ("场景 4: 独占段图片（块通道）", "![大图](https://picsum.photos/800/600)", { appearance in
+      ("场景 4: 独占段图片（块通道）", "![大图](https://picsum.photos/seed/ink-block/1200/800)", { appearance in
         appearance.imageRendering.isEnabled = true
         appearance.imageRendering.promotesToBlock = true
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
-      // 场景 5: 行内图文混排
-      ("场景 5: 行内图文混排", "这是一段文字 ![图标](https://picsum.photos/24/24) 中间嵌入了小图标，不破坏行高。", { appearance in
+      // 场景 5: 行内图文混排（排除块级 tap）
+      ("场景 5: 行内图文混排", "这是一段文字 ![图标](https://picsum.photos/seed/ink-icon/24/24) 中间嵌入了小图标，不破坏行高。", { appearance in
         appearance.imageRendering.isEnabled = true
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
       // 场景 6: 点击查看大图（全屏预览）
-      ("场景 6: 点击查看大图", "![点击查看大图](https://picsum.photos/1200/800)\n\n> 点击图片可全屏预览", { appearance in
+      ("场景 6: 点击查看大图", "![点击查看大图](https://picsum.photos/seed/ink-block/1200/800)\n\n> 点击图片可全屏预览", { appearance in
         appearance.imageRendering.isEnabled = true
-        appearance.imageRendering.tapAction = .callback
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
       // 场景 7: 多图
-      ("场景 7: 多图场景", "![图1](https://picsum.photos/300/200)\n\n![图2](https://picsum.photos/301/200)\n\n![图3](https://picsum.photos/302/200)", { appearance in
+      ("场景 7: 多图场景", "![图1](https://picsum.photos/seed/ink-medium/400/300)\n\n![图2](https://picsum.photos/seed/ink-block/400/300)\n\n![图3](https://picsum.photos/seed/ink-portrait/600/900)", { appearance in
         appearance.imageRendering.isEnabled = true
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
       // 场景 8: 占位文本（图片关闭）
-      ("场景 8: 图片渲染关闭（占位文本）", "![占位展示](https://picsum.photos/400/300)", { appearance in
+      ("场景 8: 图片渲染关闭（占位文本）", "![占位展示](https://picsum.photos/seed/ink-medium/400/300)", { appearance in
         appearance.imageRendering.isEnabled = false
       }),
       // 场景 9: 宿主自定义尺寸
-      ("场景 9: 自定义最大宽度 200pt", "![限宽图](https://picsum.photos/800/600)", { appearance in
+      ("场景 9: 自定义最大宽度 200pt", "![限宽图](https://picsum.photos/seed/ink-block/1200/800)", { appearance in
         appearance.imageRendering.isEnabled = true
         appearance.imageRendering.sizing.maxBlockImageWidth = 200
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
@@ -105,11 +104,9 @@ final class ImageDemoViewController: UIViewController {
       var appearance = InkAppearance()
       demo.configure(&appearance)
 
-      // 场景 6：通过 callback 弹出全屏预览
-      if demo.title.hasPrefix("场景 6:") {
-        appearance.imageRendering.onImageTap = { [weak self] source, image in
-          self?.presentFullscreenPreview(source: source, image: image)
-        }
+      // 除行内混排外，凡开启真图渲染的块级图均可点击放大。
+      if appearance.imageRendering.isEnabled && !demo.title.hasPrefix("场景 5:") {
+        appearance.enableDemoBlockImageTap { [weak self] in self }
       }
 
       let config = InkConfiguration(appearance: appearance)
@@ -126,10 +123,4 @@ final class ImageDemoViewController: UIViewController {
     }
   }
 
-  private func presentFullscreenPreview(source: ImageSource, image: UIImage?) {
-    guard let image else { return }
-    let preview = InkImagePreviewController(source: source, displayImage: image)
-    preview.modalPresentationStyle = .fullScreen
-    present(preview, animated: true)
-  }
 }

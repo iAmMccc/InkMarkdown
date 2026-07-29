@@ -33,11 +33,14 @@ public struct ImageSizing: Sendable {
 
 // MARK: - ImageTapAction
 
-/// 图片点击行为（v1.0 预留，当前未生效，需宿主自行实现手势分发）
+/// 图片点击行为。
+///
+/// 块级通道（``InkImageBlock``）在 `tapAction != .none` 时自动安装点击手势并分发。
+/// 行内 ``InkImageAttachment`` 仍需宿主对 `UITextView` 做命中检测后自行调用回调或打开 URL。
 public enum ImageTapAction: Sendable, Hashable {
   /// 不响应点击。
   case none
-  /// 尝试用系统打开图片 URL。
+  /// 尝试用系统打开图片 URL（http / https / file）；若同时设置了 ``InkImageRendering/onImageTap`` 也会调用。
   case openURL
   /// 仅触发 ``InkImageRendering/onImageTap`` 回调。
   case callback
@@ -84,10 +87,13 @@ public struct InkImageRendering {
   /// 加载中占位视图的高度（pt）。
   public var placeholderHeight: CGFloat = 80
 
-  /// 点击图片时的默认行为。
+  /// 点击图片时的默认行为。块级 ``InkImageBlock`` 会自动分发；默认 `.none`。
   public var tapAction: ImageTapAction = .none
 
-  /// 图片点击回调（v1.0 预留，当前未生效），在 ``tapAction`` 为 `.callback` 或需要额外处理时由宿主实现。
+  /// 图片点击回调。
+  ///
+  /// 在 ``tapAction`` 为 `.callback` 时由 ``InkImageBlock`` 调用；为 `.openURL` 时也会先调用本回调再打开 URL。
+  /// 行内图片需宿主自行命中后调用。
   public var onImageTap: ((ImageSource, UIImage?) -> Void)?
 
   /// 动图播放策略。

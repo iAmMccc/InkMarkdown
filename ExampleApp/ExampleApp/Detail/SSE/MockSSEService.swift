@@ -65,6 +65,9 @@ final class MockSSEService {
     /// 根据问题关键字挑选一条预设 Markdown 回答；命中不到走通用兜底。
     private static func answer(for question: String) -> String {
         let q = question.lowercased()
+        if q.contains("图片") || q.contains("image") || q.contains("图文") {
+            return sampleImages
+        }
         if q.contains("值类型") || q.contains("struct") || q.contains("引用") || q.contains("类型") {
             return sampleValueTypes
         }
@@ -79,6 +82,38 @@ final class MockSSEService {
         }
         return sampleIntro
     }
+
+    private static let sampleImages = """
+    **流式图文混排演示**
+
+    下面通过 SSE 流式返回 Markdown，包含文本段落与块级图片。块级图片支持**点击放大**预览。
+
+    ## 第一张块级图
+
+    ![流式块图1](https://picsum.photos/seed/ink-stream-1/1200/800)
+
+    过渡说明：块级图独占一行，加载完成后可点击查看大图。
+
+    ## 第二张块级图
+
+    ![流式块图2](https://picsum.photos/seed/ink-stream-2/1600/1000)
+
+    ## 行内混排
+
+    正文里可以嵌入 ![行内图标](https://placehold.co/24x24/2563eb/ffffff/png?text=i) 小图标，行内图仅展示、不要求点击。
+
+    ## 高清块图
+
+    ![高清块图](https://picsum.photos/seed/ink-block/1200/800)
+
+    ## 加载失败（可选）
+
+    下面这张 URL 不存在，用于观察占位 / 错误态：
+
+    ![缺失图](https://example.com/inkmarkdown-missing-image-404.jpg)
+
+    *以上为流式图片渲染 demo，块级图可点放大。*
+    """
 
     /// 结构测试点：列表项内含 | 字符，验证不被误判为表格。
     private static let sampleValueTypes = """

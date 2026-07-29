@@ -149,6 +149,7 @@ struct InkImageStoreTests {
   /// 可控延迟 / 失败的加载器；串行队列保护可变计数（兼容 iOS 14+ / async）。
   final class MockImageLoader: InkImageLoading, @unchecked Sendable {
     private var loadCount = 0
+    private var completedCount = 0
     private let queue = DispatchQueue(label: "inkmarkdown.tests.mock-image-loader")
     var delay: UInt64 = 0
     var shouldFail = false
@@ -158,13 +159,52 @@ struct InkImageStoreTests {
       if delay > 0 {
         try await Task.sleep(nanoseconds: delay)
       }
-      if shouldFail { throw ImageLoadError.decodeFailed }
-      return UIImage(systemName: "photo")!
+      if shouldFail {
+        queue.sync { completedCount += 1 }
+        throw ImageLoadError.decodeFailed
+      }
+      let image = UIImage(systemName: "photo")!
+      queue.sync { completedCount += 1 }
+      return image
     }
 
     var currentLoadCount: Int {
       queue.sync { loadCount }
     }
+
+    var currentCompletedCount: Int {
+      queue.sync { completedCount }
+    }
+  }
+
+  @MainActor
+  private func waitUntilReady(
+    store: InkImageStore,
+    source: ImageSource,
+    display: DisplayContext,
+    loader: MockImageLoader,
+    timeoutNanoseconds: UInt64 = 2_000_000_000
+  ) async -> Bool {
+    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
+    while DispatchTime.now().uptimeNanoseconds < deadline {
+      let result = store.resolve(source: source, display: display, loader: loader)
+      if case .ready = result { return true }
+      try? await Task.sleep(nanoseconds: 10_000_000)
+    }
+    return false
+  }
+
+  @MainActor
+  private func waitUntilInflightCleared(
+    store: InkImageStore,
+    timeoutNanoseconds: UInt64 = 2_000_000_000
+  ) async -> Bool {
+    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
+    while DispatchTime.now().uptimeNanoseconds < deadline {
+      if store.inflightCount == 0 { return true }
+      try? await Task.sleep(nanoseconds: 10_000_000)
+    }
+    return false
   }
 
   /// #5 inflight 合并：同 URL resolve 两次 → loader 仅调用 1 次
@@ -218,7 +258,8 @@ struct InkImageStoreTests {
     let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
 
     _ = store.resolve(source: source, display: display, loader: loader)
-    try? await Task.sleep(nanoseconds: 200_000_000)
+    let ready = await waitUntilReady(store: store, source: source, display: display, loader: loader)
+    #expect(ready)
 
     let result = store.resolve(source: source, display: display, loader: loader)
     if case .ready = result {} else { Issue.record("应该缓存命中") }
@@ -238,7 +279,7 @@ struct InkImageStoreTests {
     let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
 
     _ = store.resolve(source: source, display: display, loader: loader)
-    try? await Task.sleep(nanoseconds: 200_000_000)
+    #expect(await waitUntilReady(store: store, source: source, display: display, loader: loader))
 
     for _ in 0..<99 {
       _ = store.resolve(source: source, display: display, loader: loader)
@@ -291,7 +332,8 @@ struct InkImageStoreTests {
     let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
 
     _ = store.resolve(source: source, display: display, loader: loader)
-    try? await Task.sleep(nanoseconds: 200_000_000)
+    #expect(await waitUntilReady(store: store, source: source, display: display, loader: loader))
+    #expect(await waitUntilInflightCleared(store: store))
 
     #expect(store.inflightCount == 0)
     let result = store.resolve(source: source, display: display, loader: loader)
@@ -440,6 +482,7 @@ private func makeTestImage(width: CGFloat, height: CGFloat) -> UIImage {
 private final class SizedMockImageLoader: InkImageLoading, @unchecked Sendable {
   private let imagesByURL: [String: UIImage]
   private var loadCount = 0
+  private var completedCount = 0
   private let queue = DispatchQueue(label: "inkmarkdown.tests.sized-mock-image-loader")
 
   init(imagesByURL: [String: UIImage]) {
@@ -449,19 +492,47 @@ private final class SizedMockImageLoader: InkImageLoading, @unchecked Sendable {
   func loadImage(source: ImageSource, display: DisplayContext) async throws -> UIImage {
     queue.sync { loadCount += 1 }
     let key = source.requestURL.absoluteString
-    guard let image = imagesByURL[key] else { throw ImageLoadError.decodeFailed }
+    guard let image = imagesByURL[key] else {
+      queue.sync { completedCount += 1 }
+      throw ImageLoadError.decodeFailed
+    }
+    queue.sync { completedCount += 1 }
     return image
   }
 
   var currentLoadCount: Int {
     queue.sync { loadCount }
   }
+
+  var currentCompletedCount: Int {
+    queue.sync { completedCount }
+  }
 }
 
+/// 等待 loader 完成指定次数，并再等到 `applyImage` 把段级行高写进 storage。
 @MainActor
-private func waitForImageLoads(count: Int, loader: SizedMockImageLoader, timeoutNanoseconds: UInt64 = 500_000_000) async {
+private func waitForImageLoads(
+  count: Int,
+  loader: SizedMockImageLoader,
+  storage: NSTextStorage? = nil,
+  expectedMaximumLineHeight: CGFloat? = nil,
+  timeoutNanoseconds: UInt64 = 2_000_000_000
+) async {
   let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
-  while loader.currentLoadCount < count, DispatchTime.now().uptimeNanoseconds < deadline {
+  while loader.currentCompletedCount < count, DispatchTime.now().uptimeNanoseconds < deadline {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+
+  guard let storage, let expectedMaximumLineHeight else {
+    // 给 MainActor 回调一个调度窗口，确保 applyImage 已执行。
+    for _ in 0..<5 { await Task.yield() }
+    return
+  }
+
+  while DispatchTime.now().uptimeNanoseconds < deadline {
+    let paragraphRange = (storage.string as NSString).paragraphRange(for: NSRange(location: 0, length: 1))
+    let style = storage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSParagraphStyle
+    if style?.maximumLineHeight == expectedMaximumLineHeight { return }
     try? await Task.sleep(nanoseconds: 10_000_000)
   }
 }
@@ -506,7 +577,12 @@ private func makeImageTextStorage(
   let (storage, layoutManager) = makeImageTextStorage(attachments: [attachment], lockedLineHeight: lockedLineHeight)
 
   InkImageAttachment.bindAttachments(in: storage, layoutManager: layoutManager, store: store)
-  await waitForImageLoads(count: 1, loader: loader)
+  await waitForImageLoads(
+    count: 1,
+    loader: loader,
+    storage: storage,
+    expectedMaximumLineHeight: 130
+  )
 
   let paragraphRange = (storage.string as NSString).paragraphRange(for: NSRange(location: 0, length: 1))
   let style = storage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSParagraphStyle
@@ -535,7 +611,12 @@ private func makeImageTextStorage(
   )
 
   InkImageAttachment.bindAttachments(in: storage, layoutManager: layoutManager, store: store)
-  await waitForImageLoads(count: 2, loader: loader)
+  await waitForImageLoads(
+    count: 2,
+    loader: loader,
+    storage: storage,
+    expectedMaximumLineHeight: 150
+  )
 
   let paragraphRange = (storage.string as NSString).paragraphRange(for: NSRange(location: 0, length: 1))
   let style = storage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSParagraphStyle
@@ -560,7 +641,12 @@ private func makeImageTextStorage(
   let (storage, layoutManager) = makeImageTextStorage(attachments: [attachmentA, attachmentB])
 
   InkImageAttachment.bindAttachments(in: storage, layoutManager: layoutManager, store: store)
-  await waitForImageLoads(count: 2, loader: loader)
+  await waitForImageLoads(
+    count: 2,
+    loader: loader,
+    storage: storage,
+    expectedMaximumLineHeight: 160
+  )
 
   let paragraphRange = (storage.string as NSString).paragraphRange(for: NSRange(location: 0, length: 1))
   let style = storage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSParagraphStyle
@@ -581,13 +667,163 @@ private func makeImageTextStorage(
   let (storage, layoutManager) = makeImageTextStorage(attachments: [attachment])
 
   InkImageAttachment.bindAttachments(in: storage, layoutManager: layoutManager, store: store)
-  await waitForImageLoads(count: 1, loader: loader)
-  let countAfterFirstBind = loader.currentLoadCount
+  await waitForImageLoads(count: 1, loader: loader, storage: storage, expectedMaximumLineHeight: 80)
+  let countAfterFirstBind = loader.currentCompletedCount
 
   InkImageAttachment.bindAttachments(in: storage, layoutManager: layoutManager, store: store)
   await waitForImageLoads(count: countAfterFirstBind, loader: loader)
-  try? await Task.sleep(nanoseconds: 50_000_000)
+  for _ in 0..<5 { await Task.yield() }
 
   #expect(loader.currentLoadCount == countAfterFirstBind)
-  #expect(loader.currentLoadCount == 1)
+  #expect(loader.currentCompletedCount == 1)
+}
+
+// MARK: - InkImageBlock / InkImageBlockHandler 端到端
+
+@Test @MainActor func imageBlockHandler_promotesStandaloneImageParagraph() {
+  var appearance = InkAppearance()
+  appearance.imageRendering.isEnabled = true
+  appearance.imageRendering.promotesToBlock = true
+  appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
+  let config = InkConfiguration(appearance: appearance)
+
+  let blocks = InkBlockRenderer.render(
+    "![alt](https://example.com/promoted.png)",
+    configuration: config
+  )
+  #expect(blocks.count == 1)
+  #expect(blocks[0] is InkImageBlock)
+}
+
+@Test @MainActor func imageBlockHandler_doesNotPromoteMixedInlineImage() {
+  var appearance = InkAppearance()
+  appearance.imageRendering.isEnabled = true
+  appearance.imageRendering.promotesToBlock = true
+  appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
+  let config = InkConfiguration(appearance: appearance)
+
+  let blocks = InkBlockRenderer.render(
+    "text ![alt](https://example.com/inline.png)",
+    configuration: config
+  )
+  #expect(blocks.count == 1)
+  #expect(!(blocks[0] is InkImageBlock))
+}
+
+@Test @MainActor func imageBlockHandler_respectsSecurityPolicy() {
+  var appearance = InkAppearance()
+  appearance.imageRendering.isEnabled = true
+  appearance.imageRendering.promotesToBlock = true
+  appearance.imageRendering.securityPolicy.allowedHosts = ["safe.example.com"]
+  let config = InkConfiguration(appearance: appearance)
+
+  let blocks = InkBlockRenderer.render(
+    "![x](https://evil.example.com/malware.png)",
+    configuration: config
+  )
+  #expect(blocks.count == 1)
+  #expect(!(blocks[0] is InkImageBlock))
+}
+
+@Test @MainActor func imageBlock_configureLoadsImageAndUpdatesSize() async {
+  let url = URL(string: "https://example.com/block.png")!
+  let loader = SizedMockImageLoader(
+    imagesByURL: [url.absoluteString: makeTestImage(width: 200, height: 100)]
+  )
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.loader = loader
+
+  let store = InkImageStore()
+  let block = InkImageBlock(
+    source: ImageSource(url: url),
+    store: store,
+    rendering: rendering
+  )
+  block.configure(containerWidth: 300, loader: loader)
+
+  let deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000
+  while loader.currentCompletedCount < 1, DispatchTime.now().uptimeNanoseconds < deadline {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+  for _ in 0..<10 { await Task.yield() }
+
+  #expect(loader.currentCompletedCount == 1)
+  #expect(block.bounds.height == 100 || block.frame.height == 100 || block.intrinsicContentSize.height == 100)
+}
+
+// MARK: - InkImageBlock tapAction 分发
+
+@Test @MainActor func imageBlock_noneTapActionDoesNotInstallGesture() {
+  var rendering = InkImageRendering()
+  rendering.tapAction = .none
+  let block = InkImageBlock(
+    source: ImageSource(url: URL(string: "https://example.com/none.png")!),
+    store: InkImageStore(),
+    rendering: rendering
+  )
+  let hasTap = block.gestureRecognizers?.contains { $0 is UITapGestureRecognizer } ?? false
+  #expect(!hasTap)
+}
+
+@Test @MainActor func imageBlock_callbackTapActionInvokesOnImageTap() async {
+  let url = URL(string: "https://example.com/tap-callback.png")!
+  let loader = SizedMockImageLoader(
+    imagesByURL: [url.absoluteString: makeTestImage(width: 80, height: 60)]
+  )
+
+  var tappedSource: ImageSource?
+  var tappedImage: UIImage?
+  var callCount = 0
+
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.tapAction = .callback
+  rendering.loader = loader
+  rendering.onImageTap = { source, image in
+    callCount += 1
+    tappedSource = source
+    tappedImage = image
+  }
+
+  let store = InkImageStore()
+  let block = InkImageBlock(
+    source: ImageSource(url: url),
+    store: store,
+    rendering: rendering
+  )
+  #expect(block.gestureRecognizers?.contains { $0 is UITapGestureRecognizer } == true)
+
+  block.configure(containerWidth: 200, loader: loader)
+
+  let deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000
+  while loader.currentCompletedCount < 1, DispatchTime.now().uptimeNanoseconds < deadline {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+  for _ in 0..<10 { await Task.yield() }
+
+  block.handleConfiguredTap()
+
+  #expect(callCount == 1)
+  #expect(tappedSource?.requestURL.absoluteString == url.absoluteString)
+  #expect(tappedImage != nil)
+}
+
+@Test @MainActor func imageBlock_openURLTapActionAlsoInvokesOnImageTap() {
+  let url = URL(string: "https://example.com/tap-open.png")!
+  var callCount = 0
+
+  var rendering = InkImageRendering()
+  rendering.tapAction = .openURL
+  rendering.onImageTap = { _, _ in
+    callCount += 1
+  }
+
+  let block = InkImageBlock(
+    source: ImageSource(url: url),
+    store: InkImageStore(),
+    rendering: rendering
+  )
+  block.handleConfiguredTap()
+  #expect(callCount == 1)
 }

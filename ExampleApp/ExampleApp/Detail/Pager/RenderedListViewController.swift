@@ -64,6 +64,11 @@ final class RenderedListViewController: UIViewController, PagerListController {
   private func makeConfiguration() -> InkConfiguration {
     var config = style.configuration
 
+    // 真图 tab：块级图片点击弹出全屏预览（行内 attachment 不响应 tap）。
+    if style == .imageEnabled {
+      config.appearance.enableDemoBlockImageTap { [weak self] in self }
+    }
+
     // h1ActionCard：H1 替换为业务卡片，其余走默认路由。
     if style == .h1ActionCard {
       config.blockHandlers = [H1ActionCardBlockHandler()] + InkConfiguration.defaultBlockHandlers

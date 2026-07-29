@@ -67,6 +67,45 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
       width: bounds.width,
       height: rendering.placeholderHeight
     )
+    setupTapHandlingIfNeeded()
+  }
+
+  private func setupTapHandlingIfNeeded() {
+    guard rendering.tapAction != .none else { return }
+    isUserInteractionEnabled = true
+    isAccessibilityElement = true
+    accessibilityTraits.insert(.button)
+    let tap = UITapGestureRecognizer(target: self, action: #selector(handleImageTap))
+    addGestureRecognizer(tap)
+  }
+
+  @objc
+  private func handleImageTap() {
+    handleConfiguredTap()
+  }
+
+  /// 分发 ``InkImageRendering/tapAction``（手势与测试共用）。
+  @MainActor
+  func handleConfiguredTap() {
+    switch rendering.tapAction {
+    case .none:
+      break
+    case .callback:
+      rendering.onImageTap?(source, imageView.image)
+    case .openURL:
+      rendering.onImageTap?(source, imageView.image)
+      openImageURLIfPossible()
+    }
+  }
+
+  @MainActor
+  private func openImageURLIfPossible() {
+    switch source.scheme {
+    case .http, .https, .file:
+      UIApplication.shared.open(source.rawURL)
+    case .data, .asset, .bundle, .relative, .unknown:
+      break
+    }
   }
 
   public override func layoutSubviews() {

@@ -58,7 +58,7 @@ final class SSEChatViewController: UIViewController {
 
         textField.borderStyle = .roundedRect
         textField.backgroundColor = .systemBackground
-        textField.placeholder = "问点什么，试试「给个 swift 示例」"
+        textField.placeholder = "问点什么，试试「展示图文混排」或「给个 swift 示例」"
         textField.returnKeyType = .send
         textField.delegate = self
         textField.font = .systemFont(ofSize: 16)
@@ -99,7 +99,7 @@ final class SSEChatViewController: UIViewController {
 
     /// 预填一个示例问题，降低 demo 上手成本。
     private func seedSuggestion() {
-        textField.text = "Swift 里 struct 和 class 有什么区别"
+        textField.text = "展示图文混排和图片渲染"
     }
 
     private func setupKeyboard() {
@@ -223,6 +223,7 @@ extension SSEChatViewController: UITableViewDelegate, UITableViewDataSource {
             return cell
         } else {
             let cell = tableView.dequeueReusableCell(withIdentifier: SSEAssistantCell.id, for: indexPath) as! SSEAssistantCell
+            cell.presentingViewController = self
             cell.configure(content: msg.content, isStreaming: msg.isStreaming)
             return cell
         }
@@ -274,6 +275,8 @@ private final class SSEUserCell: UITableViewCell {
 
 private final class SSEAssistantCell: UITableViewCell {
     static let id = "SSEAssistantCell"
+
+    weak var presentingViewController: UIViewController?
 
     private let bubbleView = UIView()
     /// 竖直排列各片段（文本段 / 代码块卡片），首项是「思考中…」标签。
@@ -405,16 +408,27 @@ private final class SSEAssistantCell: UITableViewCell {
     private func rebuildSegments(from markdown: String) {
         // 移除旧片段（保留首项 thinkingLabel）
         for seg in segments { stackView.removeArrangedSubview(seg); seg.removeFromSuperview() }
-        segments = markdown.isEmpty ? [] : SSEAssistantCell.buildSegments(from: markdown)
+        let presenter: () -> UIViewController? = { [weak self] in self?.presentingViewController }
+        segments = markdown.isEmpty ? [] : SSEAssistantCell.buildSegments(from: markdown, presentingViewController: presenter)
         segmentLengths = segments.map { $0.typewriterLength }
         totalLength = segmentLengths.reduce(0, +)
         visibleTotal = 0
         for seg in segments { stackView.addArrangedSubview(seg) }
     }
 
-    /// Markdown → 片段数组：围栏代码块走自定义卡片，表格走逐行吐字，其余走文本段。
-    private static func buildSegments(from markdown: String) -> [SSETypewriterSegment] {
+    /// Markdown → 片段数组：围栏代码块走自定义卡片，表格走逐行吐字，块级图走图片片段，其余走文本段。
+    private static func buildSegments(
+        from markdown: String,
+        presentingViewController: @escaping () -> UIViewController?
+    ) -> [SSETypewriterSegment] {
+        var appearance = InkAppearance()
+        appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.promotesToBlock = true
+        appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
+        appearance.enableDemoBlockImageTap(presentingViewController: presentingViewController)
+
         let config = InkConfiguration(
+            appearance: appearance,
             blockHandlers: [SSECodeBlockHandler(), SSETableBlockHandler()]
         )
         let blocks = InkBlockRenderer.render(markdown, configuration: config)
@@ -422,6 +436,8 @@ private final class SSEAssistantCell: UITableViewCell {
         for block in blocks {
             if let textBlock = block as? InkAttributedTextBlock {
                 result.append(SSETextSegmentView(attributedText: textBlock.attributedText))
+            } else if let imageBlock = block as? InkImageBlock {
+                result.append(SSEImageSegmentView(imageBlock: imageBlock))
             } else if let seg = block.makeView() as? SSETypewriterSegment {
                 result.append(seg)
             }

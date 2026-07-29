@@ -240,19 +240,19 @@ enum MarkdownComponent: String, CaseIterable {
       ## 图片渲染演示
 
       ### 网络图片
-      ![网络图片](https://picsum.photos/400/300)
+      ![网络图片](https://picsum.photos/seed/ink-medium/400/300)
 
       ### 行内图文混排
-      这是一段文字 ![小图标](https://picsum.photos/32/32) 中间嵌入了图片。
+      这是一段文字 ![小图标](https://picsum.photos/seed/ink-icon/24/24) 中间嵌入了图片。
 
       ### 独占段图片（块通道）
-      ![大图展示](https://picsum.photos/800/600)
+      ![大图展示](https://picsum.photos/seed/ink-block/1200/800)
 
       ### 多图混排
-      ![图1](https://picsum.photos/200/150) 和 ![图2](https://picsum.photos/200/150)
+      ![图1](https://picsum.photos/seed/ink-medium/400/300) 和 ![图2](https://picsum.photos/seed/ink-portrait/600/900)
 
       ### 链接图片
-      [![点击跳转](https://picsum.photos/300/200)](https://github.com)
+      [![点击跳转](https://picsum.photos/seed/ink-medium/400/300)](https://github.com)
       """
     case .escapeAndEntity:
       return "转义：\\*星号\\*  实体：&copy; &#169;（©）"
@@ -263,6 +263,16 @@ enum MarkdownComponent: String, CaseIterable {
   ///
   /// 重构后核心库不再内置预设配方，这里只保留能用**扩展点**演示的几种：
   /// 自定义主题（`InkAppearance`）、行内语法插件（`InkInlineSyntax`）、Block 路由。
+  /// 组件详情页首位渲染样式；图片组件默认走真图 opt-in，其余保持标准占位契约。
+  var primaryRenderStyle: DemoStyle {
+    switch self {
+    case .image:
+      return .imageEnabled
+    default:
+      return .standard
+    }
+  }
+
   var customStyles: [DemoStyle] {
     switch self {
     case .headingH1:
@@ -271,6 +281,9 @@ enum MarkdownComponent: String, CaseIterable {
       return [.tableCard]
     case .link:
       return [.brandedTheme]
+    case .image:
+      // 对照 ADR-004 默认占位：真图 tab 之外保留「标准」关闭态。
+      return [.standard]
     default:
       return []
     }
