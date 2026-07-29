@@ -2,6 +2,7 @@ import Testing
 import UIKit
 @testable import InkMarkdown
 
+@Suite(.serialized)
 struct InkMermaidRendererTests {
   @Test func onlyExactMermaidFenceLanguageIsAccepted() {
     #expect(InkMermaidFence.isMermaid(language: "mermaid"))
@@ -67,6 +68,33 @@ struct InkMermaidRendererTests {
     await #expect(throws: InkMermaidRenderError.invalidDisplaySize) {
       try await renderer.render(request)
     }
+  }
+
+  @Test func bridgePollIgnoresStaleRequestID() throws {
+    let bridgeURL = try #require(
+      Bundle.module.url(forResource: "InkMermaidBridge", withExtension: "js")
+    )
+    let bridge = try String(contentsOf: bridgeURL, encoding: .utf8)
+    #expect(bridge.contains("__pendingRequestId"))
+    #expect(bridge.contains("expectedRequestId"))
+    #expect(bridge.contains("clearPendingRender"))
+  }
+
+  @Test @MainActor func rendersValidFlowchartToPNG() async throws {
+    // 生产 limits.timeout 提供有界终止；WebKit 冷启动通常 <5s，失败路径 ≤ timeout。
+    let limits = InkMermaidRenderLimits(timeout: 15)
+    let renderer = InkMermaidImageRenderer(limits: limits)
+    let request = InkMermaidRenderRequest(
+      source: "flowchart TD\n    Start-->End",
+      display: .init(maxPixelWidth: 400, scale: 1, theme: .light)
+    )
+
+    let result = try await renderer.render(request)
+
+    #expect(result.image.size.width > 0)
+    #expect(result.image.size.height > 0)
+    #expect(result.pngData.isEmpty == false)
+    #expect(result.cacheIdentity == request.cacheIdentity())
   }
 }
 

@@ -20,7 +20,14 @@ public final class InkMermaidImageRenderer: NSObject {
   private var pageReady = false
   private var currentRequest: InkMermaidRenderRequestState?
 
-  public init(limits: InkMermaidRenderLimits = .init(), bundle: Bundle = .module) {
+  public init(limits: InkMermaidRenderLimits = .init()) {
+    self.limits = limits
+    self.bridgeURL = Bundle.module.url(forResource: "InkMermaidBridge", withExtension: "html")
+    super.init()
+  }
+
+  /// 供测试注入自定义 bundle；生产路径使用 ``init(limits:)``。
+  init(limits: InkMermaidRenderLimits, bundle: Bundle) {
     self.limits = limits
     self.bridgeURL = bundle.url(forResource: "InkMermaidBridge", withExtension: "html")
     super.init()
@@ -29,7 +36,7 @@ public final class InkMermaidImageRenderer: NSObject {
   /// 使用离线 HTML bridge 把 Mermaid 代码渲染为 PNG。调用方可按错误类别显示占位图或诊断。
   public func render(_ request: InkMermaidRenderRequest) async throws -> InkMermaidRenderResult {
     try validate(request)
-    try await InkMermaidRenderScheduler.shared.withPermit { [self] in
+    return try await InkMermaidRenderScheduler.shared.withPermit { [self] in
       let state = InkMermaidRenderRequestState()
       currentRequest = state
       state.armTimeout(after: limits.timeout)
@@ -53,12 +60,12 @@ public final class InkMermaidImageRenderer: NSObject {
         state: state
       )
       let image = try await snapshot(plan: rasterPlan, using: view, state: state)
-        guard let pngData = image.pngData() else { throw InkMermaidRenderError.pngEncodingFailed }
-        return InkMermaidRenderResult(
-          image: image,
-          pngData: pngData,
-          cacheIdentity: request.cacheIdentity()
-        )
+      guard let pngData = image.pngData() else { throw InkMermaidRenderError.pngEncodingFailed }
+      return InkMermaidRenderResult(
+        image: image,
+        pngData: pngData,
+        cacheIdentity: request.cacheIdentity()
+      )
     }
   }
 
@@ -101,7 +108,7 @@ public final class InkMermaidImageRenderer: NSObject {
   private func loadBridgeIfNeeded(using view: WKWebView, state: InkMermaidRenderRequestState) async throws {
     guard !pageReady else { return }
     guard let bridgeURL else { throw InkMermaidRenderError.bundledResourceMissing }
-    try await state.awaitCallback { completion in
+    try await state.awaitCallback { [self] completion in
       pageLoadRouter.bind(view: view, state: state, completion: completion)
       view.loadFileURL(bridgeURL, allowingReadAccessTo: bridgeURL.deletingLastPathComponent())
     }
@@ -121,9 +128,10 @@ public final class InkMermaidImageRenderer: NSObject {
     using view: WKWebView,
     state: InkMermaidRenderRequestState
   ) async throws -> InkMermaidRasterPlan {
+    let requestID = UUID().uuidString
     // JSONSerialization produces a JavaScript string literal. Mermaid input is never concatenated as code.
     let payload: [String: Any] = [
-      "id": UUID().uuidString,
+      "id": requestID,
       "source": request.source,
       "theme": request.display.theme == .dark ? "dark" : "default"
     ]
@@ -132,7 +140,8 @@ public final class InkMermaidImageRenderer: NSObject {
       throw InkMermaidRenderError.invalidJavaScriptResponse
     }
     let escapedJSON = try InkMermaidBridgeEncoding.javaScriptStringLiteral(json)
-    let response = try await evaluate("window.inkMermaid.render(\(escapedJSON))", using: view, state: state)
+    _ = try await evaluate("window.inkMermaid.renderViaCallback(\(escapedJSON))", using: view, state: state)
+    let response = try await pollRenderResult(requestID: requestID, using: view, state: state)
     guard let encoded = response as? String,
           let dimensionData = encoded.data(using: .utf8),
           let object = try JSONSerialization.jsonObject(with: dimensionData) as? [String: Any],
@@ -155,13 +164,44 @@ public final class InkMermaidImageRenderer: NSObject {
   ) async throws -> Any {
     try await state.awaitCallback { completion in
       view.evaluateJavaScript(javaScript) { response, error in
-        if let error {
-          completion(.failure(InkMermaidRenderError.javaScript(message: error.localizedDescription)))
-        } else {
-          completion(.success(response as Any))
+        Task { @MainActor in
+          if let error {
+            completion(.failure(InkMermaidRenderError.javaScript(message: error.localizedDescription)))
+          } else {
+            completion(.success(response as Any))
+          }
         }
       }
     }
+  }
+
+  private func pollRenderResult(
+    requestID: String,
+    using view: WKWebView,
+    state: InkMermaidRenderRequestState
+  ) async throws -> Any {
+    let escapedID = try InkMermaidBridgeEncoding.javaScriptStringLiteral(requestID)
+    while state.isOpen {
+      try Task.checkCancellation()
+      do {
+        let polled = try await evaluate(
+          "window.inkMermaid.pollRenderResult(\(escapedID))",
+          using: view,
+          state: state
+        )
+        if polled is NSNull {
+          try await state.pollSleep(nanoseconds: 50_000_000)
+          continue
+        }
+        _ = try? await evaluate("window.inkMermaid.clearPendingRender()", using: view, state: state)
+        return polled
+      } catch {
+        discardWebView(for: state)
+        throw error
+      }
+    }
+    discardWebView(for: state)
+    throw InkMermaidRenderError.timedOut
   }
 
   private func snapshot(
@@ -175,20 +215,22 @@ public final class InkMermaidImageRenderer: NSObject {
     configuration.snapshotWidth = NSNumber(value: Double(plan.layoutSizeInPoints.width))
     let image = try await state.awaitCallback { completion in
       view.takeSnapshot(with: configuration) { image, error in
-        if let image {
-          completion(.success(image))
-        } else if error != nil {
-          completion(.failure(InkMermaidRenderError.snapshotFailed))
-        } else {
-          completion(.failure(InkMermaidRenderError.snapshotFailed))
+        Task { @MainActor in
+          if let image {
+            completion(.success(image))
+          } else {
+            completion(.failure(InkMermaidRenderError.snapshotFailed))
+          }
         }
       }
     }
     guard image.size.width > 0, image.size.height > 0 else { throw InkMermaidRenderError.zeroSize }
     let actualPixelWidth = CGFloat(image.cgImage?.width ?? Int((image.size.width * image.scale).rounded(.up)))
     let actualPixelHeight = CGFloat(image.cgImage?.height ?? Int((image.size.height * image.scale).rounded(.up)))
-    guard actualPixelWidth <= ceil(plan.outputSizeInPixels.width),
-          actualPixelHeight <= ceil(plan.outputSizeInPixels.height) else {
+    let maxPixelWidth = ceil(plan.layoutSizeInPoints.width * image.scale)
+    let maxPixelHeight = ceil(plan.layoutSizeInPoints.height * image.scale)
+    guard actualPixelWidth <= maxPixelWidth,
+          actualPixelHeight <= maxPixelHeight else {
       throw InkMermaidRenderError.exceedsMaximumSize
     }
     return image

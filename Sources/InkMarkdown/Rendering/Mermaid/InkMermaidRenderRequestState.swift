@@ -12,15 +12,22 @@ final class InkMermaidRenderRequestState {
   private var isActive = true
   private var pendingID: UUID?
   private var failPending: ((Error) -> Void)?
-  private var timeoutWorkItem: DispatchWorkItem?
+  private var timeoutTask: Task<Void, Never>?
   private var invalidationHandler: (() -> Void)?
 
+  var isOpen: Bool { isActive }
+
   func armTimeout(after timeout: TimeInterval) {
-    let item = DispatchWorkItem { [weak self] in
-      self?.invalidate(with: InkMermaidRenderError.timedOut)
+    timeoutTask?.cancel()
+    timeoutTask = Task { @MainActor [weak self] in
+      do {
+        try await Task.sleep(nanoseconds: Self.nanoseconds(for: timeout))
+        guard !Task.isCancelled else { return }
+        self?.invalidate(with: InkMermaidRenderError.timedOut)
+      } catch {
+        // Task.sleep 被取消时静默退出；finish/invalidate 会取消该 task。
+      }
     }
-    timeoutWorkItem = item
-    DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: item)
   }
 
   func setInvalidationHandler(_ handler: @escaping () -> Void) {
@@ -30,6 +37,7 @@ final class InkMermaidRenderRequestState {
   func awaitCallback<T>(
     _ start: @escaping (@escaping (Result<T, Error>) -> Void) -> Void
   ) async throws -> T {
+    try throwIfInactive()
     try Task.checkCancellation()
     return try await withTaskCancellationHandler(operation: {
       try await withCheckedThrowingContinuation { continuation in
@@ -52,15 +60,36 @@ final class InkMermaidRenderRequestState {
         }
       }
     }, onCancel: { [weak self] in
-      Task { @MainActor in self?.invalidate(with: CancellationError()) }
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          self?.invalidate(with: CancellationError())
+        }
+      }
     })
+  }
+
+  /// 轮询间隔 sleep；超时/取消后尽快结束，避免 poll 在 invalidate 后继续空转。
+  func pollSleep(nanoseconds: UInt64) async throws {
+    let chunk: UInt64 = 10_000_000
+    var remaining = nanoseconds
+    while remaining > 0, isActive {
+      try Task.checkCancellation()
+      let step = min(chunk, remaining)
+      try await Task.sleep(nanoseconds: step)
+      remaining -= step
+    }
+    try throwIfInactive()
+  }
+
+  func throwIfInactive() throws {
+    guard isActive else { throw InkMermaidRenderError.timedOut }
   }
 
   func finish() {
     guard isActive else { return }
     isActive = false
-    timeoutWorkItem?.cancel()
-    timeoutWorkItem = nil
+    timeoutTask?.cancel()
+    timeoutTask = nil
     pendingID = nil
     failPending = nil
     invalidationHandler = nil
@@ -69,14 +98,14 @@ final class InkMermaidRenderRequestState {
   func invalidate(with error: Error) {
     guard isActive else { return }
     isActive = false
-    timeoutWorkItem?.cancel()
-    timeoutWorkItem = nil
+    timeoutTask?.cancel()
+    timeoutTask = nil
     invalidationHandler?()
     invalidationHandler = nil
     let fail = failPending
     failPending = nil
-    pendingID = nil
     fail?(error)
+    pendingID = nil
   }
 
   private func complete<T>(
@@ -88,5 +117,9 @@ final class InkMermaidRenderRequestState {
     pendingID = nil
     failPending = nil
     continuation.resume(with: result)
+  }
+
+  private static func nanoseconds(for timeout: TimeInterval) -> UInt64 {
+    UInt64(max(0, timeout) * 1_000_000_000)
   }
 }
