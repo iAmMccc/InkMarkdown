@@ -19,7 +19,7 @@
 | Debt item | Why it exists | Where | Risk if ignored | Suggested fix |
 |-----------|---------------|-------|-----------------|---------------|
 | 删除线：内容保留但未做 GFM strikethrough 样式 | 行内 switch 无 `Strikethrough` 专用分支（default 透传） | `InkAttributedRenderer.renderInline` | 无法正常显示 `~~del~~` 样式 | 明确 v1 契约或补充样式与测试 |
-| 图片仅占位 | 产品范围不含下载与附件处理 | `renderImage` | 开发者期望内置图片加载 | 在文档中明确说明，扩展点由宿主实现 |
+| 图片默认占位 vs opt-in 期望 | ADR-004 默认占位；ADR-006 opt-in 真图已实现，文档曾滞后 | `renderImage`、`Rendering/Image/` | 宿主误判「库永不加载图片」或不知开启方式 | 文档已对齐 ADR-006；宿主按需配置 `isEnabled` 与 `ImageSecurityPolicy` |
 | 过时 TABLE 指南仍在树内 | 历史保留文件 | `Components/TABLE_INTEGRATION_GUIDE.md`（已 exclude） | 容易误导 API 使用 | 入口已标注警告，可移出 Sources 或标记 deprecated |
 | ExampleApp TODO | 演示未完全切到库渲染器 | `MarkdownDetailViewController.swift:137` | 示例与库实际能力不一致 | 跟进 example plan 或删除过时 TODO |
 | 本地缓存仍是可选路径 | ADR-001：默认 revision，不默认 path | `Packages/` vs `Package.swift` | 离线开发需手动改 path | 文档说明可选流程即可 |
@@ -66,7 +66,7 @@
 | 依赖策略 | 默认固定 revision；`Packages/Caches` 作为可选离线路径 | [ADR-001](../decisions/ADR-001-swift-markdown-dependency-pinning.md) |
 | 多平台 | v1.0 仅支持 iOS 14+；其余平台进入路线图 | [ADR-002](../decisions/ADR-002-v1-platform-scope-ios-only.md) |
 | docs/codebase | 作为项目结构与状态证据层 | [ADR-003](../decisions/ADR-003-docs-codebase-evidence-layer.md) |
-| 图片 / 删除线 | v1 阶段保持现有契约，不阻塞发布 | [ADR-004](../decisions/ADR-004-v1-image-and-strikethrough-contract.md) |
+| 图片 / 删除线 | v1 默认占位 + opt-in 真图（ADR-006）；删除线样式已实现 | [ADR-004](../decisions/ADR-004-v1-image-and-strikethrough-contract.md)、[ADR-006](../decisions/ADR-006-opt-in-image-rendering.md) |
 | maxParseLength | 可配置，默认 50_000 | [ADR-005](../decisions/ADR-005-stream-max-parse-length-configurable.md) |
 
 ### 7) Evidence

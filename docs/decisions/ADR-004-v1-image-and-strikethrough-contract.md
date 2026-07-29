@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Amended — v1 **默认**图片契约仍有效（文本占位）；opt-in 真图渲染见 [ADR-006](ADR-006-opt-in-image-rendering.md)（2026-07-28）。删除线部分不受 ADR-006 影响。
 
 ## Date
 

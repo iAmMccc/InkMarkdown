@@ -1,6 +1,6 @@
 # 当前项目状态
 
-> 基线日期：2026-07-13。记录仓库可验证现状。
+> 基线日期：2026-07-28。记录仓库可验证现状。
 
 InkMarkdown 处于 **v1.0 发布准备阶段**。核心 UIKit 渲染管线、块级组件、流式渲染及基础测试已就绪；后续工作集中在公开 API 收敛、语法契约覆盖、CI 及发布工程。
 
@@ -32,14 +32,15 @@ swift-markdown Markup
 | 内置块 | 代码块、表格、分割线 | `Rendering/Components/` |
 | 自定义扩展 | 源码预清洗、自定义行内语法扩展、自定义块级路由、链接点击回调 | `InkConfiguration` |
 | 流式渲染 | 稳定前缀 / 活跃后缀增量解析，解析与显示双缓冲 | `InkStreamRenderer` |
-| 示例程序 | 富文本、块渲染、SSE、流式表格、性能测试入口 | `ExampleApp/` |
+| 图片（opt-in） | 默认文本占位；`InkImageRendering.isEnabled = true` 启用真图（行内 `InkImageAttachment` + 独占块 `InkImageBlock`、Store、安全策略、降采样） | `Rendering/Image/`、`ExampleApp/ImageDemoViewController` |
+| 示例程序 | 富文本、块渲染、SSE、流式表格、性能测试、图片 Demo 入口 | `ExampleApp/` |
 | 测试集 | 行高、上下文样式、流式边界、性能一致性、语义快照骨架 | `Tests/InkMarkdownTests/` |
 
 ## 已知限制
 
 | 限制项 | 当前行为 |
 | --- | --- |
-| 图片 | 仅输出文本占位，不包含下载、缓存或附件布局 |
+| 图片 | **默认**输出文本占位（`InkImageRendering.isEnabled` 默认 `false`，与 ADR-004 一致）；opt-in 开启后走真图子系统（加载、缓存、附件/块布局），详见 [ADR-006](decisions/ADR-006-opt-in-image-rendering.md) |
 | 删除线 | 已实现 `.strikethroughStyle`；但 `inlineSyntaxes` 命中时（如 `@提及`）不继承删除线（详见 [spec](spec/extended-syntax.md)） |
 | 表格 | 依赖 `InkBlockRenderer`；纯 `InkAttributedRenderer` 不提供网格布局 |
 | 代码高亮 | 未内置语法高亮引擎 |
@@ -56,7 +57,7 @@ swift-markdown Markup
 | 平台矩阵 | iOS 14+、macOS 11+、tvOS 14+、watchOS 7+ | `Package.swift` 仅声明 iOS 14+，源码直接依赖 UIKit | 完成条件编译与逐平台验证前，对外仅宣称 iOS 14+ |
 | 依赖策略 | **ADR-001**：固定外部 revision | 已固定 `swift-markdown` revision；传递依赖 `swift-cmark` 遵循上游 manifest 的 `gfm` 分支与 resolved revision | 依赖升级时更新 revision 并验证测试 |
 | 多平台实施 | **ADR-002**：v1.0 仅对外支持 iOS 14+ | `Package.swift` 仅声明 iOS 14+ | 文档不将多平台列为已支持 |
-| 图片 / 删除线 | **ADR-004**：v1 仅占位 / 不承诺删除线样式 | 图片保留占位；已实现删除线样式 | 删除线已补充 spec；图片待实现时补充契约 |
+| 图片 / 删除线 | **ADR-004**（默认占位）+ **ADR-006**（opt-in 真图）；删除线样式已实现 | opt-in 图片栈已落地；删除线已实现 `.strikethroughStyle` | spec 已更新；图片稳定性修复进行中 |
 | 流式长度 | **ADR-005**：`maxParseLength` 支持配置（默认 50_000） | 仍硬编码于 `InkStreamRenderer` | 开放配置项并补充测试 |
 | CI 构建 | 建立 iOS Simulator 自动测试 | 统一使用 Xcode 26.6 + iPhone 17 Pro/OS 26.5 | 镜像升级时更新配置与排坑文档 |
 | SmartCodable | 早期文档提及依赖 | 实际未引用 | 从依赖说明中移除 |
@@ -79,7 +80,7 @@ xcodebuild test -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iP
 1. 补齐 CommonMark 与已支持 GFM 的语义断言。
 2. 审计公开 API 并补齐中文文档注释。
 3. 增加 CHANGELOG、版本策略与稳定版本 Tag。
-4. 明确图片与删除线的 v1 行为契约（架构决策见 ADR-004）。
+4. 图片 opt-in 契约与测试覆盖（架构决策见 [ADR-006](decisions/ADR-006-opt-in-image-rendering.md)；默认行为仍遵循 ADR-004）。
 
 详细里程碑见 [roadmap.md](roadmap.md)。开发者学习路径见 [文档首页](README.md)。
 

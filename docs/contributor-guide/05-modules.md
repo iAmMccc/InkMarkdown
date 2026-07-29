@@ -67,7 +67,7 @@ InkMarkdown.swift  (@_exported Markdown)
 
 - 列表 marker 使用正文字重，悬挂缩进设置 `headIndent = maxMarkerWidth`
 - 引用块对非段落子节点仅增加缩进，不应用全文段落样式
-- 图片使用占位符 `[🖼 plainText|source|image]`
+- 图片：**默认**占位符 `[🖼 plainText|source|image]`；`InkImageRendering.isEnabled == true` 时走 `InkImageAttachment` / `InkImageBlock`（见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)）
 - `InlineHTML`：`<br>` 转换为换行符，其余 HTML 标签丢弃或替换为空串
 - `Strikethrough`：`context.striking()` 传向下级，由叶子节点应用 `.strikethroughStyle`
 - 代码块在富文本通道仅作为降级方案，UI 块渲染使用 `InkCodeBlockView`

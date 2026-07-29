@@ -40,12 +40,11 @@ for b in blocks { stack.addArrangedSubview(b.makeView()) }
 
 ## 6. 图片只有 `[🖼 …]`？
 
-不做下载与缓存。占位串：`plainText`，否则 `source`，再否则 `"image"`。
+**默认如此**（`InkImageRendering.isEnabled` 默认 `false`，契约见 [ADR-004](../decisions/ADR-004-v1-image-and-strikethrough-contract.md)）。占位串：`plainText`，否则 `source`，再否则 `"image"`。
 
-真图路径（`Image` 是 **InlineMarkup**，不能靠块 handler 拦整块）：
+**需要真图时**：将 `appearance.imageRendering.isEnabled` 设为 `true`，详见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)。库内提供行内 `InkImageAttachment`、独占块 `InkImageBlock`、`InkImageStore` 与 `ImageSecurityPolicy`；ExampleApp 有 `ImageDemoViewController`。
 
-- 自定义 `InkInlineSyntax`，或改 attributed 行内分支
-- 或 `sourceFilter` 预处理图片语法
+`Image` 是 **InlineMarkup**，纯块 handler 拦不住行内节点；库内独占段提升由 `InkImageBlockHandler` 负责。亦可自定义 `InkInlineSyntax` 或 `sourceFilter` 预处理图片语法。
 
 ## 7. 怎么加自定义行内语法扩展 / 块级组件路由？
 

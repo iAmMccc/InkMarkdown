@@ -40,7 +40,7 @@ Markdown 源码
 |-----------------|------|--------------|----------|
 | Parser | Markup 语法树构建与行分类 | 样式计算与 UIKit 布局 | `Parser/` |
 | Configuration | 外观默认值及渲染可扩展项 | 解析语义与网络资源加载 | `Configuration/` |
-| AttributedString render | 固定行高计算及富文本映射 | 表格网格绘制与图片下载 | `InkAttributedRenderer.swift` |
+| AttributedString render | 固定行高计算及富文本映射 | 表格网格绘制；图片下载由 opt-in 子系统承担（`Rendering/Image/`） | `InkAttributedRenderer.swift` |
 | Block routing | 路由特定 Markup 至 UIView 块 | 重写解析规则 | `Block/*` |
 | Components | 代码块、表格与分割线视图组件 | 业务逻辑与导航控制 | `Components/` |
 | Stream | 增量边界划分、双缓冲与主线程同步 | 数据持久化与网络请求 | `InkStreamRenderer.swift` |

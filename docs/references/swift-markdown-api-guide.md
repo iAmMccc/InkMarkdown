@@ -124,7 +124,7 @@ struct Printer: MarkupWalker {
 | `Text` | `string` | 已渲染，支持 `InkInlineSyntax` 扫描 |
 | `Emphasis` / `Strong` | 行内子节点 | 已渲染：斜体 / 加粗 |
 | `Link` | `destination?`、`title?` | 已渲染：链接颜色 + `linkTapHandler` |
-| `Image` | `source?`、alt 子节点 | 降级：渲染为 `[🖼 …]` 占位 |
+| `Image` | `source?`、alt 子节点 | 默认：降级为 `[🖼 …]` 占位；opt-in（`InkImageRendering.isEnabled`）：真图附件/块，见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md) |
 | `InlineCode` | code | 已渲染：等宽字体 + 背景色 |
 | `Strikethrough` | 行内子节点 | 降级：仅保留文本，缺失删除线样式 |
 | `LineBreak` / `SoftBreak` | — | 已渲染：`\n` / 空格 |

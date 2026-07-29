@@ -34,7 +34,7 @@ InkMarkdown 不内置网络请求、身份验证或后端交互逻辑。宿主�
 | 性能监控 / 统计分析 | 未使用 | 无关联代码 |
 | 消息队列 | 未使用 | 无关联代码 |
 | 远程配置 | 未使用 | 无关联代码 |
-| 图片下载 / CDN 缓存 | **未内置**（图片采用占位符处理） | `renderImage` 仅输出 `"[🖼 …]"` |
+| 图片下载 / CDN 缓存 | **opt-in**（默认关：`renderImage` 仅 `"[🖼 …]"` 占位）；开启后由 `InkImageStore` + `InkImageLoading` 承担 | `Rendering/Image/`、`InkImageRendering.isEnabled` |
 
 ### 4) 本地工具链集成
 

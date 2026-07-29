@@ -49,7 +49,7 @@ xcodebuild -scheme InkMarkdown \
 |-----------------------------|---------------------------|
 | 固定行高与 baselineOffset | 完整 CommonMark / GFM 语义矩阵 |
 | 流式稳定前缀 / 未闭合 fence / 列表续行 | 删除线语义契约测试 |
-| 增量与全量输出一致性 + 性能闸门 | 图片策略契约（仅占位） |
+| 增量与全量输出一致性 + 性能闸门 | opt-in 图片策略契约测试（默认占位 + 开启真图） |
 | 快照脚手架可用性 | ExampleApp UI 自动化（库测试未覆盖） |
 | appearance 默认数值 | — |
 | CI 自动运行 iOS 测试（`.github/workflows/ci.yml`，push/PR 指定 Xcode 26.6 + iOS Simulator 26.5，见 `CONCERNS.md` High-2 Done） | — |

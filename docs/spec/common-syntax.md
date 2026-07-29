@@ -35,10 +35,11 @@
 - **渲染**：展示文本应用链接主题色；点击触发 `linkTapHandler`，代理返回 `true` 时拦截默认行为。
 - **说明**：`destination == nil` 时保留链接样式，无点击目标。
 
-## 图片 `Image`（占位）
+## 图片 `Image`
 
-- **渲染**：默认不加载图片。渲染为占位文本 `[🖼 plainText]`（优先使用 alt 属性，若为空则退化至 `source` 或 `image`）。
-- **说明**：`Image` 属于行内节点。图片渲染扩展需走行内路径或 `sourceFilter`，非块路由。
+- **默认渲染**（`InkImageRendering.isEnabled == false`，与 [ADR-004](../decisions/ADR-004-v1-image-and-strikethrough-contract.md) 一致）：不加载图片，输出占位文本 `[🖼 plainText]`（优先 alt，否则 `source`，再否则 `"image"`）。
+- **opt-in 真图**（`isEnabled == true`，见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)）：行内经 `InkImageAttachment` 展示；独占段可经 `InkImageBlockHandler` 提升为块级 `InkImageBlock`（`promotesToBlock` 默认开启）。加载、缓存与安全策略由 `InkImageStore`、`InkImageLoading` 与 `ImageSecurityPolicy` 承担。
+- **说明**：`Image` 属于行内 Markup；块路由 alone 无法拦截行内节点，库内块级提升由 `InkImageBlockHandler` 实现。宿主亦可通过 `InkInlineSyntax` 或 `sourceFilter` 自定义。
 
 ## 列表 `OrderedList` / `UnorderedList` + `ListItem`
 

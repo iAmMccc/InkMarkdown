@@ -49,7 +49,7 @@ v2 起增加步骤：Markup → **InkIR** →（可选 Transformer）→ 各后�
 | 代码块 / 表格 / 分割线 | 有（双通道） |
 | 流式（SSE） | 有（含性能门槛测试） |
 | `InkInlineSyntax` / `InkBlockHandler` | 有 |
-| 图片 | 占位 `[🖼 …]` |
+| 图片 | 默认占位 `[🖼 …]`；opt-in 真图（[ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)） |
 | 删除线 | 有内容，无删除线样式 |
 | InkIR / Transformer | 无（v2） |
 | SwiftUI | 不支持（项目范围外） |
