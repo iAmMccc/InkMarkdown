@@ -78,7 +78,8 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
 
   @MainActor
   private func configureIfNeeded() {
-    let loader = rendering.loader ?? DefaultURLSessionImageLoader(securityPolicy: rendering.securityPolicy)
+    store.prepareForRendering(rendering)
+    let loader = store.loader(for: rendering)
     configure(containerWidth: bounds.width, loader: loader)
   }
 
@@ -91,6 +92,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   public func configure(containerWidth: CGFloat, loader: InkImageLoading) {
     isConfigured = true
     subscription?.cancel()
+    store.prepareForRendering(rendering)
     let currentToken = UUID()
     loadToken = currentToken
 

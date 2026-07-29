@@ -50,6 +50,9 @@ public final class InkImageStore {
 
   private var subscribers: [String: [(id: UUID, callback: (UIImage?) -> Void)]] = [:]
 
+  /// 按安全策略复用的内置 URLSession 加载器，避免 renderer / block 各自泄漏 session。
+  private var defaultLoaders: [ImageSecurityPolicy: DefaultURLSessionImageLoader] = [:]
+
   /// 图片加载订阅句柄；调用 ``cancel`` 可取消回调。
   public struct ImageLoadSubscription {
     /// 取消订阅，不再接收加载完成通知。
@@ -78,6 +81,25 @@ public final class InkImageStore {
   public func updateConfiguration(_ config: Configuration) {
     configuration = config
     applyConfiguration(config)
+  }
+
+  /// 将 ``InkImageRendering/storeConfiguration`` 应用到 Store，并在解析前调用。
+  public func prepareForRendering(_ rendering: InkImageRendering) {
+    updateConfiguration(rendering.storeConfiguration)
+  }
+
+  /// 获取渲染配置对应的加载器：自定义 loader 优先，否则复用 Store 持有的默认实例。
+  public func loader(for rendering: InkImageRendering) -> InkImageLoading {
+    if let custom = rendering.loader {
+      return custom
+    }
+    let policy = rendering.securityPolicy
+    if let cached = defaultLoaders[policy] {
+      return cached
+    }
+    let loader = DefaultURLSessionImageLoader(securityPolicy: policy)
+    defaultLoaders[policy] = loader
+    return loader
   }
 
   // MARK: - 核心 API

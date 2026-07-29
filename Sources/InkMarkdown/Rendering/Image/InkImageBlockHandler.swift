@@ -66,7 +66,7 @@ private func isSecurityAllowed(source: ImageSource, rendering: InkImageRendering
 
   if source.scheme == .data {
     let dataSize = source.rawURL.absoluteString.count
-    if dataSize > InkImageStore.Configuration().maxDataURLBytes {
+    if dataSize > rendering.storeConfiguration.maxDataURLBytes {
       return false
     }
   }
