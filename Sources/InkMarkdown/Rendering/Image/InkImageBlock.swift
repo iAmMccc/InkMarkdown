@@ -114,6 +114,12 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   public override func layoutSubviews() {
     super.layoutSubviews()
     guard bounds.width > 0 else { return }
+    
+    imageView.frame = bounds
+    if let failure = failureContentView {
+      failure.frame = bounds
+    }
+    
     // D3：SSE 复用宿主时容器宽度会变；错宽下栅格化的位图被拉伸会糊化，允许按新宽度重配。
     if isConfigured, abs(bounds.width - configuredMaxWidth) > 1 {
       isConfigured = false
@@ -144,7 +150,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     loadToken = currentToken
 
     let effectiveWidth = min(containerWidth, rendering.sizing.maxBlockImageWidth ?? containerWidth)
-    configuredMaxWidth = effectiveWidth
+    configuredMaxWidth = containerWidth
     let scale = UIScreen.main.scale
     let display = DisplayContext(
       maxPixelWidth: effectiveWidth * scale,
@@ -199,18 +205,9 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     clearFailureContent()
     placeholderView.isHidden = true
     imageView.isHidden = false
-    let sizing = rendering.sizing
-    let size = fitted(
-      img.size,
-      maxWidth: maxWidth,
-      upscales: sizing.upscalesSmallImages,
-      minPlaceholder: rendering.placeholderHeight,
-      maxHeight: sizing.maxImageHeight
-    )
     imageView.image = img
-    imageView.frame = CGRect(origin: .zero, size: size)
-    frame.size = size
     invalidateIntrinsicContentSize()
+    setNeedsLayout()
     rendering.onLoadFinished?(source, img)
   }
 
@@ -262,13 +259,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   }
 
   private func installFailureContentView(_ view: UIView, maxWidth: CGFloat) {
-    view.translatesAutoresizingMaskIntoConstraints = false
     addSubview(view)
-    NSLayoutConstraint.activate([
-      view.topAnchor.constraint(equalTo: topAnchor),
-      view.leadingAnchor.constraint(equalTo: leadingAnchor),
-      view.trailingAnchor.constraint(equalTo: trailingAnchor),
-    ])
     failureContentView = view
     relayoutFailureContent(maxWidth: maxWidth)
   }
@@ -278,8 +269,8 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     let height = measuredFailureContentHeight(maxWidth: maxWidth)
     cachedFailureContentHeight = height
     failureContentView.frame = CGRect(x: 0, y: 0, width: maxWidth, height: height)
-    frame.size = CGSize(width: maxWidth, height: height)
     invalidateIntrinsicContentSize()
+    setNeedsLayout()
   }
 
   private func measuredFailureContentHeight(maxWidth: CGFloat) -> CGFloat {
@@ -305,7 +296,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     if failureContentView != nil {
       let maxWidth = resolvedMaxWidth()
       if maxWidth > 0, cachedFailureContentHeight > 0 {
-        return CGSize(width: UIView.layoutFittingExpandedSize.width, height: cachedFailureContentHeight)
+        return CGSize(width: UIView.noIntrinsicMetric, height: cachedFailureContentHeight)
       }
     }
     if let img = imageView.image {

@@ -75,11 +75,7 @@ final class SSETextSegmentView: UIView, SSETypewriterSegment {
         bindInlineAttachments()
     }
 
-    override var intrinsicContentSize: CGSize {
-        let width = bounds.width > 0 ? bounds.width : UIView.layoutFittingExpandedSize.width
-        let size = textView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: UIView.noIntrinsicMetric, height: size.height)
-    }
+
 
     /// 写入 textStorage 并绑定行内 ``InkImageAttachment``，否则 LaTeX 等会永久停在占位图。
     private func applyVisibleText(_ text: NSAttributedString) {

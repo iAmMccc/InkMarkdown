@@ -37,20 +37,14 @@ final class SSEImageSegmentView: UIView, SSETypewriterSegment {
     isHidden = length < 1
     if length >= 1 {
       setNeedsLayout()
-      layoutIfNeeded()
     }
   }
 
   override func layoutSubviews() {
     super.layoutSubviews()
-    let height = systemLayoutSizeFitting(
-      CGSize(width: bounds.width, height: UIView.layoutFittingCompressedSize.height),
-      withHorizontalFittingPriority: .required,
-      verticalFittingPriority: .fittingSizeLevel
-    ).height
+    let height = intrinsicContentSize.height
     guard abs(height - lastReportedHeight) > 0.5 else { return }
     lastReportedHeight = height
-    invalidateIntrinsicContentSize()
     onHeightChange?()
   }
 
