@@ -47,6 +47,7 @@ final class RenderedListViewController: UIViewController, PagerListController {
   private var scrollableToggle: UISwitch?
   private var copyToggle: UISwitch?
   private var blockContentView: UIView?
+  private var genericContentStack: UIStackView?
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -60,9 +61,30 @@ final class RenderedListViewController: UIViewController, PagerListController {
     }
   }
 
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    guard previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle else { return }
+    guard style == .latexEnabled || style == .mermaidEnabled else { return }
+    rebuildGenericBlockContent()
+  }
+
   /// 该样式对应的完整渲染配置。Block 路由的 blockHandlers（需要 `self` 侧信息）在此注入。
   private func makeConfiguration() -> InkConfiguration {
-    var config = style.configuration
+    var config: InkConfiguration
+    switch style {
+    case .latexEnabled:
+      config = .demoGeneratedContent(
+        mode: .latexOnly,
+        userInterfaceStyle: traitCollection.userInterfaceStyle
+      )
+    case .mermaidEnabled:
+      config = .demoGeneratedContent(
+        mode: .mermaidOnly,
+        userInterfaceStyle: traitCollection.userInterfaceStyle
+      )
+    default:
+      config = style.configuration
+    }
 
     // 真图 tab：块级图片点击弹出全屏预览（行内 attachment 不响应 tap）。
     if style == .imageEnabled {
@@ -106,9 +128,32 @@ final class RenderedListViewController: UIViewController, PagerListController {
       stack.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
     ])
 
-    let blocks = InkBlockRenderer.render(source, configuration: makeConfiguration())
+    genericContentStack = stack
+    rebuildGenericBlockContent()
+  }
+
+  private func rebuildGenericBlockContent() {
+    guard let stack = genericContentStack else { return }
+    stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+    var config = makeConfiguration()
+    let failureObserver: GeneratedContentFailureObserver?
+    switch style {
+    case .latexEnabled, .mermaidEnabled:
+      let observer = GeneratedContentFailureObserver()
+      observer.attach(to: &config.appearance)
+      failureObserver = observer
+    default:
+      failureObserver = nil
+    }
+
+    let blocks = InkBlockRenderer.render(source, configuration: config)
     for block in blocks {
-      stack.addArrangedSubview(block.makeView())
+      if let observer = failureObserver {
+        stack.addArrangedSubview(observer.makeView(for: block))
+      } else {
+        stack.addArrangedSubview(block.makeView())
+      }
     }
   }
 

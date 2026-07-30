@@ -74,7 +74,6 @@ public struct InkLaTeXImageRenderer {
 
   @MainActor
   private func renderOnMain(_ request: InkLaTeXRenderRequest) throws -> InkLaTeXRenderResult {
-    let maxPointWidth = request.display.maxPixelWidth / request.display.scale
     let maxPointHeight = request.style.maxPixelHeight / request.display.scale
     let label = MTMathUILabel()
     label.displayErrorInline = false
@@ -87,7 +86,7 @@ public struct InkLaTeXImageRenderer {
       throw InkLaTeXError.renderingFailed(error.localizedDescription)
     }
 
-    let measured = label.sizeThatFits(CGSize(width: maxPointWidth, height: maxPointHeight))
+    let measured = label.sizeThatFits(CGSize(width: CGFloat.greatestFiniteMagnitude, height: maxPointHeight))
     let size = CGSize(
       width: ceil(measured.width + request.style.horizontalPadding * 2),
       height: ceil(measured.height + request.style.verticalPadding * 2)

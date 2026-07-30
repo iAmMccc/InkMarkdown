@@ -27,6 +27,7 @@ enum Scenario {
   case streamingPerformance
   case imageRendering
   case imageRenderingDemo
+  case diagramRenderingDemo
 
   var title: String {
     switch self {
@@ -37,6 +38,7 @@ enum Scenario {
     case .streamingPerformance: return "增量渲染性能对比"
     case .imageRendering: return "图片渲染"
     case .imageRenderingDemo: return "图片渲染 Demo"
+    case .diagramRenderingDemo: return "公式与图表 Demo"
     }
   }
 
@@ -49,6 +51,7 @@ enum Scenario {
     case .streamingPerformance: return "对比每片全量解析与增量解析"
     case .imageRendering: return "块级可点放大，行内图文混排演示"
     case .imageRenderingDemo: return "10 个场景：网络图、Asset、Base64、块通道等"
+    case .diagramRenderingDemo: return "LaTeX 公式 + Mermaid 流程图 / 序列图本地渲染"
     }
   }
 }

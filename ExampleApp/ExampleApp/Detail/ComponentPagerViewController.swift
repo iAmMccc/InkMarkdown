@@ -20,7 +20,7 @@ final class ComponentPagerViewController: UIViewController {
   }()
   private let pagesStack = UIStackView()
 
-  /// tab 顺序：[源码, 标准, ...customStyles]
+  /// tab 顺序：开启态/主样式 → 自定义(含标准关闭态) → 源码
   private lazy var listVCs: [PagerListController] = buildListViewControllers()
 
   init(component: MarkdownComponent) {

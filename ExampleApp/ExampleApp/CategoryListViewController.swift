@@ -94,6 +94,8 @@ final class CategoryListViewController: DemoListViewController {
       return ImageIntegrationViewController()
     case .imageRenderingDemo:
       return ImageDemoViewController()
+    case .diagramRenderingDemo:
+      return GeneratedContentDemoViewController()
     }
   }
 }

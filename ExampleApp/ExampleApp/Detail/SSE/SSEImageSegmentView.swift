@@ -7,6 +7,10 @@ import InkMarkdown
 final class SSEImageSegmentView: UIView, SSETypewriterSegment {
 
   private let imageBlock: InkImageBlock
+  private var lastReportedHeight: CGFloat = 0
+
+  /// 网络图加载/布局变化时回调（D2）。
+  var onHeightChange: (() -> Void)?
 
   init(imageBlock: InkImageBlock) {
     self.imageBlock = imageBlock
@@ -35,5 +39,22 @@ final class SSEImageSegmentView: UIView, SSETypewriterSegment {
       setNeedsLayout()
       layoutIfNeeded()
     }
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    let height = systemLayoutSizeFitting(
+      CGSize(width: bounds.width, height: UIView.layoutFittingCompressedSize.height),
+      withHorizontalFittingPriority: .required,
+      verticalFittingPriority: .fittingSizeLevel
+    ).height
+    guard abs(height - lastReportedHeight) > 0.5 else { return }
+    lastReportedHeight = height
+    invalidateIntrinsicContentSize()
+    onHeightChange?()
+  }
+
+  override var intrinsicContentSize: CGSize {
+    imageBlock.intrinsicContentSize
   }
 }

@@ -97,3 +97,7 @@ InkAttributedRenderer.render(markups: [node])
 ```
 
 完整测试必须指定 iOS Simulator；不要在 macOS host 上直接运行 `swift test`。命令见[开发指南](04-development.md#构建与测试)。
+
+## 16. 公式与图表怎么 opt-in？
+
+LaTeX / Mermaid 默认关闭。行内 LaTeX：`config.enableLaTeXRendering()`（或 `appearance.latexRendering.isEnabled = true`）；Mermaid：`appearance.mermaidRendering.isEnabled = true`。块级 `$$`、`\[\]` 与 ` ```mermaid ` 须走 **`InkBlockRenderer`**，纯 `InkAttributedRenderer` 仅文本回退。ExampleApp SSE 演示的是 Demo 全量 **`InkBlockRenderer`** 路径，不是 `InkStreamRenderer` 增量 API。

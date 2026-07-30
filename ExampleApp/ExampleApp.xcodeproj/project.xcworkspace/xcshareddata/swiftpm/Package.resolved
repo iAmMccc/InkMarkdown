@@ -1,5 +1,5 @@
 {
-  "originHash" : "85dfadcc2a0d640b3dc300557a1ee4ae029d5b5b2e9366a7290754f2decbb7bb",
+  "originHash" : "f4245b04c10f2a20187cc26aca58cd0a60e2f682a20a022b5861dd8c8822378b",
   "pins" : [
     {
       "identity" : "iosmath",
@@ -8,6 +8,42 @@
       "state" : {
         "revision" : "302585fd9609f8525423f531924087fc4cfade16",
         "version" : "2.3.1"
+      }
+    },
+    {
+      "identity" : "jxpagingview",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pujiaxin33/JXPagingView.git",
+      "state" : {
+        "revision" : "a55dd07adfa9729677e2287943af5aa40f5df31f",
+        "version" : "2.1.3"
+      }
+    },
+    {
+      "identity" : "jxsegmentedview",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pujiaxin33/JXSegmentedView.git",
+      "state" : {
+        "revision" : "fbbf965d7396bd99ac1ce88a80b6c950b85313f6",
+        "version" : "1.4.1"
+      }
+    },
+    {
+      "identity" : "smartcodable",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/iAmMccc/SmartCodable.git",
+      "state" : {
+        "revision" : "475e5dbff8cb22a74741a355c9c39d74f3a6c8e7",
+        "version" : "7.0.0-beta.1"
+      }
+    },
+    {
+      "identity" : "snapkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SnapKit/SnapKit.git",
+      "state" : {
+        "revision" : "2842e6e84e82eb9a8dac0100ca90d9444b0307f4",
+        "version" : "5.7.1"
       }
     },
     {

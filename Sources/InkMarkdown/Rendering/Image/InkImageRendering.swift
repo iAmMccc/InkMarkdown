@@ -112,6 +112,11 @@ public struct InkImageRendering {
   /// 行内图片需宿主自行命中后调用。
   public var onImageTap: ((ImageSource, UIImage?) -> Void)?
 
+  /// 块级加载结束回调：成功传入图片，失败时图片为 `nil`。
+  ///
+  /// 宿主可用其挂接显式错误 UI；库默认失败路径仍走 ``failureFallback``（如源码回退），二者互不替代。
+  public var onLoadFinished: ((ImageSource, UIImage?) -> Void)?
+
   /// 动图播放策略。
   public var animatedImagePolicy: AnimatedImagePolicy = .staticFirstFrame
 

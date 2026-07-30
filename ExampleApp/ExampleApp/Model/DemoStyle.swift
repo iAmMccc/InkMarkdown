@@ -18,6 +18,10 @@ enum DemoStyle {
     case tableCard
     /// 图片 opt-in：开启 `InkImageRendering.isEnabled`，演示真图行内 / 块通道。
     case imageEnabled
+    /// LaTeX opt-in：开启 `InkLaTeXRendering.isEnabled`，演示行内 / 块级公式。
+    case latexEnabled
+    /// Mermaid opt-in：开启 `InkMermaidRendering.isEnabled`，演示围栏图表。
+    case mermaidEnabled
 
     /// Segmented tab 标题。
     var displayName: String {
@@ -27,6 +31,8 @@ enum DemoStyle {
         case .h1ActionCard: return "业务卡片"
         case .tableCard: return "表格卡片"
         case .imageEnabled: return "真图"
+        case .latexEnabled: return "公式"
+        case .mermaidEnabled: return "图表"
         }
     }
 
@@ -42,9 +48,21 @@ enum DemoStyle {
             return InkConfiguration(appearance: .demoBranded)
         case .imageEnabled:
             return InkConfiguration(appearance: .demoImageEnabled)
+        case .latexEnabled:
+            return .demoGeneratedContent(
+                mode: .latexOnly,
+                userInterfaceStyle: UITraitCollection.current.userInterfaceStyle
+            )
+        case .mermaidEnabled:
+            return .demoGeneratedContent(
+                mode: .mermaidOnly,
+                userInterfaceStyle: UITraitCollection.current.userInterfaceStyle
+            )
         }
     }
 }
+
+// MARK: - SSOT：公式与图表 Appearance / Configuration 工厂
 
 extension InkAppearance {
     /// Demo 用品牌主题：放大各级标题 + 品牌蓝链接 + 浅紫代码底色。
@@ -70,4 +88,71 @@ extension InkAppearance {
         a.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
         return a
     }
+
+    /// Demo 用 LaTeX opt-in：默认识别 `\(...\)` / `$$...$$` / `\[...\]`。
+    ///
+    /// `$...$` 在 Demo 样式里默认关闭，避免与货币符号冲突；综合 Demo 若要演示风险，单独场景临时打开。
+    static var demoLaTeXEnabled: InkAppearance {
+        var a = InkAppearance()
+        a.latexRendering.isEnabled = true
+        a.latexRendering.allowsInlineDollarDelimiter = false
+        return a
+    }
+
+    /// Demo 用 Mermaid opt-in：仅接管语言标记为 `mermaid` 的围栏代码块。
+    static func demoMermaidEnabled(
+        userInterfaceStyle: UIUserInterfaceStyle = UITraitCollection.current.userInterfaceStyle
+    ) -> InkAppearance {
+        var a = InkAppearance()
+        a.mermaidRendering.isEnabled = true
+        a.mermaidRendering.theme = userInterfaceStyle == .dark ? .dark : .light
+        return a
+    }
+
+    /// 综合 / SSE：同时开启 LaTeX 与 Mermaid；`$...$` 保持关闭；Mermaid 主题跟随界面风格。
+    static func demoDiagramsEnabled(
+        userInterfaceStyle: UIUserInterfaceStyle,
+        allowsInlineDollarDelimiter: Bool = false
+    ) -> InkAppearance {
+        var a = InkAppearance.demoLaTeXEnabled
+        a.latexRendering.allowsInlineDollarDelimiter = allowsInlineDollarDelimiter
+        a.mermaidRendering.isEnabled = true
+        a.mermaidRendering.theme = userInterfaceStyle == .dark ? .dark : .light
+        return a
+    }
+}
+
+extension InkConfiguration {
+    /// 组件开启态 / 综合 Demo / SSE 共用的公式与图表配置工厂（SSOT）。
+    static func demoGeneratedContent(
+        mode: DemoGeneratedContentMode,
+        userInterfaceStyle: UIUserInterfaceStyle,
+        allowsInlineDollarDelimiter: Bool = false
+    ) -> InkConfiguration {
+        let appearance: InkAppearance
+        switch mode {
+        case .latexOnly:
+            appearance = .demoLaTeXEnabled
+        case .mermaidOnly:
+            appearance = .demoMermaidEnabled(userInterfaceStyle: userInterfaceStyle)
+        case .diagrams:
+            appearance = .demoDiagramsEnabled(
+                userInterfaceStyle: userInterfaceStyle,
+                allowsInlineDollarDelimiter: allowsInlineDollarDelimiter
+            )
+        case .disabled:
+            appearance = InkAppearance()
+        }
+        var config = InkConfiguration(appearance: appearance)
+        config.renderEnvironment = InkRenderEnvironment(userInterfaceStyle: userInterfaceStyle)
+        return config
+    }
+}
+
+/// Demo 侧公式与图表配置模式。
+enum DemoGeneratedContentMode {
+    case latexOnly
+    case mermaidOnly
+    case diagrams
+    case disabled
 }

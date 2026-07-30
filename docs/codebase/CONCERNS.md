@@ -11,6 +11,7 @@
 | Med | 平台决策 vs manifest | `AGENTS.md` 目标矩阵；v1 仅 iOS（ADR-002） | 文档范围过大会导致误导 | 对外只宣称 iOS 14+ |
 | Med | 流式 `maxParseLength = 50_000` 硬编码 | `InkStreamRenderer.swift:147`；ADR-005 | 超长 SSE 静默截断 / 停解析 | 配置化 + 文档契约 + 测试 |
 | Med | 语义测试矩阵未完成 | `current-status.md`、仅 snapshot scaffold | 语法回归靠手测 | 在 `RenderSnapshot` 上补全 CommonMark/GFM 契约 |
+| Med | ExampleApp SSE 未闭合块的全量重解析 | `SSEChatViewController` 按 chunk 节流重建 segments | 长回答 CPU / 文本段闪烁；generated 块已按 identity 复用；**文本段已按前缀复用**（`reusableTextSegments` + `updateFullText`），行内 attachment 不再每轮销毁 | 可继续收紧「仅尾部文本增长时跳过全量 rebuild」 |
 | Low | 无 root linter/formatter | scan | 风格漂移 | 按需引入 SwiftFormat/SwiftLint |
 | Low | 传递依赖 `swift-cmark` 仍为 branch+revision | `Package.resolved` | 随 markdown pin 间接固定，但非直接声明 | 可接受；如需锁定可监控 resolved |
 
@@ -52,6 +53,8 @@
 | `Tests/InkMarkdownTests.swift` | 测试契约集中 | 4 次路径变更 | 新增语法测试优先采用快照助手 |
 | README / AGENTS / docs | 知识库更新 | 文档变更频繁 | 修改功能时同步更新 current-status |
 | ExampleApp Demo 模型与 Pager | 演示结构变动 | 多文件修改 3–4 次 | 不与库核心 API 逻辑混淆 |
+| ExampleApp SSE 增量重建 | 流式 chunk 触发 Block 重解析；靠 canonicalID 复用 generated 宿主 | 公式与图表 Demo 引入 | **未闭合 fence 提前生图：部分缓解** — `partitionForStreamingRender` 截断未闭合 Mermaid/`$$` 尾部后再 Block 渲染；`looksLikeBlockJustClosed` 仅在未闭合计数归零时立即 flush。仍为 Demo 层策略，非 `InkStreamRenderer` 契约。主题：SSE / 综合 Demo / **组件 Pager 公式·图表 tab** 均在 `traitCollectionDidChange` 时重建 |
+| `onLoadFinished` 与 `failureFallback` 双轨 | 库默认源码回退 + ExampleApp 错误条叠加 | `InkImageRendering` / `GeneratedContentErrorBannerView` | 文档写清边界，避免宿主误以为改了库默认契约 |
 
 生产代码 TODO（排除依赖缓存）：
 

@@ -12,6 +12,7 @@ enum MarkdownComponent: String, CaseIterable {
   case unorderedList
   case orderedList
   case codeBlock
+  case mermaid
   case table
   case thematicBreak
 
@@ -22,6 +23,7 @@ enum MarkdownComponent: String, CaseIterable {
   case link
   case strikethrough
   case image
+  case latex
   case escapeAndEntity
 
   /// 主列表 row 标题。
@@ -35,6 +37,7 @@ enum MarkdownComponent: String, CaseIterable {
     case .unorderedList: return "无序列表"
     case .orderedList: return "有序列表"
     case .codeBlock: return "代码块"
+    case .mermaid: return "Mermaid 图表"
     case .table: return "表格"
     case .thematicBreak: return "分隔线"
     case .strong: return "粗体"
@@ -42,6 +45,7 @@ enum MarkdownComponent: String, CaseIterable {
     case .inlineCode: return "行内代码"
     case .link: return "链接"
     case .image: return "图片"
+    case .latex: return "LaTeX 公式"
     case .strikethrough: return "删除线"
     case .escapeAndEntity: return "转义与实体"
     }
@@ -58,6 +62,7 @@ enum MarkdownComponent: String, CaseIterable {
     case .unorderedList: return "项目符号列表"
     case .orderedList: return "数字序号列表"
     case .codeBlock: return "围栏 / 缩进代码"
+    case .mermaid: return "flowchart / sequence 等"
     case .table: return "GFM 表格"
     case .thematicBreak: return "水平分隔线"
     case .strong: return "加粗强调"
@@ -66,6 +71,7 @@ enum MarkdownComponent: String, CaseIterable {
     case .link: return "行内 / 引用 / 自动链接"
     case .strikethrough: return "删除线"
     case .image: return "图片与 alt 文本"
+    case .latex: return "行内 \\(...\\) 与块级 $$ / \\[...\\]"
     case .escapeAndEntity: return "反斜杠转义与 HTML 实体"
     }
   }
@@ -92,6 +98,10 @@ enum MarkdownComponent: String, CaseIterable {
       return "以数字 + . 或 ) 开头的有序列表。序号不必递增，渲染时按首项起始编号连续显示。"
     case .codeBlock:
       return "围栏代码块用 ``` 或 ~~~ 包裹，可选语言标签；缩进代码块需每行至少 4 空格。"
+    case .mermaid:
+      return """
+      语言标记为 `mermaid` 的围栏代码块可本地渲染为位图。默认关闭；开启 `InkMermaidRendering.isEnabled` 后由块路由接管，失败时回退为源码展示。
+      """
     case .table:
       return "GFM 扩展语法的表格，由管道符 | 分隔列，支持左对齐、居中、右对齐。InkMarkdown 通过 Block 路由渲染为原生 UIView 表格。"
     case .thematicBreak:
@@ -108,6 +118,10 @@ enum MarkdownComponent: String, CaseIterable {
       return "GFM 删除线 ~~这是一段删除线文本~~"
     case .image:
       return "语法与链接类似，前缀加 !。alt 文本用于无障碍与加载失败时的占位。"
+    case .latex:
+      return """
+      数学公式 opt-in 渲染。默认识别 `\\(...\\)` 行内与 `$$...$$` / `\\[...\\]` 块级；`$...$` 需额外开启 `allowsInlineDollarDelimiter`，避免与货币符号冲突。
+      """
     case .escapeAndEntity:
       return "反斜杠可转义 ASCII 标点；&copy;、&#169; 等 HTML 实体会解析为对应 Unicode 字符。"
     }
@@ -189,6 +203,28 @@ enum MarkdownComponent: String, CaseIterable {
       }
       ```
       """
+    case .mermaid:
+      return """
+      ## 流程图
+
+      ```mermaid
+      flowchart TD
+          A[Markdown 解析] --> B{块路由?}
+          B -->|mermaid| C[WebKit 本地渲染]
+          B -->|其他| D[默认代码块]
+          C --> E[位图插入文档]
+      ```
+
+      ## 序列图
+
+      ```mermaid
+      sequenceDiagram
+          participant U as 用户
+          participant I as InkMarkdown
+          U->>I: 输入 mermaid 围栏
+          I-->>U: 返回 SVG 快照
+      ```
+      """
     case .table:
       return """
       | 序号 | 类型 | 语义 | 典型代表 | 分配方式 |
@@ -254,6 +290,24 @@ enum MarkdownComponent: String, CaseIterable {
       ### 链接图片
       [![点击跳转](https://picsum.photos/seed/ink-medium/400/300)](https://github.com)
       """
+    case .latex:
+      return """
+      ## 行内公式
+
+      勾股定理 \\(a^2 + b^2 = c^2\\) 是经典关系。
+
+      二次方程求根：\\(x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}\\)
+
+      ## 块级公式
+
+      $$
+      \\int_{0}^{1} x^2 \\, dx = \\frac{1}{3}
+      $$
+
+      \\[
+      \\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}
+      \\]
+      """
     case .escapeAndEntity:
       return "转义：\\*星号\\*  实体：&copy; &#169;（©）"
     }
@@ -268,6 +322,10 @@ enum MarkdownComponent: String, CaseIterable {
     switch self {
     case .image:
       return .imageEnabled
+    case .latex:
+      return .latexEnabled
+    case .mermaid:
+      return .mermaidEnabled
     default:
       return .standard
     }
@@ -284,6 +342,9 @@ enum MarkdownComponent: String, CaseIterable {
     case .image:
       // 对照 ADR-004 默认占位：真图 tab 之外保留「标准」关闭态。
       return [.standard]
+    case .latex, .mermaid:
+      // 开启态由 primaryRenderStyle 占首位；「标准」作为关闭态对照。
+      return [.standard]
     default:
       return []
     }
@@ -299,6 +360,7 @@ enum MarkdownComponent: String, CaseIterable {
     .unorderedList,
     .orderedList,
     .codeBlock,
+    .mermaid,
     .thematicBreak,
   ]
 
@@ -310,6 +372,7 @@ enum MarkdownComponent: String, CaseIterable {
     .link,
     .strikethrough,
     .image,
+    .latex,
     .escapeAndEntity,
   ]
 }

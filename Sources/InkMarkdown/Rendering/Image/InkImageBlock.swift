@@ -113,7 +113,12 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
 
   public override func layoutSubviews() {
     super.layoutSubviews()
-    if bounds.width > 0, !isConfigured {
+    guard bounds.width > 0 else { return }
+    // D3：SSE 复用宿主时容器宽度会变；错宽下栅格化的位图被拉伸会糊化，允许按新宽度重配。
+    if isConfigured, abs(bounds.width - configuredMaxWidth) > 1 {
+      isConfigured = false
+    }
+    if !isConfigured {
       configureIfNeeded()
     }
   }
@@ -206,6 +211,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     imageView.frame = CGRect(origin: .zero, size: size)
     frame.size = size
     invalidateIntrinsicContentSize()
+    rendering.onLoadFinished?(source, img)
   }
 
   private func showPlaceholder() {
@@ -216,6 +222,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
 
   private func showError() {
     showFailureFallback(maxWidth: resolvedMaxWidth())
+    rendering.onLoadFinished?(source, nil)
   }
 
   private func resolvedMaxWidth() -> CGFloat {
@@ -298,18 +305,20 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     if failureContentView != nil {
       let maxWidth = resolvedMaxWidth()
       if maxWidth > 0, cachedFailureContentHeight > 0 {
-        return CGSize(width: maxWidth, height: cachedFailureContentHeight)
+        return CGSize(width: UIView.layoutFittingExpandedSize.width, height: cachedFailureContentHeight)
       }
     }
     if let img = imageView.image {
-      let maxW = rendering.sizing.maxBlockImageWidth ?? bounds.width
-      return fitted(
+      let desiredWidth = rendering.sizing.maxBlockImageWidth ?? img.size.width
+      let actualWidth = bounds.width > 0 ? bounds.width : desiredWidth
+      let fitSize = fitted(
         img.size,
-        maxWidth: max(maxW, 1),
+        maxWidth: max(actualWidth, 1),
         upscales: rendering.sizing.upscalesSmallImages,
         minPlaceholder: rendering.placeholderHeight,
         maxHeight: rendering.sizing.maxImageHeight
       )
+      return CGSize(width: desiredWidth, height: fitSize.height)
     }
     return CGSize(width: UIView.noIntrinsicMetric, height: rendering.placeholderHeight)
   }

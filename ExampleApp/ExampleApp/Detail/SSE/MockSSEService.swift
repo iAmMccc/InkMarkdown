@@ -68,6 +68,9 @@ final class MockSSEService {
         if q.contains("图片") || q.contains("image") || q.contains("图文") {
             return sampleImages
         }
+        if q.contains("公式") || q.contains("latex") || q.contains("mermaid") || q.contains("图表") || q.contains("流程图") {
+            return sampleDiagrams
+        }
         if q.contains("值类型") || q.contains("struct") || q.contains("引用") || q.contains("类型") {
             return sampleValueTypes
         }
@@ -113,6 +116,61 @@ final class MockSSEService {
     ![缺失图](https://example.com/inkmarkdown-missing-image-404.jpg)
 
     *以上为流式图片渲染 demo，块级图可点放大。*
+    """
+
+    private static let sampleDiagrams = """
+    **流式公式与图表演示**
+
+    下面通过 SSE 流式返回 Markdown，包含 LaTeX 行内/块级公式与 Mermaid 图表。
+    任意 SSE 回答均已全局开启公式与图表（关键词只用于挑选样例，不控制开关）。
+
+    ## 行内公式
+
+    勾股定理 \\(a^2 + b^2 = c^2\\) 与欧拉公式 \\(e^{i\\pi} + 1 = 0\\) 可混排在正文中。
+
+    ## 块级公式
+
+    $$
+    \\int_{0}^{1} x^2 \\, dx = \\frac{1}{3}
+    $$
+
+    \\[
+    \\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}
+    \\]
+
+    ## Mermaid 流程图
+
+    ```mermaid
+    flowchart TD
+        A[SSE 分片到达] --> B[增量解析]
+        B --> C{公式/图表?}
+        C -->|LaTeX| D[iosMath 渲染]
+        C -->|Mermaid| E[WebKit 本地渲染]
+        D --> F[位图插入气泡]
+        E --> F
+    ```
+
+    ## Mermaid 序列图
+
+    ```mermaid
+    sequenceDiagram
+        participant U as 用户
+        participant S as MockSSEService
+        participant R as InkBlockRenderer
+        U->>S: 发送「展示公式与图表」
+        S-->>R: 流式 Markdown 分片
+        R-->>U: 逐字吐出渲染结果
+    ```
+
+    ## 失败示例
+
+    下面是一段非法 Mermaid，用于观察统一错误条：
+
+    ```mermaid
+    this is not valid mermaid syntax [[[
+    ```
+
+    *以上为公式与图表流式渲染 demo。*
     """
 
     /// 结构测试点：列表项内含 | 字符，验证不被误判为表格。

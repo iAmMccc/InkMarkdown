@@ -4,8 +4,8 @@ import Markdown
 
 /// 演示「服务端 SSE 流式返回 Markdown → UIKit 逐字吐字渲染」全流程。
 ///
-/// 交互复刻 AI 问答场景：用户在底部输入框发送问题，AI 气泡先显示「思考中…」，
-/// 流式攒完整段回答后，再用打字机效果逐字吐出（渲染走 `InkAttributedRenderer`）。
+/// 公式与图表：任意回答全局开启 LaTeX + Mermaid（`$...$` 关闭）；
+/// 行内随分片露出，块级围栏/公式闭合后立即异步生图，无需等待 `[DONE]`。
 final class SSEChatViewController: UIViewController {
 
     /// 单条消息。
@@ -46,6 +46,17 @@ final class SSEChatViewController: UIViewController {
         seedSuggestion()
     }
 
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        guard previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle else { return }
+        // 主题变化：重建非流式 assistant 气泡，使 Mermaid theme 跟随。
+        for (row, msg) in messages.enumerated() where !msg.isUser && !msg.isStreaming && !msg.content.isEmpty {
+            if let cell = tableView.cellForRow(at: IndexPath(row: row, section: 0)) as? SSEAssistantCell {
+                cell.reapplyTheme(content: msg.content, userInterfaceStyle: traitCollection.userInterfaceStyle)
+            }
+        }
+    }
+
     // MARK: - UI
 
     private func setupUI() {
@@ -58,7 +69,7 @@ final class SSEChatViewController: UIViewController {
 
         textField.borderStyle = .roundedRect
         textField.backgroundColor = .systemBackground
-        textField.placeholder = "问点什么，试试「展示图文混排」或「给个 swift 示例」"
+        textField.placeholder = "问点什么，试试「展示公式与图表」或「展示图文混排」"
         textField.returnKeyType = .send
         textField.delegate = self
         textField.font = .systemFont(ofSize: 16)
@@ -97,9 +108,9 @@ final class SSEChatViewController: UIViewController {
         ])
     }
 
-    /// 预填一个示例问题，降低 demo 上手成本。
+    /// 预填公式与图表示例问题，降低 demo 上手成本。
     private func seedSuggestion() {
-        textField.text = "展示图文混排和图片渲染"
+        textField.text = "展示公式与图表"
     }
 
     private func setupKeyboard() {
@@ -117,7 +128,6 @@ final class SSEChatViewController: UIViewController {
 
     private func sendQuestion(_ question: String) {
         messages.append(Message(isUser: true, content: question, isStreaming: false))
-        // assistant 先占位（显示「思考中…」）
         messages.append(Message(isUser: false, content: "", isStreaming: true))
         tableView.reloadData()
         scrollToBottom(animated: true)
@@ -129,9 +139,17 @@ final class SSEChatViewController: UIViewController {
             question: question,
             onChunk: { [weak self] chunk in
                 guard let self else { return }
-                // 静默攒内容，UI 仍显示「思考中…」——与参考实现一致
                 guard let idx = self.messages.lastIndex(where: { !$0.isUser }) else { return }
                 self.messages[idx].content += chunk
+                let content = self.messages[idx].content
+                if let cell = self.tableView.cellForRow(at: IndexPath(row: idx, section: 0)) as? SSEAssistantCell {
+                    cell.applyStreamingContent(
+                        content,
+                        userInterfaceStyle: self.traitCollection.userInterfaceStyle
+                    )
+                } else {
+                    self.requestCellHeightUpdate()
+                }
             },
             onComplete: { [weak self] in
                 guard let self else { return }
@@ -140,9 +158,10 @@ final class SSEChatViewController: UIViewController {
                 guard let idx = self.messages.lastIndex(where: { !$0.isUser }) else { return }
                 let full = self.messages[idx].content
                 if let cell = self.tableView.cellForRow(at: IndexPath(row: idx, section: 0)) as? SSEAssistantCell {
-                    cell.startTypewriter(fullContent: full) { [weak self] in
-                        self?.requestCellHeightUpdate()
-                    } completion: { [weak self] in
+                    cell.finishStreaming(
+                        fullContent: full,
+                        userInterfaceStyle: self.traitCollection.userInterfaceStyle
+                    ) { [weak self] in
                         guard let self, idx < self.messages.count else { return }
                         self.messages[idx].isStreaming = false
                     }
@@ -155,7 +174,7 @@ final class SSEChatViewController: UIViewController {
     }
 
     private var heightUpdateScheduled = false
-    /// 重新计算 cell 高度，但不触发 reloadRows（避免打字过程中 cell 重建）。
+    /// 重新计算 cell 高度，但不触发 reloadRows（避免流式过程中 cell 重建）。
     private func requestCellHeightUpdate() {
         guard !heightUpdateScheduled else { return }
         heightUpdateScheduled = true
@@ -224,7 +243,14 @@ extension SSEChatViewController: UITableViewDelegate, UITableViewDataSource {
         } else {
             let cell = tableView.dequeueReusableCell(withIdentifier: SSEAssistantCell.id, for: indexPath) as! SSEAssistantCell
             cell.presentingViewController = self
-            cell.configure(content: msg.content, isStreaming: msg.isStreaming)
+            cell.onHeightChange = { [weak self] in
+                self?.requestCellHeightUpdate()
+            }
+            cell.configure(
+                content: msg.content,
+                isStreaming: msg.isStreaming,
+                userInterfaceStyle: traitCollection.userInterfaceStyle
+            )
             return cell
         }
     }
@@ -271,33 +297,33 @@ private final class SSEUserCell: UITableViewCell {
     }
 }
 
-// MARK: - AI 消息气泡（思考中 + 分段逐字打字）
-
+// MARK: - AI 消息气泡（流式增量 + 单块闭合即渲染）
+//
+// Demo 层流式策略（对齐 ADR-007）：未闭合 Mermaid 围栏或块级 `$$` / `\\[...\\]` 的尾部
+// 不参与 generated 生图，仅作源码/代码块展示；围栏真正闭合后才立即 flush 并复用 canonicalID。
 private final class SSEAssistantCell: UITableViewCell {
     static let id = "SSEAssistantCell"
 
     weak var presentingViewController: UIViewController?
 
     private let bubbleView = UIView()
-    /// 竖直排列各片段（文本段 / 代码块卡片），首项是「思考中…」标签。
     private let stackView = UIStackView()
     private let thinkingLabel = UILabel()
     private var isShowingThinking = false
 
-    /// 当前消息拆出的吐字片段（按文档顺序）。
     private var segments: [SSETypewriterSegment] = []
-    /// 各片段的吐字长度缓存，避免每帧重复取。
-    private var segmentLengths: [Int] = []
-    /// 已吐出的总字符数（跨所有片段累计）。
-    private var visibleTotal = 0
-    /// 全部片段的字符总数。
-    private var totalLength = 0
+    /// 按 ImageSource.canonicalID 复用生成图 / 网络图宿主，避免 chunk 重建时销毁 WebKit / 重载。
+    private var reusableGeneratedHosts: [String: GeneratedContentImageHostView] = [:]
+    private var reusableNetworkImages: [String: SSEImageSegmentView] = [:]
+    /// 按 ImageSource.canonicalID 复用行内公式，避免 chunk 刷新时重新生成。
+    private var reusableInlineAttachments: [String: InkImageAttachment] = [:]
+    /// 按顺序复用文本段，避免流式 rebuild 销毁已 materialize 的行内 attachment（D1）。
+    private var reusableTextSegments: [SSETextSegmentView] = []
+    private var failureObserver = GeneratedContentFailureObserver()
 
-    private var typewriterTimer: Timer?
-    private let typewriterInterval: TimeInterval = 0.02
-    private var tickCounter = 0
-    private var onHeightChange: (() -> Void)?
-    private var onFinished: (() -> Void)?
+    var onHeightChange: (() -> Void)?
+    private var lastAppliedMarkdown: String = ""
+    private var rebuildWorkItem: DispatchWorkItem?
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -337,117 +363,407 @@ private final class SSEAssistantCell: UITableViewCell {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    /// cellForRowAt 调用：根据消息状态决定显示「思考中」「全文」还是空。
-    func configure(content: String, isStreaming: Bool) {
-        cancelTypewriter()
+    func configure(content: String, isStreaming: Bool, userInterfaceStyle: UIUserInterfaceStyle) {
+        rebuildWorkItem?.cancel()
         if content.isEmpty && isStreaming {
-            // 思考中（流式攒字阶段，UI 不显示内容）
-            rebuildSegments(from: "")
+            clearSegmentsKeepingReuseCaches(false)
             showThinking()
+            lastAppliedMarkdown = ""
         } else if content.isEmpty {
             hideThinking()
-            rebuildSegments(from: "")
+            clearSegmentsKeepingReuseCaches(false)
+            lastAppliedMarkdown = ""
         } else {
-            // 有内容且不在流式中 → 直接显示全文（滚动回来 / 打字已完成）
             hideThinking()
-            rebuildSegments(from: content)
-            // 全部可见
-            for (i, seg) in segments.enumerated() { seg.setVisibleLength(segmentLengths[i]) }
-            visibleTotal = totalLength
+            rebuildSegments(from: content, userInterfaceStyle: userInterfaceStyle, revealAll: true)
+            lastAppliedMarkdown = content
         }
     }
 
-    /// 流式接收结束后由 VC 调用：开始逐字吐字。
-    func startTypewriter(fullContent: String, onHeightChange: @escaping () -> Void, completion: @escaping () -> Void) {
+    /// 流式分片到达：增量重建；已闭合的 generated 块复用宿主并保持异步渲染。
+    func applyStreamingContent(
+        _ markdown: String,
+        userInterfaceStyle: UIUserInterfaceStyle
+    ) {
         hideThinking()
-        rebuildSegments(from: fullContent)
-        // 全部从 0 开始
-        for seg in segments { seg.setVisibleLength(0) }
-        visibleTotal = 0
-        tickCounter = 0
-        self.onHeightChange = onHeightChange
-        self.onFinished = completion
 
-        typewriterTimer = Timer.scheduledTimer(withTimeInterval: typewriterInterval, repeats: true) { [weak self] _ in
-            self?.typewriterTick()
+        // 节流：避免每个 2 字符 chunk 全量重解析；围栏闭合字符触发立即刷新。
+        let shouldFlushImmediately = Self.looksLikeBlockJustClosed(previous: lastAppliedMarkdown, current: markdown)
+        rebuildWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.rebuildSegments(from: markdown, userInterfaceStyle: userInterfaceStyle, revealAll: true)
+            self.lastAppliedMarkdown = markdown
+            self.onHeightChange?()
+        }
+        rebuildWorkItem = work
+        if shouldFlushImmediately {
+            DispatchQueue.main.async(execute: work)
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
         }
     }
 
-    private func typewriterTick() {
-        guard visibleTotal < totalLength else {
-            cancelTypewriter()
-            onHeightChange?()
-            onFinished?()
-            onHeightChange = nil
-            onFinished = nil
-            return
-        }
-        visibleTotal += 1
-        applyVisible(total: visibleTotal)
+    /// 流结束：最终全量对齐一次。
+    func finishStreaming(
+        fullContent: String,
+        userInterfaceStyle: UIUserInterfaceStyle,
+        completion: @escaping () -> Void
+    ) {
+        rebuildWorkItem?.cancel()
+        hideThinking()
+        rebuildSegments(from: fullContent, userInterfaceStyle: userInterfaceStyle, revealAll: true)
+        lastAppliedMarkdown = fullContent
+        onHeightChange?()
+        completion()
+    }
 
-        // 每 5 个字符刷新一次高度，避免每帧都触发 layout
-        tickCounter += 1
-        if tickCounter >= 5 {
-            tickCounter = 0
-            onHeightChange?()
+    func reapplyTheme(content: String, userInterfaceStyle: UIUserInterfaceStyle) {
+        // 主题切换需重建 generated 宿主（theme 进入 identity）。
+        clearSegmentsKeepingReuseCaches(false)
+        rebuildSegments(from: content, userInterfaceStyle: userInterfaceStyle, revealAll: true)
+        lastAppliedMarkdown = content
+    }
+
+    private func rebuildSegments(
+        from markdown: String,
+        userInterfaceStyle: UIUserInterfaceStyle,
+        revealAll: Bool
+    ) {
+        for seg in segments {
+            stackView.removeArrangedSubview(seg)
+            seg.removeFromSuperview()
+        }
+        segments = []
+
+        guard !markdown.isEmpty else { return }
+
+        let built = Self.buildSegments(
+            from: markdown,
+            userInterfaceStyle: userInterfaceStyle,
+            presentingViewController: { [weak self] in self?.presentingViewController },
+            failureObserver: failureObserver,
+            reusableGenerated: &reusableGeneratedHosts,
+            reusableNetwork: &reusableNetworkImages,
+            reusableInline: &reusableInlineAttachments,
+            reusableText: &reusableTextSegments
+        )
+        segments = built
+        for seg in segments {
+            wireHeightChange(for: seg)
+            stackView.addArrangedSubview(seg)
+            if revealAll {
+                seg.setVisibleLength(seg.typewriterLength)
+            }
         }
     }
 
-    /// 把累计可见长度按文档顺序分配到各片段。
-    private func applyVisible(total: Int) {
-        var remaining = total
-        for (i, seg) in segments.enumerated() {
-            let len = segmentLengths[i]
-            let v = max(0, min(remaining, len))
-            seg.setVisibleLength(v)
-            remaining -= v
+    private func wireHeightChange(for seg: SSETypewriterSegment) {
+        let callback: () -> Void = { [weak self] in self?.onHeightChange?() }
+        if let textSeg = seg as? SSETextSegmentView {
+            textSeg.onHeightChange = callback
+        } else if let host = seg as? GeneratedContentImageHostView {
+            host.onHeightChange = callback
+        } else if let imgSeg = seg as? SSEImageSegmentView {
+            imgSeg.onHeightChange = callback
         }
     }
 
-    /// 用 Block 路由把 Markdown 拆成片段视图，重建 stack。
-    private func rebuildSegments(from markdown: String) {
-        // 移除旧片段（保留首项 thinkingLabel）
-        for seg in segments { stackView.removeArrangedSubview(seg); seg.removeFromSuperview() }
-        let presenter: () -> UIViewController? = { [weak self] in self?.presentingViewController }
-        segments = markdown.isEmpty ? [] : SSEAssistantCell.buildSegments(from: markdown, presentingViewController: presenter)
-        segmentLengths = segments.map { $0.typewriterLength }
-        totalLength = segmentLengths.reduce(0, +)
-        visibleTotal = 0
-        for seg in segments { stackView.addArrangedSubview(seg) }
+    private func clearSegmentsKeepingReuseCaches(_ keep: Bool) {
+        for seg in segments {
+            stackView.removeArrangedSubview(seg)
+            seg.removeFromSuperview()
+        }
+        segments = []
+        if !keep {
+            reusableGeneratedHosts.removeAll()
+            reusableNetworkImages.removeAll()
+            reusableInlineAttachments.removeAll()
+            reusableTextSegments.removeAll()
+            failureObserver = GeneratedContentFailureObserver()
+        }
     }
 
-    /// Markdown → 片段数组：围栏代码块走自定义卡片，表格走逐行吐字，块级图走图片片段，其余走文本段。
+    /// Markdown → 片段：全局开启公式与图表；generated 块按 canonicalID 增量复用。
     private static func buildSegments(
         from markdown: String,
-        presentingViewController: @escaping () -> UIViewController?
+        userInterfaceStyle: UIUserInterfaceStyle,
+        presentingViewController: @escaping () -> UIViewController?,
+        failureObserver: GeneratedContentFailureObserver,
+        reusableGenerated: inout [String: GeneratedContentImageHostView],
+        reusableNetwork: inout [String: SSEImageSegmentView],
+        reusableInline: inout [String: InkImageAttachment],
+        reusableText: inout [SSETextSegmentView]
     ) -> [SSETypewriterSegment] {
-        var appearance = InkAppearance()
-        appearance.imageRendering.isEnabled = true
-        appearance.imageRendering.promotesToBlock = true
-        appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
-        appearance.enableDemoBlockImageTap(presentingViewController: presentingViewController)
-
-        let config = InkConfiguration(
-            appearance: appearance,
-            blockHandlers: [SSECodeBlockHandler(), SSETableBlockHandler()]
+        var config = InkConfiguration.demoGeneratedContent(
+            mode: .diagrams,
+            userInterfaceStyle: userInterfaceStyle,
+            allowsInlineDollarDelimiter: false
         )
-        let blocks = InkBlockRenderer.render(markdown, configuration: config)
+        // 图文混排路径仍开启网络图。
+        config.appearance.imageRendering.isEnabled = true
+        config.appearance.imageRendering.promotesToBlock = true
+        config.appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
+        config.appearance.enableDemoBlockImageTap(presentingViewController: presentingViewController)
+        failureObserver.attach(to: &config.appearance)
+
+        config.blockHandlers = [SSECodeBlockHandler(), SSETableBlockHandler()]
+
+        let (stableMarkdown, trailingMarkdown) = Self.partitionForStreamingRender(markdown)
         var result: [SSETypewriterSegment] = []
+        var nextGenerated: [String: GeneratedContentImageHostView] = [:]
+        var nextNetwork: [String: SSEImageSegmentView] = [:]
+        var nextText: [SSETextSegmentView] = []
+
+        appendBlocks(
+            from: stableMarkdown,
+            configuration: config,
+            failureObserver: failureObserver,
+            reusableGenerated: &reusableGenerated,
+            reusableNetwork: &reusableNetwork,
+            reusableInline: &reusableInline,
+            reusableText: &reusableText,
+            nextGenerated: &nextGenerated,
+            nextNetwork: &nextNetwork,
+            nextText: &nextText,
+            into: &result
+        )
+
+        if !trailingMarkdown.isEmpty {
+            var trailingConfig = InkConfiguration.demoGeneratedContent(
+                mode: .disabled,
+                userInterfaceStyle: userInterfaceStyle
+            )
+            trailingConfig.appearance.imageRendering = config.appearance.imageRendering
+            trailingConfig.appearance.enableDemoBlockImageTap(presentingViewController: presentingViewController)
+            trailingConfig.blockHandlers = config.blockHandlers
+            appendBlocks(
+                from: trailingMarkdown,
+                configuration: trailingConfig,
+                failureObserver: failureObserver,
+                reusableGenerated: &reusableGenerated,
+                reusableNetwork: &reusableNetwork,
+                reusableInline: &reusableInline,
+                reusableText: &reusableText,
+                nextGenerated: &nextGenerated,
+                nextNetwork: &nextNetwork,
+                nextText: &nextText,
+                into: &result
+            )
+        }
+
+        reusableGenerated = nextGenerated
+        reusableNetwork = nextNetwork
+        reusableText = nextText
+        return result
+    }
+
+    private static func appendBlocks(
+        from markdown: String,
+        configuration: InkConfiguration,
+        failureObserver: GeneratedContentFailureObserver,
+        reusableGenerated: inout [String: GeneratedContentImageHostView],
+        reusableNetwork: inout [String: SSEImageSegmentView],
+        reusableInline: inout [String: InkImageAttachment],
+        reusableText: inout [SSETextSegmentView],
+        nextGenerated: inout [String: GeneratedContentImageHostView],
+        nextNetwork: inout [String: SSEImageSegmentView],
+        nextText: inout [SSETextSegmentView],
+        into result: inout [SSETypewriterSegment]
+    ) {
+        let blocks = InkBlockRenderer.render(markdown, configuration: configuration)
+        var textIndex = 0
         for block in blocks {
-            if let textBlock = block as? InkAttributedTextBlock {
-                result.append(SSETextSegmentView(attributedText: textBlock.attributedText))
+            if let imageBlock = block as? InkImageBlock, imageBlock.source.scheme == .generated {
+                let id = imageBlock.source.canonicalID
+                if let existing = reusableGenerated[id] {
+                    failureObserver.register(existing)
+                    result.append(existing)
+                    nextGenerated[id] = existing
+                } else if let host = failureObserver.makeSegment(for: block) as? GeneratedContentImageHostView {
+                    result.append(host)
+                    nextGenerated[id] = host
+                }
             } else if let imageBlock = block as? InkImageBlock {
-                result.append(SSEImageSegmentView(imageBlock: imageBlock))
+                let id = imageBlock.source.canonicalID
+                if let existing = reusableNetwork[id] {
+                    result.append(existing)
+                    nextNetwork[id] = existing
+                } else {
+                    let seg = SSEImageSegmentView(imageBlock: imageBlock)
+                    result.append(seg)
+                    nextNetwork[id] = seg
+                }
+            } else if let textBlock = block as? InkAttributedTextBlock {
+                let mutableAttr = NSMutableAttributedString(attributedString: textBlock.attributedText)
+                mutableAttr.enumerateAttribute(.attachment, in: NSRange(location: 0, length: mutableAttr.length), options: []) { value, range, _ in
+                    if let attachment = value as? InkImageAttachment {
+                        let id = attachment.source.canonicalID
+                        if let existing = reusableInline[id] {
+                            mutableAttr.addAttribute(.attachment, value: existing, range: range)
+                        } else {
+                            reusableInline[id] = attachment
+                        }
+                    }
+                }
+                
+                let seg: SSETextSegmentView
+                if textIndex < reusableText.count {
+                    seg = reusableText[textIndex]
+                    seg.updateFullText(mutableAttr)
+                } else {
+                    seg = SSETextSegmentView(attributedText: mutableAttr)
+                }
+                result.append(seg)
+                nextText.append(seg)
+                textIndex += 1
             } else if let seg = block.makeView() as? SSETypewriterSegment {
                 result.append(seg)
             }
         }
-        return result
     }
 
-    private func cancelTypewriter() {
-        typewriterTimer?.invalidate()
-        typewriterTimer = nil
+    /// 未闭合 generated 块（Mermaid 围栏 / 块级 `$$` / `\\[...\\]`）之前的稳定前缀可立即生图；尾部降级为普通块。
+    private static func partitionForStreamingRender(_ markdown: String) -> (stable: String, trailing: String) {
+        if let fenceStart = startOfUnclosedMermaidFence(in: markdown) {
+            return (String(markdown[..<fenceStart]), String(markdown[fenceStart...]))
+        }
+        if let dollarStart = startOfUnclosedBlockDollar(in: markdown) {
+            return (String(markdown[..<dollarStart]), String(markdown[dollarStart...]))
+        }
+        if let bracketStart = startOfUnclosedBlockBrackets(in: markdown) {
+            return (String(markdown[..<bracketStart]), String(markdown[bracketStart...]))
+        }
+        return (markdown, "")
+    }
+
+    /// 仅当本次增量使未闭合 generated 块归零时才立即 flush；单纯打开围栏不算闭合。
+    private static func looksLikeBlockJustClosed(previous: String, current: String) -> Bool {
+        guard current.count > previous.count else { return false }
+        if hasUnclosedMermaidFence(previous) && !hasUnclosedMermaidFence(current) { return true }
+        if hasUnclosedBlockDollar(previous) && !hasUnclosedBlockDollar(current) { return true }
+        if hasUnclosedBlockBrackets(previous) && !hasUnclosedBlockBrackets(current) { return true }
+        return false
+    }
+
+    private struct FenceMarker {
+        let character: Character
+        let count: Int
+    }
+
+    private static func hasUnclosedMermaidFence(_ source: String) -> Bool {
+        startOfUnclosedMermaidFence(in: source) != nil
+    }
+
+    private static func startOfUnclosedMermaidFence(in source: String) -> String.Index? {
+        var fence: FenceMarker?
+        var openingLineStart: String.Index?
+        var lineStart = source.startIndex
+
+        while lineStart < source.endIndex {
+            let lineEnd = source[lineStart...].firstIndex(of: "\n") ?? source.endIndex
+            let line = source[lineStart..<lineEnd]
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            if let open = fence {
+                if let closing = closingCodeFenceMarker(in: trimmed),
+                   closing.character == open.character,
+                   closing.count >= open.count {
+                    fence = nil
+                    openingLineStart = nil
+                }
+            } else if let opening = openingCodeFenceMarker(in: trimmed) {
+                let language = trimmed.dropFirst(opening.count).trimmingCharacters(in: .whitespacesAndNewlines)
+                if InkMermaidFence.isMermaid(language: String(language)) {
+                    fence = opening
+                    openingLineStart = lineStart
+                }
+            }
+
+            if lineEnd < source.endIndex {
+                lineStart = source.index(after: lineEnd)
+            } else {
+                break
+            }
+        }
+
+        return fence != nil ? openingLineStart : nil
+    }
+
+    private static func hasUnclosedBlockDollar(_ source: String) -> Bool {
+        startOfUnclosedBlockDollar(in: source) != nil
+    }
+
+    private static func startOfUnclosedBlockDollar(in source: String) -> String.Index? {
+        var open = false
+        var openingIndex: String.Index?
+        var index = source.startIndex
+        while index < source.endIndex {
+            if source[index...].hasPrefix("$$"), !isEscaped(source, at: index) {
+                if open {
+                    open = false
+                    openingIndex = nil
+                } else {
+                    open = true
+                    openingIndex = index
+                }
+                index = source.index(index, offsetBy: 2)
+                continue
+            }
+            index = source.index(after: index)
+        }
+        return open ? openingIndex : nil
+    }
+
+    private static func hasUnclosedBlockBrackets(_ source: String) -> Bool {
+        startOfUnclosedBlockBrackets(in: source) != nil
+    }
+
+    private static func startOfUnclosedBlockBrackets(in source: String) -> String.Index? {
+        var open = false
+        var openingIndex: String.Index?
+        var index = source.startIndex
+        while index < source.endIndex {
+            if source[index...].hasPrefix("\\["), !isEscaped(source, at: index) {
+                open = true
+                openingIndex = index
+                index = source.index(index, offsetBy: 2)
+                continue
+            }
+            if source[index...].hasPrefix("\\]"), !isEscaped(source, at: index), open {
+                open = false
+                openingIndex = nil
+                index = source.index(index, offsetBy: 2)
+                continue
+            }
+            index = source.index(after: index)
+        }
+        return open ? openingIndex : nil
+    }
+
+    private static func openingCodeFenceMarker(in trimmedLine: String) -> FenceMarker? {
+        guard let first = trimmedLine.first, first == "`" || first == "~" else { return nil }
+        let count = trimmedLine.prefix(while: { $0 == first }).count
+        guard count >= 3 else { return nil }
+        return FenceMarker(character: first, count: count)
+    }
+
+    private static func closingCodeFenceMarker(in trimmedLine: String) -> FenceMarker? {
+        guard let marker = openingCodeFenceMarker(in: trimmedLine) else { return nil }
+        guard trimmedLine.dropFirst(marker.count).isEmpty else { return nil }
+        return marker
+    }
+
+    private static func isEscaped(_ source: String, at index: String.Index) -> Bool {
+        var slashCount = 0
+        var cursor = index
+        while cursor > source.startIndex {
+            let previous = source.index(before: cursor)
+            guard source[previous] == "\\" else { break }
+            slashCount += 1
+            cursor = previous
+        }
+        return !slashCount.isMultiple(of: 2)
     }
 
     // MARK: - 思考中动画
@@ -474,18 +790,14 @@ private final class SSEAssistantCell: UITableViewCell {
 
     override func prepareForReuse() {
         super.prepareForReuse()
-        cancelTypewriter()
+        rebuildWorkItem?.cancel()
         onHeightChange = nil
-        onFinished = nil
         thinkingLabel.layer.removeAllAnimations()
         isShowingThinking = false
         thinkingLabel.isHidden = true
         thinkingLabel.alpha = 1
-        for seg in segments { stackView.removeArrangedSubview(seg); seg.removeFromSuperview() }
-        segments = []
-        segmentLengths = []
-        visibleTotal = 0
-        totalLength = 0
+        clearSegmentsKeepingReuseCaches(false)
+        lastAppliedMarkdown = ""
     }
 }
 
@@ -493,7 +805,9 @@ private final class SSEAssistantCell: UITableViewCell {
 
 private struct SSECodeBlockHandler: InkBlockHandler {
     func canHandle(_ markup: Markup) -> Bool {
-        markup is Markdown.CodeBlock
+        guard let code = markup as? Markdown.CodeBlock else { return false }
+        // Mermaid 由库侧 InkMermaidBlockHandler 优先接管；此处只处理普通代码块。
+        return !InkMermaidFence.isMermaid(language: code.language)
     }
 
     func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {

@@ -64,6 +64,15 @@ enum DemoCatalog {
           .scenario(.imageRenderingDemo),
         ]
       ),
+      DemoSection(
+        title: "公式与图表",
+        footer: "LaTeX 数学公式与 Mermaid 图表，本地生成位图并复用 Image Store。",
+        rows: [
+          .component(.latex),
+          .component(.mermaid),
+          .scenario(.diagramRenderingDemo),
+        ]
+      ),
     ]
   }
 
