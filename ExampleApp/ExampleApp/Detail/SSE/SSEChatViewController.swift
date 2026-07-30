@@ -25,7 +25,7 @@ final class SSEChatViewController: UIViewController {
         t.delegate = self
         t.dataSource = self
         t.keyboardDismissMode = .onDrag
-        t.estimatedRowHeight = 60
+        t.estimatedRowHeight = 200
         t.rowHeight = UITableView.automaticDimension
         t.register(SSEUserCell.self, forCellReuseIdentifier: SSEUserCell.id)
         t.register(SSEAssistantCell.self, forCellReuseIdentifier: SSEAssistantCell.id)
@@ -216,24 +216,42 @@ final class SSEChatViewController: UIViewController {
     }
 
     private var heightUpdateScheduled = false
+    private var lastHeightUpdateTime: CFTimeInterval = 0
     /// 重新计算 cell 高度，但不触发 reloadRows（避免流式过程中 cell 重建）。
     private func requestCellHeightUpdate() {
         guard !heightUpdateScheduled else { return }
         heightUpdateScheduled = true
-        DispatchQueue.main.async { [weak self] in
+        
+        let now = CACurrentMediaTime()
+        let interval: CFTimeInterval = 0.05
+        let elapsed = now - lastHeightUpdateTime
+        
+        let executeUpdate: () -> Void = { [weak self] in
             guard let self else { return }
             self.heightUpdateScheduled = false
-            self.tableView.beginUpdates()
-            self.tableView.endUpdates()
-            self.scrollToBottom(animated: false)
+            self.lastHeightUpdateTime = CACurrentMediaTime()
+            UIView.performWithoutAnimation {
+                self.tableView.beginUpdates()
+                self.tableView.endUpdates()
+                self.scrollToBottom(animated: false)
+            }
+        }
+        
+        if elapsed >= interval {
+            DispatchQueue.main.async(execute: executeUpdate)
+        } else {
+            let delay = interval - elapsed
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: executeUpdate)
         }
     }
 
     private func scrollToBottom(animated: Bool) {
         guard !messages.isEmpty else { return }
-        let indexPath = IndexPath(row: messages.count - 1, section: 0)
         tableView.layoutIfNeeded()
-        tableView.scrollToRow(at: indexPath, at: .bottom, animated: animated)
+        let bottomOffset = max(tableView.contentSize.height - tableView.bounds.height + tableView.contentInset.bottom, -tableView.contentInset.top)
+        if bottomOffset > tableView.contentOffset.y {
+            tableView.setContentOffset(CGPoint(x: 0, y: bottomOffset), animated: animated)
+        }
     }
 
     // MARK: - 键盘
@@ -361,6 +379,7 @@ private final class SSEAssistantCell: UITableViewCell {
     private var reusableInlineAttachments: [String: InkImageAttachment] = [:]
     /// 按顺序复用文本段，避免流式 rebuild 销毁已 materialize 的行内 attachment（D1）。
     private var reusableTextSegments: [SSETextSegmentView] = []
+    private var reusableMermaidWidgets: [MermaidWidgetView] = []
     private var failureObserver = GeneratedContentFailureObserver()
 
     var onHeightChange: (() -> Void)?
@@ -503,7 +522,8 @@ private final class SSEAssistantCell: UITableViewCell {
             reusableGenerated: &reusableGeneratedHosts,
             reusableNetwork: &reusableNetworkImages,
             reusableInline: &reusableInlineAttachments,
-            reusableText: &reusableTextSegments
+            reusableText: &reusableTextSegments,
+            reusableMermaid: &reusableMermaidWidgets
         )
         segments = built
         for seg in segments {
@@ -523,6 +543,8 @@ private final class SSEAssistantCell: UITableViewCell {
             host.onHeightChange = callback
         } else if let imgSeg = seg as? SSEImageSegmentView {
             imgSeg.onHeightChange = callback
+        } else if let mermaidSeg = seg as? MermaidWidgetView {
+            mermaidSeg.onHeightChange = callback
         }
     }
 
@@ -537,6 +559,7 @@ private final class SSEAssistantCell: UITableViewCell {
             reusableNetworkImages.removeAll()
             reusableInlineAttachments.removeAll()
             reusableTextSegments.removeAll()
+            reusableMermaidWidgets.removeAll()
             failureObserver = GeneratedContentFailureObserver()
         }
     }
@@ -550,7 +573,8 @@ private final class SSEAssistantCell: UITableViewCell {
         reusableGenerated: inout [String: GeneratedContentImageHostView],
         reusableNetwork: inout [String: SSEImageSegmentView],
         reusableInline: inout [String: InkImageAttachment],
-        reusableText: inout [SSETextSegmentView]
+        reusableText: inout [SSETextSegmentView],
+        reusableMermaid: inout [MermaidWidgetView]
     ) -> [SSETypewriterSegment] {
         var config = InkConfiguration.demoGeneratedContent(
             mode: .diagrams,
@@ -571,6 +595,9 @@ private final class SSEAssistantCell: UITableViewCell {
         var nextGenerated: [String: GeneratedContentImageHostView] = [:]
         var nextNetwork: [String: SSEImageSegmentView] = [:]
         var nextText: [SSETextSegmentView] = []
+        var nextMermaid: [MermaidWidgetView] = []
+        
+        var mermaidIndex = 0
 
         appendBlocks(
             from: stableMarkdown,
@@ -580,9 +607,13 @@ private final class SSEAssistantCell: UITableViewCell {
             reusableNetwork: &reusableNetwork,
             reusableInline: &reusableInline,
             reusableText: &reusableText,
+            reusableMermaid: &reusableMermaid,
             nextGenerated: &nextGenerated,
             nextNetwork: &nextNetwork,
             nextText: &nextText,
+            nextMermaid: &nextMermaid,
+            mermaidIndex: &mermaidIndex,
+            presentingViewController: presentingViewController,
             into: &result
         )
 
@@ -602,9 +633,13 @@ private final class SSEAssistantCell: UITableViewCell {
                 reusableNetwork: &reusableNetwork,
                 reusableInline: &reusableInline,
                 reusableText: &reusableText,
+                reusableMermaid: &reusableMermaid,
                 nextGenerated: &nextGenerated,
                 nextNetwork: &nextNetwork,
                 nextText: &nextText,
+                nextMermaid: &nextMermaid,
+                mermaidIndex: &mermaidIndex,
+                presentingViewController: presentingViewController,
                 into: &result
             )
         }
@@ -612,6 +647,7 @@ private final class SSEAssistantCell: UITableViewCell {
         reusableGenerated = nextGenerated
         reusableNetwork = nextNetwork
         reusableText = nextText
+        reusableMermaid = nextMermaid
         return result
     }
 
@@ -623,14 +659,57 @@ private final class SSEAssistantCell: UITableViewCell {
         reusableNetwork: inout [String: SSEImageSegmentView],
         reusableInline: inout [String: InkImageAttachment],
         reusableText: inout [SSETextSegmentView],
+        reusableMermaid: inout [MermaidWidgetView],
         nextGenerated: inout [String: GeneratedContentImageHostView],
         nextNetwork: inout [String: SSEImageSegmentView],
         nextText: inout [SSETextSegmentView],
+        nextMermaid: inout [MermaidWidgetView],
+        mermaidIndex: inout Int,
+        presentingViewController: @escaping () -> UIViewController?,
         into result: inout [SSETypewriterSegment]
     ) {
         let blocks = InkBlockRenderer.render(markdown, configuration: configuration)
         var textIndex = 0
         for block in blocks {
+            // Check for Mermaid block (closed or unclosed)
+            let isMermaidClosed = (block as? InkImageBlock)?.source.generatedRequest?.owner == "mermaid"
+            let isMermaidUnclosed = (block as? CodeBlockCardBlock)?.language.map { InkMermaidFence.isMermaid(language: $0) } == true
+            
+            if isMermaidClosed || isMermaidUnclosed {
+                let widget: MermaidWidgetView
+                if mermaidIndex < reusableMermaid.count {
+                    widget = reusableMermaid[mermaidIndex]
+                } else {
+                    widget = MermaidWidgetView()
+                    widget.onFullscreenRequest = { image in
+                        if let vc = presentingViewController() {
+                            let fullVC = MermaidFullscreenViewController(image: image)
+                            vc.present(fullVC, animated: true)
+                        }
+                    }
+                }
+                
+                if let closedBlock = block as? InkImageBlock {
+                    if let req = closedBlock.source.generatedRequest {
+                        widget.updateSource(req.source)
+                        let loader = InkMermaidGeneratedImageLoader(limits: .init())
+                        let display = DisplayContext(maxPixelWidth: 1024, scale: UIScreen.main.scale, contentMode: .fit)
+                        Task { @MainActor in
+                            if let image = try? await loader.loadGeneratedImage(request: req, display: display) {
+                                widget.setRenderedImage(image)
+                            }
+                        }
+                    }
+                } else if let unclosedBlock = block as? CodeBlockCardBlock {
+                    widget.updateSource(unclosedBlock.code)
+                }
+                
+                result.append(widget)
+                nextMermaid.append(widget)
+                mermaidIndex += 1
+                continue
+            }
+            
             if let imageBlock = block as? InkImageBlock, imageBlock.source.scheme == .generated {
                 let id = imageBlock.source.canonicalID
                 if let existing = reusableGenerated[id] {

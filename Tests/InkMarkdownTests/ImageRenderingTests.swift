@@ -958,3 +958,41 @@ private func makeImageTextStorage(
   block.handleConfiguredTap()
   #expect(callCount == 1)
 }
+
+@Test @MainActor func applyImage_setsShouldAnimateNextHeightChangeWhenDeltaExceedsThreshold() async {
+  let urlLarge = URL(string: "https://example.com/large.png")!
+  let urlSmall = URL(string: "https://example.com/small.png")!
+  let loader = SizedMockImageLoader(imagesByURL: [
+    urlLarge.absoluteString: makeTestImage(width: 200, height: 300),
+    urlSmall.absoluteString: makeTestImage(width: 200, height: 180),
+  ])
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.loader = loader
+
+  let store = InkImageStore()
+
+  var largeAnimatedFlagDuringCallback: Bool?
+  var smallAnimatedFlagDuringCallback: Bool?
+
+  let attachmentLarge = InkImageAttachment(source: ImageSource(url: urlLarge), rendering: rendering, store: store)
+  let (storageLarge, layoutManagerLarge) = makeImageTextStorage(attachments: [attachmentLarge])
+  attachmentLarge.bind(to: layoutManagerLarge, store: store) {
+    largeAnimatedFlagDuringCallback = attachmentLarge.shouldAnimateNextHeightChange
+  }
+
+  await waitForImageLoads(count: 1, loader: loader, storage: storageLarge, expectedMaximumLineHeight: 300)
+  #expect(largeAnimatedFlagDuringCallback == true)
+  #expect(attachmentLarge.shouldAnimateNextHeightChange == false)
+
+  let attachmentSmall = InkImageAttachment(source: ImageSource(url: urlSmall), rendering: rendering, store: store)
+  let (storageSmall, layoutManagerSmall) = makeImageTextStorage(attachments: [attachmentSmall])
+  attachmentSmall.bind(to: layoutManagerSmall, store: store) {
+    smallAnimatedFlagDuringCallback = attachmentSmall.shouldAnimateNextHeightChange
+  }
+
+  await waitForImageLoads(count: 2, loader: loader, storage: storageSmall, expectedMaximumLineHeight: 180)
+  #expect(smallAnimatedFlagDuringCallback == false)
+  #expect(attachmentSmall.shouldAnimateNextHeightChange == false)
+}
+

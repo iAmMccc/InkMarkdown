@@ -20,6 +20,10 @@ public final class InkImageAttachment: NSTextAttachment {
   weak var layoutManager: NSLayoutManager?
   /// 布局高度变化通知（流式路径复用 ``InkStreamRenderer`` 的高度检测）。
   var onHeightChange: (() -> Void)?
+  /// 标志位：标识下一次 `onHeightChange` 触发的高度变更是否推荐执行动画过渡。
+  /// 在 `applyImage` 中当图片实际高度与占位高度差值超过 50pt 时设为 `true`，
+  /// 回调完成后重置为 `false`。
+  public internal(set) var shouldAnimateNextHeightChange: Bool = false
   private var subscription: InkImageStore.ImageLoadSubscription?
   private var didMaterialize = false
   private var pendingLayoutMaterialize = false
@@ -207,6 +211,14 @@ public final class InkImageAttachment: NSTextAttachment {
       minPlaceholder: rendering.placeholderHeight,
       maxHeight: sizing.maxImageHeight
     )
+
+    let heightDelta = abs(fittedSize.height - rendering.placeholderHeight)
+    let needsAnimation = heightDelta > 50
+    shouldAnimateNextHeightChange = needsAnimation
+    defer {
+      shouldAnimateNextHeightChange = false
+    }
+
     bounds = CGRect(origin: .zero, size: fittedSize)
     image = loadedImage
 

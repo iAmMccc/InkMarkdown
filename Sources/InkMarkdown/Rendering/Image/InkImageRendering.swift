@@ -101,7 +101,7 @@ public struct InkImageRendering {
   public var sizing: ImageSizing = .init()
 
   /// 加载中占位视图的高度（pt）。
-  public var placeholderHeight: CGFloat = 80
+  public var placeholderHeight: CGFloat = 160
 
   /// 点击图片时的默认行为。块级 ``InkImageBlock`` 会自动分发；默认 `.none`。
   public var tapAction: ImageTapAction = .none

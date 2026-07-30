@@ -48,6 +48,10 @@ public final class InkStreamRenderer {
   /// 每帧显示内容变化时回调（用于通知外部更新 cell 高度）。
   public var onDisplayUpdate: (() -> Void)?
 
+  /// Mermaid 块事件回调
+  public var onMermaidBlockUpdate: ((_ blockID: String, _ source: String, _ isComplete: Bool) -> Void)?
+
+
   /// 所有内容吐字完毕时回调（finish 被调用且 displayIndex 追上 totalLength 时触发）。
   public var onFinishDisplay: (() -> Void)?
 
