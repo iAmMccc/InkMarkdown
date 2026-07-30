@@ -44,7 +44,7 @@ Add InkMarkdown to your `Package.swift` dependencies:
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/iAmMccc/InkMarkdown.git", branch: "main")
+  .package(url: "https://github.com/iAmMccc/InkMarkdown.git", from: "0.0.1")
 ]
 ```
 

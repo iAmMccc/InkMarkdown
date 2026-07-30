@@ -6,7 +6,11 @@
 
 ---
 
-## [Unreleased] - v1.0.0-dev
+## [Unreleased]
+
+## [0.0.1] - 2026-07-30
+
+首次公测发布（pre-release）。
 
 ### Added
 - **富文本渲染引擎 (`InkAttributedRenderer`)**：
@@ -28,9 +32,10 @@
 - **Opt-in 本地 LaTeX 与 Mermaid 支持**：
   - 支持行内公式 `$` / `\(` 及块级公式 `$$` / `\[` 的本地图片渲染；
   - 支持 Mermaid 围栏图表离线渲染与独立块路由 (`InkMermaidBlockView`)；
-  - 提供受控统一内存图片 Store。
+  - 提供受控统一内存图片 Store；
+  - 升级支持 Mermaid 11+ 语法，并补充图类型测试用例。
 - **测试套件与示例程序**：
-  - 提供包含 32 项测试的 iOS Simulator 自动化测试套件（涵盖行高、上下文、流式边界与性能）；
+  - 提供 iOS Simulator 自动化测试套件（涵盖行高、上下文、流式边界、性能、图片与 Mermaid）；
   - 提供完整的 ExampleApp 交互式演示程序。
 
 ---

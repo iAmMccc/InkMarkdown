@@ -44,7 +44,7 @@ InkMarkdown 是基于 Apple [`swift-markdown`](https://github.com/swiftlang/swif
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/iAmMccc/InkMarkdown.git", branch: "main")
+  .package(url: "https://github.com/iAmMccc/InkMarkdown.git", from: "0.0.1")
 ]
 ```
 
