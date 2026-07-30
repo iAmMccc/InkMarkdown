@@ -23,6 +23,8 @@
 | 层级 | 职责 | 主要文件 |
 | --- | --- | --- |
 | 项目约束 | 定位、平台和协作规则 | 根目录 `AGENTS.md` / `CLAUDE.md` |
+| 参与开源贡献 | 贡献指南 | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| 版本变更 | 更新日志 | [CHANGELOG.md](CHANGELOG.md) |
 | 当前事实 | 交付产物与现实状态 | [current-status.md](current-status.md)、`Package.swift`、公开 API、测试 |
 | 工程证据基线 | 技术栈、目录结构、架构摘要、编码约定、测试方式、风险点 | [codebase/](codebase/README.md) |
 | 决策记录 | 方案选型与被否决方案 | [decisions/](decisions/README.md) |

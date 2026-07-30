@@ -2,174 +2,229 @@
 
 [简体中文](README.zh-CN.md)
 
-InkMarkdown is a **UIKit-only** Markdown rendering library built on Apple
-[swift-markdown](https://github.com/swiftlang/swift-markdown). It turns the
-Markup tree into `NSAttributedString` and native block `UIView`s, including an
-incremental renderer for AI chat and other streaming content.
+[![Swift](https://img.shields.io/badge/Swift-6.2+-orange.svg)](https://swift.org)
+[![Platform](https://img.shields.io/badge/Platform-iOS%2014+-lightgrey.svg)](https://developer.apple.com/ios/)
+[![UIKit](https://img.shields.io/badge/Framework-UIKit%20Only-blue.svg)](https://developer.apple.com/documentation/uikit)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-InkMarkdown deliberately does not provide a SwiftUI renderer. MarkdownUI and
-Textual already serve that ecosystem; this project focuses on UIKit hosts and
-does not use WebView / HTML-first rendering as its primary path.
+InkMarkdown is a **UIKit-dedicated** Markdown parsing and rendering framework built on Apple's [`swift-markdown`](https://github.com/swiftlang/swift-markdown). It transforms the Markup AST into native `NSAttributedString` rich text and native block `UIView`s, while providing a frame-paced incremental renderer for AI streaming applications.
 
-The project does not replace `swift-markdown` as a parser. It consumes the
-Markup tree and turns it into native UI:
+> 📌 **UIKit Scope**: InkMarkdown is designed exclusively for UIKit hosts to fill the capability gap in existing Apple Markdown libraries. It deliberately omits SwiftUI renderers (which are already served by MarkdownUI and Textual) and avoids WebView/HTML wrappers.
 
-- `NSAttributedString` for rich text.
-- Block `UIView`s for tables, code blocks, and thematic breaks.
-- Incremental rendering for streaming Markdown.
-- Host custom extension points for custom inline syntax, block routing, source filtering,
-  appearance, and link handling.
-- Opt-in local LaTeX images and offline Mermaid diagram blocks, both sharing the image store.
+---
 
-## Why InkMarkdown
+## Key Features
 
-| Library type | What it usually provides | How InkMarkdown is different |
-| --- | --- | --- |
-| `swift-markdown` | Parsing + Markup AST | Adds a UIKit-native **render layer** on top. |
-| MarkdownUI / Textual | Mature **SwiftUI** rendering | Focuses on UIKit instead of duplicating their SwiftUI scope. |
-| Microsoft SwiftStreamingMarkdown | Streaming + SwiftUI-oriented product features | Pure native stack with **block routing**, fixed line height, and host-pluggable custom handlers—built for embedding in existing UIKit apps first. |
-| HTML / WebView renderers | HTML or embedded web | Native text + views; no WebView required for core content. |
-| Simple attributed-string helpers | Inline rich text | Block routing (tables / code), streaming, and custom extension points. |
+- **Dual Rendering Pipelines**:
+  - **`InkAttributedRenderer`**: Converts Markdown to `NSAttributedString` with strict fixed line height and downward context passing.
+  - **`InkBlockRenderer`**: Routes AST nodes into native `UIView` block components (tables, code blocks, thematic breaks, images).
+- **Streaming AI Renderer (`InkStreamRenderer`)**:
+  - Dual-buffer architecture (background parsing queue + CADisplayLink frame-driven output).
+  - Smooth text display with zero main-thread parsing stutter and bound `UITextView` differential updates.
+- **Extensible Architecture**:
+  - Host-definable inline syntax (`InkInlineSyntax`), block routing (`InkBlockHandler`), source filtering, and link tap interception.
+- **Opt-in Local Diagram & Math Support**:
+  - Native rendering for LaTeX formulas (`$...$`, `$$...$$`) and Mermaid diagrams via local offline image generation and bounded image storage.
+
+---
 
 ## Requirements
 
-- Swift 6.2+
-- iOS 14+ (current package declaration)
+| Toolchain / Platform | Requirement |
+| --- | --- |
+| Swift Toolchain | 6.2+ (Package configured with Swift 5 language mode) |
+| Target Platform | iOS 14.0+ |
+| Framework | UIKit (No SwiftUI dependency) |
+
+---
 
 ## Installation
 
+Add InkMarkdown to your `Package.swift` dependencies:
+
 ```swift
-.package(url: "https://github.com/iAmMccc/InkMarkdown.git", branch: "main")
+dependencies: [
+  .package(url: "https://github.com/iAmMccc/InkMarkdown.git", branch: "main")
+]
 ```
 
-## Usage
+Or add the repository URL directly in Xcode via **File > Add Package Dependencies...**.
 
-Render Markdown as `NSAttributedString`:
+---
+
+## Quick Start
+
+### 1. Attributed Text Rendering
+
+Render Markdown directly into an `NSAttributedString`:
 
 ```swift
 import InkMarkdown
+import UIKit
 
 let markdown = """
-# Title
+# InkMarkdown Title
 
-Hello **InkMarkdown**.
+Hello **UIKit**, this is *attributed text*.
 """
 
-let attributed = InkAttributedRenderer.render(markdown)
+let attributedString = InkAttributedRenderer.render(markdown)
+label.attributedText = attributedString
 ```
 
-Render Markdown as UIKit blocks:
+### 2. Block Component Rendering
+
+Render Markdown into a list of native UIKit block components:
 
 ```swift
+let markdown = """
+| Header 1 | Header 2 |
+| -------- | -------- |
+| Cell 1   | Cell 2   |
+
+```swift
+print("Hello World")
+```
+"""
+
 let blocks = InkBlockRenderer.render(markdown)
-let views = blocks.map { $0.makeView() }
+for block in blocks {
+    let view = block.makeView()
+    stackView.addArrangedSubview(view)
+}
 ```
 
-Streaming (AI-style incremental text):
+### 3. Streaming AI Output
+
+Bind streaming Markdown chunks from SSE/WebSocket directly to a `UITextView`:
 
 ```swift
-let renderer = InkStreamRenderer()
-renderer.bindTextView(textView)
-renderer.append("## Streaming title\n")
-renderer.append("Markdown content can keep growing.")
-renderer.finish()
+let streamRenderer = InkStreamRenderer(configuration: .standard)
+streamRenderer.bindTextView(textView)
+
+// Append received chunks
+streamRenderer.append("## Streaming Response\n")
+streamRenderer.append("Thinking through the solution...")
+
+// Signal end of stream
+streamRenderer.finish()
 ```
 
-Customize:
+### 4. Custom Configuration & Extensions
+
+Configure custom appearance, inline syntax, and link handlers:
 
 ```swift
-let configuration = InkConfiguration(
-  inlineSyntaxes: [MyInlineSyntax()],
-  linkTapHandler: { url, view in
-    // Return true when the app handles the link.
-    false
-  }
+struct CustomMentionSyntax: InkInlineSyntax {
+    let pattern = #"@(\w+)"#
+    func match(in text: String) -> [NSRange] { /* matching logic */ }
+    func apply(to attributedString: NSMutableAttributedString, range: NSRange, context: InkTextContext) {
+        attributedString.addAttribute(.foregroundColor, value: UIColor.systemBlue, range: range)
+    }
+}
+
+var config = InkConfiguration(
+    inlineSyntaxes: [CustomMentionSyntax()],
+    linkTapHandler: { url, hostView in
+        print("User tapped link: \(url)")
+        return true // Return true if handled
+    }
 )
 
-let attributed = InkAttributedRenderer.render(markdown, configuration: configuration)
+// Opt-in local LaTeX and Mermaid diagram rendering
+config.enableLaTeXRendering()
+config.appearance.mermaidRendering.isEnabled = true
+
+let attributed = InkAttributedRenderer.render(markdown, configuration: config)
 ```
 
-Enable local generated images (all remain off by default):
+---
 
-```swift
-var configuration = InkConfiguration()
-configuration.enableLaTeXRendering()       // inline $...$ and \\(...\\)
-configuration.appearance.mermaidRendering.isEnabled = true
-let blocks = InkBlockRenderer.render(markdown, configuration: configuration)
-```
+## Supported Syntax & Limitations
 
-`$$...$$` and fenced `mermaid` render as UIKit blocks only. The attributed-only API
-keeps its existing text fallback for block content.
+| Markdown Feature | Implementation Status | Output Format |
+| --- | --- | --- |
+| Headings (H1–H6) | Supported | `NSAttributedString` |
+| Paragraphs & Emphasis | Supported | `NSAttributedString` |
+| Inline Code | Supported | `NSAttributedString` |
+| Links & Callbacks | Supported | `NSAttributedString` + `linkTapHandler` |
+| Ordered / Unordered Lists | Supported | `NSAttributedString` |
+| Block Quotes | Supported | `NSAttributedString` |
+| Code Blocks | Supported | `NSAttributedString` / `InkCodeBlockView` |
+| Tables | Supported | `InkTableView` (`InkBlockRenderer` required) |
+| Thematic Breaks | Supported | `InkThematicBreakView` |
+| Inline Math (`$...$`) | Supported (Opt-in) | `InkImageAttachment` |
+| Block Math (`$$...$$`) | Supported (Opt-in) | `InkLaTeXBlockView` (`InkBlockRenderer` required) |
+| Mermaid Diagrams | Supported (Opt-in) | `InkMermaidBlockView` (`InkBlockRenderer` required) |
+| Images | Supported (Opt-in) | Text placeholder by default; `InkImageBlockView` when enabled |
 
-Generated sources require their matching local renderer. They never fall back to a
-network URL loader; the image store also bounds pending work to protect streaming hosts.
+> ℹ️ **Note**: For complete details on rendering behavior and edge cases, see [Current Project Status](docs/current-status.md) and [Rendering Spec](docs/spec/README.md).
 
-## Current Markdown Support
-
-| Area | Status |
-| --- | --- |
-| Headings | Supported |
-| Paragraphs | Supported |
-| Strong / emphasis | Supported |
-| Inline code | Supported |
-| Links | Supported |
-| Images | Text fallback |
-| Fixed line height | Supported |
-| Ordered / unordered lists | Supported |
-| Block quotes | Supported |
-| Code blocks | Attributed text + UIKit block |
-| Tables | UIKit block |
-| Thematic breaks | Supported |
-| Custom inline syntax | Supported |
-| Link tap callback | Supported |
-| Streaming Markdown | Supported |
-| SwiftUI renderer | Not supported (out of scope) |
-
-Tables require `InkBlockRenderer`; the attributed-string-only path does not
-provide grid layout. Images currently use a text fallback, and strikethrough
-keeps its content without applying a strike style. See the
-[current status](docs/current-status.md) for the complete limitation list.
-
-## Documentation
-
-- [Documentation index](docs/README.md)
-- [Current implementation status](docs/current-status.md)
-- [Contributor guide](docs/contributor-guide/README.md)
-- [Rendering semantics](docs/spec/README.md)
-- [Roadmap](docs/roadmap.md)
+---
 
 ## Project Structure
 
 ```text
-Sources/InkMarkdown/       Library source
-Tests/InkMarkdownTests/    Unit tests
-ExampleApp/                UIKit example app
-docs/                      Architecture, spec, roadmap
+InkMarkdown/
+├── Sources/InkMarkdown/
+│   ├── Configuration/       # InkConfiguration, InkAppearance & RenderEnvironment
+│   ├── Parser/              # InkParser (swift-markdown AST wrapper)
+│   └── Rendering/
+│       ├── AttributedString/# InkAttributedRenderer (TextKit pipeline)
+│       ├── Block/           # InkBlockRenderer & InkBlockHandler routing
+│       ├── Components/      # Native UIKit views (Table, CodeBlock, Separator)
+│       ├── Image/           # Image store, downloader & attachment handlers
+│       ├── LaTeX/           # LaTeX formula image generation & handlers
+│       ├── Mermaid/         # Mermaid diagram generator & handlers
+│       └── InkStreamRenderer.swift # CADisplayLink dual-buffered streaming
+├── Tests/InkMarkdownTests/   # Unit, snapshot, streaming & performance tests
+├── ExampleApp/               # UIKit demo app with SSE streaming & components
+└── docs/                     # Architectural decisions (ADR), specs & guides
 ```
 
-## Build and Test
+---
 
-InkMarkdown imports UIKit directly, so macOS-host `swift build` / `swift test`
-fails with `no such module 'UIKit'`. Test against an iOS Simulator.
+## Building and Testing
 
-Use [XcodeBuildMCP](https://www.xcodebuildmcp.com/) first to discover the
-project, select the `InkMarkdown` scheme and an available simulator, and run
-the simulator tests. If the current MCP client does not expose SwiftPM package
-testing, use the native fallback documented in the
-[development guide](docs/contributor-guide/04-development.md#回退到原生-xcodebuild).
+Because InkMarkdown directly imports `UIKit`, running `swift build` or `swift test` on macOS hosts will fail with `no such module 'UIKit'`. Tests must run against an **iOS Simulator**.
 
-Run the simulator test suite after changing rendering behavior; do not treat this
-README as a record of the latest local test result.
+### Preferred Test Execution
+
+Use [XcodeBuildMCP](https://www.xcodebuildmcp.com/) or `xcodebuild` with an iOS Simulator target:
+
+```bash
+xcodebuild test \
+  -scheme InkMarkdown \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
+```
+
+### Running the Example App
+
+Open the Xcode project to run interactive component and streaming demos:
 
 ```bash
 open ExampleApp/ExampleApp.xcodeproj
 ```
 
+---
+
+## Documentation Index
+
+- 📖 [Documentation Hub](docs/README.md)
+- 📊 [Current Project Status](docs/current-status.md)
+- 🏗️ [Architecture Overview](docs/contributor-guide/02-architecture.md)
+- 📐 [Rendering Semantics Spec](docs/spec/README.md)
+- 🛣️ [Development Roadmap](docs/roadmap.md)
+- 📝 [Architecture Decision Records (ADRs)](docs/decisions/README.md)
+
+---
+
 ## Contributing
 
-Start with the [contributor guide](docs/contributor-guide/README.md).
-Public behavior changes should include tests and matching documentation.
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) and [Contributor Guide](docs/contributor-guide/README.md) before submitting pull requests or opening issues.
+
+---
 
 ## License
 
-See [LICENSE](LICENSE).
+InkMarkdown is released under the [MIT License](LICENSE).
