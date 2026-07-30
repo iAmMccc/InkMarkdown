@@ -3,17 +3,33 @@ window.inkMermaid = {
   __pendingResult: null,
   __pendingError: null,
   render: function (encodedRequest) {
+    if (typeof mermaid === 'undefined' || !mermaid || typeof mermaid.render !== 'function') {
+      return Promise.reject(new Error('Mermaid runtime is not available'));
+    }
     var request = JSON.parse(encodedRequest);
     var holder = document.getElementById('diagram');
     holder.replaceChildren();
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: request.theme, flowchart: { htmlLabels: false } });
-    return mermaid.render('ink-mermaid-' + request.id, request.source).then(function (rendered) {
+    // mermaid 11 still supports initialize + render; keep securityLevel strict and disable HTML labels.
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: request.theme,
+      flowchart: { htmlLabels: false }
+    });
+    var renderPromise = mermaid.render('ink-mermaid-' + request.id, request.source).then(function (rendered) {
       holder.innerHTML = rendered.svg;
       var svg = holder.querySelector('svg');
       if (!svg) throw new Error('Mermaid did not return SVG');
       var rect = svg.getBoundingClientRect();
       return JSON.stringify({ width: rect.width, height: rect.height });
     });
+    // Fail closed if Mermaid's Promise never settles (e.g. layout waiting on a zero viewport).
+    var timeoutPromise = new Promise(function (_, reject) {
+      setTimeout(function () {
+        reject(new Error('mermaid.render exceeded 25s JS timeout'));
+      }, 25000);
+    });
+    return Promise.race([renderPromise, timeoutPromise]);
   },
   renderViaCallback: function (encodedRequest) {
     var request = JSON.parse(encodedRequest);
@@ -37,9 +53,13 @@ window.inkMermaid = {
       return null;
     }
     if (window.inkMermaid.__pendingError) {
-      throw new Error(window.inkMermaid.__pendingError);
+      // Return as value so WKWebView preserves the message (throw often becomes a generic localized string).
+      return JSON.stringify({ ok: false, error: window.inkMermaid.__pendingError });
     }
-    return window.inkMermaid.__pendingResult;
+    if (window.inkMermaid.__pendingResult == null) {
+      return null;
+    }
+    return JSON.stringify({ ok: true, value: window.inkMermaid.__pendingResult });
   },
   clearPendingRender: function () {
     window.inkMermaid.__pendingRequestId = null;

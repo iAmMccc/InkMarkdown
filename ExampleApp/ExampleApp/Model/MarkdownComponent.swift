@@ -62,7 +62,7 @@ enum MarkdownComponent: String, CaseIterable {
     case .unorderedList: return "项目符号列表"
     case .orderedList: return "数字序号列表"
     case .codeBlock: return "围栏 / 缩进代码"
-    case .mermaid: return "flowchart / sequence 等"
+    case .mermaid: return "26 种图表类型矩阵（Mermaid 11.16）"
     case .table: return "GFM 表格"
     case .thematicBreak: return "水平分隔线"
     case .strong: return "加粗强调"
@@ -100,7 +100,7 @@ enum MarkdownComponent: String, CaseIterable {
       return "围栏代码块用 ``` 或 ~~~ 包裹，可选语言标签；缩进代码块需每行至少 4 空格。"
     case .mermaid:
       return """
-      语言标记为 `mermaid` 的围栏代码块可本地渲染为位图。默认关闭；开启 `InkMermaidRendering.isEnabled` 后由块路由接管，失败时回退为源码展示。
+      语言标记为 `mermaid` 的围栏代码块可本地渲染为位图。默认关闭；开启 `InkMermaidRendering.isEnabled` 后由块路由接管，失败时回退为源码展示。当前打包 Mermaid 11.16.0，组件样例覆盖 26 种图表类型。
       """
     case .table:
       return "GFM 扩展语法的表格，由管道符 | 分隔列，支持左对齐、居中、右对齐。InkMarkdown 通过 Block 路由渲染为原生 UIView 表格。"
@@ -204,27 +204,7 @@ enum MarkdownComponent: String, CaseIterable {
       ```
       """
     case .mermaid:
-      return """
-      ## 流程图
-
-      ```mermaid
-      flowchart TD
-          A[Markdown 解析] --> B{块路由?}
-          B -->|mermaid| C[WebKit 本地渲染]
-          B -->|其他| D[默认代码块]
-          C --> E[位图插入文档]
-      ```
-
-      ## 序列图
-
-      ```mermaid
-      sequenceDiagram
-          participant U as 用户
-          participant I as InkMarkdown
-          U->>I: 输入 mermaid 围栏
-          I-->>U: 返回 SVG 快照
-      ```
-      """
+      return DemoMermaidSamples.typeMatrixMarkdown
     case .table:
       return """
       | 序号 | 类型 | 语义 | 典型代表 | 分配方式 |

@@ -51,7 +51,7 @@ enum Scenario {
     case .streamingPerformance: return "对比每片全量解析与增量解析"
     case .imageRendering: return "块级可点放大，行内图文混排演示"
     case .imageRenderingDemo: return "10 个场景：网络图、Asset、Base64、块通道等"
-    case .diagramRenderingDemo: return "LaTeX 公式 + Mermaid 流程图 / 序列图本地渲染"
+    case .diagramRenderingDemo: return "LaTeX 公式 + Mermaid 26 种图表类型本地渲染"
     }
   }
 }

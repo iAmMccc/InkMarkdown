@@ -80,11 +80,7 @@ final class GeneratedContentDemoViewController: UIViewController {
       title: "场景 4: Mermaid 流程图",
       markdown: """
       ```mermaid
-      flowchart LR
-          A[输入 Markdown] --> B{mermaid 围栏?}
-          B -->|是| C[WebKit 本地渲染]
-          B -->|否| D[普通代码块]
-          C --> E[位图插入文档]
+      \(DemoMermaidSamples.sections[0].source)
       ```
       """,
       mode: .mermaidOnly
@@ -94,21 +90,29 @@ final class GeneratedContentDemoViewController: UIViewController {
       title: "场景 5: Mermaid 序列图",
       markdown: """
       ```mermaid
-      sequenceDiagram
-          participant U as 用户
-          participant A as ExampleApp
-          participant I as InkMarkdown
-          U->>A: 打开公式与图表 Demo
-          A->>I: 开启 mermaidRendering
-          I-->>A: 返回 SVG 快照位图
-          A-->>U: 展示渲染结果
+      \(DemoMermaidSamples.sections[1].source)
       ```
       """,
       mode: .mermaidOnly
     )
 
+    // 场景 6+: Mermaid 11 全类型矩阵（逐条生图，便于定位某类失败）
+    for (offset, section) in DemoMermaidSamples.sections.dropFirst(2).enumerated() {
+      let sceneNumber = offset + 6
+      appendSection(
+        title: "场景 \(sceneNumber): Mermaid \(section.title)",
+        markdown: """
+        ```mermaid
+        \(section.source)
+        ```
+        """,
+        mode: .mermaidOnly
+      )
+    }
+
+    let mixedSceneNumber = DemoMermaidSamples.sections.count + 4
     appendSection(
-      title: "场景 6: 公式 + 图表混排",
+      title: "场景 \(mixedSceneNumber): 公式 + 图表混排",
       markdown: """
       ## 算法复杂度
 
@@ -126,8 +130,9 @@ final class GeneratedContentDemoViewController: UIViewController {
       mode: .diagrams
     )
 
+    let disabledSceneNumber = mixedSceneNumber + 1
     appendSection(
-      title: "场景 7: 关闭态对照（源码降级）",
+      title: "场景 \(disabledSceneNumber): 关闭态对照（源码降级）",
       markdown: """
       ```mermaid
       graph TD; A-->B
@@ -140,21 +145,21 @@ final class GeneratedContentDemoViewController: UIViewController {
       mode: .disabled
     )
 
-    // 场景 8：失败 — 显式错误条（SSOT）+ 触发真实生成失败
+    let failureSceneNumber = disabledSceneNumber + 1
     let invalidMermaid = """
     ```mermaid
     this is not valid mermaid syntax [[[
     ```
     """
     appendFailureSection(
-      title: "场景 8: 失败场景 + 显式错误条",
+      title: "场景 \(failureSceneNumber): 失败场景 + 显式错误条",
       markdown: invalidMermaid,
       userInterfaceStyle: style
     )
 
-    // 可选：`$` 风险演示（单独标明，默认样式仍关闭 `$`）
+    let dollarSceneNumber = failureSceneNumber + 1
     appendSection(
-      title: "场景 9: `$...$` 风险对照（本场景临时开启）",
+      title: "场景 \(dollarSceneNumber): `$...$` 风险对照（本场景临时开启）",
       markdown: """
       开启 `allowsInlineDollarDelimiter` 后，能量公式 $E = mc^2$ 会渲染；
       同时价格写法 $5 也有被误识别的风险——因此全局 Demo / SSE 默认关闭 `$`。
@@ -182,6 +187,9 @@ final class GeneratedContentDemoViewController: UIViewController {
       userInterfaceStyle: traitCollection.userInterfaceStyle,
       allowsInlineDollarDelimiter: allowsInlineDollarDelimiter
     )
+    if mode == .mermaidOnly || mode == .diagrams {
+      config.appearance.enableDemoMermaidImageTap { [weak self] in self }
+    }
     let observer = GeneratedContentFailureObserver()
     if mode != .disabled {
       observer.attach(to: &config.appearance)
@@ -218,6 +226,7 @@ final class GeneratedContentDemoViewController: UIViewController {
       mode: .mermaidOnly,
       userInterfaceStyle: userInterfaceStyle
     )
+    config.appearance.enableDemoMermaidImageTap { [weak self] in self }
     let observer = GeneratedContentFailureObserver()
     observer.attach(to: &config.appearance)
     let blocks = InkBlockRenderer.render(markdown, configuration: config)

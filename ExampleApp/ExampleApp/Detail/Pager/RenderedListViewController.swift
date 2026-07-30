@@ -82,6 +82,7 @@ final class RenderedListViewController: UIViewController, PagerListController {
         mode: .mermaidOnly,
         userInterfaceStyle: traitCollection.userInterfaceStyle
       )
+      config.appearance.enableDemoMermaidImageTap { [weak self] in self }
     default:
       config = style.configuration
     }

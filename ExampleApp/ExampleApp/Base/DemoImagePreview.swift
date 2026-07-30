@@ -41,4 +41,16 @@ extension InkAppearance {
       )
     }
   }
+
+  /// 为 Mermaid 生成图块开启点击全屏预览（`InkImageBlock` / generated owner `mermaid`）。
+  ///
+  /// 复用 SSE 场景的 ``MermaidFullscreenViewController``；非 Mermaid 图源忽略点击。
+  mutating func enableDemoMermaidImageTap(presentingViewController: @escaping () -> UIViewController?) {
+    imageRendering.tapAction = .callback
+    imageRendering.onImageTap = { source, image in
+      guard source.generatedRequest?.owner == "mermaid", let image else { return }
+      let fullVC = MermaidFullscreenViewController(image: image)
+      presentingViewController()?.present(fullVC, animated: true)
+    }
+  }
 }

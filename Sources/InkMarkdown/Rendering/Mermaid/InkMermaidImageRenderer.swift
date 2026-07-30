@@ -9,7 +9,7 @@ import WebKit
 @MainActor
 public final class InkMermaidImageRenderer: NSObject {
   public static let rendererVersion = "ink-mermaid-renderer/1"
-  public static let mermaidVersion = "10.9.1"
+  public static let mermaidVersion = "11.16.0"
 
   public let limits: InkMermaidRenderLimits
 
@@ -52,6 +52,14 @@ public final class InkMermaidImageRenderer: NSObject {
         self?.discardWebView(for: state)
       }
       try await loadBridgeIfNeeded(using: view, state: state)
+      // Mermaid 11 的 layout 会等待可度量视口；零 frame 时 render Promise 可能永不 settle。
+      let provisionalWidth = max(request.display.maxPixelWidth / request.display.scale, 320)
+      view.frame = CGRect(x: 0, y: 0, width: provisionalWidth, height: max(provisionalWidth, 480))
+      _ = try await evaluate(
+        "window.inkMermaid.resize(\(view.frame.width), \(view.frame.height))",
+        using: view,
+        state: state
+      )
       let rasterPlan = try await evaluateDiagram(request, using: view, state: state)
       view.frame = CGRect(origin: .zero, size: rasterPlan.layoutSizeInPoints)
       _ = try await evaluate(
@@ -141,7 +149,19 @@ public final class InkMermaidImageRenderer: NSObject {
     }
     let escapedJSON = try InkMermaidBridgeEncoding.javaScriptStringLiteral(json)
     _ = try await evaluate("window.inkMermaid.renderViaCallback(\(escapedJSON))", using: view, state: state)
-    let response = try await pollRenderResult(requestID: requestID, using: view, state: state)
+    var response = try await pollRenderResult(requestID: requestID, using: view, state: state)
+    // Bridge may wrap `{ ok, value|error }` so JS errors keep their message across WK evaluateJavaScript.
+    if let encoded = response as? String,
+       let data = encoded.data(using: .utf8),
+       let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+       object["ok"] is Bool {
+      if object["ok"] as? Bool == true {
+        response = object["value"] as Any
+      } else {
+        let message = (object["error"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Mermaid render failed"
+        throw InkMermaidRenderError.javaScript(message: message)
+      }
+    }
     guard let encoded = response as? String,
           let dimensionData = encoded.data(using: .utf8),
           let object = try JSONSerialization.jsonObject(with: dimensionData) as? [String: Any],
@@ -166,13 +186,27 @@ public final class InkMermaidImageRenderer: NSObject {
       view.evaluateJavaScript(javaScript) { response, error in
         Task { @MainActor in
           if let error {
-            completion(.failure(InkMermaidRenderError.javaScript(message: error.localizedDescription)))
+            completion(.failure(InkMermaidRenderError.javaScript(message: Self.javaScriptErrorMessage(from: error))))
           } else {
             completion(.success(response as Any))
           }
         }
       }
     }
+  }
+
+  private static func javaScriptErrorMessage(from error: Error) -> String {
+    let userInfo = (error as NSError).userInfo
+    let keys = [
+      "WKJavaScriptExceptionMessage",
+      "NSLocalizedDescription",
+    ]
+    for key in keys {
+      if let message = userInfo[key] as? String, !message.isEmpty {
+        return message
+      }
+    }
+    return error.localizedDescription
   }
 
   private func pollRenderResult(
