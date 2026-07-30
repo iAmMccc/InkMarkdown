@@ -37,6 +37,9 @@ final class SSEChatViewController: UIViewController {
     private let sendButton = UIButton(type: .system)
     private var inputBottom: NSLayoutConstraint?
 
+    private let suggestionsScrollView = UIScrollView()
+    private let suggestionsStackView = UIStackView()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
@@ -61,6 +64,7 @@ final class SSEChatViewController: UIViewController {
 
     private func setupUI() {
         view.addSubview(tableView)
+        view.addSubview(suggestionsScrollView)
         view.addSubview(inputContainer)
 
         inputContainer.backgroundColor = .secondarySystemBackground
@@ -78,7 +82,28 @@ final class SSEChatViewController: UIViewController {
         sendButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         sendButton.addTarget(self, action: #selector(handleSend), for: .touchUpInside)
 
+        suggestionsScrollView.showsHorizontalScrollIndicator = false
+        suggestionsScrollView.contentInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        suggestionsScrollView.addSubview(suggestionsStackView)
+
+        suggestionsStackView.axis = .horizontal
+        suggestionsStackView.spacing = 8
+        suggestionsStackView.alignment = .center
+
+        let suggestions = ["公式图表", "图文混排", "复杂表格", "代码示例", "列表说明"]
+        for title in suggestions {
+            var config = UIButton.Configuration.tinted()
+            config.title = title
+            config.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
+            config.cornerStyle = .capsule
+            let btn = UIButton(configuration: config)
+            btn.addTarget(self, action: #selector(handleSuggestionTap(_:)), for: .touchUpInside)
+            suggestionsStackView.addArrangedSubview(btn)
+        }
+
         tableView.translatesAutoresizingMaskIntoConstraints = false
+        suggestionsScrollView.translatesAutoresizingMaskIntoConstraints = false
+        suggestionsStackView.translatesAutoresizingMaskIntoConstraints = false
         inputContainer.translatesAutoresizingMaskIntoConstraints = false
         sendButton.translatesAutoresizingMaskIntoConstraints = false
         textField.translatesAutoresizingMaskIntoConstraints = false
@@ -90,7 +115,18 @@ final class SSEChatViewController: UIViewController {
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: inputContainer.topAnchor),
+            tableView.bottomAnchor.constraint(equalTo: suggestionsScrollView.topAnchor, constant: -8),
+
+            suggestionsScrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            suggestionsScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            suggestionsScrollView.bottomAnchor.constraint(equalTo: inputContainer.topAnchor, constant: -8),
+            suggestionsScrollView.heightAnchor.constraint(equalToConstant: 32),
+
+            suggestionsStackView.topAnchor.constraint(equalTo: suggestionsScrollView.contentLayoutGuide.topAnchor),
+            suggestionsStackView.bottomAnchor.constraint(equalTo: suggestionsScrollView.contentLayoutGuide.bottomAnchor),
+            suggestionsStackView.leadingAnchor.constraint(equalTo: suggestionsScrollView.contentLayoutGuide.leadingAnchor),
+            suggestionsStackView.trailingAnchor.constraint(equalTo: suggestionsScrollView.contentLayoutGuide.trailingAnchor),
+            suggestionsStackView.heightAnchor.constraint(equalTo: suggestionsScrollView.frameLayoutGuide.heightAnchor),
 
             inputContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             inputContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -110,7 +146,7 @@ final class SSEChatViewController: UIViewController {
 
     /// 预填公式与图表示例问题，降低 demo 上手成本。
     private func seedSuggestion() {
-        textField.text = "展示公式与图表"
+        textField.text = ""
     }
 
     private func setupKeyboard() {
@@ -124,6 +160,12 @@ final class SSEChatViewController: UIViewController {
         guard !isLoading, let text = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return }
         textField.text = nil
         sendQuestion(text)
+    }
+
+    @objc private func handleSuggestionTap(_ sender: UIButton) {
+        guard !isLoading, let title = sender.titleLabel?.text else { return }
+        textField.text = nil
+        sendQuestion(title)
     }
 
     private func sendQuestion(_ question: String) {
@@ -324,6 +366,7 @@ private final class SSEAssistantCell: UITableViewCell {
     var onHeightChange: (() -> Void)?
     private var lastAppliedMarkdown: String = ""
     private var rebuildWorkItem: DispatchWorkItem?
+    private var pendingMarkdown: String?
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -365,6 +408,8 @@ private final class SSEAssistantCell: UITableViewCell {
 
     func configure(content: String, isStreaming: Bool, userInterfaceStyle: UIUserInterfaceStyle) {
         rebuildWorkItem?.cancel()
+        rebuildWorkItem = nil
+        pendingMarkdown = nil
         if content.isEmpty && isStreaming {
             clearSegmentsKeepingReuseCaches(false)
             showThinking()
@@ -387,19 +432,29 @@ private final class SSEAssistantCell: UITableViewCell {
     ) {
         hideThinking()
 
+        pendingMarkdown = markdown
         // 节流：避免每个 2 字符 chunk 全量重解析；围栏闭合字符触发立即刷新。
         let shouldFlushImmediately = Self.looksLikeBlockJustClosed(previous: lastAppliedMarkdown, current: markdown)
-        rebuildWorkItem?.cancel()
-        let work = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            self.rebuildSegments(from: markdown, userInterfaceStyle: userInterfaceStyle, revealAll: true)
-            self.lastAppliedMarkdown = markdown
-            self.onHeightChange?()
-        }
-        rebuildWorkItem = work
+        
         if shouldFlushImmediately {
-            DispatchQueue.main.async(execute: work)
-        } else {
+            rebuildWorkItem?.cancel()
+            rebuildWorkItem = nil
+            rebuildSegments(from: markdown, userInterfaceStyle: userInterfaceStyle, revealAll: true)
+            lastAppliedMarkdown = markdown
+            pendingMarkdown = nil
+            onHeightChange?()
+        } else if rebuildWorkItem == nil {
+            let work = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                self.rebuildWorkItem = nil
+                if let md = self.pendingMarkdown {
+                    self.rebuildSegments(from: md, userInterfaceStyle: userInterfaceStyle, revealAll: true)
+                    self.lastAppliedMarkdown = md
+                    self.pendingMarkdown = nil
+                    self.onHeightChange?()
+                }
+            }
+            rebuildWorkItem = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
         }
     }
@@ -411,6 +466,8 @@ private final class SSEAssistantCell: UITableViewCell {
         completion: @escaping () -> Void
     ) {
         rebuildWorkItem?.cancel()
+        rebuildWorkItem = nil
+        pendingMarkdown = nil
         hideThinking()
         rebuildSegments(from: fullContent, userInterfaceStyle: userInterfaceStyle, revealAll: true)
         lastAppliedMarkdown = fullContent
@@ -791,6 +848,8 @@ private final class SSEAssistantCell: UITableViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         rebuildWorkItem?.cancel()
+        rebuildWorkItem = nil
+        pendingMarkdown = nil
         onHeightChange = nil
         thinkingLabel.layer.removeAllAnimations()
         isShowingThinking = false
