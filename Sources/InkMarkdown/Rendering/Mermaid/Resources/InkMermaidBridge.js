@@ -20,8 +20,11 @@ window.inkMermaid = {
       holder.innerHTML = rendered.svg;
       var svg = holder.querySelector('svg');
       if (!svg) throw new Error('Mermaid did not return SVG');
-      var rect = svg.getBoundingClientRect();
-      return JSON.stringify({ width: rect.width, height: rect.height });
+      // Prefer intrinsic size: journey/gantt etc. set width=100% + max-width, so
+      // getBoundingClientRect can shrink to the provisional WKWebView viewport and
+      // under-report the real diagram, causing later snapshot crops.
+      var size = window.inkMermaid.measureSvg(svg);
+      return JSON.stringify({ width: size.width, height: size.height });
     });
     // Fail closed if Mermaid's Promise never settles (e.g. layout waiting on a zero viewport).
     var timeoutPromise = new Promise(function (_, reject) {
@@ -71,5 +74,47 @@ window.inkMermaid = {
     document.documentElement.style.height = height + 'px';
     document.body.style.width = width + 'px';
     document.body.style.height = height + 'px';
+  },
+  measureSvg: function (svg) {
+    var rect = svg.getBoundingClientRect();
+    var width = rect.width;
+    var height = rect.height;
+    var vb = svg.viewBox && svg.viewBox.baseVal;
+    if (vb && vb.width > 0 && vb.height > 0) {
+      var vbWidth = vb.width + (vb.x < 0 ? -vb.x : 0);
+      var vbHeight = vb.height + (vb.y < 0 ? -vb.y : 0);
+      if (width + 0.5 < vbWidth) width = vbWidth;
+      if (height + 0.5 < vbHeight) height = vbHeight;
+    }
+    var attrWidth = parseFloat(svg.getAttribute('width'));
+    var attrHeight = parseFloat(svg.getAttribute('height'));
+    if (!isNaN(attrWidth) && attrWidth > width) width = attrWidth;
+    if (!isNaN(attrHeight) && attrHeight > height) height = attrHeight;
+    return { width: width, height: height };
+  },
+  // RasterPlan may shrink the WKWebView below Mermaid's natural SVG box.
+  // Force absolute width/height (keeping viewBox) so takeSnapshot sees the full diagram.
+  fitSvgToSize: function (width, height) {
+    var svg = document.querySelector('#diagram svg');
+    if (!svg) return false;
+    if (!svg.getAttribute('viewBox')) {
+      try {
+        var bb = svg.getBBox();
+        if (bb && bb.width > 0 && bb.height > 0) {
+          svg.setAttribute(
+            'viewBox',
+            bb.x + ' ' + bb.y + ' ' + bb.width + ' ' + bb.height
+          );
+        }
+      } catch (error) {
+        // getBBox can throw when the SVG is not rendered; fall through.
+      }
+    }
+    svg.setAttribute('width', String(width));
+    svg.setAttribute('height', String(height));
+    svg.style.width = width + 'px';
+    svg.style.height = height + 'px';
+    svg.style.maxWidth = 'none';
+    return true;
   }
 };

@@ -291,7 +291,7 @@ enum DemoMermaidSamples {
     Section(title: "26. Wardley 图 wardley-beta", source: """
     wardley-beta
       title Capability Evolution
-      anchor UserNeed [0.95, 0.6] label [-15, 10]
+      anchor UserNeed [0.95, 0.6]
       component Visibility [0.7, 0.4] label [-20, 10]
       component WebKitBridge [0.45, 0.55] label [-30, 10]
       component NativeRender [0.2, 0.7] label [-30, 10]

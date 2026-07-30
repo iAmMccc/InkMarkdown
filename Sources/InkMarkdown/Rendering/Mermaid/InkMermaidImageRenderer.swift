@@ -62,8 +62,17 @@ public final class InkMermaidImageRenderer: NSObject {
       )
       let rasterPlan = try await evaluateDiagram(request, using: view, state: state)
       view.frame = CGRect(origin: .zero, size: rasterPlan.layoutSizeInPoints)
+      let layoutWidth = rasterPlan.layoutSizeInPoints.width
+      let layoutHeight = rasterPlan.layoutSizeInPoints.height
       _ = try await evaluate(
-        "window.inkMermaid.resize(\(rasterPlan.layoutSizeInPoints.width), \(rasterPlan.layoutSizeInPoints.height))",
+        "window.inkMermaid.resize(\(layoutWidth), \(layoutHeight))",
+        using: view,
+        state: state
+      )
+      // Mermaid journey 等图天然远宽于列表容器；仅 resize viewport 而不改 SVG
+      // 会在 overflow:hidden 下裁切快照。把 SVG 压到 layoutSize，保留 viewBox 等比装入。
+      _ = try await evaluate(
+        "window.inkMermaid.fitSvgToSize(\(layoutWidth), \(layoutHeight))",
         using: view,
         state: state
       )

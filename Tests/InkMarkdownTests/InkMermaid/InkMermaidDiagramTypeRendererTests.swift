@@ -210,7 +210,9 @@ enum InkMermaidDiagramTypeFixtures {
     Fixture(name: "wardley-beta", source: """
     wardley-beta
       title Evolution
-      component WebKit [0.45, 0.55]
+      anchor UserNeed [0.95, 0.6]
+      component WebKit [0.45, 0.55] label [-20, 10]
+      UserNeed -> WebKit
     """),
   ]
 }
