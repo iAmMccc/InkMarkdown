@@ -19,6 +19,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   private var configuredMaxWidth: CGFloat = 0
   private var failureContentView: UIView?
   private var cachedFailureContentHeight: CGFloat = 0
+  private var isShowingLoadingPlaceholder = false
 
   private let imageView: UIImageView = {
     let iv = UIImageView()
@@ -64,12 +65,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     addSubview(placeholderView)
     addSubview(imageView)
     imageView.isHidden = true
-    placeholderView.frame = CGRect(
-      x: 0,
-      y: 0,
-      width: bounds.width,
-      height: rendering.placeholderHeight
-    )
+    placeholderView.isHidden = true
     setupTapHandlingIfNeeded()
   }
 
@@ -158,19 +154,12 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
       contentMode: .fit
     )
 
-    placeholderView.frame = CGRect(
-      x: 0,
-      y: 0,
-      width: effectiveWidth,
-      height: rendering.placeholderHeight
-    )
-
     let result = store.resolve(source: source, display: display, loader: loader)
     switch result {
     case .ready(let img):
       showImage(img, token: currentToken, maxWidth: effectiveWidth)
     case .loading(let subscribe):
-      showPlaceholder()
+      showPlaceholder(maxWidth: effectiveWidth)
       subscription = subscribe { [weak self] image in
         Task { @MainActor in
           guard let self else { return }
@@ -182,7 +171,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
         }
       }
     case .queued(let subscribe):
-      showPlaceholder()
+      showPlaceholder(maxWidth: effectiveWidth)
       let token = loadToken
       subscription = subscribe { [weak self] image in
         Task { @MainActor in
@@ -203,6 +192,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   private func showImage(_ img: UIImage, token: UUID, maxWidth: CGFloat) {
     guard token == loadToken else { return }
     clearFailureContent()
+    isShowingLoadingPlaceholder = false
     placeholderView.isHidden = true
     imageView.isHidden = false
     imageView.image = img
@@ -211,10 +201,18 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     rendering.onLoadFinished?(source, img)
   }
 
-  private func showPlaceholder() {
+  private func showPlaceholder(maxWidth: CGFloat) {
     clearFailureContent()
+    isShowingLoadingPlaceholder = true
+    placeholderView.frame = CGRect(
+      x: 0,
+      y: 0,
+      width: maxWidth,
+      height: rendering.placeholderHeight
+    )
     placeholderView.isHidden = false
     imageView.isHidden = true
+    invalidateIntrinsicContentSize()
   }
 
   private func showError() {
@@ -236,16 +234,14 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
 
   private func showFailureFallback(maxWidth: CGFloat) {
     clearFailureContent()
+    isShowingLoadingPlaceholder = false
     imageView.isHidden = true
+    placeholderView.isHidden = true
 
     guard let fallback = rendering.failureFallback else {
-      placeholderView.isHidden = false
-      frame.size = CGSize(width: maxWidth, height: rendering.placeholderHeight)
-      invalidateIntrinsicContentSize()
+      installFailureContentView(makeCompactFailureLabel(), maxWidth: maxWidth)
       return
     }
-
-    placeholderView.isHidden = true
 
     switch fallback {
     case .sourceCode(let code, let language):
@@ -273,8 +269,17 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     setNeedsLayout()
   }
 
+  private func makeCompactFailureLabel() -> UILabel {
+    let label = UILabel()
+    label.numberOfLines = 0
+    label.font = UIFont.systemFont(ofSize: UIFont.labelFontSize)
+    label.textColor = UIColor.secondaryLabel
+    label.text = "[\u{1F5BC} image]"
+    return label
+  }
+
   private func measuredFailureContentHeight(maxWidth: CGFloat) -> CGFloat {
-    guard let failureContentView else { return rendering.placeholderHeight }
+    guard let failureContentView else { return inlineUnresolvedAttachmentHeight() }
     let savedFrame = failureContentView.frame
     failureContentView.bounds = CGRect(x: 0, y: 0, width: maxWidth, height: 0)
     failureContentView.setNeedsLayout()
@@ -290,6 +295,29 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
 
   private func updateFrameForFailureContent(maxWidth: CGFloat) {
     relayoutFailureContent(maxWidth: maxWidth)
+  }
+
+  public override func sizeThatFits(_ size: CGSize) -> CGSize {
+    let width = size.width > 0 ? size.width : resolvedMaxWidth()
+    if failureContentView != nil {
+      let height = cachedFailureContentHeight > 0 ? cachedFailureContentHeight : measuredFailureContentHeight(maxWidth: width)
+      return CGSize(width: width, height: height)
+    }
+    if let img = imageView.image {
+      let desiredWidth = min(width, rendering.sizing.maxBlockImageWidth ?? img.size.width)
+      let fitSize = fitted(
+        img.size,
+        maxWidth: max(width, 1),
+        upscales: rendering.sizing.upscalesSmallImages,
+        minPlaceholder: rendering.placeholderHeight,
+        maxHeight: rendering.sizing.maxImageHeight
+      )
+      return CGSize(width: desiredWidth, height: fitSize.height)
+    }
+    if isShowingLoadingPlaceholder {
+      return CGSize(width: width, height: rendering.placeholderHeight)
+    }
+    return CGSize(width: width, height: 0)
   }
 
   public override var intrinsicContentSize: CGSize {
@@ -311,7 +339,10 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
       )
       return CGSize(width: desiredWidth, height: fitSize.height)
     }
-    return CGSize(width: UIView.noIntrinsicMetric, height: rendering.placeholderHeight)
+    if isShowingLoadingPlaceholder {
+      return CGSize(width: UIView.noIntrinsicMetric, height: rendering.placeholderHeight)
+    }
+    return CGSize(width: UIView.noIntrinsicMetric, height: 0)
   }
 
   public func makeView() -> UIView {
@@ -329,7 +360,8 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     imageView.image = nil
     imageView.isHidden = true
     clearFailureContent()
-    placeholderView.isHidden = false
+    isShowingLoadingPlaceholder = false
+    placeholderView.isHidden = true
   }
 
   deinit {

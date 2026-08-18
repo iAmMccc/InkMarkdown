@@ -81,7 +81,7 @@ public final class InkImageAttachment: NSTextAttachment {
         )
       )
     }
-    return CGRect(origin: .zero, size: CGSize(width: maxW, height: rendering.placeholderHeight))
+    return CGRect(origin: .zero, size: CGSize(width: maxW, height: inlineUnresolvedAttachmentHeight()))
   }
 
   /// 显示层绑定：注入 Store / layoutManager，并在容器宽度已知时触发首次 materialize。
@@ -212,7 +212,7 @@ public final class InkImageAttachment: NSTextAttachment {
       maxHeight: sizing.maxImageHeight
     )
 
-    let heightDelta = abs(fittedSize.height - rendering.placeholderHeight)
+    let heightDelta = abs(fittedSize.height - inlineUnresolvedAttachmentHeight())
     let needsAnimation = heightDelta > 50
     shouldAnimateNextHeightChange = needsAnimation
     defer {

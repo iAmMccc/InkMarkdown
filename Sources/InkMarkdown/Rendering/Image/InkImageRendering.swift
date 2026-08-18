@@ -100,7 +100,10 @@ public struct InkImageRendering {
   /// 块级与行内图片的尺寸约束。
   public var sizing: ImageSizing = .init()
 
-  /// 加载中占位视图的高度（pt）。
+  /// 块级 ``InkImageBlock`` 处于 **加载中**（`.loading` / `.queued`）时的骨架高度（pt）。
+  ///
+  /// 不用于加载失败态（失败走紧凑 alt 标签或 ``failureFallback``），
+  /// 也不用于行内 ``InkImageAttachment``（行内未就绪高度见 ``inlineUnresolvedAttachmentHeight()``）。
   public var placeholderHeight: CGFloat = 160
 
   /// 点击图片时的默认行为。块级 ``InkImageBlock`` 会自动分发；默认 `.none`。
@@ -123,7 +126,7 @@ public struct InkImageRendering {
   /// 相对路径基准 URL（v1.0 预留，当前未生效）
   public var baseURL: URL? = nil
 
-  /// 块级通道加载失败（含 Store rejected）时的备用展示；`nil` 时维持灰色占位。
+  /// 块级通道加载失败（含 Store rejected）时的备用展示；`nil` 时显示紧凑 alt 标签（约一行）。
   var failureFallback: InkImageFailureFallback?
 
   /// ``failureFallback`` 为源码代码块时使用的外观；Mermaid 等 handler 注入前应显式赋值。
@@ -131,3 +134,22 @@ public struct InkImageRendering {
 
   public init() {}
 }
+
+// MARK: - Equatable
+
+extension ImageSizing: Equatable {}
+
+extension InkImageRendering: Equatable {
+  public static func == (lhs: InkImageRendering, rhs: InkImageRendering) -> Bool {
+    lhs.isEnabled == rhs.isEnabled &&
+    lhs.promotesToBlock == rhs.promotesToBlock &&
+    lhs.placeholderHeight == rhs.placeholderHeight &&
+    lhs.tapAction == rhs.tapAction &&
+    lhs.sizing == rhs.sizing &&
+    lhs.animatedImagePolicy == rhs.animatedImagePolicy &&
+    lhs.baseURL == rhs.baseURL &&
+    lhs.failureFallback == rhs.failureFallback &&
+    lhs.failureCodeBlockStyle == rhs.failureCodeBlockStyle
+  }
+}
+

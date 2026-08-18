@@ -964,7 +964,7 @@ private func makeImageTextStorage(
   let urlSmall = URL(string: "https://example.com/small.png")!
   let loader = SizedMockImageLoader(imagesByURL: [
     urlLarge.absoluteString: makeTestImage(width: 200, height: 300),
-    urlSmall.absoluteString: makeTestImage(width: 200, height: 180),
+    urlSmall.absoluteString: makeTestImage(width: 200, height: 35),
   ])
   var rendering = InkImageRendering()
   rendering.isEnabled = true
@@ -991,8 +991,110 @@ private func makeImageTextStorage(
     smallAnimatedFlagDuringCallback = attachmentSmall.shouldAnimateNextHeightChange
   }
 
-  await waitForImageLoads(count: 2, loader: loader, storage: storageSmall, expectedMaximumLineHeight: 180)
+  await waitForImageLoads(count: 2, loader: loader, storage: storageSmall, expectedMaximumLineHeight: 35)
   #expect(smallAnimatedFlagDuringCallback == false)
   #expect(attachmentSmall.shouldAnimateNextHeightChange == false)
+}
+
+// MARK: - 占位 / 失败态紧凑高度
+
+@Test @MainActor func imageBlock_unconfiguredIntrinsicHeightIsMinimal() {
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.placeholderHeight = 160
+  let block = InkImageBlock(
+    source: ImageSource(url: URL(string: "https://example.com/unconfigured.png")!),
+    store: InkImageStore(),
+    rendering: rendering
+  )
+  #expect(block.intrinsicContentSize.height == 0)
+}
+
+@Test @MainActor func imageBlock_failureWithoutFallbackUsesCompactHeight() async {
+  let url = URL(string: "https://example.com/fail-block.png")!
+  let loader = InkImageStoreTests.MockImageLoader()
+  loader.shouldFail = true
+
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.placeholderHeight = 160
+  rendering.loader = loader
+
+  let store = InkImageStore()
+  let block = InkImageBlock(
+    source: ImageSource(url: url),
+    store: store,
+    rendering: rendering
+  )
+  block.configure(containerWidth: 300, loader: loader)
+
+  let deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000
+  while loader.currentCompletedCount < 1, DispatchTime.now().uptimeNanoseconds < deadline {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+  for _ in 0..<10 { await Task.yield() }
+
+  let height = block.intrinsicContentSize.height
+  #expect(height < 80)
+  #expect(height < 160)
+}
+
+@Test @MainActor func imageBlock_cachedReadySkipsLoadingPlaceholderHeight() async {
+  let url = URL(string: "https://example.com/cached-ready.png")!
+  let loader = SizedMockImageLoader(
+    imagesByURL: [url.absoluteString: makeTestImage(width: 200, height: 100)]
+  )
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.placeholderHeight = 160
+  rendering.loader = loader
+
+  let store = InkImageStore()
+  let source = ImageSource(url: url)
+  let containerWidth: CGFloat = 300
+  let scale = UIScreen.main.scale
+  let display = DisplayContext(
+    maxPixelWidth: containerWidth * scale,
+    scale: scale,
+    contentMode: .fit
+  )
+
+  _ = store.resolve(source: source, display: display, loader: loader)
+  let deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000
+  while loader.currentCompletedCount < 1, DispatchTime.now().uptimeNanoseconds < deadline {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+
+  let block = InkImageBlock(source: source, store: store, rendering: rendering)
+  #expect(block.intrinsicContentSize.height == 0)
+
+  block.configure(containerWidth: containerWidth, loader: loader)
+
+  #expect(block.intrinsicContentSize.height == 100)
+  #expect(block.intrinsicContentSize.height != 160)
+}
+
+@Test @MainActor func inlineAttachment_unloadedBoundsHeightIsCompact() {
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.placeholderHeight = 160
+
+  let attachment = InkImageAttachment(
+    source: ImageSource(url: URL(string: "https://example.com/inline-unloaded.png")!),
+    rendering: rendering,
+    store: InkImageStore()
+  )
+
+  let lineFragment = CGRect(x: 0, y: 0, width: 300, height: 22)
+  let bounds = attachment.attachmentBounds(
+    for: nil,
+    proposedLineFragment: lineFragment,
+    glyphPosition: .zero,
+    characterIndex: 0
+  )
+
+  #expect(bounds.height < 80)
+  #expect(bounds.height < 160)
+  #expect(bounds.height >= 20)
 }
 
