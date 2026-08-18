@@ -7,14 +7,16 @@ let package = Package(
     name: "InkMarkdown",
     platforms: [
         .iOS(.v14),
-        // 供 SwiftPM 在 macOS host 上解析 iosMath 的最低部署版本；库的 UIKit API 仍以 iOS 为主。
-        .macOS(.v10_15),
     ],
     products: [
         // 对外暴露的库产品
         .library(
             name: "InkMarkdown",
             targets: ["InkMarkdown"]
+        ),
+        .library(
+            name: "InkMarkdownSwiftUI",
+            targets: ["InkMarkdownSwiftUI"]
         ),
     ],
     dependencies: [
@@ -45,10 +47,23 @@ let package = Package(
                 .swiftLanguageMode(.v5),
             ]
         ),
+        .target(
+            name: "InkMarkdownSwiftUI",
+            dependencies: ["InkMarkdown"],
+            path: "Sources/InkMarkdownSwiftUI",
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+            ]
+        ),
         .testTarget(
             name: "InkMarkdownTests",
             dependencies: ["InkMarkdown"],
             path: "Tests/InkMarkdownTests"
+        ),
+        .testTarget(
+            name: "InkMarkdownSwiftUITests",
+            dependencies: ["InkMarkdownSwiftUI"],
+            path: "Tests/InkMarkdownSwiftUITests"
         ),
     ]
 )
