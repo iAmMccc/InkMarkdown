@@ -70,7 +70,7 @@ InkMarkdown.swift  (@_exported Markdown)
 - 图片：**默认**占位符 `[🖼 plainText|source|image]`；`InkImageRendering.isEnabled == true` 时走 `InkImageAttachment` / `InkImageBlock`（见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)）
 - `InlineHTML`：`<br>` 转换为换行符，其余 HTML 标签丢弃或替换为空串
 - `Strikethrough`：`context.striking()` 传向下级，由叶子节点应用 `.strikethroughStyle`
-- 代码块在富文本通道仅作为降级方案，UI 块渲染使用 `InkCodeBlockView`
+- 代码块在富文本通道仅作为降级方案，UI 块渲染使用公开 `InkCodeBlock` 生成的 `UIView`
 
 ### `InkTextContext`（internal）
 
@@ -105,7 +105,7 @@ public protocol InkRenderableBlock {
 | 文件 | 职责 |
 | --- | --- |
 | `InkMarkdownLayoutManager` | 绘制行内代码背景与引用竖线，提供公开 attribute key |
-| `InkCodeBlockView` | 代码块视图（圆角背景与等宽字体） |
+| `InkCodeBlockView.swift` / `InkCodeBlock` | 代码块视图实现；公开 block `InkCodeBlock` 生成圆角背景与等宽字体 `UIView` |
 | `InkThematicBreakBlock` | 分割线视图 |
 | `InkTableBlock` | 解析 `Table` AST 节点生成表格结构 |
 | `InkTableBlockView` | 表格自动换行与横向滚动分流 |
@@ -132,6 +132,6 @@ public protocol InkRenderableBlock {
 | 样式传递逻辑 | `InkTextContext`（参考 03 §3.2） |
 | 自定义块或行内语法 | `InkBlockHandler` / `InkInlineSyntax` |
 | 表格渲染与布局 | `InkTableBlockView` + `InkTableRenderHelper` |
-| 代码块外观 | `InkCodeBlockView` |
+| 代码块外观 | `InkCodeBlock`（实现位于 `InkCodeBlockView.swift`） |
 | 引用线与代码块背景 | `InkMarkdownLayoutManager` |
 | 流式渲染逻辑 | `InkStreamRenderer`（参考 03 §3.7） |

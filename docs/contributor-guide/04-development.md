@@ -8,7 +8,7 @@
 | --- | --- |
 | macOS + Xcode | 提供 Swift 6.2 工具链；以 `swift --version` 输出为准 |
 | Swift | 6.2+ |
-| 目标平台 | iOS 14+（见 `Package.swift`） |
+| 目标平台 | 已发布 `0.0.1`：iOS 14+；v0.0.2 目标：iOS / iPadOS 14+（iPad 验证待完成） |
 | iOS 模拟器 | 安装至少一个可用模拟器 |
 | 网络/缓存 | 首次解析远程依赖需联网；离线缓存脚本见后文 |
 
@@ -69,11 +69,11 @@ xcodebuildmcp --version
 
 | 项目 | 结果 |
 | --- | --- |
-| 日期 | 2026-07-13 |
-| Scheme | `InkMarkdown` |
-| Destination | iPhone 17 Pro / iOS 26.5 Simulator |
-| 测试结果 | 32 项通过，0 项失败，0 项跳过 |
-| 运行方式 | XcodeBuildMCP 自动发现；回退原生 `xcodebuild` 验证 |
+| 日期 | 2026-08-18 |
+| Scheme | `InkMarkdown-Package` |
+| Destination | iPhone 16 / iOS 18.5 与 iPad Pro 11-inch (M4) / iPadOS 18.5 Simulator |
+| 测试结果 | 两个 destination 均为 178 项通过，0 项失败 |
+| 运行方式 | XcodeBuildMCP 自动发现 |
 
 测试文件分布：
 
@@ -82,6 +82,7 @@ xcodebuildmcp --version
 | `InkMarkdownTests.swift` | 固定行高、context 样式、流式边界、appearance 默认值 |
 | `Snapshots/` | 语义属性快照基建（`RenderSnapshot`） |
 | `StreamingPerformanceTests.swift` | 增量耗时 ≤ 全量耗时 30% 性能闸门及输出一致性 |
+| `../InkMarkdownSwiftUITests/` | 静态配置刷新、stream session 状态机、headless finish、重置和 configuration snapshot |
 
 ### 清理构建产物
 
@@ -104,8 +105,9 @@ open ExampleApp/ExampleApp.xcodeproj
 | `SSE/` | 模拟流式输出与流式表格 |
 | `BlockRendering/` | 块级扩展 Demo |
 | `ServerMarkdownViewController` | 完整渲染 Demo |
+| `SwiftUI/` | SwiftUI adapter 的静态、配置与流式示例，详见 [SwiftUI ExampleApp 指南](10-swiftui-example-app.md) |
 
-宿主仅需 `import InkMarkdown`。
+UIKit 宿主仅需 `import InkMarkdown`；SwiftUI 示例使用 `import InkMarkdownSwiftUI`，并在 Xcode 工程中链接 `InkMarkdownSwiftUI` product。
 
 ## 准备 swift-markdown 依赖
 

@@ -1,5 +1,7 @@
 # 架构设计
 
+> 本页以已发布 `0.0.1` UIKit rendering engine 为主，也记录当前 source 中未发布 v0.0.2 的独立 SwiftUI adapter。发布状态与剩余验证见 [当前状态](../current-status.md)；架构范围见 [ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md) 与 [总体技术设计](../contributor-guide/08-swiftui-adapter-architecture.md)。
+
 ## 核心架构
 
 ### 1) 架构风格与模式
@@ -10,7 +12,7 @@
   - 渲染通道分离：根据元素能否构建为 `NSAttributedString`，划分为富文本通道与 `UIView` 块级通道。
   - 流式增量渲染：作为双通道上的控制编排机制（解析缓冲与显示缓冲），不新增第三套语义后端。
 - **架构约束**：
-  - **纯 UIKit 架构**：不提供 SwiftUI 渲染器。
+  - **当前 UIKit core**：不 import SwiftUI；未发布的 v0.0.2 在独立 product 中实现 adapter，不改变 core 的 UIKit-first 边界。
   - **固定行高机制**：固定行高结合 baseline 居中对齐，保证混排字体排版一致。
   - **v1 阶段直接渲染**：直接由 `Markup` 渲染，无独立 IR 中端（`InkIR` 规划于 v2）。
 

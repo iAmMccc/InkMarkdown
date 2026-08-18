@@ -12,24 +12,24 @@
 
 ## 1. 目标形态
 
-基于 swift-markdown 的 Apple 原生 Markdown 渲染库：
+基于 swift-markdown 的 iOS / iPadOS 原生 Markdown 渲染库：
 
-- **当前**：UIKit。富文本使用 `UITextView` 与列表；表格、代码块等采用 `UIView`；具备流式渲染验证测试。
-- **v2**：解析结果生成中间模型 **InkIR**，支持挂载可选 Transformer。
-- **后续**：持续完善 UIKit 渲染、扩展语义与平台验证，不增加 SwiftUI 后端。
+- **已发布 v0.0.1**：UIKit-first。富文本使用 `UITextView` 与列表；表格、代码块等采用 `UIView`；具备流式渲染验证测试。
+- **v0.0.2**：新增独立 `InkMarkdownSwiftUI` adapter product，使 SwiftUI 宿主复用 UIKit rendering engine 的完整语义。
+- **v2**：解析结果生成中间模型 **InkIR**，支持挂载可选 Transformer，并在真实需求出现后评估 native SwiftUI renderer。
 
 ### 适用场景
 
 | 优先级 | 场景 | 核心需求 |
 | --- | --- | --- |
-| 高 | UIKit / 混合界面（IM、资讯、AI 对话） | 嵌套至现有气泡与 Cell，解耦 SwiftUI |
-| 高 | 流式 Markdown 渲染 | 避免性能衰减与样式跳变，提供可测增量结果 |
+| 高 | UIKit / 混合界面（IM、资讯、AI 对话） | 嵌套至现有气泡与 Cell，并可与 SwiftUI 宿主共享渲染语义 |
+| 高 | SwiftUI 宿主中的流式 Markdown 渲染 | 通过正式 adapter 复用可测的增量结果，而非复制第二套 renderer |
 | 中 | 业务语法扩展 | 支持 `@提及`、自定义代码块卡片、链接过滤 |
 | 中 | 大型 UIKit 宿主应用 | 统一语义规范、可组合扩展能力、可控性能 |
 
 ### 核心特征
 
-1. **UIKit 整合**：基于 `NSAttributedString` 与块级 `UIView`，使用固定行高，非 WebView 架构。
+1. **UIKit-first 整合**：基于 `NSAttributedString` 与块级 `UIView`，使用固定行高；SwiftUI 通过独立 adapter product 接入，非 WebView 架构。
 2. **流式渲染机制**：使用稳定前缀 / 活跃后缀与双缓冲结构，配置增量与全量测试基准。
 3. **分层扩展能力**
    - 轻量层（已有）：`sourceFilter`、`InkInlineSyntax`、`InkBlockHandler`、`linkTapHandler`
@@ -38,12 +38,18 @@
 ### 目标管线
 
 ```text
+v0.0.2：
 Markdown
-  → sourceFilter? 
+  → sourceFilter?
   → swift-markdown Document
+  → UIKit rendering engine（富文本 + 块 + 流式）
+  → 可选 SwiftUI adapter host
+
+v2：
+Markdown
   → Lowering → InkIR
   → Transformer 链（可空）
-  → UIKit 后端（富文本 + 块 + 流式）
+  → UIKit renderer / future native SwiftUI renderer
 ```
 
 | 阶段 | 接口形态 |
@@ -58,7 +64,7 @@ Markdown
 | CommonMark + 实用 GFM | 完整 HTML 浏览器、编辑器、独立高亮引擎 |
 | UIKit 渲染 + 流式支持 | WebView 渲染主路径 |
 | 基础扩展点（v2 引入 IR/Transformer） | 将 TED 作为默认流式引擎 |
-| UIKit 渲染 + 可组合扩展 | SwiftUI 渲染器及 Theme 主题生态 |
+| UIKit rendering engine + SwiftUI adapter + 可组合扩展 | native SwiftUI renderer 及第二套 Theme 主题生态（留待 InkIR 后评估） |
 | **TextKit 1** 库内绘制默认 | 仅依赖 TextKit 2 或长文编辑器架构 |
 | 补全图片与删除线契约 | 强制渲染所有解析节点 |
 
@@ -81,20 +87,34 @@ TextKit 2 仅作为远期试探（验证 Fragment 机制是否满足自定义绘
 
 | 版本 | 定义 |
 | --- | --- |
-| **v1.0** | 可靠的 UIKit 渲染库：包含契约测试、CI、规范 API 与完整文档；**不强制公开 IR** |
-| **v2.0** | 引入 InkIR + Transformer + 扩展决策树 + 删除线/图片策略；渲染依赖 IR |
+| **v0.0.1** | 已发布 UIKit-first public beta |
+| **v0.0.2** | 独立 SwiftUI adapter product；完整语义对齐、iOS/iPadOS 14 验证、性能基线与示例为 release blocker |
+| **v1.0** | 稳定的 UIKit-first + SwiftUI adapter 渲染库：包含契约测试、CI、规范 interface 与完整文档；**不强制公开 IR** |
+| **v2.0** | 引入 InkIR + Transformer + 扩展决策树；根据实际需求评估 native SwiftUI renderer |
 | **v2.x** | 补全图片与删除线语义，完善可访问性与性能 |
-| **v3+** | 多平台兼容落地；TextKit 2 试探；TED 机制研究 |
+| **v3+** | 仅在 iOS/iPadOS 范围内评估 TextKit 2 或 TED 机制；跨平台支持不在当前路线 |
 
 ## 2. 路线规划
 
 已交付能力、限制与配置项保持在 [current-status.md](current-status.md) 维护。
 
 ```text
-v1 发布  →  v2 InkIR + Transformer  →  UIKit 能力补全  →  TK2 / 平台验证 / TED 试探
+v0.0.1 beta  →  v0.0.2 SwiftUI adapter  →  v1.0 稳定契约  →  v2 InkIR + Transformer
 ```
 
 依赖关系：缺乏 v1 快照护栏时不引入 IR；缺乏稳定 IR 时不扩展复杂语义转换。
+
+### Phase S → v0.0.2（承诺）
+
+| ID | 事项 | 退出标准 |
+| --- | --- | --- |
+| S1 | 独立 SwiftUI product | `InkMarkdownSwiftUI → InkMarkdown` 单向依赖；UIKit core 不 import SwiftUI |
+| S2 | 完整语义对齐 | 静态、流式、配置、扩展和 opt-in 行为均有 SwiftUI adapter 测试 |
+| S3 | 流式生命周期 | render session 的结束、取消、重置、重新绑定与终态 block promotion 可测 |
+| S4 | iOS/iPadOS 兼容 | iOS 14、当前 iOS、iPhone 与 iPad 容器场景均有验证证据 |
+| S5 | 交付证据 | ExampleApp、可访问性、性能基线、README、状态和 ADR 一致 |
+
+完整设计见 [SwiftUI Adapter 总体技术设计](contributor-guide/08-swiftui-adapter-architecture.md)。
 
 ### Phase A → v1.0.0（承诺）
 
@@ -107,7 +127,7 @@ v1 发布  →  v2 InkIR + Transformer  →  UIKit 能力补全  →  TK2 / 平�
 | A5 | 发布 준비 | 补充 CHANGELOG，明确 API 与限制（图片/删除线/iOS/TK1） |
 | A6 | ExampleApp 补全 | 提供富文本、块、流式及自定义 handler 示例 |
 
-**v1 阶段不包含：** 公开 InkIR、Transformer、TextKit 2、TED、多平台正式支持、Theme 协议。SwiftUI 不在此路线中。
+**v1 阶段不包含：** 公开 InkIR、Transformer、TextKit 2、TED、多平台正式支持、native SwiftUI renderer、第二套 Theme 协议。SwiftUI adapter 是 Phase S / v0.0.2 的 release blocker，尚未交付。
 
 ### Phase B → v2.0.0（架构跃迁）
 
@@ -143,9 +163,10 @@ v1 发布  →  v2 InkIR + Transformer  →  UIKit 能力补全  →  TK2 / 平�
 | ID | 事项 | 规则 |
 | --- | --- | --- |
 | D1 | TextKit 2 | 非默认方案；PoC 未达成预期则移入「不做」 |
-| D2 | 目标平台验证 | 逐项解决条件编译并输出验证报告 |
-| D3 | 树编辑距离算法 | 对比现有边界，性能/准确度无 >10% 提升则归档 |
-| D4 | `maxParseLength` 配置项 | 可并入 v2 实施 |
+| D2 | 树编辑距离算法 | 对比现有边界，性能/准确度无 >10% 提升则归档 |
+| D3 | `maxParseLength` 配置项 | 可并入 v2 实施 |
+
+> iPad Split View、旋转、Dynamic Type 与 repeated attach/detach 验证属于 Phase S / v0.0.2 release blocker，不是 Phase D 的可选试探。
 
 ## 3. 验收标准
 
@@ -163,12 +184,13 @@ v1 发布  →  v2 InkIR + Transformer  →  UIKit 能力补全  →  TK2 / 平�
 | IR 重构引发渲染回归 | 先完成 A2 快照全集覆盖，再进行 B3 |
 | 中端与 Handler 职责重叠 | 遵循 B6 扩展决策指南 |
 | TextKit 2 无法兼容自定义绘制 | 执行 D1 试探，保留 TextKit 1 为主线 |
-| 平台支持与声明不符 | 在完成 D2 逐项验证前，仅声明支持 iOS |
+| 平台支持与声明不符 | 在完成 Phase S 的 iPhone/iPad 验证前，不将 iOS/iPadOS 14+ 作为已完成交付宣传；不承诺其他平台 |
 
 ## 5. 变更历史
 
 - **2026-07-09**：确定 v1 目标为发布 1.0。
 - **2026-07-09**：完成快照测试基建与流式渲染比例阈值设置。
-- **2026-07-13**：确认纯 UIKit 定位；明确不包含 SwiftUI 后端；将 IR 移至 v2。
+- **2026-07-13**：将 IR 移至 v2。
+- **2026-08-17**：通过 ADR-008 确认 v0.0.2 的独立 SwiftUI adapter product；native SwiftUI renderer 继续延后至 InkIR 后评估。
 - **2026-07-09**：确定文本引擎默认采用 TextKit 1，TextKit 2 仅作为试探。
 - **2026-07-13**：当前状态转移至 `current-status.md`；本文仅维护路线方向与验收标准。

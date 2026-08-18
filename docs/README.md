@@ -1,6 +1,6 @@
 # InkMarkdown 文档
 
-项目知识库入口。InkMarkdown 为 **UIKit 专用** Markdown 渲染库，不提供也不规划 SwiftUI 渲染器。
+项目知识库入口。InkMarkdown 是 **UIKit-first** Markdown 渲染库；未发布的 v0.0.2 已以独立 SwiftUI adapter product 实现 SwiftUI 支持，发布范围与剩余验证项见 [当前状态](current-status.md) 及 [ADR-008](decisions/ADR-008-swiftui-adapter-architecture.md)。
 
 ## 入口索引
 
@@ -10,9 +10,12 @@
 | 排查工程决策原因 | [架构决策 ADR](decisions/README.md) |
 | 建立代码库事实基线（技术栈、结构、风险） | [Codebase 证据基线](codebase/README.md) |
 | 快速了解项目全貌 | [贡献者文档](contributor-guide/README.md) → [项目概述](contributor-guide/01-overview.md) → [架构设计](contributor-guide/02-architecture.md) |
+| 了解 SwiftUI v0.0.2 设计 | [SwiftUI Adapter 总体技术设计](contributor-guide/08-swiftui-adapter-architecture.md) → [ADR-008](decisions/ADR-008-swiftui-adapter-architecture.md) |
+| 运行 SwiftUI ExampleApp | [SwiftUI ExampleApp 指南](contributor-guide/10-swiftui-example-app.md) |
 | 修改渲染核心 | [核心原理](contributor-guide/03-principles.md) → [模块详解](contributor-guide/05-modules.md) |
 | 对比主流 iOS Markdown 库定位 | [生态 Reference](references/ios-markdown-ecosystem.md) |
 | 排查常见问题 | [FAQ](contributor-guide/06-faq.md) |
+| ExampleApp 走查 / 已知演示限制 | [ExampleApp 走查 SSOT](qa/example-app-walkthrough-issues.md) |
 | 排查 CI / 本机 Xcode 不一致 | [CI 与工具链排坑](contributor-guide/07-ci-and-toolchain-pitfalls.md) |
 | 查询 swift-markdown API | [依赖 API 参考](references/README.md) |
 | 确认 Markdown 渲染语义 | [渲染语义规范](spec/README.md) |
@@ -23,12 +26,13 @@
 | 层级 | 职责 | 主要文件 |
 | --- | --- | --- |
 | 项目约束 | 定位、平台和协作规则 | 根目录 `AGENTS.md` / `CLAUDE.md` |
-| 参与开源贡献 | 贡献指南 | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| 版本变更 | 更新日志 | [CHANGELOG.md](CHANGELOG.md) |
+| 参与开源贡献 | 贡献指南 | [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| 版本变更 | 更新日志 | [CHANGELOG.md](../CHANGELOG.md) |
 | 当前事实 | 交付产物与现实状态 | [current-status.md](current-status.md)、`Package.swift`、公开 API、测试 |
 | 工程证据基线 | 技术栈、目录结构、架构摘要、编码约定、测试方式、风险点 | [codebase/](codebase/README.md) |
 | 决策记录 | 方案选型与被否决方案 | [decisions/](decisions/README.md) |
 | 开发知识 | 设计细节与修改指南 | [contributor-guide/](contributor-guide/README.md) |
+| QA / 走查 | ExampleApp 人工走查 SSOT | [qa/](qa/example-app-walkthrough-issues.md) |
 | 行为契约 | Markdown 渲染语义 | [spec/](spec/README.md) |
 | 依赖知识 | swift-markdown API 参考 | [references/](references/README.md) |
 | 未来计划 | 未交付的后续规划 | [roadmap.md](roadmap.md) |

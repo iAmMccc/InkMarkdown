@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by ADR-008 (2026-08-17)
 
 ## Date
 
@@ -38,3 +38,7 @@ Accepted
 
 - README / AGENTS 中「支持平台」若写全矩阵，应标明 **目标 / 决策** 与 **当前交付** 的区别（current-status 已有表）。
 - 后续若有 macOS Catalyst 或 AppKit 需求，单独立项与 ADR。
+
+## Supersession note
+
+[ADR-008](ADR-008-swiftui-adapter-architecture.md) 将当前产品路线明确为 iOS 14+ / iPadOS 14+，且不再把 macOS、tvOS、watchOS 或其他平台列为路线图目标。它 supersede 本 ADR 的平台范围与旧平台扩展预期；“不得抢先声明未验证平台”的原则已被 ADR-008 吸收。

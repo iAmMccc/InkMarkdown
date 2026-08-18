@@ -33,7 +33,7 @@ swift-markdown 底层由 cmark-gfm 驱动，支持解析 GFM 扩展语法。本�
 ## 删除线 `Strikethrough`（已渲染）
 
 - **语法**：`~~text~~`
-- **渲染实现**：`renderInline` 拦截删除线节点，通过 `context.striking()` 向下传递删除线标记。叶子节点（`renderText` / `renderInlineCode` / `renderImage`）检查标记并应用 `.strikethroughStyle = .single`。
+- **渲染实现**：`renderInline` 拦截删除线节点，通过 `context.striking()` 向下传递删除线标记。文本叶子节点（`renderText` / `renderInlineCode`）检查标记并应用 `.strikethroughStyle = .single`。
 - **样式嵌套**：支持 `~~**bold**~~` 等加粗与删除线叠加效果（Context 状态互相独立）。
 - **设计权衡**：参考 [03-principles §3.2](../contributor-guide/03-principles.md)；演进规划参考 [roadmap B9](../roadmap.md)。
 
@@ -42,6 +42,7 @@ swift-markdown 底层由 cmark-gfm 驱动，支持解析 GFM 扩展语法。本�
 - **`inlineSyntaxes` 命中时不继承删除线**：自定义行内语法（如 `@提及`、`$标签$`）在 `renderText` 中触发 early-return，跳过删除线设置逻辑，且 `InkInlineContext` 未透传删除线状态。因此 `~~@张三~~` 中 `@张三` 缺少删除线。
   - **因由与规划**：该问题涉及公开 API（`InkInlineContext` 样式透传机制）的设计调整，需独立改进。
   - **变通方案**：如需要，自定义语法可在生成 `NSAttributedString` 时手动添加 `.strikethroughStyle`。
+- **图片叶子节点**：`renderImage` 当前不写入 `.strikethroughStyle`；`~~![alt](url)~~` 不承诺图片上的删除线视觉效果。
 - **颜色配置**：删除线颜色目前使用 UIKit 默认文字前景色，未接入 `InkAppearance`。后续版本补充主题配置。
 
 ## 自动链接（已渲染，使用 `Link` 节点）

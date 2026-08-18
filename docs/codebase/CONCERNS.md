@@ -8,8 +8,8 @@
 |----------|---------|----------|--------|------------------|
 | ~~High~~ Done | ~~依赖跟踪 `branch: main`~~ | `Package.swift` 已 `revision:`；`Package.resolved` 无 branch 字段 | 可重复构建已改善 | 升级时显式修改 revision 并测试 |
 | ~~High~~ Done | ~~无 CI~~ | `.github/workflows/ci.yml` | PR/push 自动 iOS 测试 | 监控 runner/模拟器可用性 |
-| Med | 平台决策 vs manifest | `AGENTS.md` 目标矩阵；v1 仅 iOS（ADR-002） | 文档范围过大会导致误导 | 对外只宣称 iOS 14+ |
-| Med | 流式 `maxParseLength = 50_000` 硬编码 | `InkStreamRenderer.swift:147`；ADR-005 | 超长 SSE 静默截断 / 停解析 | 配置化 + 文档契约 + 测试 |
+| Med | 最低平台验证 | ADR-008 仅承诺 iOS/iPadOS 14+；manifest 已仅声明 `.iOS(.v14)`，但仅有 iOS/iPadOS 18.5 Simulator 证据 | 可能把较高版本 Simulator 结果误当作最低版本支持 | v0.0.2 前完成 iOS/iPadOS 14 验证；不为其他平台建立路径 |
+| Med | 流式 `maximumSourceLength = 50_000` 固定 | `InkStreamRenderer.swift`；ADR-005 | 超长 SSE 在达到上限后不再进入 canonical source | 配置化 + 文档契约 + 测试 |
 | Med | 语义测试矩阵未完成 | `current-status.md`、仅 snapshot scaffold | 语法回归靠手测 | 在 `RenderSnapshot` 上补全 CommonMark/GFM 契约 |
 | Med | ExampleApp SSE 未闭合块的全量重解析 | `SSEChatViewController` 按 chunk 节流重建 segments | 长回答 CPU / 文本段闪烁；generated 块已按 identity 复用；**文本段已按前缀复用**（`reusableTextSegments` + `updateFullText`），行内 attachment 不再每轮销毁 | 可继续收紧「仅尾部文本增长时跳过全量 rebuild」 |
 | Low | 无 root linter/formatter | scan | 风格漂移 | 按需引入 SwiftFormat/SwiftLint |
@@ -19,7 +19,7 @@
 
 | Debt item | Why it exists | Where | Risk if ignored | Suggested fix |
 |-----------|---------------|-------|-----------------|---------------|
-| 删除线：内容保留但未做 GFM strikethrough 样式 | 行内 switch 无 `Strikethrough` 专用分支（default 透传） | `InkAttributedRenderer.renderInline` | 无法正常显示 `~~del~~` 样式 | 明确 v1 契约或补充样式与测试 |
+| 自定义 inline syntax / 图片不完整继承删除线 | 文本与行内代码 `Strikethrough` 已写入 `.strikethroughStyle`，但自定义 `inlineSyntaxes` 未透传该属性，图片叶子节点也不写入 | `InkAttributedRenderer.renderInline` / `renderImage`；`spec/extended-syntax.md` | `~~@mention~~`、`~~![image](url)~~` 等组合语义可能不一致 | 补充契约测试；需要时让 custom syntax 合并文本 context，并为图片定义独立视觉契约 |
 | 图片默认占位 vs opt-in 期望 | ADR-004 默认占位；ADR-006 opt-in 真图已实现，文档曾滞后 | `renderImage`、`Rendering/Image/` | 宿主误判「库永不加载图片」或不知开启方式 | 文档已对齐 ADR-006；宿主按需配置 `isEnabled` 与 `ImageSecurityPolicy` |
 | 过时 TABLE 指南仍在树内 | 历史保留文件 | `Components/TABLE_INTEGRATION_GUIDE.md`（已 exclude） | 容易误导 API 使用 | 入口已标注警告，可移出 Sources 或标记 deprecated |
 | ExampleApp TODO | 演示未完全切到库渲染器 | `MarkdownDetailViewController.swift:137` | 示例与库实际能力不一致 | 跟进 example plan 或删除过时 TODO |
@@ -53,7 +53,7 @@
 | `Tests/InkMarkdownTests.swift` | 测试契约集中 | 4 次路径变更 | 新增语法测试优先采用快照助手 |
 | README / AGENTS / docs | 知识库更新 | 文档变更频繁 | 修改功能时同步更新 current-status |
 | ExampleApp Demo 模型与 Pager | 演示结构变动 | 多文件修改 3–4 次 | 不与库核心 API 逻辑混淆 |
-| ExampleApp SSE 增量重建 | 流式 chunk 触发 Block 重解析；靠 canonicalID 复用 generated 宿主 | 公式与图表 Demo 引入 | **未闭合 fence 提前生图：部分缓解** — `partitionForStreamingRender` 截断未闭合 Mermaid/`$$` 尾部后再 Block 渲染；`looksLikeBlockJustClosed` 仅在未闭合计数归零时立即 flush。仍为 Demo 层策略，非 `InkStreamRenderer` 契约。主题：SSE / 综合 Demo / **组件 Pager 公式·图表 tab** 均在 `traitCollectionDidChange` 时重建 |
+| ExampleApp SSE 流式路径 | Chat 已改走 `ChatDemoViewModel` + `InkMarkdownRenderSession`；旧 cell 内 `partitionForStreamingRender` 与未闭合 fence 提前生图策略已移除 | 公式与图表 Demo 引入 | chunk 路径仅 `session.append`；`finish()` 后等 `isPromoted` 再 promotion 为静态视图。**勿假定** `InkStreamRenderer` 支持 GFM 增量表（流式阶段表格仍为管道文本，finish 后升格为真表）。主题：SSE / 综合 Demo / **组件 Pager 公式·图表 tab** 均在 `traitCollectionDidChange` 时重建 |
 | `onLoadFinished` 与 `failureFallback` 双轨 | 库默认源码回退 + ExampleApp 错误条叠加 | `InkImageRendering` / `GeneratedContentErrorBannerView` | 文档写清边界，避免宿主误以为改了库默认契约 |
 
 生产代码 TODO（排除依赖缓存）：
@@ -67,7 +67,7 @@
 | 议题 | 决策摘要 | ADR |
 |------|----------|-----|
 | 依赖策略 | 默认固定 revision；`Packages/Caches` 作为可选离线路径 | [ADR-001](../decisions/ADR-001-swift-markdown-dependency-pinning.md) |
-| 多平台 | v1.0 仅支持 iOS 14+；其余平台进入路线图 | [ADR-002](../decisions/ADR-002-v1-platform-scope-ios-only.md) |
+| 平台范围 | 当前产品路线仅支持 iOS 14+ / iPadOS 14+；不支持其他平台 | [ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md) |
 | docs/codebase | 作为项目结构与状态证据层 | [ADR-003](../decisions/ADR-003-docs-codebase-evidence-layer.md) |
 | 图片 / 删除线 | v1 默认占位 + opt-in 真图（ADR-006）；删除线样式已实现 | [ADR-004](../decisions/ADR-004-v1-image-and-strikethrough-contract.md)、[ADR-006](../decisions/ADR-006-opt-in-image-rendering.md) |
 | maxParseLength | 可配置，默认 50_000 | [ADR-005](../decisions/ADR-005-stream-max-parse-length-configurable.md) |
@@ -85,8 +85,8 @@
 
 | Intent (docs / AGENTS) | Reality (repo) |
 |------------------------|----------------|
-| UIKit-only 产品 | 一致 |
-| iOS/macOS/tvOS/watchOS 矩阵 | v1 仅 iOS 14+（ADR-002）；多平台为路线图 |
+| UIKit-first engine + SwiftUI adapter 产品路线 | 已发布 `0.0.1` 为 UIKit-first；当前 source 已有独立 `InkMarkdownSwiftUI` adapter，v0.0.2 尚未发布 |
+| iOS/iPadOS 14+ 范围 | ADR-008 已排除其他平台；manifest 已收敛，iOS/iPadOS 14 验证仍是 v0.0.2 blocker |
 | 依赖可重复构建 | 直接依赖 revision pin（ADR-001）；本地 Caches 可选 |
-| v1.0 前完善 + CI/CHANGELOG | 核心实现 + **CI 已有**；CHANGELOG/tag 未落地 |
-| 完整语义测试矩阵 | 32 测试 + 快照脚手架，矩阵未齐 |
+| v0.0.2 前完善 + 发布证据 | 核心 UIKit implementation + **CI / 0.0.1 public beta 已有**；adapter 基础契约测试已通过，示例、可访问性与性能证据未落地 |
+| 完整语义测试矩阵 | 最近一次 iPhone/iPad Simulator 验证为 178 测试；SwiftUI adapter 仍缺完整语义、交互与最低版本矩阵 |

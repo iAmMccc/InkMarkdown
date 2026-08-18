@@ -9,9 +9,9 @@
 | 主要语言 | Swift（包内语言模式 **v5**） | `Package.swift`：`swiftSettings: [.swiftLanguageMode(.v5)]` |
 | 工具链版本 | Swift tools **6.2+** | `Package.swift` 首行 `// swift-tools-version: 6.2` |
 | 包管理器 | Swift Package Manager (SPM) | `Package.swift`、`Package.resolved` |
-| 模块与构建系统 | SPM library target `InkMarkdown` + Xcode ExampleApp | `Package.swift`；`ExampleApp/ExampleApp.xcodeproj` |
-| 声明平台 | **仅 iOS 14+** | `Package.swift`：`platforms: [.iOS(.v14)]` |
-| 产品定位 | 纯 UIKit Markdown 渲染 → `NSAttributedString` / 块级 `UIView` | `AGENTS.md`、`README.md`、`docs/current-status.md` |
+| 模块与构建系统 | SPM library targets `InkMarkdown` 与 `InkMarkdownSwiftUI` + Xcode ExampleApp | `Package.swift`；`ExampleApp/ExampleApp.xcodeproj`；ADR-008 |
+| Manifest 声明 | `.iOS(.v14)`；不声明 macOS、tvOS、watchOS 或 visionOS | `Package.swift`；`docs/current-status.md` |
+| 产品定位 | 已发布 `0.0.1` 为 UIKit-first Markdown rendering engine；未发布的 v0.0.2 提供独立 SwiftUI adapter | `AGENTS.md`、`README.md`、`docs/current-status.md`、ADR-008 |
 
 ### 2) 依赖项
 
@@ -67,8 +67,8 @@ rm -rf .build
 - **配置来源**：`Package.swift`、`Package.resolved`、`Packages/packages.json`、`ExampleApp` 工程配置
 - **环境变量**：无需应用级 `.env`；可继承 Git 代理环境变量（`http_proxy` / `https_proxy`）
 - **部署与运行约束**：
-  - 依赖 UIKit，仅支持 iOS Target
-  - 外部库声明仅支持 iOS 14+
+  - 已发布 UIKit engine 在 iOS Simulator 上验证；v0.0.2 的交付目标是 iOS/iPadOS 14+，iPad 验证尚未完成
+  - 外部库声明的最低平台以 `Package.swift` 与 `docs/current-status.md` 的实际证据为准
   - 直接依赖项已锁定 revision；传递依赖项 `swift-cmark` 遵循 `Package.resolved` 锁定的 revision
 
 ### 6) 验证依据
@@ -83,11 +83,11 @@ rm -rf .build
 
 | 主题 | 规划目标 | 仓库现状 |
 |-------|-------------------|--------------------|
-| 多平台支持 | iOS 14+、macOS 11+、tvOS 14+、watchOS 7+（`AGENTS.md` 路线） | Manifest 仅声明 iOS 14+；源码依赖 UIKit；v1 对外仅支持 iOS（ADR-002） |
+| 产品平台范围 | iOS 14+、iPadOS 14+；不支持其他平台（ADR-008） | 已发布 `0.0.1` source 依赖 UIKit；manifest 与 iPad 验证需在 v0.0.2 前收敛 |
 | 本地 SPM 缓存 | 支持 `path: Packages/Caches/...` | 默认 Manifest 锁定远程 Revision；缓存脚本可选 |
 | SmartCodable | 早期依赖列表项 | 未引用 |
 
 ## 补充说明
 
 - 扫描报告中的 “Total files 2741 / LOC 116025” 包含 `.build/` 及 `Packages/Caches/` 中的第三方依赖代码。
-- 本库实际代码库 `Sources/InkMarkdown` 包含 **21 个 Swift 文件，约 3,000 行代码**。
+- 当前已跟踪的 `Sources/` 包含 **53 个 Swift 文件**；代码规模与模块明细以源码和当前状态为准，不以旧扫描摘要作发布证据。
