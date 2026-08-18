@@ -77,15 +77,17 @@ extension InkAppearance {
         return a
     }
 
-    /// Demo 用图片 opt-in：开启真图渲染、块通道点击放大，并对演示 CDN 放开 host 限制。
+    /// Demo 用图片 opt-in：开启真图渲染、块通道点击放大，并对演示 CDN 显式 allowlist。
     ///
+    /// 这是 ExampleApp 工厂预设，**不是**库默认：库默认 fail-closed（空 `allowedHosts` + `rejectAll`）。
     /// `onImageTap` 需在持有 presenting VC 处注入（见 ``RenderedListViewController``）。
     static var demoImageEnabled: InkAppearance {
         var a = InkAppearance()
         a.imageRendering.isEnabled = true
         a.imageRendering.promotesToBlock = true
         a.imageRendering.tapAction = .callback
-        a.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
+        a.imageRendering.securityPolicy.allowedHosts = ["placehold.co", "picsum.photos"]
+        a.imageRendering.securityPolicy.emptyHostPolicy = .rejectAll
         return a
     }
 

@@ -10,6 +10,7 @@
 		138FC356DC189F0649256A42 /* SmartCodable in Frameworks */ = {isa = PBXBuildFile; productRef = 50432D2B957FD0F6D01F4059 /* SmartCodable */; };
 		430EA368AB68A3F6535F8B71 /* JXSegmentedView in Frameworks */ = {isa = PBXBuildFile; productRef = C21F260C507C6395CB305FE7 /* JXSegmentedView */; };
 		55213DD35161629611C75A5E /* JXPagingView in Frameworks */ = {isa = PBXBuildFile; productRef = AF528F36372CBC6E5E68064C /* JXPagingView */; };
+		7FE2795B44A24588AE06FC5F /* InkMarkdownSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EE1912A30A14D67A9100889 /* InkMarkdownSwiftUI */; };
 		9E2F7F4D9285150605A329D4 /* InkMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = B80102C1FE644144E059F7B0 /* InkMarkdown */; };
 		CCFBF002C0DC775CA9478E16 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2D146DF8365BC373D85A7B22 /* SnapKit */; };
 /* End PBXBuildFile section */
@@ -45,6 +46,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9E2F7F4D9285150605A329D4 /* InkMarkdown in Frameworks */,
+				7FE2795B44A24588AE06FC5F /* InkMarkdownSwiftUI in Frameworks */,
 				138FC356DC189F0649256A42 /* SmartCodable in Frameworks */,
 				430EA368AB68A3F6535F8B71 /* JXSegmentedView in Frameworks */,
 				55213DD35161629611C75A5E /* JXPagingView in Frameworks */,
@@ -92,6 +94,7 @@
 			name = ExampleApp;
 			packageProductDependencies = (
 				B80102C1FE644144E059F7B0 /* InkMarkdown */,
+				5EE1912A30A14D67A9100889 /* InkMarkdownSwiftUI */,
 				50432D2B957FD0F6D01F4059 /* SmartCodable */,
 				C21F260C507C6395CB305FE7 /* JXSegmentedView */,
 				AF528F36372CBC6E5E68064C /* JXPagingView */,
@@ -423,6 +426,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 9BE79DE4459FA85D88CD2023 /* XCRemoteSwiftPackageReference "SmartCodable" */;
 			productName = SmartCodable;
+		};
+		5EE1912A30A14D67A9100889 /* InkMarkdownSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3AE376F2769F086B656D004 /* XCLocalSwiftPackageReference ".." */;
+			productName = InkMarkdownSwiftUI;
 		};
 		AF528F36372CBC6E5E68064C /* JXPagingView */ = {
 			isa = XCSwiftPackageProductDependency;
