@@ -44,16 +44,18 @@ public enum InkBlockRenderer {
       handlers.insert(InkLaTeXBlockHandler(), at: 0)
     }
 
-    for child in document.children {
-      let handled = handlers
-        .first { $0.canHandle(child) }?
-        .makeBlock(from: child, configuration: configuration)
-
-      if let block = handled {
+    let children = Array(document.children)
+    var index = 0
+    while index < children.count {
+      if let consumed = handlers.lazy.compactMap({
+        $0.consume(from: children, startingAt: index, configuration: configuration)
+      }).first {
         flushPendingAsAttributed()
-        blocks.append(block)
+        blocks.append(consumed.block)
+        index += consumed.consumedCount
       } else {
-        pendingMarkup.append(child)
+        pendingMarkup.append(children[index])
+        index += 1
       }
     }
     flushPendingAsAttributed()

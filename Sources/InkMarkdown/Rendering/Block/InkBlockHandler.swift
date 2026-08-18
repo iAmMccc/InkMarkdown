@@ -27,6 +27,32 @@ public protocol InkBlockHandler {
   /// - Parameter configuration: 完整渲染配置。Block 内部若需二次渲染行内内容
   ///   （如表格单元格），应透传此配置以复用 `inlineSyntaxes` / `linkTapHandler`。
   func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock?
+
+  /// 从文档子节点序列中消费一个或多个 Markup 并产出 Block。
+  ///
+  /// 默认实现仅处理单节点：``canHandle(_:)`` 为真且 ``makeBlock(from:configuration:)`` 成功时
+  /// 返回 `(block, 1)`；否则返回 `nil` 以回落富文本。多段块（如跨段 LaTeX）可覆写此方法。
+  func consume(
+    from children: [Markup],
+    startingAt index: Int,
+    configuration: InkConfiguration
+  ) -> (block: InkRenderableBlock, consumedCount: Int)?
+}
+
+public extension InkBlockHandler {
+  func consume(
+    from children: [Markup],
+    startingAt index: Int,
+    configuration: InkConfiguration
+  ) -> (block: InkRenderableBlock, consumedCount: Int)? {
+    guard index < children.count else { return nil }
+    let markup = children[index]
+    guard canHandle(markup),
+          let block = makeBlock(from: markup, configuration: configuration) else {
+      return nil
+    }
+    return (block, 1)
+  }
 }
 
 // MARK: - 内置默认 Handler

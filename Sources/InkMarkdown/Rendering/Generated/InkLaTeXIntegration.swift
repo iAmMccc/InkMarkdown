@@ -2,7 +2,7 @@ import UIKit
 import Markdown
 
 /// LaTeX 图片渲染的公开配置。默认关闭，保持既有 Markdown 文本行为。
-public struct InkLaTeXRendering {
+public struct InkLaTeXRendering: Equatable {
   /// 是否启用 LaTeX 渲染总开关。开启后默认识别 `\\(...\\)`、`$$...$$` 与 `\\[...\\]`。
   public var isEnabled: Bool = false
   /// 是否识别 `$...$` 行内分隔符。默认 `false`；即使总开关开启，也需显式 opt-in 才会渲染美元符公式。
@@ -108,6 +108,11 @@ public struct InkLaTeXInlineSyntax: InkInlineSyntax {
 public struct InkLaTeXBlockHandler: InkBlockHandler {
   public init() {}
 
+  private enum BlockDelimiter {
+    case dollar
+    case bracket
+  }
+
   public func canHandle(_ markup: Markup) -> Bool {
     guard let paragraph = markup as? Paragraph else { return false }
     let text = paragraph.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -116,6 +121,46 @@ public struct InkLaTeXBlockHandler: InkBlockHandler {
        text.hasSuffix(InkLaTeXSourcePreservation.blockClose),
        text.count > 2 { return true }
     return false
+  }
+
+  public func consume(
+    from children: [Markup],
+    startingAt index: Int,
+    configuration: InkConfiguration
+  ) -> (block: InkRenderableBlock, consumedCount: Int)? {
+    guard index < children.count else { return nil }
+    let latexRendering = configuration.appearance.latexRendering
+    guard latexRendering.isEnabled else { return nil }
+
+    let markup = children[index]
+
+    if canHandle(markup), let block = makeBlock(from: markup, configuration: configuration) {
+      return (block, 1)
+    }
+
+    guard let opening = openingDelimiter(in: markup) else { return nil }
+
+    var latexParts: [String] = []
+    var scanIndex = index + 1
+
+    while scanIndex < children.count {
+      guard let paragraph = children[scanIndex] as? Paragraph else { return nil }
+      let text = paragraph.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+      if isClosingDelimiter(text, for: opening) {
+        let latex = latexParts.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !latex.isEmpty,
+              let block = makeLaTeXImageBlock(latex: latex, configuration: configuration) else {
+          return nil
+        }
+        return (block, scanIndex - index + 1)
+      }
+
+      latexParts.append(paragraph.plainText)
+      scanIndex += 1
+    }
+
+    return nil
   }
 
   public func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
@@ -133,6 +178,30 @@ public struct InkLaTeXBlockHandler: InkBlockHandler {
       return nil
     }
     guard !latex.isEmpty else { return nil }
+    return makeLaTeXImageBlock(latex: latex, configuration: configuration)
+  }
+
+  /// 独占段落且 trim 后恰为 opening 定界符（跨段块级公式的起始段）。
+  private func openingDelimiter(in markup: Markup) -> BlockDelimiter? {
+    guard let paragraph = markup as? Paragraph else { return nil }
+    let text = paragraph.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+    if text == "$$" { return .dollar }
+    if text == InkLaTeXSourcePreservation.blockOpen { return .bracket }
+    return nil
+  }
+
+  private func isClosingDelimiter(_ text: String, for opening: BlockDelimiter) -> Bool {
+    switch opening {
+    case .dollar: text == "$$"
+    case .bracket: text == InkLaTeXSourcePreservation.blockClose
+    }
+  }
+
+  private func makeLaTeXImageBlock(
+    latex: String,
+    configuration: InkConfiguration
+  ) -> InkRenderableBlock? {
+    let latexRendering = configuration.appearance.latexRendering
     let resolvedColor = latexRendering.blockStyle.color ?? InkLaTeXColor(
       resolving: configuration.appearance.text.color,
       environment: configuration.renderEnvironment
