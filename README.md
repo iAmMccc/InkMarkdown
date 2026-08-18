@@ -4,12 +4,12 @@
 
 [![Swift](https://img.shields.io/badge/Swift-6.2+-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-iOS%2014+-lightgrey.svg)](https://developer.apple.com/ios/)
-[![UIKit](https://img.shields.io/badge/Framework-UIKit%20Only-blue.svg)](https://developer.apple.com/documentation/uikit)
+[![UIKit](https://img.shields.io/badge/Framework-UIKit%20First-blue.svg)](https://developer.apple.com/documentation/uikit)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-InkMarkdown is a **UIKit-dedicated** Markdown parsing and rendering framework built on Apple's [`swift-markdown`](https://github.com/swiftlang/swift-markdown). It transforms the Markup AST into native `NSAttributedString` rich text and native block `UIView`s, while providing a frame-paced incremental renderer for AI streaming applications.
+InkMarkdown is a **UIKit-first** Markdown parsing and rendering framework built on Apple's [`swift-markdown`](https://github.com/swiftlang/swift-markdown). It transforms the Markup AST into native `NSAttributedString` rich text and native block `UIView`s, while providing a frame-paced incremental renderer for AI streaming applications.
 
-> 📌 **UIKit Scope**: InkMarkdown is designed exclusively for UIKit hosts to fill the capability gap in existing Apple Markdown libraries. It deliberately omits SwiftUI renderers (which are already served by MarkdownUI and Textual) and avoids WebView/HTML wrappers.
+> 📌 **Product scope**: the released `0.0.1` public beta supports UIKit hosts. The unreleased `0.0.2` branch includes the optional `InkMarkdownSwiftUI` adapter product, so SwiftUI hosts reuse the same rendering semantics without a second native SwiftUI renderer. Its product scope is iOS/iPadOS 14+ only; other Apple platforms are not supported. The SwiftUI ExampleApp entry is now present; iPad/iOS 14 validation, accessibility coverage, and performance baselines remain `0.0.2` release blockers. See the [technical design](docs/contributor-guide/08-swiftui-adapter-architecture.md) and [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md). WebView/HTML wrappers remain outside the core path.
 
 ---
 
@@ -20,11 +20,13 @@ InkMarkdown is a **UIKit-dedicated** Markdown parsing and rendering framework bu
   - **`InkBlockRenderer`**: Routes AST nodes into native `UIView` block components (tables, code blocks, thematic breaks, images).
 - **Streaming AI Renderer (`InkStreamRenderer`)**:
   - Dual-buffer architecture (background parsing queue + CADisplayLink frame-driven output).
-  - Smooth text display with zero main-thread parsing stutter and bound `UITextView` differential updates.
+  - Frame-paced display with a background parsing queue and bound `UITextView` differential updates; performance claims require reproducible benchmarks.
 - **Extensible Architecture**:
   - Host-definable inline syntax (`InkInlineSyntax`), block routing (`InkBlockHandler`), source filtering, and link tap interception.
 - **Opt-in Local Diagram & Math Support**:
   - Native rendering for LaTeX formulas (`$...$`, `$$...$$`) and Mermaid diagrams via local offline image generation and bounded image storage.
+- **SwiftUI Adapter (unreleased `0.0.2`)**:
+  - The separate `InkMarkdownSwiftUI` product hosts the UIKit rendering engine in SwiftUI and preserves one configuration snapshot across streaming and terminal block routing.
 
 ---
 
@@ -33,8 +35,8 @@ InkMarkdown is a **UIKit-dedicated** Markdown parsing and rendering framework bu
 | Toolchain / Platform | Requirement |
 | --- | --- |
 | Swift Toolchain | 6.2+ (Package configured with Swift 5 language mode) |
-| Target Platform | iOS 14.0+ |
-| Framework | UIKit (No SwiftUI dependency) |
+| Target Platform | Released `0.0.1`: iOS 14.0+; unreleased `0.0.2`: iOS / iPadOS 14.0+ (iPad validation pending) |
+| Framework | UIKit rendering engine; optional SwiftUI adapter in unreleased `0.0.2` |
 
 ---
 
@@ -138,6 +140,40 @@ config.appearance.mermaidRendering.isEnabled = true
 let attributed = InkAttributedRenderer.render(markdown, configuration: config)
 ```
 
+### 5. SwiftUI Adapter (unreleased `0.0.2`)
+
+Add the `InkMarkdownSwiftUI` product when integrating a SwiftUI host. The adapter keeps scrolling and transport ownership in the host while reusing the UIKit rendering engine:
+
+```swift
+import SwiftUI
+import InkMarkdownSwiftUI
+
+struct MarkdownScreen: View {
+    @StateObject private var session = InkMarkdownRenderSession()
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading) {
+                InkMarkdownView("# Hello SwiftUI")
+                InkStreamMarkdownView(session: session)
+            }
+        }
+    }
+}
+```
+
+For configuration, pass an explicit `InkConfiguration` or inject one for a view subtree:
+
+```swift
+var configuration = InkConfiguration.standard
+configuration.appearance.text.fontSize = 18
+
+InkMarkdownView(markdown)
+    .inkConfiguration(configuration)
+```
+
+For streaming, the host app feeds received deltas to `session.append(_:)`, then calls `finish()`, `cancel()`, or `reset()` as appropriate. See the [SwiftUI ExampleApp guide](docs/contributor-guide/10-swiftui-example-app.md) for the three adapter examples.
+
 ---
 
 ## Supported Syntax & Limitations
@@ -150,13 +186,13 @@ let attributed = InkAttributedRenderer.render(markdown, configuration: config)
 | Links & Callbacks | Supported | `NSAttributedString` + `linkTapHandler` |
 | Ordered / Unordered Lists | Supported | `NSAttributedString` |
 | Block Quotes | Supported | `NSAttributedString` |
-| Code Blocks | Supported | `NSAttributedString` / `InkCodeBlockView` |
-| Tables | Supported | `InkTableView` (`InkBlockRenderer` required) |
-| Thematic Breaks | Supported | `InkThematicBreakView` |
+| Code Blocks | Supported | `NSAttributedString` / code-block `UIView` from `InkCodeBlock` |
+| Tables | Supported | table `UIView` from `InkTableBlock` (`InkBlockRenderer` required) |
+| Thematic Breaks | Supported | separator `UIView` from `InkThematicBreakBlock` |
 | Inline Math (`$...$`) | Supported (Opt-in) | `InkImageAttachment` |
-| Block Math (`$$...$$`) | Supported (Opt-in) | `InkLaTeXBlockView` (`InkBlockRenderer` required) |
-| Mermaid Diagrams | Supported (Opt-in) | `InkMermaidBlockView` (`InkBlockRenderer` required) |
-| Images | Supported (Opt-in) | Text placeholder by default; `InkImageBlockView` when enabled |
+| Block Math (`$$...$$`) | Supported (Opt-in) | generated `InkImageBlock` (`InkBlockRenderer` required) |
+| Mermaid Diagrams | Supported (Opt-in) | generated `InkImageBlock` (`InkBlockRenderer` required) |
+| Images | Supported (Opt-in) | Text placeholder by default; enabled inline images use `InkImageAttachment`, standalone blocks use `InkImageBlock` |
 
 > ℹ️ **Note**: For complete details on rendering behavior and edge cases, see [Current Project Status](docs/current-status.md) and [Rendering Spec](docs/spec/README.md).
 
@@ -177,8 +213,9 @@ InkMarkdown/
 │       ├── LaTeX/           # LaTeX formula image generation & handlers
 │       ├── Mermaid/         # Mermaid diagram generator & handlers
 │       └── InkStreamRenderer.swift # CADisplayLink dual-buffered streaming
+├── Sources/InkMarkdownSwiftUI/ # Unreleased v0.0.2 SwiftUI adapter target
 ├── Tests/InkMarkdownTests/   # Unit, snapshot, streaming & performance tests
-├── ExampleApp/               # UIKit demo app with SSE streaming & components
+├── ExampleApp/               # UIKit + SwiftUI demo app with streaming & components
 └── docs/                     # Architectural decisions (ADR), specs & guides
 ```
 
@@ -213,6 +250,7 @@ open ExampleApp/ExampleApp.xcodeproj
 - 📖 [Documentation Hub](docs/README.md)
 - 📊 [Current Project Status](docs/current-status.md)
 - 🏗️ [Architecture Overview](docs/contributor-guide/02-architecture.md)
+- 🧩 [SwiftUI Adapter Technical Design](docs/contributor-guide/08-swiftui-adapter-architecture.md)
 - 📐 [Rendering Semantics Spec](docs/spec/README.md)
 - 🛣️ [Development Roadmap](docs/roadmap.md)
 - 📝 [Architecture Decision Records (ADRs)](docs/decisions/README.md)

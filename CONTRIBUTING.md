@@ -8,7 +8,7 @@
 
 在开始贡献前，请确保理解 InkMarkdown 的核心原则（详见 [AGENTS.md](AGENTS.md)）：
 
-1. **UIKit Only**：InkMarkdown 定位为纯 UIKit 库，不提供也不接入 SwiftUI 渲染器，不依赖 WebView/HTML。
+1. **UIKit-first + SwiftUI adapter**：`InkMarkdown` 保持 UIKit rendering engine；v0.0.2 的 `InkMarkdownSwiftUI` 是独立 adapter product。实现必须遵守 [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md)，不以 WebView/HTML 作为核心路径。
 2. **纯粹依赖 `swift-markdown`**：解析层 100% 使用 Apple 官方 `swift-markdown` AST，不做自定义语法解析器替代方案。
 3. **不做补丁式设计**：局部修改必须保持与全局架构与统一样式上下文（`InkAppearance` / `InkConfiguration`）的一致性。
 
@@ -41,7 +41,7 @@ xcodebuild test \
 ### 1. 提交 Issue
 
 在提交 Issue 前：
-- 检索既有 Issue 和 [FAQ](docs/contributor-guide/06-faq.md)，确认是否为已有已知问题；
+- 检索既有 Issue、[FAQ](docs/contributor-guide/06-faq.md) 与 [ExampleApp 走查 SSOT](docs/qa/example-app-walkthrough-issues.md)，确认是否为已有已知问题或系统控制台噪声；
 - 明确描述重现步骤、使用的 Markdown 输入、期望输出与实际行为；
 - 如涉及崩溃或渲染错乱，请附带样例工程或单元测试用例。
 

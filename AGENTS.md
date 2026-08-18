@@ -1,17 +1,24 @@
 # InkMarkdown
 
-基于 Apple [swift-markdown](https://github.com/apple/swift-markdown) 的 **UIKit 专用** Markdown 解析与渲染库。核心差异化：把 Markup 树渲染为 `NSAttributedString`，填补三代库（swift-markdown / MarkdownUI / Textual）均不支持 UIKit 的能力空缺。
+基于 Apple [swift-markdown](https://github.com/apple/swift-markdown) 的 **UIKit-first** Markdown 解析与渲染库。核心差异化是将 Markup 树渲染为 `NSAttributedString` 与可路由的 `UIView` block；计划在 v0.0.2 通过独立 product 向 SwiftUI 宿主提供相同渲染语义。
 
-> 📌 **明确不做 SwiftUI**：InkMarkdown 定位是 UIKit 库。SwiftUI 场景已有 MarkdownUI / Textual 覆盖，不重复造轮。
+> 📌 **产品范围**：`InkMarkdown` 保持 UIKit rendering engine；v0.0.2 交付后的 `InkMarkdownSwiftUI` 才是正式 SwiftUI adapter，而非第二套 native SwiftUI renderer。整体决策见 [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md)。
 
 ## 项目结构
 
 ```
 InkMarkdown/
 ├── Package.swift              # SPM 包定义（swift-tools-version: 6.2）
-├── Sources/InkMarkdown/       # Parser / Configuration / Rendering
-├── Tests/InkMarkdownTests/    # 语义、快照骨架与流式性能测试
-├── ExampleApp/                # 示例 App（UIKit）
+├── Sources/InkMarkdown/       # UIKit Parser / Configuration / Rendering engine
+├── Sources/InkMarkdownSwiftUI/ # SwiftUI presentation adapter target
+│   ├── InkMarkdownSwiftUI.swift  # 模块导出入口
+│   ├── Views/                    # 声明式视图入口
+│   ├── Bridge/                   # UIViewRepresentable 桥接
+│   ├── Session/                  # 流式会话状态机
+│   └── Modifiers/                # Environment 配置注入
+├── Tests/InkMarkdownTests/    # UIKit 语义、快照骨架与流式性能测试
+├── Tests/InkMarkdownSwiftUITests/ # SwiftUI adapter 契约测试
+├── ExampleApp/                # UIKit + SwiftUI adapter 示例 App
 │   ├── ExampleApp.xcodeproj
 │   └── ExampleApp/            # AppDelegate / SceneDelegate / ViewController
 ├── Packages/                  # 本地依赖拉取脚本；Caches/ 不提交 Git
@@ -23,18 +30,10 @@ InkMarkdown/
 ## 平台与工具链
 
 - **Swift 工具链**：6.2+
-- **UI 框架**：**UIKit only**（不支持 SwiftUI）
-- **支持平台**（已决策，不再讨论）：
-  - iOS 14+
-  - macOS 11+
-  - tvOS 14+
-  - watchOS 7+
+- **UI 框架**：UIKit rendering engine；v0.0.2 独立 SwiftUI adapter
+- **v0.0.2 目标平台 / 发布边界**：iOS 14+、iPadOS 14+；不支持其他平台
 
-> 📌 **平台决策记录**：项目定位为 UIKit 库，核心 API 是 `NSAttributedString`（iOS 6+ 就有），不依赖任何 iOS 15+ 的 SwiftUI 或 `AttributedString`（Swift 原生类型）。
->
-> 在 UIKit 场景下 iOS 14 vs 15 能力差距 ≈ 0。降到 iOS 14 仅有的小损失：`HTMLFormatter` 的 `.parseInlineAttributeClass` 选项在 iOS 14 退回普通 JSON 解析（无 JSON5），但库本身已写好 fallback，且这是用户主动开启的边缘选项，几乎无影响。
->
-> 收益：覆盖更多老设备、提升库的开源吸引力、企业市场友好。
+> 📌 已发布 `0.0.1` 的 iPad 验证尚未完成，不能将此目标描述为当前已交付支持。`UIViewRepresentable` 覆盖最低平台，但部分 SwiftUI convenience capability 晚于 iOS 14；兼容实现必须把可用性差异收敛在 adapter 内。
 
 ## 依赖管理
 
@@ -81,15 +80,18 @@ docs/
 ### 目标架构原则
 
 ```
-解析：100% 用 swift-markdown（三代库中能力最强）
+解析：100% 使用 swift-markdown
    ↓
-适配：Markup 树 → 渲染中间表示（借鉴 Textual 的解耦思路，但基于 Markup 类型）
+语义与配置：Markup + InkConfiguration（v0.0.2 保持现有 Markup 直渲染；InkIR 留待 v2）
    ↓
-样式：TextProperty + Theme 协议（借鉴 Textual 组合式 + MarkdownUI 分层）
+UIKit rendering engine：NSAttributedString + 可选 UIView block 路由
    ↓
-渲染：UIKit NSAttributedString（差异化主力，三代库均不支持）
-      └─ 可选附加：自定义 UIView 路由（处理 Table / CodeBlock 等无法塞进 NSAttributedString 的元素）
+InkMarkdownSwiftUI：在独立 seam 承载 UIKit view、配置与生命周期
+   ↓
+UIKit / SwiftUI 宿主共享同一渲染语义
 ```
+
+SwiftUI 的总体设计、范围和退出标准以 [SwiftUI Adapter 总体技术设计](docs/contributor-guide/08-swiftui-adapter-architecture.md) 为准。
 
 ## 协作偏好
 
@@ -147,7 +149,7 @@ docs/
 推荐工具顺序：
 1. `search_apple_docs` / `list_technologies` / `search_framework_symbols` — 定位 API、框架与符号
 2. `get_apple_doc_content` / `resolve_references_batch` / `get_related_apis` / `find_similar_apis` — 读取完整文档与关联 API
-3. `get_platform_compatibility` — 核对部署版本与平台可用性（本项目硬边界：iOS 14+ / macOS 11+ 等）
+3. `get_platform_compatibility` — 核对部署版本与平台可用性（本项目硬边界：iOS 14+ / iPadOS 14+；不支持其他平台）
 4. `get_sample_code` / `get_technology_overviews` / `get_documentation_updates` — 示例、指南与更新说明
 5. `list_wwdc_videos` / `search_wwdc_content` / `get_wwdc_video` / `get_wwdc_code_examples` — WWDC 演讲与示例代码
 
@@ -244,14 +246,8 @@ open ExampleApp/ExampleApp.xcodeproj
 
 ## 当前状态
 
-项目已越过初始化阶段，当前处于 **v1.0 前的实现完善与发布准备阶段**：
-
-- ✅ `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer` 已实现
-- ✅ `InkAppearance` / `InkConfiguration` 与行内、块级扩展点已实现
-- ✅ 代码块、表格、分割线 UIKit 组件与 ExampleApp 已实现
-- ✅ 32 个 iOS Simulator 测试覆盖行高、样式上下文、流式边界、性能一致性与快照骨架
-- ✅ contributor guide、渲染语义规范和 swift-markdown API 参考已建立
-- ⏳ 完整语义测试矩阵、公开 API 审计、CI、CHANGELOG 与稳定版本待补
-- ⚠️ 当前 manifest / 平台声明与目标依赖策略、目标平台矩阵仍有差异
-
-完整且可维护的状态基线见 [docs/current-status.md](docs/current-status.md)。
+- ✅ `0.0.1` 已作为 UIKit-first public beta 发布。
+- ✅ `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer`、`InkAppearance` / `InkConfiguration` 与 UIKit ExampleApp 已具备。
+- ✅ 2026-08-18 通过 XcodeBuildMCP 在 iPhone 16 / iOS 18.5 与 iPad Pro 11-inch (M4) / iPadOS 18.5 验证 `InkMarkdown-Package` scheme：均为 178 项测试通过；具体证据以 [docs/current-status.md](docs/current-status.md) 为准。
+- ⏳ `InkMarkdownSwiftUI` adapter 源码已按 ADR-008 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 等公开类型），基础契约测试与 ExampleApp 的静态、配置、流式示例入口已具备；完整语义对齐测试、iOS/iPadOS 14 验证、可访问性、性能基线和发布文档仍为 v0.0.2 release blocker。
+- ⚠️ 此前被拒绝的 SwiftUI spike 已移出仓库；当前 v0.0.2 adapter 已按 ADR-008 作为独立 product 完整实现，基础契约测试与 ExampleApp 示例入口已验证，完整发布验收仍待完成。
