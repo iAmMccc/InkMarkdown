@@ -11,19 +11,17 @@ final class MarkdownDetailViewController: UIViewController {
 
     private let resourceName: String
     private var markdownSource: String = ""
-    private var renderedContent: NSAttributedString?
     private var displayMode: DisplayMode = .rendered
 
     private let segmentedControl = UISegmentedControl(items: ["渲染效果", "Markdown 源码"])
-    private let textView: UITextView = {
-        let layoutManager = InkMarkdownLayoutManager()
-        let textStorage = NSTextStorage()
-        textStorage.addLayoutManager(layoutManager)
-        let textContainer = NSTextContainer()
-        textContainer.lineFragmentPadding = 0
-        textContainer.widthTracksTextView = true
-        layoutManager.addTextContainer(textContainer)
-        return UITextView(frame: .zero, textContainer: textContainer)
+    private let blockStackView = DemoBlockStackView()
+    private let sourceTextView: UITextView = {
+        let textView = UITextView()
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.alwaysBounceVertical = true
+        textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        return textView
     }()
 
     /// - Parameters:
@@ -44,8 +42,8 @@ final class MarkdownDetailViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         loadMarkdownSource()
-        renderedContent = renderMarkdown(markdownSource)
         setupUI()
+        renderMarkdownContent()
         applyDisplayMode()
     }
 
@@ -56,16 +54,12 @@ final class MarkdownDetailViewController: UIViewController {
         segmentedControl.addTarget(self, action: #selector(segmentChanged), for: .valueChanged)
         segmentedControl.translatesAutoresizingMaskIntoConstraints = false
 
-        textView.isEditable = false
-        textView.isSelectable = true
-        textView.alwaysBounceVertical = true
-        // Markdown 距屏幕左右 15pt（demo 侧统一）。
-        textView.textContainerInset = UIEdgeInsets(top: 16, left: 15, bottom: 16, right: 15)
-        textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.dataDetectorTypes = [.link]
+        blockStackView.translatesAutoresizingMaskIntoConstraints = false
+        sourceTextView.translatesAutoresizingMaskIntoConstraints = false
 
         view.addSubview(segmentedControl)
-        view.addSubview(textView)
+        view.addSubview(blockStackView)
+        view.addSubview(sourceTextView)
 
         let guide = view.safeAreaLayoutGuide
         NSLayoutConstraint.activate([
@@ -73,10 +67,15 @@ final class MarkdownDetailViewController: UIViewController {
             segmentedControl.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 16),
             segmentedControl.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -16),
 
-            textView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 12),
-            textView.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
-            textView.trailingAnchor.constraint(equalTo: guide.trailingAnchor),
-            textView.bottomAnchor.constraint(equalTo: guide.bottomAnchor),
+            blockStackView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 12),
+            blockStackView.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
+            blockStackView.trailingAnchor.constraint(equalTo: guide.trailingAnchor),
+            blockStackView.bottomAnchor.constraint(equalTo: guide.bottomAnchor),
+
+            sourceTextView.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 12),
+            sourceTextView.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
+            sourceTextView.trailingAnchor.constraint(equalTo: guide.trailingAnchor),
+            sourceTextView.bottomAnchor.constraint(equalTo: guide.bottomAnchor),
         ])
     }
 
@@ -89,16 +88,12 @@ final class MarkdownDetailViewController: UIViewController {
     private func applyDisplayMode() {
         switch displayMode {
         case .rendered:
-            if let rendered = renderedContent {
-                textView.attributedText = rendered
-            } else {
-                textView.attributedText = NSAttributedString(
-                    string: "渲染失败，请检查 Markdown 源码。",
-                    attributes: [.foregroundColor: UIColor.secondaryLabel]
-                )
-            }
+            blockStackView.isHidden = false
+            sourceTextView.isHidden = true
         case .source:
-            textView.attributedText = sourceAttributedString(markdownSource)
+            blockStackView.isHidden = true
+            sourceTextView.isHidden = false
+            sourceTextView.attributedText = sourceAttributedString(markdownSource)
         }
     }
 
@@ -133,12 +128,11 @@ final class MarkdownDetailViewController: UIViewController {
 
     // MARK: - Rendering
 
-    private func renderMarkdown(_ source: String) -> NSAttributedString? {
-        // TODO: 替换为 InkMarkdown 自身渲染器（计划见 docs/plans/example-app-demo-plan.md §6）
-        // 早期方案使用 NSAttributedString.init(html:) 解析 HTMLFormatter 输出，
-        // 但该 API 内部跑 WebKit 同步渲染，主线程一阻就是数百毫秒，详情页推入卡顿明显。
-        // 改为基于 swift-markdown 的 MarkupVisitor 直接构造 NSAttributedString。
-        return InkAttributedRenderer.render(source)
+    private func renderMarkdownContent() {
+        let config = DemoInkConfigurationBuilder.makeStaticConfiguration(
+            userInterfaceStyle: traitCollection.userInterfaceStyle
+        )
+        blockStackView.render(markdown: markdownSource, configuration: config)
     }
 
     private func sourceAttributedString(_ source: String) -> NSAttributedString {
