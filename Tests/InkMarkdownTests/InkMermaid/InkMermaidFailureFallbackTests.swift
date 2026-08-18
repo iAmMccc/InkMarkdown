@@ -204,7 +204,7 @@ private func waitForGeneratedLoaderCompletion(
     #expect(block.intrinsicContentSize.height >= expectedHeight - 1)
   }
 
-  @Test func imageBlockFailureWithoutFallbackKeepsGrayPlaceholder() async {
+  @Test func imageBlockFailureWithoutFallbackShowsCompactLabel() async {
     let url = URL(string: "https://example.com/fail.png")!
     let loader = FailingURLImageLoader()
     var rendering = InkImageRendering()
@@ -219,8 +219,9 @@ private func waitForGeneratedLoaderCompletion(
     block.configure(containerWidth: 300, loader: loader)
     await waitForLoaderCompletion(count: 1, loader: loader)
 
-    #expect(collectLabelTexts(in: block).isEmpty)
-    #expect(hasVisibleGrayPlaceholder(in: block))
+    #expect(collectLabelTexts(in: block).contains("[🖼 image]"))
+    #expect(!hasVisibleGrayPlaceholder(in: block))
+    #expect(block.intrinsicContentSize.height < rendering.placeholderHeight)
   }
 
   @Test func imageBlockReuseClearsFailureFallbackAfterSuccess() async {
@@ -281,6 +282,7 @@ private func waitForGeneratedLoaderCompletion(
 
     block.prepareForReuse()
     #expect(collectLabelTexts(in: block).isEmpty)
-    #expect(hasVisibleGrayPlaceholder(in: block))
+    #expect(!hasVisibleGrayPlaceholder(in: block))
+    #expect(block.intrinsicContentSize.height == 0)
   }
 }

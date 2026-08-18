@@ -285,3 +285,39 @@ public extension InkAppearance {
     public init() {}
   }
 }
+
+// MARK: - Equatable
+
+extension InkAppearance.Text: Equatable {}
+extension InkAppearance.Heading: Equatable {}
+extension InkAppearance.Blockquote: Equatable {}
+extension InkAppearance.List: Equatable {}
+extension InkAppearance.CodeBlock: Equatable {}
+extension InkAppearance.InlineCode: Equatable {}
+
+extension InkAppearance.Table: Equatable {
+  public static func == (lhs: InkAppearance.Table, rhs: InkAppearance.Table) -> Bool {
+    lhs.headerFontSize == rhs.headerFontSize &&
+    lhs.bodyFontSize == rhs.bodyFontSize &&
+    lhs.headerColor == rhs.headerColor &&
+    lhs.bodyColor == rhs.bodyColor &&
+    lhs.separatorColor == rhs.separatorColor &&
+    lhs.headerBackgroundColor == rhs.headerBackgroundColor &&
+    lhs.horizontalPadding == rhs.horizontalPadding &&
+    lhs.verticalPadding == rhs.verticalPadding &&
+    lhs.lineHeight == rhs.lineHeight &&
+    lhs.horizontalInset == rhs.horizontalInset &&
+    lhs.verticalInset == rhs.verticalInset &&
+    lhs.cornerRadius == rhs.cornerRadius &&
+    lhs.borderWidth == rhs.borderWidth &&
+    lhs.separatorThickness == rhs.separatorThickness &&
+    lhs.columnMaxWidthRatio == rhs.columnMaxWidthRatio &&
+    lhs.enableLongPressCopy == rhs.enableLongPressCopy &&
+    (lhs.onCopyFeedback == nil) == (rhs.onCopyFeedback == nil)
+  }
+}
+
+extension InkAppearance.ThematicBreak: Equatable {}
+extension InkAppearance.Link: Equatable {}
+extension InkAppearance: Equatable {}
+

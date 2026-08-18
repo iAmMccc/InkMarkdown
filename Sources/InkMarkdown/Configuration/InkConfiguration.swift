@@ -84,4 +84,15 @@ public struct InkConfiguration {
 
   /// 标准配置：全局样式 + 无行内扩展 + 默认块级路由。
   public static var standard: InkConfiguration { InkConfiguration() }
+
+  /// 判断两个配置是否在渲染语义上等价（包含样式、环境、语法扩展与处理器）。
+  public func isSemanticallyEqualTo(_ other: InkConfiguration) -> Bool {
+    appearance == other.appearance &&
+    renderEnvironment == other.renderEnvironment &&
+    inlineSyntaxes.count == other.inlineSyntaxes.count &&
+    blockHandlers.count == other.blockHandlers.count &&
+    (sourceFilter == nil) == (other.sourceFilter == nil) &&
+    (linkTapHandler == nil) == (other.linkTapHandler == nil)
+  }
 }
+

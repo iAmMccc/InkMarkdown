@@ -33,8 +33,8 @@ public struct InkAttributedTextBlock: InkRenderableBlock {
     textView.linkTapHandler = linkTapHandler
     textView.isEditable = false
     textView.isSelectable = true
-    // 有自定义 linkTapHandler 时关闭数据探测，避免系统自动识别与业务 scheme 抢占点击。
-    textView.dataDetectorTypes = linkTapHandler == nil ? UIDataDetectorTypes.link : []
+    // Markdown 文本在解析阶段已由引擎打上 .link 属性，无需开启正则数据探测，避免与富文本属性及手势冲突。
+    textView.dataDetectorTypes = []
     textView.backgroundColor = UIColor.clear
     textView.isScrollEnabled = false
     textView.textContainerInset = insets
@@ -53,6 +53,23 @@ final class InkAttributedBlockTextView: UITextView, UITextViewDelegate {
 
   var linkTapHandler: ((URL, UIView) -> Bool)? {
     didSet { delegate = linkTapHandler == nil ? nil : self }
+  }
+
+  override func sizeThatFits(_ size: CGSize) -> CGSize {
+    let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 320)
+    guard targetWidth > 0, let layoutManager = textContainer.layoutManager else {
+      return super.sizeThatFits(size)
+    }
+    let contentWidth = max(0, targetWidth - textContainerInset.left - textContainerInset.right)
+    textContainer.size = CGSize(width: contentWidth, height: .greatestFiniteMagnitude)
+    _ = layoutManager.glyphRange(for: textContainer)
+    let rect = layoutManager.usedRect(for: textContainer)
+    let calculatedHeight = ceil(rect.height + textContainerInset.top + textContainerInset.bottom)
+    return CGSize(width: targetWidth, height: calculatedHeight)
+  }
+
+  override var intrinsicContentSize: CGSize {
+    sizeThatFits(CGSize(width: bounds.width > 0 ? bounds.width : UIView.noIntrinsicMetric, height: .greatestFiniteMagnitude))
   }
 
   func textView(

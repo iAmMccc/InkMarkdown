@@ -12,8 +12,8 @@ import Markdown
 ///                          CADisplayLink 按帧率 → 逐步截取 → textStorage 增量更新
 /// ```
 ///
-/// - 解析与显示完全解耦：解析慢不影响吐字动画平滑
-/// - 显示侧每帧开销恒定 O(1)：只做 attributedSubstring 截取 + textStorage append
+/// - 解析与显示分阶段调度：显示侧消费最近一次已准备的内容
+/// - 显示侧使用 attributedSubstring 与 textStorage 增量更新；substring、布局和测量成本取决于内容与视图状态，不承诺 O(1)
 /// - 支持暂停/恢复显示（用户滑动时暂停）
 ///
 /// ## 块级 LaTeX / Mermaid 的终态职责
@@ -32,15 +32,18 @@ import Markdown
 /// // 块级 LaTeX / Mermaid（需保留完整源文本）：
 /// let blocks = InkBlockRenderer.render(fullSource, configuration: config)
 /// ```
-/// 流式渲染器：所有公开 API（append/finish/bindTextView/unbindTextView）必须在主线程调用。
+/// 流式渲染器：所有公开 API（append/finish/reset/updateConfiguration/bindTextView/unbindTextView）必须在主线程调用。
 public final class InkStreamRenderer {
 
   // MARK: - Public Properties
 
-  public let configuration: InkConfiguration
+  public private(set) var configuration: InkConfiguration
 
   /// 每次渲染产物更新时回调（未绑定 textView 时使用）。
   public var onUpdate: ((NSAttributedString) -> Void)?
+
+  /// 单个会话可解析的最大 Markdown 字符数；超出部分不会进入该 renderer 的 canonical source。
+  public static let maximumSourceLength = 50_000
 
   /// 每帧显示的字符数。60fps 下：1=60字/秒，2=120字/秒，3=180字/秒。
   public var charactersPerFrame: Int = 2
@@ -51,6 +54,9 @@ public final class InkStreamRenderer {
   /// Mermaid 块事件回调
   public var onMermaidBlockUpdate: ((_ blockID: String, _ source: String, _ isComplete: Bool) -> Void)?
 
+
+  /// 最终全量解析完成时回调；此时显示可能仍在逐帧追赶最终内容。
+  public var onFinishParse: (() -> Void)?
 
   /// 所有内容吐字完毕时回调（finish 被调用且 displayIndex 追上 totalLength 时触发）。
   public var onFinishDisplay: (() -> Void)?
@@ -120,6 +126,17 @@ public final class InkStreamRenderer {
     self.configuration = configuration
   }
 
+  /// 替换渲染配置，并以给定完整源文本重新开始解析和显示。
+  ///
+  /// 调用方须在主线程调用；进行中的后台解析结果会由渲染代次丢弃。
+  /// - Parameters:
+  ///   - configuration: 后续解析与显示使用的新配置快照。
+  ///   - source: 作为唯一输入源重新解析的完整 Markdown 文本。
+  public func updateConfiguration(_ configuration: InkConfiguration, source: String) {
+    self.configuration = configuration
+    reset(to: source)
+  }
+
   deinit {
     stopDisplayLink()
   }
@@ -144,29 +161,37 @@ public final class InkStreamRenderer {
       }
     }
 
-    startDisplayLink()
+    if !buffer.isEmpty || isFinished {
+      startDisplayLink()
+    }
   }
 
   /// 解绑 textView 并快进 displayIndex 到当前已解析位置。
   /// 用于 cell 离开屏幕时：不再做 textStorage 操作，但逻辑上视为已吐出。
   public func unbindTextView() {
     textView = nil
-    // 快进到已解析的最新位置
+    // 快进到已解析的最新位置。
     preloadLock.lock()
     displayIndex = preloadContent.length
+    let shouldFinish = isFinished && finalParseCompleted
     preloadLock.unlock()
+
+    if shouldFinish {
+      completeFinishDisplay()
+    }
   }
 
-  /// 与 BDAiTextViewCache.maxRenderLength 保持一致：超过此长度停止解析
-  private static let maxParseLength = 50_000
-
   /// 追加一段新到达的 Markdown 文本分片。
-  /// 内部将在后台队列异步解析，不阻塞主线程。
+  /// 内部将在后台队列异步解析，不阻塞主线程。超过 ``maximumSourceLength`` 的尾部不会进入会话。
   public func append(_ chunk: String) {
-    buffer += chunk
+    let remainingCapacity = Self.maximumSourceLength - buffer.count
+    guard remainingCapacity > 0 else { return }
 
-    // buffer 超过阈值后停止解析——最终 warmUp 也只渲染 50K，流式中超出部分无意义
-    guard buffer.count <= Self.maxParseLength else { return }
+    let acceptedChunk = String(chunk.prefix(remainingCapacity))
+    buffer += acceptedChunk
+    if textView != nil || onUpdate != nil {
+      startDisplayLink()
+    }
 
     let currentBuffer = buffer
     let config = configuration.capturingRenderEnvironmentForBackgroundParse()
@@ -175,7 +200,7 @@ public final class InkStreamRenderer {
       guard let self = self else { return }
       let result: InkIncrementalMarkdownRenderer.Result
       if config.sourceFilter == nil {
-        result = self.incrementalRenderer.append(chunk, configuration: config)
+        result = self.incrementalRenderer.append(acceptedChunk, configuration: config)
       } else {
         result = InkIncrementalMarkdownRenderer.Result(
           content: InkAttributedRenderer.render(currentBuffer, configuration: config),
@@ -201,6 +226,7 @@ public final class InkStreamRenderer {
     displayIndex = 0
     isFinished = false
     lastAppliedParseVersion = 0
+    lastContentHeight = 0
 
     preloadLock.lock()
     renderGeneration += 1
@@ -256,11 +282,7 @@ public final class InkStreamRenderer {
   /// 块级 LaTeX（`$$...$$`、`\\[...\\]`）与 Mermaid 围栏不会被转为 `UIView`。
   /// 若宿主需要块级图片渲染，请在流结束后对完整源文本调用 ``InkBlockRenderer/render(_:configuration:)``。
   public func finish() {
-    var currentBuffer = buffer
-    if currentBuffer.count > Self.maxParseLength {
-      let endIndex = currentBuffer.index(currentBuffer.startIndex, offsetBy: Self.maxParseLength)
-      currentBuffer = String(currentBuffer[..<endIndex])
-    }
+    let currentBuffer = buffer
     let config = configuration.capturingRenderEnvironmentForBackgroundParse()
     isFinished = true
     preloadLock.lock()
@@ -283,6 +305,9 @@ public final class InkStreamRenderer {
       self.parseVersion += 1
       self.finalParseCompleted = true
       self.preloadLock.unlock()
+      DispatchQueue.main.async { [weak self] in
+        self?.handleFinalParseCompleted()
+      }
     }
   }
 
@@ -351,20 +376,14 @@ public final class InkStreamRenderer {
       bindImageAttachmentsIfNeeded(in: bindRange)
       notifyHeightChangeIfNeeded()
       if isFinished && finalParseCompleted && displayIndex >= totalLength {
-        stopDisplayLink()
-        let cb = onFinishDisplay
-        onFinishDisplay = nil
-        cb?()
+        completeFinishDisplay()
       }
       return
     }
 
     guard totalLength > displayIndex else {
       if isFinished && finalParseCompleted {
-        stopDisplayLink()
-        let cb = onFinishDisplay
-        onFinishDisplay = nil
-        cb?()
+        completeFinishDisplay()
       }
       return
     }
@@ -377,6 +396,9 @@ public final class InkStreamRenderer {
       displayIndex = newDisplayIndex
       let substring = content.attributedSubstring(from: NSRange(location: 0, length: newDisplayIndex))
       onUpdate?(substring)
+      if isFinished && finalParseCompleted && displayIndex >= totalLength {
+        completeFinishDisplay()
+      }
       return
     }
 
@@ -394,11 +416,33 @@ public final class InkStreamRenderer {
 
     // 流结束且最终解析完成且显示追上 → 停止并通知
     if isFinished && finalParseCompleted && displayIndex >= totalLength {
-      stopDisplayLink()
-      let cb = onFinishDisplay
-      onFinishDisplay = nil
-      cb?()
+      completeFinishDisplay()
     }
+  }
+
+  private func handleFinalParseCompleted() {
+    guard isFinished else { return }
+    onFinishParse?()
+
+    guard textView == nil else {
+      startDisplayLink()
+      return
+    }
+
+    preloadLock.lock()
+    let content = preloadContent
+    displayIndex = content.length
+    preloadLock.unlock()
+    onUpdate?(content)
+    completeFinishDisplay()
+  }
+
+  private func completeFinishDisplay() {
+    guard isFinished else { return }
+    stopDisplayLink()
+    let callback = onFinishDisplay
+    onFinishDisplay = nil
+    callback?()
   }
 
   private func notifyHeightChangeIfNeeded() {

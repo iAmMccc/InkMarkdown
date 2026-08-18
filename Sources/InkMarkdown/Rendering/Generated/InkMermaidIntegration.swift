@@ -2,7 +2,7 @@ import UIKit
 import Markdown
 
 /// Mermaid 的公共开关与主题。默认关闭，因而不会接管既有 `mermaid` 代码围栏。
-public struct InkMermaidRendering {
+public struct InkMermaidRendering: Equatable {
   public var isEnabled: Bool = false
   public var theme: InkMermaidTheme = .light
   public var limits: InkMermaidRenderLimits = .init()

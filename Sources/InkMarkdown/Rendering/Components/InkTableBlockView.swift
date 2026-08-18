@@ -12,6 +12,8 @@ final class InkTableBlockView: UIView {
   private let config: InkAppearance.Table
   private let configuration: InkConfiguration
 
+  private var contentStack: UIStackView?
+
   init(headers: [String], rows: [[String]], alignments: [Table.ColumnAlignment?], layoutMode: InkTableLayoutMode, config: InkAppearance.Table, configuration: InkConfiguration) {
     self.headers = headers
     self.rows = rows
@@ -26,6 +28,37 @@ final class InkTableBlockView: UIView {
   @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+
+  override func sizeThatFits(_ size: CGSize) -> CGSize {
+    let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 320)
+    let availableWidth = max(0, targetWidth - config.horizontalInset * 2)
+    guard let stack = contentStack else {
+      return CGSize(width: targetWidth, height: config.verticalInset)
+    }
+
+    let fittingSize: CGSize
+    switch layoutMode {
+    case .wrap:
+      fittingSize = stack.systemLayoutSizeFitting(
+        CGSize(width: availableWidth, height: UIView.layoutFittingCompressedSize.height),
+        withHorizontalFittingPriority: .required,
+        verticalFittingPriority: .fittingSizeLevel
+      )
+    case .scroll:
+      fittingSize = stack.systemLayoutSizeFitting(
+        CGSize(width: UIView.layoutFittingCompressedSize.width, height: UIView.layoutFittingCompressedSize.height),
+        withHorizontalFittingPriority: .fittingSizeLevel,
+        verticalFittingPriority: .fittingSizeLevel
+      )
+    }
+
+    let totalHeight = fittingSize.height + config.borderWidth * 2 + config.verticalInset
+    return CGSize(width: targetWidth, height: ceil(totalHeight))
+  }
+
+  override var intrinsicContentSize: CGSize {
+    sizeThatFits(CGSize(width: bounds.width > 0 ? bounds.width : UIView.noIntrinsicMetric, height: .greatestFiniteMagnitude))
   }
 
   // MARK: - Setup
@@ -48,10 +81,12 @@ final class InkTableBlockView: UIView {
     let container = InkTableRenderHelper.makeContainer(config: config)
     addSubview(container)
     container.translatesAutoresizingMaskIntoConstraints = false
+    let bottomConstraint = container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset)
+    bottomConstraint.priority = UILayoutPriority(999)
     NSLayoutConstraint.activate([
       // 规范总纲：上方不设间距（top=0），下方间距由 verticalInset 承担（规范：24）。
       container.topAnchor.constraint(equalTo: topAnchor),
-      container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset),
+      bottomConstraint,
       container.leadingAnchor.constraint(equalTo: leadingAnchor, constant: config.horizontalInset),
       container.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -config.horizontalInset),
     ])
@@ -69,6 +104,7 @@ final class InkTableBlockView: UIView {
       stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
     ])
 
+    contentStack = stack
     populateStack(stack, widthMode: .ratio(ratios))
   }
 
@@ -84,10 +120,12 @@ final class InkTableBlockView: UIView {
     scrollView.alwaysBounceVertical = false
     scrollView.translatesAutoresizingMaskIntoConstraints = false
     addSubview(scrollView)
+    let bottomConstraint = scrollView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset)
+    bottomConstraint.priority = UILayoutPriority(999)
     NSLayoutConstraint.activate([
       // 规范总纲：上方不设间距（top=0），下方间距由 verticalInset 承担（规范：24）。
       scrollView.topAnchor.constraint(equalTo: topAnchor),
-      scrollView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset),
+      bottomConstraint,
       scrollView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: config.horizontalInset),
       scrollView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -config.horizontalInset),
     ])
@@ -117,6 +155,7 @@ final class InkTableBlockView: UIView {
       stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
     ])
 
+    contentStack = stack
     populateStack(stack, widthMode: .fixed(fixedWidths))
   }
 

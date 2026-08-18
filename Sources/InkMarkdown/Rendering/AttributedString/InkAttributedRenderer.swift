@@ -167,6 +167,8 @@ private struct InkRenderer {
       return renderCodeBlock(cb)
     case is Markdown.ThematicBreak:
       return renderThematicBreak()
+    case let t as Markdown.Table:
+      return renderTable(t, context: context)
     default:
       // 未知块：退化为拼接子块，保持 context。
       let result = NSMutableAttributedString()
@@ -452,6 +454,57 @@ private struct InkRenderer {
     )
   }
 
+  // MARK: - Table（富文本与流式展示 fallback）
+
+  private func renderTable(_ table: Markdown.Table, context: InkTextContext) -> NSAttributedString {
+    let result = NSMutableAttributedString()
+    let tableConfig = configuration.appearance.table
+    let separatorColor = tableConfig.separatorColor
+    let separatorFont = context.font
+
+    // 1. 渲染表头
+    let head = table.head
+    let headCells = Array(head.cells)
+    if !headCells.isEmpty {
+      let headerStr = NSMutableAttributedString()
+      for (i, cell) in headCells.enumerated() {
+        let cellText = renderInlineChildren(of: cell, context: context.addingTrait(.traitBold))
+        headerStr.append(cellText)
+        if i < headCells.count - 1 {
+          headerStr.append(NSAttributedString(string: "  │  ", attributes: [
+            .font: separatorFont,
+            .foregroundColor: separatorColor,
+          ]))
+        }
+      }
+      result.append(headerStr)
+      result.append(NSAttributedString(string: "\n"))
+    }
+
+    // 2. 渲染数据行
+    let rows = Array(table.body.rows)
+    for (rowIndex, row) in rows.enumerated() {
+      let rowCells = Array(row.cells)
+      let rowStr = NSMutableAttributedString()
+      for (cellIndex, cell) in rowCells.enumerated() {
+        let cellText = renderInlineChildren(of: cell, context: context)
+        rowStr.append(cellText)
+        if cellIndex < rowCells.count - 1 {
+          rowStr.append(NSAttributedString(string: "  │  ", attributes: [
+            .font: separatorFont,
+            .foregroundColor: separatorColor,
+          ]))
+        }
+      }
+      result.append(rowStr)
+      if rowIndex < rows.count - 1 {
+        result.append(NSAttributedString(string: "\n"))
+      }
+    }
+
+    return result
+  }
+
   // MARK: - Inline Elements
 
   private func renderInlineCode(_ inlineCode: Markdown.InlineCode, context: InkTextContext) -> NSAttributedString {
@@ -481,7 +534,7 @@ private struct InkRenderer {
       .kern: appearance.inlineCode.margin,
     ]
 
-    if context.isStrikethrogh {
+    if context.isStrikethrough {
       codeAttrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
       marginAttrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
     }
@@ -534,7 +587,7 @@ private struct InkRenderer {
       attrs[.link] = url
     }
 
-    if context.isStrikethrogh {
+    if context.isStrikethrough {
       attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
     }
 

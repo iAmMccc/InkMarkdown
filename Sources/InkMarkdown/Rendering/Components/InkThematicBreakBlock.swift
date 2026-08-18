@@ -9,22 +9,44 @@ public struct InkThematicBreakBlock: InkRenderableBlock {
   }
 
   public func makeView() -> UIView {
-    let container = UIView()
-    container.backgroundColor = .clear
-    container.translatesAutoresizingMaskIntoConstraints = false
-    container.heightAnchor.constraint(equalToConstant: config.lineThickness + config.spacingAfter).isActive = true
-
-    let line = UIView()
-    line.backgroundColor = config.color
-    line.translatesAutoresizingMaskIntoConstraints = false
-    container.addSubview(line)
-    NSLayoutConstraint.activate([
-      line.topAnchor.constraint(equalTo: container.topAnchor),
-      line.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-      line.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-      line.heightAnchor.constraint(equalToConstant: config.lineThickness),
-    ])
-
-    return container
+    InkThematicBreakView(config: config)
   }
 }
+
+// MARK: - 内部视图实现
+
+final class InkThematicBreakView: UIView {
+
+  private let config: InkAppearance.ThematicBreak
+  private let lineView = UIView()
+
+  init(config: InkAppearance.ThematicBreak) {
+    self.config = config
+    super.init(frame: .zero)
+    backgroundColor = .clear
+    lineView.backgroundColor = config.color
+    addSubview(lineView)
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func sizeThatFits(_ size: CGSize) -> CGSize {
+    let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 320)
+    return CGSize(width: targetWidth, height: config.lineThickness + config.spacingAfter)
+  }
+
+  override var intrinsicContentSize: CGSize {
+    CGSize(width: UIView.noIntrinsicMetric, height: config.lineThickness + config.spacingAfter)
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    let width = bounds.width
+    guard width > 0 else { return }
+    lineView.frame = CGRect(x: 0, y: 0, width: width, height: config.lineThickness)
+  }
+}
+
