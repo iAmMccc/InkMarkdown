@@ -39,7 +39,9 @@ public final class InkStreamRenderer {
 
   public private(set) var configuration: InkConfiguration
 
-  /// 每次渲染产物更新时回调（未绑定 textView 时使用）。
+  /// 渲染产物有**可见变化**时回调（未绑定 textView 时，每次解析更新都会回调）。
+  /// 绑定 textView 且变更点位于已显示范围之外（纯尾部新增、显示内容无变化）时，
+  /// 节流路径会跳过重写与回调——此时宿主收到的上一份内容仍然有效。
   public var onUpdate: ((NSAttributedString) -> Void)?
 
   /// 单个会话可解析的最大 Markdown 字符数；超出部分不会进入该 renderer 的 canonical source。
@@ -120,6 +122,11 @@ public final class InkStreamRenderer {
   /// 后台队列独占访问的增量渲染缓存
   private var incrementalRenderer = InkIncrementalMarkdownRenderer()
 
+  /// sourceFilter 路径上一次**被接受**的全量渲染结果（仅 parseQueue 上读写），
+  /// 作为本次全量渲染的前缀 diff 基线：textStorage 重写范围由此收敛到
+  /// "本次 append 真正影响的范围"，而不是每次都从 0 全量重写。
+  private var lastFilteredContent: NSAttributedString?
+
   // MARK: - Init
 
   public init(configuration: InkConfiguration = .standard) {
@@ -184,6 +191,12 @@ public final class InkStreamRenderer {
   /// 追加一段新到达的 Markdown 文本分片。
   /// 内部将在后台队列异步解析，不阻塞主线程。超过 ``maximumSourceLength`` 的尾部不会进入会话。
   public func append(_ chunk: String) {
+    // finish() 已把 buffer 固化为终态：此后到达的分片一律安全忽略。
+    // 若放行会污染终态——incrementalRenderer 已在 finish() 里 reset，追加会基于空状态
+    // 重渲出残缺内容，且 parseVersion 继续递增会让 onDisplayFrame 在错误时机
+    // 覆盖 finalize 结果或提前触发 onFinishDisplay。
+    guard !isFinished else { return }
+
     let remainingCapacity = Self.maximumSourceLength - buffer.count
     guard remainingCapacity > 0 else { return }
 
@@ -202,15 +215,22 @@ public final class InkStreamRenderer {
       if config.sourceFilter == nil {
         result = self.incrementalRenderer.append(acceptedChunk, configuration: config)
       } else {
-        result = InkIncrementalMarkdownRenderer.Result(
-          content: InkAttributedRenderer.render(currentBuffer, configuration: config),
-          refreshLocation: 0
-        )
+        // sourceFilter 依赖完整源文本，无法像无 filter 路径那样按稳定边界做源级增量，
+        // 只能对整段 buffer 全量解析（保证 filter 语义正确）；但主线程 textStorage
+        // 不必随之全量重写：与上一次全量渲染做前缀 diff，把 refreshLocation 定位到
+        // 本次 append 实际影响的范围起点，显示层只重写该点之后的尾部。
+        let rendered = InkAttributedRenderer.render(currentBuffer, configuration: config)
+        let refresh = Self.stablePrefixLength(between: self.lastFilteredContent, and: rendered)
+        result = InkIncrementalMarkdownRenderer.Result(content: rendered, refreshLocation: refresh)
       }
       self.preloadLock.lock()
       guard self.renderGeneration == generation else {
         self.preloadLock.unlock()
         return
+      }
+      if config.sourceFilter != nil {
+        // 只在渲染代次被接受后才更新 diff 基线，避免过期闭包污染后续 diff。
+        self.lastFilteredContent = result.content
       }
       self.preloadContent = result.content
       self.preloadRefreshLocation = result.refreshLocation
@@ -240,6 +260,8 @@ public final class InkStreamRenderer {
     if source.isEmpty {
       parseQueue.async { [weak self] in
         self?.incrementalRenderer.reset()
+        // diff 基线一并清空：只在 parseQueue 上触碰 lastFilteredContent，避免跨线程竞争。
+        self?.lastFilteredContent = nil
       }
       preloadLock.lock()
       preloadContent = NSAttributedString()
@@ -265,6 +287,10 @@ public final class InkStreamRenderer {
         guard self.renderGeneration == generation else {
           self.preloadLock.unlock()
           return
+        }
+        if config.sourceFilter != nil {
+          // 重置后的全量渲染成为新的 diff 基线（refreshLocation 固定为 0 = 整体重建）。
+          self.lastFilteredContent = result.content
         }
         self.preloadContent = result.content
         self.preloadRefreshLocation = result.refreshLocation
@@ -304,6 +330,10 @@ public final class InkStreamRenderer {
       self.preloadRefreshLocation = 0
       self.parseVersion += 1
       self.finalParseCompleted = true
+      if config.sourceFilter != nil {
+        // 终态全量渲染同样更新 diff 基线，维持"lastFilteredContent == 最近被接受的全量渲染"。
+        self.lastFilteredContent = rendered
+      }
       self.preloadLock.unlock()
       DispatchQueue.main.async { [weak self] in
         self?.handleFinalParseCompleted()
@@ -324,6 +354,76 @@ public final class InkStreamRenderer {
     let generation = renderGeneration
     preloadLock.unlock()
     return generation
+  }
+
+  /// 计算两次全量渲染产物从开头起完全一致（字符与属性均相同）的最长 UTF-16 长度。
+  ///
+  /// 为什么需要它：sourceFilter 依赖完整源文本，每次 append 只能整段全量解析
+  /// （无 filter 路径的源级稳定边界在此不可用），但主线程 textStorage 不必跟着全量重写。
+  /// 返回的稳定前缀长度就是"本次 append 真正影响的范围"起点：显示层只重写该点之后的尾部，
+  /// 主线程成本从 O(累计长度) 降为 O(本次变化)。
+  ///
+  /// 前缀内字符相同但属性不同（典型如新增输入改变了前方块级结构，例如段落被重解析成
+  /// setext heading）时整体回退到 0 全量重写——宁可多重写，也不能漏掉重解析改变的前缀样式。
+  private static func stablePrefixLength(between old: NSAttributedString?, and new: NSAttributedString) -> Int {
+    guard let old = old else { return 0 }
+    let limit = min(old.length, new.length)
+    guard limit > 0 else { return 0 }
+    let oldUnits = old.string as NSString
+    let newUnits = new.string as NSString
+
+    // 字符级扫描：流式场景通常只差在尾部，扫描在首个差异点即停，均摊代价低。
+    var firstDiff = 0
+    while firstDiff < limit,
+          oldUnits.character(at: firstDiff) == newUnits.character(at: firstDiff) {
+      firstDiff += 1
+    }
+
+    // 把差异点对齐到组合字符序列边界，避免落在代理对/组合记号中间，
+    // 否则 attributedSubstring 会产出孤立半代理或拆散的组合字符，显示为乱码。
+    if firstDiff < limit {
+      let composed = oldUnits.rangeOfComposedCharacterSequence(at: firstDiff)
+      if composed.location != NSNotFound {
+        firstDiff = composed.location
+      }
+    }
+
+    // 属性一致性校验：字符相同不代表样式相同；前缀内任何属性差异都整体回退。
+    let oldPrefix = old.attributedSubstring(from: NSRange(location: 0, length: firstDiff))
+    let newPrefix = new.attributedSubstring(from: NSRange(location: 0, length: firstDiff))
+    if oldPrefix.isEqual(to: newPrefix) {
+      return firstDiff
+    }
+    return 0
+  }
+
+  /// 把 `content[0..<showLength)` 的刷新应用到 textStorage：只重写 `refreshLocation`
+  /// 之后受影响的尾部，跳过完全无变化的帧。
+  ///
+  /// 返回本次重写的绑定范围（供附件绑定使用）；返回 `nil` 表示显示内容无需变化
+  /// （变更点超出已显示范围且无需裁剪），调用方应跳过 onUpdate/附件/测高等副作用。
+  ///
+  /// 为什么抽成静态方法：显示刷新是"节流 + 差量重写"的纯函数逻辑，抽离后可以被
+  /// 单元测试直接驱动——CADisplayLink 在主 RunLoop 上运行，集成测试环境无法触发
+  /// `onDisplayFrame`，若不抽离，这个分支将永远处于测试盲区（曾经如此）。
+  static func refreshTextStorage(
+    textStorage: NSTextStorage,
+    content: NSAttributedString,
+    refreshLocation: Int,
+    showLength: Int
+  ) -> NSRange? {
+    let start = min(refreshLocation, textStorage.length, showLength)
+    // 两个重写时机：变更点落在已显示范围内（start < showLength，需重写/插入新尾部），
+    // 或内容收缩需要裁剪（textStorage 比目标长）。
+    if start < showLength || textStorage.length > showLength {
+      let replacement = content.attributedSubstring(from: NSRange(location: start, length: showLength - start))
+      textStorage.replaceCharacters(
+        in: NSRange(location: start, length: textStorage.length - start),
+        with: replacement
+      )
+      return NSRange(location: start, length: showLength - start)
+    }
+    return nil
   }
 
   // MARK: - Display Link
@@ -361,20 +461,34 @@ public final class InkStreamRenderer {
     if totalLength < displayIndex || parseVersion != lastAppliedParseVersion {
       displayIndex = min(displayIndex, totalLength)
       lastAppliedParseVersion = parseVersion
+
       var bindRange: NSRange?
+      var displayedChanged = false
       if let tv = textView {
         let showLength = min(displayIndex, totalLength)
-        let start = min(refreshLocation, tv.textStorage.length, showLength)
-        let replacement = content.attributedSubstring(from: NSRange(location: start, length: showLength - start))
-        tv.textStorage.replaceCharacters(
-          in: NSRange(location: start, length: tv.textStorage.length - start),
-          with: replacement
+        // 节流：变更起点在已显示范围之外（纯尾部新增）且无需裁剪时，本次不重写任何
+        // 已显示内容——已显示前缀与上一已接受解析完全一致，textStorage 重写、onUpdate、
+        // 附件绑定与高度测量全部跳过，避免每个 parseVersion 都在主线程做
+        // O(已显示长度) 的无谓工作（sourceFilter 路径曾经的 O(n²) 来源）。
+        // 多个 parseVersion 已按帧合并：本方法每帧只读取最新的 parseVersion，
+        // 帧间多次 append 只触发一次重写；新字符由下方逐字追加路径负责展示。
+        bindRange = Self.refreshTextStorage(
+          textStorage: tv.textStorage,
+          content: content,
+          refreshLocation: refreshLocation,
+          showLength: showLength
         )
-        bindRange = NSRange(location: start, length: showLength - start)
+        displayedChanged = bindRange != nil
+      } else {
+        // 未绑定 textView：没有 textStorage 可节流，解析版本变化必须通知宿主。
+        displayedChanged = true
       }
-      onUpdate?(content.attributedSubstring(from: NSRange(location: 0, length: displayIndex)))
-      bindImageAttachmentsIfNeeded(in: bindRange)
-      notifyHeightChangeIfNeeded()
+
+      if displayedChanged {
+        onUpdate?(content.attributedSubstring(from: NSRange(location: 0, length: displayIndex)))
+        bindImageAttachmentsIfNeeded(in: bindRange)
+        notifyHeightChangeIfNeeded()
+      }
       if isFinished && finalParseCompleted && displayIndex >= totalLength {
         completeFinishDisplay()
       }
@@ -456,6 +570,12 @@ public final class InkStreamRenderer {
   }
 
   private func bindImageAttachmentsIfNeeded(in range: NSRange? = nil) {
+    // 为什么 用 assumeIsolated 而不是 await MainActor.run：
+    // 本方法所有调用点（bindTextView / onDisplayFrame / _flushDisplay）都保证在主线程——
+    // displayLink 只加入 .main run loop、_flushDisplay 只经 DispatchQueue.main.async 进入、
+    // 公开 API 契约也要求主线程调用。assumeIsolated 在成立时同步直通，避免在
+    // CADisplayLink 回调里引入 actor hop 造成的乱序或死锁；一旦未来有调用点移到
+    // 后台线程，这里会立刻 fatal error 兜底，而不是静默在错误的线程上操作 TextKit。
     MainActor.assumeIsolated {
       guard let tv = textView else { return }
       let layoutManager = tv.layoutManager

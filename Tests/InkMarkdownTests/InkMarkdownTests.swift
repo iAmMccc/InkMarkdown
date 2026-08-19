@@ -398,6 +398,57 @@ import UIKit
   #expect(result.outputMatches)
 }
 
+// MARK: - 流式 sourceFilter 语义（T4'）
+
+/// sourceFilter 每次 append 必须整段全量解析（filter 依赖完整 buffer，无源级增量可言），
+/// 但显示侧只重写受影响尾部。此测试钉住"全量解析"的语义底线：
+/// 当分片边界切开 `<ref/>` 时，只有整段重解析能正确消除该标记；
+/// 若退化为逐分片增量，两个分片都会被当作普通文本保留。
+@Test func streamRenderer_sourceFilterReparsesWholeBufferPerAppend() async throws {
+  let config = InkConfiguration(sourceFilter: { $0.replacingOccurrences(of: "<ref/>", with: "") })
+  let renderer = InkStreamRenderer(configuration: config)
+
+  renderer.append("<ref")
+  renderer.append("/>正文")
+
+  // 等待第二次 append 的后台全量解析落盘。
+  for _ in 0..<50 where !renderer.currentAttributedString().string.contains("正文") {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+
+  // 语义：跨分片的 <ref/> 被 filter 消除，且结果与一次性全量渲染完全一致。
+  let full = InkAttributedRenderer.render("<ref/>正文", configuration: config)
+  #expect(renderer.currentAttributedString().string == full.string)
+  #expect(!renderer.currentAttributedString().string.contains("<ref/>"))
+  #expect(renderer.currentAttributedString().string.contains("正文"))
+}
+
+/// finish() 已固化的终态解析不可被后续 append 污染：append-after-finish 必须被安全忽略。
+/// 若未忽略，incrementalRenderer 已在 finish 里 reset，追加会基于空状态重渲出残缺内容，
+/// 从而出现在终态文本中（本测试即失败）。
+@Test func streamRenderer_ignoresAppendAfterFinish() async throws {
+  let renderer = InkStreamRenderer()
+  renderer.append("第一段")
+  renderer.finish()
+
+  // 先等终态解析落盘，确保后续断言针对的是"终态未被污染"而非"解析还没完成"。
+  for _ in 0..<50 where !renderer.currentAttributedString().string.contains("第一段") {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+  #expect(renderer.currentAttributedString().string.contains("第一段"))
+
+  renderer.append("不应出现的续写")
+
+  // 留出可观测窗口：若 append-after-finish 未被忽略，其后台解析会在此窗口内污染终态。
+  for _ in 0..<5 {
+    try? await Task.sleep(nanoseconds: 10_000_000)
+  }
+
+  let finalContent = renderer.currentAttributedString().string
+  #expect(!finalContent.contains("不应出现的续写"))
+  #expect(finalContent.contains("第一段"))
+}
+
 // MARK: - context 下传验收（slice 1）
 //
 // 这批测试锁定 render-then-rewrite → context 下传重写后的样式正确性：
