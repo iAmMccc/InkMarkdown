@@ -19,7 +19,7 @@ swift-markdown Markup
 - **工具链**：Swift tools 6.2，包内使用 Swift 5 语言模式。
 - **依赖管理**：`swift-markdown` 锁定 revision `07ebc9c071b22a5d021031b798c3a84b76281213`（ADR-001，详见 `Package.swift` / `Package.resolved`）。
 - **CI 环境**：`.github/workflows/ci.yml` 指定 `macos-26` + **Xcode 26.6**（Build `17F113`）+ **iPhone 17 Pro / iOS 26.5**（详见 [CI 排坑](contributor-guide/07-ci-and-toolchain-pitfalls.md)）。
-- **验证结果**：2026-08-18，通过 XcodeBuildMCP 在 iPhone 16 / iOS 18.5 与 iPad Pro 11-inch (M4) / iPadOS 18.5 执行 `InkMarkdown-Package` scheme：**178 项测试通过，0 项失败**。其中包含 SwiftUI adapter 的静态配置、会话状态机、headless finish、重置和配置 snapshot 契约测试。同日后续在 **iPhone 17 Pro / iOS Simulator latest**（XcodeBuildMCP `test_sim`，scheme `InkMarkdown-Package`）：全量曾 **193 passed**；随后全量 **192 passed / 1 failed**；过滤重跑 `-only-testing:InkMarkdownTests/InkMermaidDiagramTypeRendererTests`：**26 cases 中 25 通过，1 失败**（fixture `flowchart`，`Tests/InkMarkdownTests/InkMermaid/InkMermaidDiagramTypeRendererTests.swift:17`，`.timedOut`）。共享 `InkMermaidImageRenderer(limits: .init(timeout: 30))` 已复用以避免每 case 冷启动 3.4MB `mermaid.min.js`；失败更像 **WKWebView 首次加载超时**，非 `flowchart` 源码非法。
+- **验证结果**：2026-08-18，通过 XcodeBuildMCP 在 iPhone 16 / iOS 18.5 与 iPad Pro 11-inch (M4) / iPadOS 18.5 执行 `InkMarkdown-Package` scheme：**178 项测试通过，0 项失败**。其中包含 SwiftUI adapter 的静态配置、会话状态机、headless finish、重置和配置 snapshot 契约测试。同日后续在 **iPhone 17 Pro / iOS Simulator latest**（XcodeBuildMCP `test_sim`，scheme `InkMarkdown-Package`）：全量曾 **193 passed**；随后全量 **192 passed / 1 failed**；过滤重跑 `-only-testing:InkMarkdownTests/InkMermaidDiagramTypeRendererTests`：**26 cases 中 25 通过，1 失败**（fixture `flowchart`，`Tests/InkMarkdownTests/InkMermaid/InkMermaidDiagramTypeRendererTests.swift:17`，`.timedOut`）。共享 `InkMermaidImageRenderer(limits: .init(timeout: 30))` 已复用以避免每 case 冷启动 3.4MB `mermaid.min.js`；失败更像 **WKWebView 首次加载超时**，非 `flowchart` 源码非法。2026-08-19 追加验证（原生 xcodebuild，iPhone 17 Pro / iOS Simulator latest，scheme `InkMarkdown-Package`）：全量 **202 项（Swift Testing 186 + XCTest 16）**，除 2 项已知 Mermaid `flowchart` `.timedOut` 外全部通过；新增 9 项测试（流式刷新 seam 5 项、配置语义 2 项、流式语义 2 项）全部通过。同日一次运行中增量性能基准 `incremental_renderIsFasterThanFullRender` 出现 1 次偶发超时（高负载相关，多次复跑通过，见 [CONCERNS](codebase/CONCERNS.md)）。
 
 ## 已落地能力
 
@@ -33,7 +33,7 @@ swift-markdown Markup
 | 内置块 | 代码块、表格、分割线 | `Rendering/Components/` |
 | 自定义扩展 | 源码预清洗、自定义行内语法扩展、自定义块级路由、链接点击回调 | `InkConfiguration` |
 | 流式渲染 | 稳定前缀 / 活跃后缀增量解析，解析与显示双缓冲 | `InkStreamRenderer` |
-| 图片（opt-in） | 默认文本占位；`InkImageRendering.isEnabled = true` 启用真图（行内 `InkImageAttachment` + 独占块 `InkImageBlock`、Store、安全策略、降采样） | `Rendering/Image/`、`ExampleApp/ImageDemoViewController` |
+| 图片（opt-in） | 默认文本占位；`InkImageRendering.isEnabled = true` 启用真图（行内 `InkImageAttachment` + 独占块 `InkImageBlock`、Store、安全策略、降采样） | `Rendering/Image/`、`ExampleApp/ExampleApp/Detail/ImageDemoViewController.swift` |
 | 示例程序 | 富文本、块渲染、SSE、流式表格、性能测试、图片与公式/图表 Demo 入口 | `ExampleApp/` |
 | SwiftUI 桥接 | 已按 ADR-008 完成独立 adapter 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 修饰符等），静态配置刷新、流式会话状态机、headless finish 与重置已通过 Simulator 契约测试；ExampleApp 已提供静态、配置和流式示例入口 | [ADR-008](decisions/ADR-008-swiftui-adapter-architecture.md) / [总体技术设计](contributor-guide/08-swiftui-adapter-architecture.md) / [ExampleApp 指南](contributor-guide/10-swiftui-example-app.md) |
 | 测试集 | 行高、上下文样式、流式边界、性能一致性、语义快照骨架 | `Tests/InkMarkdownTests/` |

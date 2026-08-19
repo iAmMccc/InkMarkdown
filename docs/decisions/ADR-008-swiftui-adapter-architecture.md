@@ -69,6 +69,19 @@ Accepted
 - adapter 不会自动获得 native SwiftUI renderer 的所有组合能力。
 - 性能、内存和流畅度必须用证据持续验证，不能以架构名称推断。
 
+## 公开类型清单
+
+以下类型是 `InkMarkdownSwiftUI` adapter 面向 SwiftUI 宿主公开的 API 表面（v0.0.2 实现基线，声明见 `Sources/InkMarkdownSwiftUI/`）。这些类型承载 UIKit 视图、配置与生命周期：宿主通过它们获得与 UIKit 渲染引擎一致的渲染语义，而无需直接接触 `UIViewRepresentable` 桥接细节。
+
+| 类型 / 成员 | 声明 | 职责 |
+| --- | --- | --- |
+| `InkMarkdownView` | `public struct InkMarkdownView: View` | 静态 Markdown 渲染视图；`init(markdown: String, configuration: InkConfiguration? = nil)` 及省略参数名变体；未显式传入配置时读取环境注入的 `inkConfiguration`，回退至 `InkConfiguration.standard` |
+| `InkStreamMarkdownView` | `public struct InkStreamMarkdownView: View` | 流式 Markdown 渲染视图；`init(session: InkMarkdownRenderSession)` 绑定流式会话，支持打字机式逐字渲染，并在显示完成后提升为终态块级组件 |
+| `InkMarkdownRenderSession` | `public final class InkMarkdownRenderSession: ObservableObject` | 流式会话状态机，单条流式 Markdown 的唯一输入源与生命周期所有者；公开 `State: Sendable, Equatable` 枚举、`append(_:)` / `finish()` / `cancel()` / `reset()`、`onDisplayUpdate` 回调与 `isPromoted` 发布 |
+| `.inkConfiguration(_:)` | `public extension View { func inkConfiguration(_ configuration: InkConfiguration) -> some View }` | 为视图层级注入统一渲染配置的环境修饰符；配套 `EnvironmentValues.inkConfiguration` 环境值 |
+
+> 注：本清单是文档与源码之间可核对的 API 基线；类型名如有演进，以 `Sources/InkMarkdownSwiftUI/` 源码为准。
+
 ## Related Documents
 
 - [SwiftUI Adapter 总体技术设计](../contributor-guide/08-swiftui-adapter-architecture.md)

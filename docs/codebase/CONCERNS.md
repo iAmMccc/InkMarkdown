@@ -8,7 +8,13 @@
 |----------|---------|----------|--------|------------------|
 | ~~High~~ Done | ~~依赖跟踪 `branch: main`~~ | `Package.swift` 已 `revision:`；`Package.resolved` 无 branch 字段 | 可重复构建已改善 | 升级时显式修改 revision 并测试 |
 | ~~High~~ Done | ~~无 CI~~ | `.github/workflows/ci.yml` | PR/push 自动 iOS 测试 | 监控 runner/模拟器可用性 |
+| ~~High~~ Done | ~~流式 sourceFilter 路径每次 append 全量重渲 O(n²)~~ | `InkStreamRenderer.swift`：sourceFilter 依赖完整源文本只能整段全量解析，但显示侧改为「稳定前缀 diff + 只重写受影响尾部」（`stablePrefixLength` + `refreshTextStorage` seam），parseQueue 内维护 diff 基线 | 主线程 textStorage 重写成本从 O(累计长度) 收敛到 O(本次变化) | 2026-08-19 已修复；5 项 seam 测试钉住跳过/尾部追加/收缩/前缀变化四情形 |
+| ~~High~~ Done | ~~流式显示刷新逻辑处于测试盲区~~ | `onDisplayFrame` 由 CADisplayLink 驱动，集成测试不触发；节流分支此前无任何测试执行 | 行为变化无回归防线 | 已抽 `refreshTextStorage` 纯函数 seam 并补测试（`InkStreamRendererRefreshTests.swift`） |
+| ~~Med~~ Done | ~~finish 后 append 无保护~~ | `InkStreamRenderer.append` 无终态守卫，可覆盖 finalize 结果 | 终态被污染、onFinishDisplay 提前触发 | 已加 `guard !isFinished` 并有测试钉住 |
+| ~~Med~~ Done | ~~配置语义相等性只看数量与 nil 性~~ | `InkConfiguration.isSemanticallyEqualTo` 曾把内容不同的配置误判相等，SwiftUI Coordinator 据此漏更新 | 配置内容变化不触发重渲 | 已改为逐项动态类型有序比较，2 项测试钉住 |
 | Med | 最低平台验证 | ADR-008 仅承诺 iOS/iPadOS 14+；manifest 已仅声明 `.iOS(.v14)`，但仅有 iOS/iPadOS 18.5 Simulator 证据 | 可能把较高版本 Simulator 结果误当作最低版本支持 | v0.0.2 前完成 iOS/iPadOS 14 验证；不为其他平台建立路径 |
+| Med | `isSemanticallyEqualTo` 对「同类型不同状态」仍判相等 | 协议（`InkInlineSyntax`/`InkBlockHandler`）未暴露身份或状态，`type(of:)` 是当前约束下唯一代理；`InkTableBlockHandler.layoutMode` 等状态变更会漏判 | SwiftUI 侧配置更新可能漏重渲 | 给协议加带默认实现的 `semanticIdentifier`（公开 API 变更，建议 v0.0.2 前走 ADR） |
+| Low | 增量性能基准偶发超时 | `StreamingPerformanceTests.incremental_renderIsFasterThanFullRender` 在机器高负载下偶发失败（同日多次复跑通过，P3 与模块级复跑均通过） | 负载相关 flaky，非逻辑回归 | 复跑确认；必要时给基准加宽裕或标注 flaky |
 | Med | 流式 `maximumSourceLength = 50_000` 固定 | `InkStreamRenderer.swift`；ADR-005 | 超长 SSE 在达到上限后不再进入 canonical source | 配置化 + 文档契约 + 测试 |
 | Med | 语义测试矩阵未完成 | `current-status.md`、仅 snapshot scaffold | 语法回归靠手测 | 在 `RenderSnapshot` 上补全 CommonMark/GFM 契约 |
 | Med | ExampleApp SSE 未闭合块的全量重解析 | `SSEChatViewController` 按 chunk 节流重建 segments | 长回答 CPU / 文本段闪烁；generated 块已按 identity 复用；**文本段已按前缀复用**（`reusableTextSegments` + `updateFullText`），行内 attachment 不再每轮销毁 | 可继续收紧「仅尾部文本增长时跳过全量 rebuild」 |
