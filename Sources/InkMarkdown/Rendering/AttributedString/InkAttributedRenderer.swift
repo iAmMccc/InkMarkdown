@@ -788,7 +788,13 @@ extension InkConfiguration {
   }
 
   /// 流式渲染在主线程调用，显式捕获 trait 快照供后台 parse 使用。
+  ///
+  /// 仅当用户未注入 ``InkConfiguration/renderEnvironment``（`userInterfaceStyle == .unspecified`）时
+  /// 才捕获当前 trait；已注入的环境必须原样保留，与 ``withResolvedRenderEnvironmentIfNeeded()``
+  /// 保持同一套"未设置才补全"语义（见 ``InkConfiguration/renderEnvironment`` 文档）。
   func capturingRenderEnvironmentForBackgroundParse() -> InkConfiguration {
+    guard renderEnvironment.userInterfaceStyle == .unspecified else { return self }
+    guard Thread.isMainThread else { return self }
     var copy = self
     copy.renderEnvironment = InkRenderEnvironment(
       userInterfaceStyle: UITraitCollection.current.userInterfaceStyle
