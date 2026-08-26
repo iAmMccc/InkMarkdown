@@ -37,6 +37,15 @@ public protocol InkBlockHandler {
     startingAt index: Int,
     configuration: InkConfiguration
   ) -> (block: InkRenderableBlock, consumedCount: Int)?
+
+  /// 从文档子节点序列中消费一个或多个 Markup 并产出零个或多个 Block（支持拆解卡片与续接正文）。
+  ///
+  /// 默认实现转发至 ``consume(from:startingAt:configuration:)`` 并封装为单元素数组。
+  func consumeBlocks(
+    from children: [Markup],
+    startingAt index: Int,
+    configuration: InkConfiguration
+  ) -> (blocks: [InkRenderableBlock], consumedCount: Int)?
 }
 
 public extension InkBlockHandler {
@@ -52,6 +61,17 @@ public extension InkBlockHandler {
       return nil
     }
     return (block, 1)
+  }
+
+  func consumeBlocks(
+    from children: [Markup],
+    startingAt index: Int,
+    configuration: InkConfiguration
+  ) -> (blocks: [InkRenderableBlock], consumedCount: Int)? {
+    if let single = consume(from: children, startingAt: index, configuration: configuration) {
+      return ([single.block], single.consumedCount)
+    }
+    return nil
   }
 }
 

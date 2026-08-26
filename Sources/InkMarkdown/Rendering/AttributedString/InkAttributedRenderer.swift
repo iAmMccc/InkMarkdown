@@ -169,6 +169,8 @@ private struct InkRenderer {
       return renderThematicBreak()
     case let t as Markdown.Table:
       return renderTable(t, context: context)
+    case let html as Markdown.HTMLBlock:
+      return renderHTMLBlock(html, context: context)
     default:
       // 未知块：退化为拼接子块，保持 context。
       let result = NSMutableAttributedString()
@@ -576,9 +578,10 @@ private struct InkRenderer {
         return rendered
       }
     }
-    let plainText = configuration.appearance.latexRendering.isEnabled
+    var plainText = configuration.appearance.latexRendering.isEnabled
       ? InkLaTeXSourcePreservation.restoreBracketDelimiters(in: textNode.string)
       : textNode.string
+    plainText = InkThoughtScanner.stripThoughtTags(from: plainText)
     var attrs: [NSAttributedString.Key: Any] = [
       .font: context.font,
       .foregroundColor: context.foregroundColor,
@@ -685,12 +688,76 @@ private struct InkRenderer {
     return nil
   }
 
+  private func renderHTMLBlock(_ html: Markdown.HTMLBlock, context: InkTextContext) -> NSAttributedString {
+    let raw = html.rawHTML
+    guard let scanResult = InkThoughtScanner.scan(from: raw) else {
+      return NSAttributedString()
+    }
+
+    let thoughtConfig = appearance.thought
+    let result = NSMutableAttributedString()
+
+    if !scanResult.thoughtBody.isEmpty || !scanResult.isComplete {
+      let headerFont = UIFont.systemFont(ofSize: thoughtConfig.headerFontSize, weight: .medium)
+      let titleText = scanResult.isComplete ? thoughtConfig.completedTitle : thoughtConfig.title
+      let headerText = scanResult.thoughtBody.isEmpty ? "💭 \(titleText)..." : "💭 \(titleText)\n"
+      let headerAttr = NSAttributedString(
+        string: headerText,
+        attributes: [
+          .font: headerFont,
+          .foregroundColor: thoughtConfig.headerColor,
+        ]
+      )
+      result.append(headerAttr)
+
+      if !scanResult.thoughtBody.isEmpty {
+        let bodyFont = UIFont.systemFont(ofSize: thoughtConfig.fontSize)
+        let thoughtContext = context.withFont(bodyFont).coloring(thoughtConfig.textColor)
+        let innerDoc = InkParser.parse(scanResult.thoughtBody)
+        for child in innerDoc.children {
+          result.append(renderBlock(child, context: thoughtContext))
+        }
+      }
+
+      applyFixedLineHeight(
+        to: result,
+        lineHeight: thoughtConfig.lineHeight,
+        spacingAfter: thoughtConfig.spacingAfter
+      )
+
+      if result.length > 0 {
+        result.addAttribute(
+          .backgroundColor,
+          value: thoughtConfig.backgroundColor,
+          range: NSRange(location: 0, length: result.length)
+        )
+      }
+    }
+
+    // 尾随正文保全（Suffix Preservation）：将闭合标签后的正文以当前上下文续接渲染
+    if let suffix = scanResult.suffixContent, !suffix.isEmpty {
+      if result.length > 0 {
+        result.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
+      }
+      let suffixDoc = InkParser.parse(suffix)
+      for child in suffixDoc.children {
+        result.append(renderBlock(child, context: context))
+      }
+    }
+
+    return result
+  }
+
   private func renderInlineHTML(_ inlineHTML: InlineHTML) -> NSAttributedString {
     let html = inlineHTML.rawHTML
+    if InkThoughtScanner.startsWithThoughtTag(html) || InkThoughtScanner.isClosingThoughtTag(html) {
+      return NSAttributedString()
+    }
     if Self.isCustomEmptyTag(html) {
       return NSAttributedString()
     }
-    if html.lowercased().hasPrefix("<br") {
+    let lower = html.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    if lower.hasPrefix("<br") {
       return NSAttributedString(string: "\n")
     }
     return NSAttributedString()

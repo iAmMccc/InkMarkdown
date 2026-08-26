@@ -48,10 +48,10 @@ public enum InkBlockRenderer {
     var index = 0
     while index < children.count {
       if let consumed = handlers.lazy.compactMap({
-        $0.consume(from: children, startingAt: index, configuration: configuration)
+        $0.consumeBlocks(from: children, startingAt: index, configuration: configuration)
       }).first {
         flushPendingAsAttributed()
-        blocks.append(consumed.block)
+        blocks.append(contentsOf: consumed.blocks)
         index += consumed.consumedCount
       } else {
         pendingMarkup.append(children[index])

@@ -50,6 +50,8 @@ public struct InkAppearance {
   public var mermaidRendering: InkMermaidRendering = .init()
   /// LaTeX 行内/块级公式配置；默认关闭以保持原始文本降级。
   public var latexRendering: InkLaTeXRendering = .init()
+  /// 思考过程块样式（<think>...</think> 或 <thought>...</thought>）。
+  public var thought: Thought = .init()
 
   public init() {}
 }
@@ -286,6 +288,44 @@ public extension InkAppearance {
   }
 }
 
+// MARK: - Thought（思考过程块）
+
+public extension InkAppearance {
+
+  struct Thought {
+    /// 思考中状态标题。
+    public var title: String = "思考过程"
+    /// 思考完成状态标题。
+    public var completedTitle: String = "已深度思考"
+    /// 思考正文字号。
+    public var fontSize: CGFloat = 14
+    /// 思考正文行高。
+    public var lineHeight: CGFloat = 22
+    /// 思考正文颜色。
+    public var textColor: UIColor = .secondaryLabel
+    /// 头部标题字号。
+    public var headerFontSize: CGFloat = 13
+    /// 头部标题颜色。
+    public var headerColor: UIColor = .secondaryLabel
+    /// 卡片背景色。
+    public var backgroundColor: UIColor = .secondarySystemFill
+    /// 卡片圆角。
+    public var cornerRadius: CGFloat = 8
+    /// 内边距（整个卡片内部与四周的间距）。
+    public var insets: UIEdgeInsets = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+    /// 头部高度。
+    public var headerHeight: CGFloat = 28
+    /// 是否支持点击折叠/展开。
+    public var isCollapsible: Bool = true
+    /// 初始状态是否折叠。
+    public var isInitiallyCollapsed: Bool = false
+    /// 卡片下方间距。
+    public var spacingAfter: CGFloat = 12
+
+    public init() {}
+  }
+}
+
 // MARK: - Equatable
 
 extension InkAppearance.Text: Equatable {}
@@ -294,6 +334,7 @@ extension InkAppearance.Blockquote: Equatable {}
 extension InkAppearance.List: Equatable {}
 extension InkAppearance.CodeBlock: Equatable {}
 extension InkAppearance.InlineCode: Equatable {}
+extension InkAppearance.Thought: Equatable {}
 
 extension InkAppearance.Table: Equatable {
   public static func == (lhs: InkAppearance.Table, rhs: InkAppearance.Table) -> Bool {

@@ -32,6 +32,7 @@ struct InkConfigurationSemanticsTests {
     // 同类型、同顺序 → 语义等价（保持 Coordinator 幂等）。
     var sameHandlers = base
     sameHandlers.blockHandlers = [
+      InkThoughtBlockHandler(),
       InkCodeBlockHandler(),
       InkTableBlockHandler(),
       InkThematicBreakHandler(),
@@ -52,13 +53,41 @@ struct InkConfigurationSemanticsTests {
     latexFirst.inlineSyntaxes = [InkLaTeXInlineSyntax(rendering: .init()), TestTagSyntax()]
     #expect(!latexFirst.isSemanticallyEqualTo(reordered))
 
-    // 处理器类型不同（数量同为 3）→ 不等价；旧实现仅比数量会误判相等。
+    // 处理器类型不同（数量同为 4）→ 不等价；验证动态类型比对生效，而非仅比较 count。
     var imageHandlerFirst = base
     imageHandlerFirst.blockHandlers = [
       InkImageBlockHandler(),
+      InkCodeBlockHandler(),
       InkTableBlockHandler(),
       InkThematicBreakHandler(),
     ]
     #expect(!base.isSemanticallyEqualTo(imageHandlerFirst))
+  }
+
+  @Test("isSemanticallyEqualTo 严格识别 appearance、renderEnvironment 与 closure 注入差异")
+  func semanticEqualityDetectsAppearanceAndEnvironmentChanges() {
+    let base = InkConfiguration.standard
+
+    // 1. Appearance 属性变化
+    var differentFontSize = base
+    differentFontSize.appearance.text.fontSize = 25
+    #expect(!base.isSemanticallyEqualTo(differentFontSize))
+
+    // 2. RenderEnvironment 变化
+    var darkConfig = base
+    darkConfig.renderEnvironment = InkRenderEnvironment(userInterfaceStyle: .dark)
+    var lightConfig = base
+    lightConfig.renderEnvironment = InkRenderEnvironment(userInterfaceStyle: .light)
+    #expect(!darkConfig.isSemanticallyEqualTo(lightConfig))
+
+    // 3. sourceFilter 从无到有
+    var filtered = base
+    filtered.sourceFilter = { $0 }
+    #expect(!base.isSemanticallyEqualTo(filtered))
+
+    // 4. linkTapHandler 从无到有
+    var withLinkHandler = base
+    withLinkHandler.linkTapHandler = { _, _ in true }
+    #expect(!base.isSemanticallyEqualTo(withLinkHandler))
   }
 }

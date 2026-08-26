@@ -77,8 +77,9 @@ public struct InkConfiguration {
     appearance.latexRendering.isEnabled = true
   }
 
-  /// 核心库内置的默认块级路由（代码块 + 表格 + 分割线）。
+  /// 核心库内置的默认块级路由（思考过程块 + 代码块 + 表格 + 分割线）。
   public static let defaultBlockHandlers: [InkBlockHandler] = [
+    InkThoughtBlockHandler(),
     InkCodeBlockHandler(),
     InkTableBlockHandler(),
     InkThematicBreakHandler(),
