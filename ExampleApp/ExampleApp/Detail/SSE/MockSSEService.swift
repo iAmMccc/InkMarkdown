@@ -42,7 +42,8 @@ final class MockSSEService {
                     onComplete()
                     return
                 }
-                onChunk(chunks[cursor])
+                let chunk = chunks[cursor]
+                onChunk(chunk)
                 cursor += 1
             }
         }

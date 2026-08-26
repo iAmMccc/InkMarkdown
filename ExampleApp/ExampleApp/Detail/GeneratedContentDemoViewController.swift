@@ -19,10 +19,22 @@ final class GeneratedContentDemoViewController: UIViewController {
     view.backgroundColor = .systemBackground
     setupViews()
     renderDemos()
+
+    if #available(iOS 17.0, *) {
+      registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: GeneratedContentDemoViewController, previousTraitCollection: UITraitCollection) in
+        guard previousTraitCollection.userInterfaceStyle != self.traitCollection.userInterfaceStyle else { return }
+        self.stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        self.renderDemos()
+      }
+    }
   }
 
+  @available(iOS, deprecated: 17.0)
   override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
     super.traitCollectionDidChange(previousTraitCollection)
+    if #available(iOS 17.0, *) {
+      return
+    }
     guard previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle else { return }
     stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
     renderDemos()

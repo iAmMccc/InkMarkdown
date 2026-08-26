@@ -47,6 +47,14 @@ final class SSEChatViewController: UIViewController {
         seedSuggestion()
         setupNavButtons()
         updateNavTitle()
+
+        if #available(iOS 17.0, *) {
+            registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: SSEChatViewController, previousTraitCollection: UITraitCollection) in
+                guard previousTraitCollection.userInterfaceStyle != self.traitCollection.userInterfaceStyle else { return }
+                self.viewModel.updateUserInterfaceStyle(self.traitCollection.userInterfaceStyle)
+                self.tableView.reloadData()
+            }
+        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -61,25 +69,86 @@ final class SSEChatViewController: UIViewController {
         }
     }
 
+    @available(iOS, deprecated: 17.0)
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
+        if #available(iOS 17.0, *) {
+            return
+        }
         guard previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle else { return }
         viewModel.updateUserInterfaceStyle(traitCollection.userInterfaceStyle)
         tableView.reloadData()
     }
 
     private func setupNavButtons() {
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
+        let configButton = UIBarButtonItem(
             image: UIImage(systemName: "gearshape"),
             style: .plain,
             target: self,
             action: #selector(openConfigSettings)
         )
+
+        let modelMenu = makeModelMenu()
+        let modelButton = UIBarButtonItem(
+            image: UIImage(systemName: "sparkles"),
+            menu: modelMenu
+        )
+
+        navigationItem.rightBarButtonItems = [configButton, modelButton]
+    }
+
+    private func makeModelMenu() -> UIMenu {
+        let store = LLMConfigurationStore.shared
+        let active = store.activeConfig
+
+        let gpt56Actions = LLMModelPresets.gpt56Series.map { preset in
+            UIAction(
+                title: preset.name,
+                state: active.model == preset.id ? .on : .off
+            ) { [weak self] _ in
+                store.updateActiveModel(preset.id)
+                self?.updateNavTitle()
+                self?.setupNavButtons()
+            }
+        }
+        let gpt56Menu = UIMenu(title: "GPT 5.6 全系列", options: .displayInline, children: gpt56Actions)
+
+        let popularActions = LLMModelPresets.popularModels.map { preset in
+            UIAction(
+                title: preset.name,
+                state: active.model == preset.id ? .on : .off
+            ) { [weak self] _ in
+                store.updateActiveModel(preset.id)
+                self?.updateNavTitle()
+                self?.setupNavButtons()
+            }
+        }
+        let popularMenu = UIMenu(title: "热门模型", options: .displayInline, children: popularActions)
+
+        let effortActions = LLMReasoningEffort.allCases.map { effort in
+            UIAction(
+                title: effort.displayName,
+                state: active.reasoningEffort == effort ? .on : .off
+            ) { [weak self] _ in
+                store.updateActiveReasoningEffort(effort)
+                self?.updateNavTitle()
+                self?.setupNavButtons()
+            }
+        }
+        let effortMenu = UIMenu(title: "推理程度 (Reasoning Effort)", children: effortActions)
+
+        return UIMenu(title: "模型与推理设置", children: [gpt56Menu, popularMenu, effortMenu])
     }
 
     private func updateNavTitle() {
         let config = LLMConfigurationStore.shared.activeConfig
-        title = "SSE: \(config.name)"
+        if config.isMock {
+            title = "SSE: \(config.name)"
+        } else if config.reasoningEffort == .automatic {
+            title = config.model
+        } else {
+            title = "\(config.model) · \(config.reasoningEffort.shortName)"
+        }
     }
 
     @objc private func openConfigSettings() {
@@ -93,7 +162,9 @@ final class SSEChatViewController: UIViewController {
             .sink { [weak self] _ in
                 guard let self else { return }
                 self.tableView.reloadData()
-                self.scrollToBottom(animated: true)
+                if self.viewModel.shouldAutoScroll() {
+                    self.scrollToBottom(animated: true)
+                }
             }
             .store(in: &cancellables)
 
@@ -152,13 +223,15 @@ final class SSEChatViewController: UIViewController {
         suggestionsStackView.spacing = 8
         suggestionsStackView.alignment = .center
 
-        let suggestions = ["公式图表", "图文混排", "复杂表格", "代码示例", "列表说明"]
+        let suggestions = ["深度思考", "公式图表", "图文混排", "复杂表格", "代码示例", "列表说明"]
         for title in suggestions {
-            var config = UIButton.Configuration.tinted()
-            config.title = title
-            config.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
-            config.cornerStyle = .capsule
-            let btn = UIButton(configuration: config)
+            let btn = UIButton(type: .system)
+            btn.setTitle(title, for: .normal)
+            btn.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+            btn.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
+            btn.backgroundColor = .tertiarySystemFill
+            btn.layer.cornerRadius = 14
+            btn.layer.cornerCurve = .continuous
             btn.addTarget(self, action: #selector(handleSuggestionTap(_:)), for: .touchUpInside)
             suggestionsStackView.addArrangedSubview(btn)
         }
@@ -249,7 +322,7 @@ final class SSEChatViewController: UIViewController {
             tableView.beginUpdates()
             tableView.endUpdates()
             CATransaction.commit()
-            scrollToBottom(animated: false)
+            performAutoScrollIfNeeded()
         } else {
             DispatchQueue.main.asyncAfter(deadline: .now() + (minInterval - interval)) { [weak self] in
                 guard let self else { return }
@@ -260,9 +333,22 @@ final class SSEChatViewController: UIViewController {
                 self.tableView.beginUpdates()
                 self.tableView.endUpdates()
                 CATransaction.commit()
-                self.scrollToBottom(animated: false)
+                self.performAutoScrollIfNeeded()
             }
         }
+    }
+
+    private func performAutoScrollIfNeeded() {
+        guard viewModel.shouldAutoScroll() else { return }
+        scrollToBottom(animated: false)
+    }
+
+    private func distanceFromBottom() -> CGFloat {
+        let contentHeight = tableView.contentSize.height
+        let boundsHeight = tableView.bounds.height
+        let offsetY = tableView.contentOffset.y
+        if contentHeight <= boundsHeight { return 0 }
+        return max(0, contentHeight - boundsHeight - offsetY)
     }
 
     private func scrollToBottom(animated: Bool) {
@@ -281,7 +367,9 @@ final class SSEChatViewController: UIViewController {
         inputBottom?.constant = -max(inset, 0)
         UIView.animate(withDuration: duration) {
             self.view.layoutIfNeeded()
-            if !self.viewModel.messages.isEmpty { self.scrollToBottom(animated: false) }
+            if !self.viewModel.messages.isEmpty, self.viewModel.shouldAutoScroll() {
+                self.scrollToBottom(animated: false)
+            }
         }
     }
 
@@ -323,13 +411,39 @@ extension SSEChatViewController: UITableViewDelegate, UITableViewDataSource {
             let isActiveStream = viewModel.activeStreamingMessageID == msg.id
             cell.configure(
                 message: msg,
-                session: isActiveStream ? viewModel.session : nil,
+                activeSession: isActiveStream ? viewModel.session : nil,
                 configuration: viewModel.chatConfiguration,
                 isActiveStream: isActiveStream,
                 parent: self
             )
             return cell
         }
+    }
+}
+
+// MARK: - UIScrollViewDelegate
+
+extension SSEChatViewController {
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        viewModel.handleScrollDragBegan()
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        viewModel.handleScrollOffsetChanged(
+            distanceFromBottom: distanceFromBottom(),
+            isDragging: scrollView.isDragging
+        )
+    }
+
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        viewModel.handleScrollDragEnded(
+            distanceFromBottom: distanceFromBottom(),
+            isDecelerating: decelerate
+        )
+    }
+
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        viewModel.handleScrollDecelerationEnded(distanceFromBottom: distanceFromBottom())
     }
 }
 
@@ -382,6 +496,7 @@ private final class SSEAssistantCell: UITableViewCell {
     private let bubbleView = UIView()
     private let thinkingLabel = UILabel()
     private var hostingController: UIHostingController<AnyView>?
+    private var embeddedSession: InkMarkdownRenderSession?
     private var isShowingThinking = false
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -421,51 +536,74 @@ private final class SSEAssistantCell: UITableViewCell {
 
     func configure(
         message: ChatDemoViewModel.ChatMessage,
-        session: InkMarkdownRenderSession?,
+        activeSession: InkMarkdownRenderSession?,
         configuration: InkConfiguration,
         isActiveStream: Bool,
         parent: UIViewController
     ) {
-        if isActiveStream, let session {
-            if message.content.isEmpty && session.currentText.isEmpty {
+        if isActiveStream, let activeSession {
+            if message.content.isEmpty && activeSession.currentText.isEmpty {
                 removeHostingController()
                 showThinking()
             } else {
                 hideThinking()
-                embed(
-                    InkStreamMarkdownView(session: session),
-                    parent: parent
-                )
+                if embeddedSession === activeSession, hostingController != nil {
+                    hostingController?.rootView = AnyView(InkStreamMarkdownView(session: activeSession))
+                } else {
+                    embeddedSession = activeSession
+                    embed(
+                        InkStreamMarkdownView(session: activeSession),
+                        parent: parent
+                    )
+                }
             }
         } else if message.content.isEmpty && message.isStreaming {
             removeHostingController()
             showThinking()
+        } else if let renderSession = message.renderSession {
+            hideThinking()
+            if embeddedSession === renderSession, hostingController != nil {
+                hostingController?.rootView = AnyView(InkStreamMarkdownView(session: renderSession))
+            } else {
+                embeddedSession = renderSession
+                embed(
+                    InkStreamMarkdownView(session: renderSession),
+                    parent: parent
+                )
+            }
         } else {
             hideThinking()
-            embed(
-                InkMarkdownView(message.content, configuration: configuration),
-                parent: parent
-            )
+            embeddedSession = nil
+            if let hosting = hostingController {
+                hosting.rootView = AnyView(InkMarkdownView(message.content, configuration: configuration))
+            } else {
+                embed(
+                    InkMarkdownView(message.content, configuration: configuration),
+                    parent: parent
+                )
+            }
         }
     }
 
     private func embed<V: View>(_ view: V, parent: UIViewController) {
-        removeHostingController()
+        if hostingController == nil {
+            let hosting = UIHostingController(rootView: AnyView(view))
+            hosting.view.backgroundColor = .clear
+            hostingController = hosting
 
-        let hosting = UIHostingController(rootView: AnyView(view))
-        hosting.view.backgroundColor = .clear
-        hostingController = hosting
-
-        parent.addChild(hosting)
-        bubbleView.addSubview(hosting.view)
-        hosting.view.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            hosting.view.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 14),
-            hosting.view.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -14),
-            hosting.view.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
-            hosting.view.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
-        ])
-        hosting.didMove(toParent: parent)
+            parent.addChild(hosting)
+            bubbleView.addSubview(hosting.view)
+            hosting.view.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                hosting.view.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 14),
+                hosting.view.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -14),
+                hosting.view.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 14),
+                hosting.view.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: -14),
+            ])
+            hosting.didMove(toParent: parent)
+        } else {
+            hostingController?.rootView = AnyView(view)
+        }
     }
 
     private func removeHostingController() {
@@ -474,6 +612,7 @@ private final class SSEAssistantCell: UITableViewCell {
         hosting.view.removeFromSuperview()
         hosting.removeFromParent()
         hostingController = nil
+        embeddedSession = nil
     }
 
     private func showThinking() {

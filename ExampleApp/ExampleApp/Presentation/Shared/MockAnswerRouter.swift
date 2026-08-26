@@ -10,6 +10,7 @@ enum MockAnswerRouter {
 
     /// 路由目标样本标识。
     enum Sample: String, CaseIterable {
+        case thinking
         case closures
         case structClassComparison
         case images
@@ -22,6 +23,7 @@ enum MockAnswerRouter {
 
     /// 有序匹配表：index 越小优先级越高。
     private static let matchTable: [(sample: Sample, keywords: [String])] = [
+        (.thinking, ["思考", "think", "推理", "r1", "深度思考", "reasoning"]),
         (.closures, ["闭包", "closure"]),
         (.structClassComparison, [
             "结构体与类", "结构体与 class", "struct与class", "struct 与 class",
@@ -54,6 +56,7 @@ enum MockAnswerRouter {
     /// 返回指定样本的 Markdown 正文。
     static func content(for sample: Sample) -> String {
         switch sample {
+        case .thinking: return sampleThinking
         case .closures: return sampleClosures
         case .structClassComparison: return sampleStructClassComparison
         case .images: return sampleImages
@@ -67,7 +70,36 @@ enum MockAnswerRouter {
 
     // MARK: - 预设 Markdown 样本
 
+    static let sampleThinking = """
+    <think>
+    用户希望体验大模型的深度思考（Reasoning / Thought Process）过程。
+    我需要展示：
+    1. 思考过程被封装在 `<think>...</think>` 标签内，流式输出时实时吐字。
+    2. 流式结束后自动提升为可交互、可点击折叠/展开的原生思考卡片。
+    3. 正文紧随其后，支持标准 Markdown 语法（标题、列表、加粗、代码等）。
+    4. 展现 UIKit 渲染引擎与 SwiftUI 适配器的渲染一致性。
+    </think>
+
+    ### 深度思考能力演示
+
+    恭喜！你刚刚完整体验了大模型**思考过程（Thinking Process）**从流式吐字到终态交互卡片的全流程：
+
+    1. **协议层支持**：兼容 OpenAI 标准扩展 `delta.reasoning_content` 与原生 `<think>` 标签；
+    2. **渲染层支持**：`InkMarkdown` 原生块级处理器自动将 `<think>` 提升为 `InkThoughtBlockView`；
+    3. **交互体验**：支持**点击上方卡片头部**随时折叠或展开思考细节；
+    4. **双端对称**：UIKit 与 SwiftUI 共享完全相同的视觉规范与排版表现。
+    """
+
     static let sampleClosures = """
+    <think>
+    用户正在询问 Swift 闭包相关知识。
+    需要系统化梳理：
+    1. 基本语法结构与闭包表达式简写
+    2. 变量捕获机制与避免循环引用的弱引用列表（[weak self]）
+    3. 逃逸闭包（@escaping）与自动闭包（@autoclosure）的应用场景
+    4. 配合清晰代码块与表格展示
+    </think>
+
     **Swift 闭包（Closure）专题**
 
     闭包是自包含的功能代码块，可以在代码中传递和使用。Swift 的闭包表达式语法简洁，是函数式编程的核心工具之一。
@@ -108,6 +140,15 @@ enum MockAnswerRouter {
     """
 
     static let sampleStructClassComparison = """
+    <think>
+    用户正在询问 Swift 结构体（struct）与类（class）的区别与选型建议。
+    思考要点：
+    1. 区分值语义（Value Semantics）与引用语义（Reference Semantics）的本质差异。
+    2. 内存分配策略（栈优先与 COW 写时复制 vs 堆分配与 ARC 引用计数）。
+    3. 面向对象特性（单继承、析构器）与面向协议编程（POP）的权衡。
+    4. 提供直观对比表格、典型代码演练与实际工程选型建议。
+    </think>
+
     **Swift 结构体与类的对比**
 
     Swift 同时提供值类型（`struct`/`enum`）与引用类型（`class`），理解二者差异是写出正确 Swift 代码的基础。

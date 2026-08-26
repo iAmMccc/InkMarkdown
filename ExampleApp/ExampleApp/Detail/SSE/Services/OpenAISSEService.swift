@@ -22,13 +22,7 @@ public enum LLMStreamError: LocalizedError {
         case .invalidURL(let url):
             return "无效的 API 请求地址: \(url)"
         case .httpError(let code, let msg):
-            if code == 401 {
-                return "API 认证失败 (HTTP 401)：请检查 API Key 是否正确或已过期。"
-            }
-            if code == 429 {
-                return "请求过于频繁或额度不足 (HTTP 429)：\(msg)"
-            }
-            return "服务器返回错误 (HTTP \(code))：\(msg)"
+            return LLMErrorMapper.userFacingHTTPMessage(statusCode: code, message: msg)
         case .networkError(let err):
             return LLMErrorMapper.userFacingMessage(for: err)
         case .cancelled:
@@ -101,8 +95,9 @@ public final class OpenAISSEService: NSObject, @unchecked Sendable {
         request.addValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 60
 
-        let payload: [String: Any] = [
-            "model": config.model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "gpt-4o-mini" : config.model,
+        let modelName = config.model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "gpt-4o-mini" : config.model
+        var payload: [String: Any] = [
+            "model": modelName,
             "messages": [
                 [
                     "role": "system",
@@ -116,7 +111,11 @@ public final class OpenAISSEService: NSObject, @unchecked Sendable {
             "stream": true
         ]
 
-        guard let bodyData = try? JSONSerialization.data(withJSONObject: payload, options: []) else {
+        if let effort = config.reasoningEffort.apiValue {
+            payload["reasoning_effort"] = effort
+        }
+
+        guard let bodyData = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]) else {
             Task { @MainActor in onError(.networkError(NSError(domain: "OpenAISSEService", code: -1, userInfo: [NSLocalizedDescriptionKey: "请求体序列化失败"]))) }
             return
         }
@@ -164,7 +163,9 @@ private final class SSEStreamParserDelegate: NSObject, URLSessionDataDelegate, @
     private var buffer = Data()
     private var statusCode: Int = 200
     private var errorBodyData = Data()
-    private var hasFinished = false
+    private var isEmittingReasoning = false
+    private var isTerminated = false
+    private let lock = NSLock()
 
     init(
         onChunk: @escaping @MainActor (String) -> Void,
@@ -184,58 +185,86 @@ private final class SSEStreamParserDelegate: NSObject, URLSessionDataDelegate, @
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        guard !hasFinished else { return }
+        lock.lock()
+        guard !isTerminated else {
+            lock.unlock()
+            return
+        }
 
         // 非 2xx 响应时累积错误信息
         if statusCode < 200 || statusCode >= 300 {
             errorBodyData.append(data)
+            lock.unlock()
             return
         }
 
         buffer.append(data)
-        processBuffer()
+        processBuffer(isFinal: false)
+        lock.unlock()
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard !hasFinished else { return }
-        hasFinished = true
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard !isTerminated else { return }
 
         if let error = error {
             let nsError = error as NSError
             if nsError.code == NSURLErrorCancelled {
-                // 用户主动取消
+                terminateOnce(with: .cancelled)
                 return
             }
-            Task { @MainActor in
-                self.onError(.networkError(error))
-            }
+            terminateOnce(with: .failure(.networkError(error)))
             return
         }
 
         if statusCode < 200 || statusCode >= 300 {
             let message = parseErrorMessage(from: errorBodyData)
-            Task { @MainActor in
-                self.onError(.httpError(statusCode: self.statusCode, message: message))
-            }
+            terminateOnce(with: .failure(.httpError(statusCode: statusCode, message: message)))
             return
         }
 
-        // 刷新剩余未处理的行
+        // 处理缓冲区残留的最后一行
         processBuffer(isFinal: true)
+        terminateOnce(with: .success)
+    }
+
+    // MARK: - 内部状态派发
+
+    private enum StreamTerminalResult {
+        case success
+        case failure(LLMStreamError)
+        case cancelled
+    }
+
+    private func terminateOnce(with result: StreamTerminalResult) {
+        guard !isTerminated else { return }
+        isTerminated = true
+
+        let shouldCloseReasoning = isEmittingReasoning
+        isEmittingReasoning = false
 
         Task { @MainActor in
-            self.onComplete()
+            if shouldCloseReasoning {
+                self.onChunk("\n</think>\n\n")
+            }
+            switch result {
+            case .success:
+                self.onComplete()
+            case .failure(let error):
+                self.onError(error)
+            case .cancelled:
+                break
+            }
         }
     }
 
-    // MARK: - 内部行解析
-
-    private func processBuffer(isFinal: Bool = false) {
+    private func processBuffer(isFinal: Bool) {
         guard let text = String(data: buffer, encoding: .utf8) else { return }
 
         var lines = text.components(separatedBy: "\n")
         if !isFinal {
-            // 最后一行可能是不完整的 chunk，保留在 buffer 中
             if let lastLine = lines.popLast() {
                 buffer = lastLine.data(using: .utf8) ?? Data()
             }
@@ -244,48 +273,158 @@ private final class SSEStreamParserDelegate: NSObject, URLSessionDataDelegate, @
         }
 
         for line in lines {
+            guard !isTerminated else { break }
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty || trimmed.hasPrefix(":") {
-                continue // 注释或保活 ping
+                continue
             }
 
             if trimmed.hasPrefix("data:") {
                 let payload = trimmed.dropFirst(5).trimmingCharacters(in: .whitespaces)
                 if payload == "[DONE]" {
-                    hasFinished = true
-                    Task { @MainActor in
-                        self.onComplete()
-                    }
+                    terminateOnce(with: .success)
                     return
                 }
 
-                if let chunkText = parseDeltaContent(from: payload) {
-                    Task { @MainActor in
-                        self.onChunk(chunkText)
-                    }
+                processPayload(payload)
+            }
+        }
+    }
+
+    private func processPayload(_ jsonString: String) {
+        guard let data = jsonString.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return
+        }
+
+        // 处理服务端在 200 OK 流中内嵌 error 对象的情况
+        if let errorObj = json["error"] as? [String: Any],
+           let errorMsg = errorObj["message"] as? String {
+            terminateOnce(with: .failure(.httpError(statusCode: statusCode, message: errorMsg)))
+            return
+        }
+
+        guard let choices = json["choices"] as? [[String: Any]],
+              let firstChoice = choices.first else {
+            return
+        }
+
+        let delta = firstChoice["delta"] as? [String: Any] ?? [:]
+        // 1. 广泛兼容提取思考/推理内容（适配 DeepSeek、OpenAI o系列、Claude 3.7、Qwen、Groq、Ollama 等各类网关格式）
+        let reasoning = extractReasoning(from: delta, choice: firstChoice, root: json)
+
+        // 2. 提取正式回答正文
+        let content = extractContent(from: delta, choice: firstChoice)
+
+        var chunksToEmit: [String] = []
+
+        if let reasoning = reasoning, !reasoning.isEmpty {
+            if !isEmittingReasoning {
+                isEmittingReasoning = true
+                chunksToEmit.append("<think>\n" + reasoning)
+            } else {
+                chunksToEmit.append(reasoning)
+            }
+        }
+
+        if let content = content, !content.isEmpty {
+            if isEmittingReasoning {
+                isEmittingReasoning = false
+                chunksToEmit.append("\n</think>\n\n" + content)
+            } else {
+                chunksToEmit.append(content)
+            }
+        }
+
+        if !chunksToEmit.isEmpty {
+            let finalChunks = chunksToEmit
+            Task { @MainActor in
+                for chunk in finalChunks {
+                    self.onChunk(chunk)
                 }
             }
         }
     }
 
-    /// 解析 OpenAI 单行 SSE JSON 中的 delta.content
-    private func parseDeltaContent(from jsonString: String) -> String? {
-        guard let data = jsonString.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let choices = json["choices"] as? [[String: Any]],
-              let firstChoice = choices.first,
-              let delta = firstChoice["delta"] as? [String: Any] else {
-            return nil
+    /// 从 delta、choice 以及 top-level json 中多策略提取思考/推理内容。
+    private func extractReasoning(from delta: [String: Any], choice: [String: Any], root: [String: Any]) -> String? {
+        // 优先在 delta 中查找各种常见 key
+        let candidateKeys = [
+            "reasoning_content",       // DeepSeek official / SiliconFlow / vLLM
+            "reasoning",               // OpenAI o1/o3 / OpenRouter
+            "thought",                 // Qwen / Groq / Gemini / Ollama
+            "thoughts",                // 部分代理中转网关
+            "thinking",                // Anthropic Claude 3.7 thinking
+            "reasoning_text",          // 常见聚合网关
+            "reasoning_content_text",  // 聚合网关变体
+            "thinking_process"         // 国产模型中转变体
+        ]
+
+        for key in candidateKeys {
+            if let value = delta[key] {
+                if let str = extractString(from: value), !str.isEmpty {
+                    return str
+                }
+            }
         }
 
-        // 优先提取 content；若有 reasoning_content（深度思考模型）亦可合并或提取
-        if let content = delta["content"] as? String {
-            return content
+        // 备选：部分网关放置于 choice 级别
+        for key in candidateKeys {
+            if let value = choice[key] {
+                if let str = extractString(from: value), !str.isEmpty {
+                    return str
+                }
+            }
+        }
+
+        // 备选：部分非标准网关放置于 choice["message"] 级别
+        if let message = choice["message"] as? [String: Any] {
+            for key in candidateKeys {
+                if let value = message[key] {
+                    if let str = extractString(from: value), !str.isEmpty {
+                        return str
+                    }
+                }
+            }
+        }
+
+        return nil
+    }
+
+    /// 提取正文内容（兼容 delta.content 或 legacy choice.text）。
+    private func extractContent(from delta: [String: Any], choice: [String: Any]) -> String? {
+        if let contentVal = delta["content"] {
+            return extractString(from: contentVal)
+        }
+        if let textVal = choice["text"] {
+            return extractString(from: textVal)
         }
         return nil
     }
 
-    /// 提取服务端返回的错误信息
+    /// 递归解析 Any 类型的值为 String（支持 String、字典中的 text/content、数组等）。
+    private func extractString(from value: Any) -> String? {
+        if let str = value as? String {
+            return str
+        }
+        if let dict = value as? [String: Any] {
+            if let text = dict["text"] as? String {
+                return text
+            }
+            if let content = dict["content"] as? String {
+                return content
+            }
+            if let val = dict["value"] as? String {
+                return val
+            }
+        }
+        if let array = value as? [Any] {
+            let joined = array.compactMap { extractString(from: $0) }.joined()
+            return joined.isEmpty ? nil : joined
+        }
+        return nil
+    }
+
     private func parseErrorMessage(from data: Data) -> String {
         guard !data.isEmpty else { return "未知服务端错误" }
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {

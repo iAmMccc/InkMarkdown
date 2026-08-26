@@ -9,14 +9,17 @@ import InkMarkdown
 import InkMarkdownSwiftUI
 import UIKit
 
-/// SwiftUI / UIKit Chat Demo 的 MVVM 状态机：单条 `InkMarkdownRenderSession` 驱动流式气泡。
+/// SwiftUI / UIKit Chat Demo 的 MVVM 状态机：每条 assistant 消息持有独立 `InkMarkdownRenderSession`。
 @MainActor
 final class ChatDemoViewModel: ObservableObject {
 
     struct ChatMessage: Identifiable {
         let id = UUID()
         let isUser: Bool
+        /// 纯文本快照；错误/取消回退或用户消息正文。
         var content: String
+        /// 已完成 assistant 消息的渲染会话（含 promotion 后 blocks 与折叠态 SSOT）。
+        var renderSession: InkMarkdownRenderSession?
         var isStreaming: Bool
     }
 
@@ -24,13 +27,16 @@ final class ChatDemoViewModel: ObservableObject {
     @Published var inputPrompt: String = ""
     @Published private(set) var isLoading: Bool = false
     @Published var showingConfigSheet: Bool = false
-    /// 流式 append 时发出，供 UIKit 触发 cell 高度重算（不修改 messages，SwiftUI 不订阅）。
+    /// 流式显示尺寸变化时发出，供 UIKit 触发 cell 高度重算 / SwiftUI scrollTo（不修改 messages，不驱动换树）。
     let streamDisplayPulse = PassthroughSubject<Void, Never>()
 
-    /// 当前活跃流式渲染会话（全局唯一）；每次发送前按 trait 重建。
+    /// Chat 滚动策略（SwiftUI / UIKit 共用同一实例）。
+    private(set) var scrollPolicy = ChatScrollPolicy()
+
+    /// 当前活跃流式渲染会话；promotion 完成后转移到 `messages[].renderSession`，此处重建供下一条使用。
     private(set) var session: InkMarkdownRenderSession
 
-    /// 与 session 同步的 Chat Demo 配置快照，供终态 `InkMarkdownView` 复用。
+    /// 与 session 同步的 Chat Demo 配置快照，供无 session 回退路径复用。
     var chatConfiguration: InkConfiguration {
         session.configuration
     }
@@ -44,6 +50,38 @@ final class ChatDemoViewModel: ObservableObject {
         self.session = InkMarkdownRenderSession(
             configuration: DemoInkConfigurationBuilder.makeChatConfiguration(userInterfaceStyle: userInterfaceStyle)
         )
+        bindSessionDisplayCallback()
+    }
+
+    // MARK: - Scroll Policy
+
+    func handleScrollDragBegan() {
+        scrollPolicy.dragBegan()
+        session.isDisplayPaused = scrollPolicy.shouldPauseDisplay
+    }
+
+    func handleScrollDragEnded(distanceFromBottom: CGFloat, isDecelerating: Bool) {
+        scrollPolicy.dragEnded(distanceFromBottom: distanceFromBottom, isDecelerating: isDecelerating)
+        session.isDisplayPaused = scrollPolicy.shouldPauseDisplay
+    }
+
+    func handleScrollDecelerationEnded(distanceFromBottom: CGFloat) {
+        scrollPolicy.decelerationEnded(distanceFromBottom: distanceFromBottom)
+        session.isDisplayPaused = scrollPolicy.shouldPauseDisplay
+    }
+
+    func handleScrollOffsetChanged(distanceFromBottom: CGFloat, isDragging: Bool) {
+        scrollPolicy.offsetChanged(distanceFromBottom: distanceFromBottom, isDragging: isDragging)
+        session.isDisplayPaused = scrollPolicy.shouldPauseDisplay
+    }
+
+    func handleContentGrew() {
+        scrollPolicy.contentGrew()
+    }
+
+    /// 是否应自动滚动到底部（薄 relay，唯一谓词在 `ChatScrollPolicy.shouldAutoScroll`）。
+    func shouldAutoScroll() -> Bool {
+        scrollPolicy.shouldAutoScroll
     }
 
     // MARK: - Actions
@@ -62,16 +100,18 @@ final class ChatDemoViewModel: ObservableObject {
         recreateSession()
         isLoading = true
 
-        messages.append(ChatMessage(isUser: true, content: question, isStreaming: false))
-        messages.append(ChatMessage(isUser: false, content: "", isStreaming: true))
+        messages.append(ChatMessage(isUser: true, content: question, renderSession: nil, isStreaming: false))
+        messages.append(ChatMessage(isUser: false, content: "", renderSession: nil, isStreaming: true))
         streamingAssistantIndex = messages.count - 1
+        scrollPolicy = ChatScrollPolicy()
+        scrollPolicy.messagesCountChanged()
 
         OpenAISSEService.shared.askStream(
             question: question,
             config: config,
             onChunk: { [weak self] chunk in
-                self?.session.append(chunk)
-                self?.streamDisplayPulse.send()
+                guard let self = self else { return }
+                self.session.append(chunk)
             },
             onComplete: { [weak self] in
                 self?.handleStreamComplete()
@@ -95,6 +135,7 @@ final class ChatDemoViewModel: ObservableObject {
             if !partial.isEmpty {
                 messages[idx].content = partial
             }
+            // cancel() 清空 streamingThought；无 session 转移，回退 InkMarkdownView 静态渲染。
             messages[idx].isStreaming = false
         }
         streamingAssistantIndex = nil
@@ -108,9 +149,18 @@ final class ChatDemoViewModel: ObservableObject {
         guard style != userInterfaceStyle else { return }
         userInterfaceStyle = style
 
-        // 流式阶段由 `InkStreamMarkdownView` 通过 SwiftUI colorScheme 更新 renderEnvironment。
+        let environment = InkRenderEnvironment(
+            userInterfaceStyle: style == .dark ? .dark : .light
+        )
+
+        for index in messages.indices {
+            messages[index].renderSession?.updateRenderEnvironment(environment)
+        }
+
         if session.state == .idle || session.state == .cancelled || session.state == .finished {
             recreateSession()
+        } else {
+            session.updateRenderEnvironment(environment)
         }
     }
 
@@ -129,6 +179,15 @@ final class ChatDemoViewModel: ObservableObject {
         session = InkMarkdownRenderSession(
             configuration: DemoInkConfigurationBuilder.makeChatConfiguration(userInterfaceStyle: userInterfaceStyle)
         )
+        bindSessionDisplayCallback()
+    }
+
+    private func bindSessionDisplayCallback() {
+        session.onDisplayUpdate = { [weak self] in
+            guard let self else { return }
+            self.handleContentGrew()
+            self.streamDisplayPulse.send()
+        }
     }
 
     private func handleStreamComplete() {
@@ -156,9 +215,12 @@ final class ChatDemoViewModel: ObservableObject {
         promotionCancellable = nil
 
         guard idx < messages.count, messages[idx].isStreaming else { return }
+        session.syncStreamingThoughtCollapseIntoBlocks()
         messages[idx].content = session.currentText
+        messages[idx].renderSession = session
         messages[idx].isStreaming = false
         streamingAssistantIndex = nil
+        recreateSession()
     }
 
     private func handleStreamError(_ error: LLMStreamError) {

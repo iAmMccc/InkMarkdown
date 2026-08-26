@@ -16,27 +16,106 @@ struct SwiftUIStreamingMarkdownDemoView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      HStack {
-        Image(systemName: configStore.activeConfig.isMock ? "internaldrive" : "network")
-          .font(.caption)
-        Text("当前端点: \(configStore.activeConfig.name)")
-          .font(.caption)
-          .fontWeight(.medium)
-        if !configStore.activeConfig.isMock {
-          Text("(\(configStore.activeConfig.model))")
+      HStack(spacing: 8) {
+        HStack(spacing: 4) {
+          Image(systemName: configStore.activeConfig.isMock ? "internaldrive" : "network")
             .font(.caption2)
-            .foregroundColor(.secondary)
+          Text(configStore.activeConfig.name)
+            .font(.caption)
+            .fontWeight(.medium)
+            .lineLimit(1)
         }
+
         Spacer()
+
+        if !configStore.activeConfig.isMock {
+          // 快捷切换模型 Menu
+          Menu {
+            Section(header: Text("GPT 5.6 全系列")) {
+              ForEach(LLMModelPresets.gpt56Series) { preset in
+                Button {
+                  configStore.updateActiveModel(preset.id)
+                } label: {
+                  HStack {
+                    Text(preset.name)
+                    if configStore.activeConfig.model == preset.id {
+                      Image(systemName: "checkmark")
+                    }
+                  }
+                }
+              }
+            }
+
+            Section(header: Text("热门推理/通用模型")) {
+              ForEach(LLMModelPresets.popularModels) { preset in
+                Button {
+                  configStore.updateActiveModel(preset.id)
+                } label: {
+                  HStack {
+                    Text(preset.name)
+                    if configStore.activeConfig.model == preset.id {
+                      Image(systemName: "checkmark")
+                    }
+                  }
+                }
+              }
+            }
+          } label: {
+            HStack(spacing: 3) {
+              Text(configStore.activeConfig.model)
+                .font(.caption2)
+                .fontWeight(.medium)
+              Image(systemName: "chevron.down")
+                .font(.system(size: 8))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color.blue.opacity(0.12))
+            .foregroundColor(.blue)
+            .cornerRadius(5)
+          }
+
+          // 快捷切换推理程度 Menu
+          Menu {
+            ForEach(LLMReasoningEffort.allCases) { effort in
+              Button {
+                configStore.updateActiveReasoningEffort(effort)
+              } label: {
+                HStack {
+                  Text(effort.displayName)
+                  if configStore.activeConfig.reasoningEffort == effort {
+                    Image(systemName: "checkmark")
+                  }
+                }
+              }
+            }
+          } label: {
+            HStack(spacing: 3) {
+              Image(systemName: "brain.head.profile")
+                .font(.system(size: 9))
+              Text(configStore.activeConfig.reasoningEffort.shortName)
+                .font(.caption2)
+                .fontWeight(.medium)
+              Image(systemName: "chevron.down")
+                .font(.system(size: 8))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color.purple.opacity(0.12))
+            .foregroundColor(.purple)
+            .cornerRadius(5)
+          }
+        }
+
         Button {
           viewModel.showingConfigSheet = true
         } label: {
-          Text("切换配置")
+          Image(systemName: "slider.horizontal.3")
             .font(.caption)
-            .foregroundColor(.blue)
+            .foregroundColor(.secondary)
         }
       }
-      .padding(.horizontal, 16)
+      .padding(.horizontal, 14)
       .padding(.vertical, 8)
       .background(Color(UIColor.secondarySystemBackground))
 

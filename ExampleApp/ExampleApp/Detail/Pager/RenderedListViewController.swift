@@ -59,10 +59,22 @@ final class RenderedListViewController: UIViewController, PagerListController {
     } else {
       setupGenericBlockRouting()
     }
+
+    if #available(iOS 17.0, *) {
+      registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: RenderedListViewController, previousTraitCollection: UITraitCollection) in
+        guard previousTraitCollection.userInterfaceStyle != self.traitCollection.userInterfaceStyle else { return }
+        guard self.style == .latexEnabled || self.style == .mermaidEnabled else { return }
+        self.rebuildGenericBlockContent()
+      }
+    }
   }
 
+  @available(iOS, deprecated: 17.0)
   override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
     super.traitCollectionDidChange(previousTraitCollection)
+    if #available(iOS 17.0, *) {
+      return
+    }
     guard previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle else { return }
     guard style == .latexEnabled || style == .mermaidEnabled else { return }
     rebuildGenericBlockContent()

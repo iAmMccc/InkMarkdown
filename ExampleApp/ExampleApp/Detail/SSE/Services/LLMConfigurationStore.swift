@@ -32,6 +32,22 @@ public final class LLMConfigurationStore: ObservableObject {
         return configs.first ?? LLMConfiguration.mockPreset
     }
 
+    /// 快捷切换当前激活配置的目标模型。
+    public func updateActiveModel(_ model: String) {
+        var current = activeConfig
+        guard current.model != model else { return }
+        current.model = model
+        update(config: current)
+    }
+
+    /// 快捷切换当前激活配置的推理程度。
+    public func updateActiveReasoningEffort(_ effort: LLMReasoningEffort) {
+        var current = activeConfig
+        guard current.reasoningEffort != effort else { return }
+        current.reasoningEffort = effort
+        update(config: current)
+    }
+
     /// 选中指定配置。
     public func select(id: UUID) {
         guard configs.contains(where: { $0.id == id }) else { return }
@@ -95,10 +111,10 @@ public final class LLMConfigurationStore: ObservableObject {
         }
     }
 
-    /// 迁移已持久化的 RightCodes 配置：旧 host / 旧 model → 新预设，保留 apiKey。
+    /// 迁移已持久化的配置：按稳定 id 合并新增内置预设（如 DeepSeek R1），并平滑升级旧 host / model。
     private func migratePersistedConfigs(_ configs: [LLMConfiguration]) -> [LLMConfiguration] {
         let rightCodesId = LLMConfiguration.rightCodesPreset.id
-        return configs.map { config in
+        var result = configs.map { config -> LLMConfiguration in
             guard config.id == rightCodesId else { return config }
             var migrated = config
             if migrated.baseURL.contains("right.codes") {
@@ -109,6 +125,15 @@ public final class LLMConfigurationStore: ObservableObject {
             }
             return migrated
         }
+
+        // 按稳定 ID 补齐新版本新增的内置预设，保留老用户已有配置与 Key
+        for preset in LLMConfiguration.defaultPresets {
+            if !result.contains(where: { $0.id == preset.id }) {
+                result.append(preset)
+            }
+        }
+
+        return result
     }
 
     private func save() {

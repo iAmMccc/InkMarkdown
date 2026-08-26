@@ -37,6 +37,24 @@ enum LLMErrorMapper {
         }
     }
 
+    /// 将 HTTP 状态码与服务端错误信息转为用户可读的友好说明。
+    static func userFacingHTTPMessage(statusCode: Int, message: String) -> String {
+        let lower = message.lowercased()
+        if lower.contains("upstream service temporarily unavailable") || lower.contains("temporarily unavailable") {
+            return "上游大模型服务暂时不可用（当前选择的模型或超高推理档位可能超出算力预算，建议切换为中/高推理或更换模型重试）。"
+        }
+        if statusCode == 401 {
+            return "API 认证失败 (HTTP 401)：请检查 API Key 是否正确或已过期。"
+        }
+        if statusCode == 429 {
+            return "请求过于频繁或额度不足 (HTTP 429)：\(message)"
+        }
+        if statusCode >= 500 {
+            return "服务暂时不可用 (HTTP \(statusCode))：\(message)"
+        }
+        return "服务器返回错误 (HTTP \(statusCode))：\(message)"
+    }
+
     // MARK: - Private
 
     /// NSURLError -1200 且底层 SSL -9816（errSSLClosedAbort / 对端重置）。

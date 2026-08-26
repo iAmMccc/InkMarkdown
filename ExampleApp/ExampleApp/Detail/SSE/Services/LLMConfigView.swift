@@ -42,10 +42,11 @@ public struct LLMConfigView: View {
 
                 Section(header: Text("选择当前生效配置")) {
                     ForEach(store.configs) { config in
+                        let isSelected = store.selectedConfigId == config.id
                         HStack(spacing: 12) {
                             // 选中勾选指示
-                            Image(systemName: store.selectedConfigId == config.id ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(store.selectedConfigId == config.id ? .blue : .gray.opacity(0.4))
+                            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(isSelected ? .blue : .gray.opacity(0.4))
                                 .font(.title3)
 
                             VStack(alignment: .leading, spacing: 4) {
@@ -84,9 +85,21 @@ public struct LLMConfigView: View {
                                     Text(config.baseURL)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
-                                    Text("模型: \(config.model)")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                    HStack(spacing: 6) {
+                                        Text("模型: \(config.model)")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                        Text("·")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                        Text(config.reasoningEffort.shortName)
+                                            .font(.caption2)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Color.purple.opacity(0.12))
+                                            .foregroundColor(.purple)
+                                            .cornerRadius(3)
+                                    }
                                 }
                             }
 
@@ -118,9 +131,9 @@ public struct LLMConfigView: View {
                                 showingEditor = true
                             }
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        .contextMenu {
                             if !config.isMock {
-                                Button(role: .destructive) {
+                                Button {
                                     store.delete(id: config.id)
                                 } label: {
                                     Label("删除", systemImage: "trash")
@@ -132,7 +145,6 @@ public struct LLMConfigView: View {
                                 } label: {
                                     Label("编辑", systemImage: "pencil")
                                 }
-                                .tint(.blue)
                             }
                         }
                     }
@@ -144,7 +156,8 @@ public struct LLMConfigView: View {
                             name: "自定义端点",
                             baseURL: "https://",
                             apiKey: "",
-                            model: "gpt-4o-mini"
+                            model: "gpt-5.6-luna",
+                            reasoningEffort: .automatic
                         )
                         showingEditor = true
                     } label: {
@@ -166,7 +179,7 @@ public struct LLMConfigView: View {
                 trailing: Button("完成") {
                     presentationMode.wrappedValue.dismiss()
                 }
-                .fontWeight(.semibold)
+                .font(.system(size: 17, weight: .semibold))
             )
             .sheet(isPresented: $showingEditor) {
                 if let config = editingConfig {
@@ -209,21 +222,80 @@ private struct LLMConfigEditorView: View {
                         .disabled(edited.isMock)
 
                     if !edited.isMock {
-                        TextField("请求 Base URL（如 https://right.codes/codex/v1）", text: $edited.baseURL)
+                        TextField("请求 Base URL（如 https://www.rightapi.ai/codex/v1）", text: $edited.baseURL)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
                             .keyboardType(.URL)
 
-                        TextField("目标 Model Name（如 gpt-4o-mini）", text: $edited.model)
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                TextField("目标模型名称（如 gpt-5.6-luna）", text: $edited.model)
+                                    .autocapitalization(.none)
+                                    .disableAutocorrection(true)
+
+                                Menu {
+                                    Section(header: Text("GPT 5.6 全系列")) {
+                                        ForEach(LLMModelPresets.gpt56Series) { preset in
+                                            Button {
+                                                edited.model = preset.id
+                                            } label: {
+                                                HStack {
+                                                    Text(preset.name)
+                                                    if edited.model == preset.id {
+                                                        Image(systemName: "checkmark")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Section(header: Text("热门推理/通用模型")) {
+                                        ForEach(LLMModelPresets.popularModels) { preset in
+                                            Button {
+                                                edited.model = preset.id
+                                            } label: {
+                                                HStack {
+                                                    Text(preset.name)
+                                                    if edited.model == preset.id {
+                                                        Image(systemName: "checkmark")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "sparkles")
+                                        Text("选择预设")
+                                    }
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.blue.opacity(0.1))
+                                    .foregroundColor(.blue)
+                                    .cornerRadius(6)
+                                }
+                            }
+                        }
                     }
                 }
 
                 if !edited.isMock {
                     Section(
+                        header: Text("推理程度（Reasoning Effort）"),
+                        footer: Text("控制深度思考模型（如 GPT 5.6 Luna/Nova/Pro、DeepSeek R1、o系列）的思考预算与推理深度。")
+                    ) {
+                        Picker("推理深度", selection: $edited.reasoningEffort) {
+                            ForEach(LLMReasoningEffort.allCases) { effort in
+                                Text(effort.displayName).tag(effort)
+                            }
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                    }
+
+                    Section(
                         header: Text("API 密钥"),
-                        footer: Text("API Key 仅用于本地向该端点发起 Bearer 鉴权请求。")
+                        footer: Text("API Key 仅保存在本机沙盒，用于向端点发起 Bearer 鉴权。")
                     ) {
                         SecureField("输入 API Key (sk-...)", text: $edited.apiKey)
                             .autocapitalization(.none)
@@ -247,7 +319,7 @@ private struct LLMConfigEditorView: View {
                     presentationMode.wrappedValue.dismiss()
                 }
                 .disabled(!isValid || edited.isMock)
-                .fontWeight(.semibold)
+                .font(.system(size: 17, weight: .semibold))
             )
         }
     }
