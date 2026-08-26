@@ -71,9 +71,23 @@
 | `SoftBreak` | 软换行 | 转换为单个空格 |
 | `LineBreak` | 硬换行（行尾 `\` 或包含双空格） | 转换为 `\n` |
 
+## 深度思考过程 `Thought`
+
+| 通道 | 语法形态 | 渲染行为 |
+| --- | --- | --- |
+| 块路由（默认） | `<think>...</think>` / `<thought>...</thought>` | 实例化为原生可交互的 `InkThoughtBlockView` 卡片（支持点击展开/折叠、VoiceOver 适配、TextKit 统一排版与链接拦截）。**折叠态 SSOT** 为 `InkThoughtBlock.isCollapsed`；`makeView()` / `apply()` 读取该字段，视图 toggle 回写模型。流式 PREFIX 在 promotion 前即挂载卡片；finish / promotion 必须保留折叠态（不得仅靠 re-parse Markdown 字符串恢复 UI 状态）。 |
+| 富文本 Fallback | `<think>...</think>` / `<thought>...</thought>` | **仅限** `InkAttributedRenderer` 及不使用 session 块通道的宿主：渲染为包含 `💭 已深度思考`（流式中途为 `💭 思考过程`）的富文本段落，并应用 `backgroundColor`。 |
+
+- **解析边界**：通过 `InkThoughtScanner` 唯一所有者精确匹配 `<think>` / `<thought>` 开标签与 `</think>` / `</thought>` 闭标签；严格排除 `<thinker>`、`<thinking>`、`<think class="x">` 等非法前缀。
+- **未闭合容错**：流式未闭合状态被识别为中途态（`isComplete = false`），正常呈现思考正文并显示进行中文案（`思考过程`）。
+- **尾随正文保全（Suffix Preservation）**：当 `</think>\n正式回答` 处于同一 AST 节点时，严格保全闭标签后的 `suffixContent`，并无缝返还下游 Markdown 渲染管线，保证正式回答首段不丢失。
+- **流式 PREFIX 约束**：流式早期卡片**仅**对文档 PREFIX 思考标签生效；文档中部出现的 `<think>` 仍等待 promotion 后由块路由处理，不在流式阶段提前挂载卡片。
+- **流式 append 折叠保留**：`InkMarkdownRenderSession.updateStreamingThought` 重建 PREFIX 快照时必须拷贝上一帧 `streamingThought.isCollapsed`（用户 override 优先于 `isInitiallyCollapsed`）。
+- **Chat 终态会话**：ExampleApp 将 promotion 完成的 `InkMarkdownRenderSession` 挂到 `messages[].renderSession`，UI 仍用 `InkStreamMarkdownView`；不得 value-copy `[InkRenderableBlock]` 作为唯一真相。
+
 ## HTML 元素
 
 | AST 节点 | 渲染行为 |
 | --- | --- |
-| `HTMLBlock` | 忽略不处理 |
-| `InlineHTML` | `<br>` 转换为换行符；`<tag .../>` 自定义自闭合标签剥离抛弃；其他按空字符串处理 |
+| `HTMLBlock` | 优先经 `InkThoughtScanner` 匹配深度思考块；其他通用 HTML 标签按 CommonMark 忽略不处理 |
+| `InlineHTML` | `<br>` 转换为换行符；`<think>` / `</think>` 标签剥离；`<tag .../>` 自定义自闭合标签剥离抛弃；其他按空字符串处理 |

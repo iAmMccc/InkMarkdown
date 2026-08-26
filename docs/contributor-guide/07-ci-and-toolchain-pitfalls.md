@@ -126,6 +126,19 @@ CI 不会使用：
 
 遇到“本地测试通过但 CI 失败”的问题时，优先使用 CI 固定的 Xcode 版本在本地复现测试。
 
+## 9. ExampleAppPolicyTests（SPM testTarget）
+
+`Tests/ExampleAppPolicyTests` 是 **Swift Package 测试 target**，不是 Xcode `ExampleApp.xcodeproj` 内的 test target：
+
+| 项 | 说明 |
+| --- | --- |
+| 被测代码 | `ExampleAppChatPolicy` **target**（仅 `ChatScrollPolicy.swift`） |
+| 公开 product | **无** — `ExampleAppChatPolicy` 不是 SPM library product，避免双根编译 / 发布泄漏 |
+| ExampleApp 编译 | `ChatScrollPolicy.swift` 直接编入 ExampleApp app target |
+| 运行方式 | `xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,...' test`，或 Xcode 选择 `InkMarkdown-Package` scheme 跑全量测试 |
+
+本地只开 ExampleApp Xcode 工程**不会**自动运行 `ChatScrollPolicyTests`；需在 Package scheme 下执行。
+
 ## 8. 相关链接
 
 - CI 配置文件：`.github/workflows/ci.yml`  

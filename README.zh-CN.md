@@ -9,7 +9,7 @@
 
 InkMarkdown 是基于 Apple [`swift-markdown`](https://github.com/swiftlang/swift-markdown) 的 **UIKit-first** Markdown 解析与渲染库。它将 Markup 语法树转换为 iOS 原生 `NSAttributedString` 富文本与块级 `UIView` 组件，并为 AI 流式文本场景提供按帧控制的增量渲染器。
 
-> 📌 **产品范围**：已发布的 `0.0.1` public beta 支持 UIKit 宿主；尚未发布的 `0.0.2` 分支已包含可选 `InkMarkdownSwiftUI` adapter product，使 SwiftUI 宿主复用同一套渲染语义，而不是开发第二套 native SwiftUI renderer。其产品范围仅为 iOS/iPadOS 14+，不支持其他 Apple 平台；SwiftUI ExampleApp 入口已补齐，但 iOS/iPadOS 14 验证、可访问性覆盖与性能基线仍是 `0.0.2` 的 release blocker。详见 [总体技术设计](docs/contributor-guide/08-swiftui-adapter-architecture.md) 与 [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md)。WebView/HTML 仍不作为核心路径。
+> 📌 **产品范围**：已发布的 `0.0.1` public beta 支持 UIKit 宿主；尚未发布的 `0.0.2` 分支已包含可选 `InkMarkdownSwiftUI` adapter product，使 SwiftUI 宿主复用同一套渲染语义，而不是开发第二套 native SwiftUI renderer。其产品范围仅为 iOS/iPadOS 14+，不支持其他 Apple 平台；SwiftUI ExampleApp 已以 14.0 部署目标完成编译验证，但 iOS/iPadOS 14 运行验证、可访问性覆盖与性能基线仍是 `0.0.2` 的 release blocker。详见 [总体技术设计](docs/contributor-guide/08-swiftui-adapter-architecture.md) 与 [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md)。WebView/HTML 仍不作为核心路径。
 
 ---
 
@@ -21,6 +21,8 @@ InkMarkdown 是基于 Apple [`swift-markdown`](https://github.com/swiftlang/swif
 - **AI 增量流式渲染器 (`InkStreamRenderer`)**：
   - 解析-显示双缓冲架构（后台串行解析队列 + CADisplayLink 按帧吐字）。
   - 后台解析队列配合按帧显示，支持直接绑定 `UITextView` 进行差量更新；性能结论以可复现 benchmark 为准。
+- **思考过程块**：
+  - 以前缀 `<think>` / `<thought>` 输出的流式内容会成为可折叠原生 `InkThoughtBlock`；仅同名闭标签会结束思考过程，闭标签后的 Markdown 后缀保持原样。
 - **高可扩展架构**：
   - 支持宿主自定义行内语法扩展（`InkInlineSyntax`）、块路由拦截（`InkBlockHandler`）、源文本预清洗与链接点击拦截。
 - **Opt-in 本地公式与图表支持**：
@@ -193,6 +195,7 @@ InkMarkdownView(markdown)
 | 块级公式 (`$$...$$`) | 已支持 (Opt-in) | 生成的 `InkImageBlock`（须使用 `InkBlockRenderer`） |
 | Mermaid 图表 | 已支持 (Opt-in) | 生成的 `InkImageBlock`（须使用 `InkBlockRenderer`） |
 | 图片 | 已支持 (Opt-in) | 默认占位文本；开启后行内图片为 `InkImageAttachment`，独占块为 `InkImageBlock` |
+| 思考过程 (`<think>` / `<thought>`) | 已支持 | `InkBlockRenderer` 输出可折叠 `InkThoughtBlock`；支持流式前缀 |
 
 > ℹ️ **说明**：关于完整渲染行为细节与边界边缘情况，请参阅[当前项目状态](docs/current-status.md)与[渲染语义规范](docs/spec/README.md)。
 

@@ -145,9 +145,11 @@ LaTeX / Mermaid 默认关闭。行内 LaTeX：`config.enableLaTeXRendering()`（
 | 噪声类型 | 典型关键字 | 归因 | 处理 |
 | --- | --- | --- | --- |
 | LaunchServices / 沙盒 | `canmaplsdatabase`、`sandbox extension` | 系统 | 点链接仍可跳转；Example 已用 `DemoLinkOpening.inkHandler` |
+| RunningBoard (RBS) | `RBSAssertionErrorDomain`、`Unable to obtain a task name port right` | 系统 | Simulator 进程权限噪音；与渲染无关，**只文档化** |
 | WebKit / Mermaid | `GPU IdleExit`、`Failed to terminate`、`web-browser-engine` | 系统 + Mermaid 离线渲染 | **只文档化**；不申请 web-browser-engine entitlement |
 | TextKit 1 | `layoutManager` 相关 | 库契约（v1 刻意 TextKit 1） | 见 [§10](#10-会不会改成只支持-textkit-2) |
 | 第三方 IME | 搜狗输入法、`usermanagerd` | 系统 / 第三方 | Chat 输入时常见，与渲染无关 |
+| 键盘占位 | `UIKeyboardImpl`、`placeholder`、InputSystem 相关 | 系统 | Chat 输入框聚焦/切换键盘时的 Simulator 噪音，**只文档化** |
 
-SwiftUI adapter 的 Publishing / 会话 defer 见 [09 §12](09-swiftui-uiviewrepresentable-gotchas.md#12-publishing-与-session-defer)。
+SwiftUI adapter 的 Publishing / 会话 defer 见 [09 §12](09-swiftui-uiviewrepresentable-gotchas.md#12-publishing-与-session-defer)。Chat 滚动粘底与流式吐字暂停见 ExampleApp `ChatScrollPolicy`（[P4](../qa/example-app-walkthrough-issues.md#p4--ai-sse-对话)）；`shouldPauseDisplay` 仅在用户拖拽/减速期间为 true，由 `session.isDisplayPaused` 转发至 renderer。
 

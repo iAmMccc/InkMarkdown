@@ -59,7 +59,7 @@
 | `Tests/InkMarkdownTests.swift` | 测试契约集中 | 4 次路径变更 | 新增语法测试优先采用快照助手 |
 | README / AGENTS / docs | 知识库更新 | 文档变更频繁 | 修改功能时同步更新 current-status |
 | ExampleApp Demo 模型与 Pager | 演示结构变动 | 多文件修改 3–4 次 | 不与库核心 API 逻辑混淆 |
-| ExampleApp SSE 流式路径 | Chat 已改走 `ChatDemoViewModel` + `InkMarkdownRenderSession`；旧 cell 内 `partitionForStreamingRender` 与未闭合 fence 提前生图策略已移除 | 公式与图表 Demo 引入 | chunk 路径仅 `session.append`；`finish()` 后等 `isPromoted` 再 promotion 为静态视图。**勿假定** `InkStreamRenderer` 支持 GFM 增量表（流式阶段表格仍为管道文本，finish 后升格为真表）。主题：SSE / 综合 Demo / **组件 Pager 公式·图表 tab** 均在 `traitCollectionDidChange` 时重建 |
+| Med | ExampleApp SSE 流式路径 | Chat 走 `ChatDemoViewModel` + `InkMarkdownRenderSession`；chunk 路径仅 `session.append`；滚动/粘底/吐字暂停由 **ExampleApp 内** `ChatScrollPolicy`（非 SPM 公开 product）+ `session.isDisplayPaused` 驱动；promotion 后会话转移到 `messages[].renderSession`，UI 仍绑定 `InkStreamMarkdownView`，**勿**假定 re-parse `content` 或 value-copy blocks 可保留折叠态。**勿假定** `InkStreamRenderer` 支持 GFM 增量表。 |
 | `onLoadFinished` 与 `failureFallback` 双轨 | 库默认源码回退 + ExampleApp 错误条叠加 | `InkImageRendering` / `GeneratedContentErrorBannerView` | 文档写清边界，避免宿主误以为改了库默认契约 |
 
 生产代码 TODO（排除依赖缓存）：

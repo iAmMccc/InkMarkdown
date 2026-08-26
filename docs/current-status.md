@@ -1,8 +1,8 @@
 # 当前项目状态
 
-> 基线日期：2026-08-18。记录仓库可验证现状；计划与已交付能力严格区分。
+> 基线日期：2026-08-20。记录仓库可验证现状；计划与已交付能力严格区分。
 
-`0.0.1` 已作为 UIKit-first public beta 发布。核心 UIKit 渲染管线、块级组件、流式渲染及基础测试已具备；`0.0.2` 的目标是交付正式 `InkMarkdownSwiftUI` adapter product。此前被拒绝的 SwiftUI spike 已移出仓库；当前 adapter 已按 ADR-008 实现并通过 iPhone/iPad Simulator 自动化测试（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 等）。ExampleApp 已补充 SwiftUI adapter 的静态、配置和流式示例入口；iOS/iPadOS 14、完整语义/可访问性与性能基线仍未完成，不能视为已发布支持。
+`0.0.1` 已作为 UIKit-first public beta 发布。核心 UIKit 渲染管线、块级组件、流式渲染及基础测试已具备；`0.0.2` 的目标是交付正式 `InkMarkdownSwiftUI` adapter product。此前被拒绝的 SwiftUI spike 已移出仓库；当前 adapter 已按 ADR-008 实现并通过 iPhone/iPad Simulator 自动化测试（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 等）。ExampleApp 已补充 SwiftUI adapter 的静态、配置和流式示例入口，并以 iOS 14.0 部署目标完成编译；iOS/iPadOS 14 实际运行、完整语义/可访问性与性能基线仍未完成，不能视为已发布支持。
 
 ## 状态概览
 
@@ -15,11 +15,11 @@ swift-markdown Markup
 
 - **已发布产品范围**：`0.0.1` 仅支持 UIKit。
 - **v0.0.2 目标范围**：独立 `InkMarkdownSwiftUI` adapter product，复用 UIKit rendering engine；详细设计见 [ADR-008](decisions/ADR-008-swiftui-adapter-architecture.md)。
-- **正式目标平台**：iOS 14+、iPadOS 14+。`Package.swift` 已收敛为 `.iOS(.v14)`；iPadOS 14 的实际运行验证仍是 release blocker。
+- **正式目标平台**：iOS 14+、iPadOS 14+。`Package.swift` 与 ExampleApp 均收敛为 iOS 14.0；iOS/iPadOS 14 的实际运行验证仍是 release blocker。
 - **工具链**：Swift tools 6.2，包内使用 Swift 5 语言模式。
 - **依赖管理**：`swift-markdown` 锁定 revision `07ebc9c071b22a5d021031b798c3a84b76281213`（ADR-001，详见 `Package.swift` / `Package.resolved`）。
 - **CI 环境**：`.github/workflows/ci.yml` 指定 `macos-26` + **Xcode 26.6**（Build `17F113`）+ **iPhone 17 Pro / iOS 26.5**（详见 [CI 排坑](contributor-guide/07-ci-and-toolchain-pitfalls.md)）。
-- **验证结果**：2026-08-18，通过 XcodeBuildMCP 在 iPhone 16 / iOS 18.5 与 iPad Pro 11-inch (M4) / iPadOS 18.5 执行 `InkMarkdown-Package` scheme：**178 项测试通过，0 项失败**。其中包含 SwiftUI adapter 的静态配置、会话状态机、headless finish、重置和配置 snapshot 契约测试。同日后续在 **iPhone 17 Pro / iOS Simulator latest**（XcodeBuildMCP `test_sim`，scheme `InkMarkdown-Package`）：全量曾 **193 passed**；随后全量 **192 passed / 1 failed**；过滤重跑 `-only-testing:InkMarkdownTests/InkMermaidDiagramTypeRendererTests`：**26 cases 中 25 通过，1 失败**（fixture `flowchart`，`Tests/InkMarkdownTests/InkMermaid/InkMermaidDiagramTypeRendererTests.swift:17`，`.timedOut`）。共享 `InkMermaidImageRenderer(limits: .init(timeout: 30))` 已复用以避免每 case 冷启动 3.4MB `mermaid.min.js`；失败更像 **WKWebView 首次加载超时**，非 `flowchart` 源码非法。2026-08-19 追加验证（原生 xcodebuild，iPhone 17 Pro / iOS Simulator latest，scheme `InkMarkdown-Package`）：全量 **202 项（Swift Testing 186 + XCTest 16）**，除 2 项已知 Mermaid `flowchart` `.timedOut` 外全部通过；新增 9 项测试（流式刷新 seam 5 项、配置语义 2 项、流式语义 2 项）全部通过。同日一次运行中增量性能基准 `incremental_renderIsFasterThanFullRender` 出现 1 次偶发超时（高负载相关，多次复跑通过，见 [CONCERNS](codebase/CONCERNS.md)）。
+- **验证结果**：2026-08-20，通过 XcodeBuildMCP 在 iOS Simulator（scheme `InkMarkdown-Package`）执行全量测试：**252 项通过，0 项失败**；包含思考过程块的标签匹配、Markdown suffix 保全、VoiceOver 辅助语义、Dynamic Type 排版、宽窄视口适配与性能闸门测试。ExampleApp 亦以 **iOS 14.0** 部署目标完成编译验证。此前 2026-08-18 的 iPhone 16 / iOS 18.5 与 iPad Pro 11-inch (M4) / iPadOS 18.5 验证为 178 项通过。
 
 ## 已落地能力
 
@@ -31,6 +31,7 @@ swift-markdown Markup
 | 固定行高 | paragraph style + baseline offset，覆盖混排字体 | `applyFixedLineHeight` 及相关测试 |
 | 块级路由 | 非富文本内容路由至 `InkRenderableBlock` / `UIView` | `InkBlockRenderer`、`InkBlockHandler` |
 | 内置块 | 代码块、表格、分割线 | `Rendering/Components/` |
+| 思考过程块 | 以 `<think>` / `<thought>` 前缀识别为可折叠 `InkThoughtBlock`；仅同名闭标签终止并保全后续 Markdown | `InkThoughtScanner`、`InkThoughtBlockHandler`、`InkThoughtBlock` |
 | 自定义扩展 | 源码预清洗、自定义行内语法扩展、自定义块级路由、链接点击回调 | `InkConfiguration` |
 | 流式渲染 | 稳定前缀 / 活跃后缀增量解析，解析与显示双缓冲 | `InkStreamRenderer` |
 | 图片（opt-in） | 默认文本占位；`InkImageRendering.isEnabled = true` 启用真图（行内 `InkImageAttachment` + 独占块 `InkImageBlock`、Store、安全策略、降采样） | `Rendering/Image/`、`ExampleApp/ExampleApp/Detail/ImageDemoViewController.swift` |
@@ -50,8 +51,8 @@ swift-markdown Markup
 | 代码高亮 | 未内置语法高亮引擎 |
 | 背景绘制 | 行内代码背景与引用竖线依赖 TextKit 1 布局管理器 / block view |
 | 超长流式输入 | `InkStreamRenderer.maximumSourceLength` 当前固定为 50,000；render session 使用同一上限以保证流式与终态 source 一致 |
-| Mermaid 离线 PNG 测试 | `InkMermaidDiagramTypeRendererTests` 首 case（fixture `flowchart`）在 iPhone 17 Pro Simulator 上可能 **30s `.timedOut`**；共享 renderer 已设 30s timeout 并复用 WKWebView，更像 WebKit 冷启动超时，非产品语法缺陷；本轮未调整 timeout |
-| 测试覆盖率 | 2026-08-18 的 iPhone 16 / iPad Simulator 验证均为 178 项测试通过；iPhone 17 Pro 同日全量 192/1（Mermaid 套件 25/1）；仍缺 iOS/iPadOS 14、完整语义/交互矩阵、可访问性和性能基线 |
+| Mermaid 离线 PNG 测试 | Simulator 首次启动 WebProcess 可能被系统挂起；renderer 仅对 `.timedOut`、页面加载失败和页面进程终止丢弃页面并重试一次，2026-08-20 的全量 241 项测试已通过 |
+| 测试覆盖率 | 2026-08-20 iPhone 17 Pro / iOS Simulator 26.5 全量 241 项通过；仍缺 iOS/iPadOS 14 实际运行、完整语义/交互矩阵、可访问性和性能基线 |
 | 发布工程 | 已有 `0.0.1` public beta 与 CHANGELOG；`0.0.2` 的 adapter 代码、基础契约测试和 SwiftUI ExampleApp 入口已具备，iOS/iPadOS 14 验证、可访问性、完整语义矩阵与性能基线仍是 release blocker |
 
 ## 决策与仓库现状差异
@@ -61,7 +62,7 @@ swift-markdown Markup
 | UI 范围 | UIKit rendering engine + v0.0.2 SwiftUI adapter | 已发布 `0.0.1` 为 UIKit；`InkMarkdownSwiftUI` 已按 ADR-008 完成代码实现并通过基础 iPhone/iPad 契约测试 | 补齐语义、交互、可访问性与性能测试矩阵并作为发布门槛 |
 | 平台矩阵 | iOS 14+、iPadOS 14+；不支持其他平台 | `Package.swift` 已仅声明 `.iOS(.v14)`，源码直接依赖 UIKit；当前验证目的地为 iOS/iPadOS 18.5 | v0.0.2 前完成 iOS/iPadOS 14 实机或 Simulator 验证；不为 macOS/tvOS/watchOS/visionOS 建立支持路径 |
 | 依赖策略 | **ADR-001**：固定外部 revision | 已固定 `swift-markdown` revision；传递依赖 `swift-cmark` 遵循上游 manifest 的 `gfm` 分支与 resolved revision | 依赖升级时更新 revision 并验证测试 |
-| 平台实施 | **ADR-008**：v0.0.2 仅承诺 iOS/iPadOS 14+ | manifest 已收敛；仅有 iOS/iPadOS 18.5 Simulator 证据 | 补齐最低版本验证后才以 iOS/iPadOS 14+ 对外承诺 |
+| 平台实施 | **ADR-008**：v0.0.2 仅承诺 iOS/iPadOS 14+ | manifest 与 ExampleApp deployment target 已收敛为 14.0；当前运行证据为 iOS Simulator 26.5 | 补齐最低版本验证后才以 iOS/iPadOS 14+ 对外承诺 |
 | 图片 / 删除线 | **ADR-004**（默认占位）+ **ADR-006**（opt-in 真图）；删除线样式已实现 | opt-in 图片栈已落地；删除线已实现 `.strikethroughStyle` | spec 已更新；图片稳定性修复进行中 |
 | 流式长度 | **ADR-005**：最大长度支持配置（默认 50_000） | 当前为 `InkStreamRenderer.maximumSourceLength` 固定值；render session 已复用该上限 | 开放配置项并补充测试 |
 | CI 构建 | 建立 iOS Simulator 自动测试 | 统一使用 Xcode 26.6 + iPhone 17 Pro/OS 26.5 | 镜像升级时更新配置与排坑文档 |

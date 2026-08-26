@@ -76,9 +76,9 @@ session.append(delta)
 **Chat 契约（`ChatDemoViewModel`，SwiftUI / UIKit 对称）**：
 
 1. `onChunk` **仅** `session.append(...)` — 不在 chunk 路径写入 `messages.content` 或切换静态视图。
-2. `handleStreamComplete()` 先 `session.finish()`，再等待 `session.isPromoted == true`（订阅 `$isPromoted`），然后写入终态 `content` 并设 `isStreaming = false`。
-3. 流式阶段 UI 绑定 `InkStreamMarkdownView(session: viewModel.session)`；promotion 完成后 UI 切 `InkMarkdownView(msg.content, configuration: viewModel.chatConfiguration)`。
-4. 配置经 `DemoInkConfigurationBuilder.makeChatConfiguration` 注入 session；`chatConfiguration` 为与 session 同步的快照，供终态静态视图复用。
+2. `handleStreamComplete()` 先 `session.finish()`，再等待 `session.isPromoted == true`（订阅 `$isPromoted`），然后将 **当前 session** 转移到 `messages[].renderSession`，写入 `content` 快照并设 `isStreaming = false`，再 `recreateSession()` 供下一条消息使用。
+3. 流式阶段 UI 绑定 `InkStreamMarkdownView(session: viewModel.session)`；promotion 完成后 UI **仍**绑定 `InkStreamMarkdownView(session: msg.renderSession)`（同一会话，Coordinator 内部切换块级布局）；仅错误/取消回退 `InkMarkdownView(msg.content, ...)`。
+4. 配置经 `DemoInkConfigurationBuilder.makeChatConfiguration` 注入 session；trait 变化须对所有 `messages[].renderSession` 调用 `updateRenderEnvironment`。
 
 finish 路径的 `@Published` defer 见 [09 §12](09-swiftui-uiviewrepresentable-gotchas.md#12-publishing-与-session-defer)。
 

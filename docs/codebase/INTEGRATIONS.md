@@ -42,8 +42,9 @@ InkMarkdown 不内置网络请求、身份验证或后端交互逻辑。宿主�
 |------|------|----------|
 | `Packages/scripts/fetch-packages.sh` | 依据 `packages.json` 克隆依赖至 `Packages/Caches/` | 脚本内容 |
 | `packages.json` | 记录第三方依赖的 URL 与 Revision | `Packages/packages.json` |
-| XcodeBuildMCP | 构建与测试环境 | `AGENTS.md` |
-| codebase-memory | 本地代码库架构辅助查询 | `AGENTS.md` |
+| `XcodeBuildMCP` | 构建与测试环境 | `AGENTS.md` |
+| `Serena` | 基于 LSP (sourcekit-lsp) 的代码符号导航与重构 | `AGENTS.md` |
+| `ripgrep` (`rg`) | 高性能代码与全文检索工具 | `AGENTS.md` |
 
 ### 5) 凭证与安全配置
 

@@ -268,11 +268,11 @@ Chat 层若在 chunk 路径重复发布视图级状态，或在 `finish()` 后�
    - `updateRenderEnvironment` 在流式阶段**不**触发 `objectWillChange`。
 2. **`InkStreamMarkdownView`**：
    - **不得** `@ObservedObject var session`。
-   - 仅 `onReceive(session.$isPromoted)`；为 true 后本视图切 `InkMarkdownRepresentable` 静态模式（Chat 宿主另用 `InkMarkdownView`）。
+   - body **始终** `InkMarkdownRepresentable(mode: .streaming(session:))`；promotion 后由 Coordinator 在同一会话上切换块级布局（含 `setPromotedThoughtCollapsed` 写回），**不得** body 切无 session 的 `.blocks` 模式。
 3. **Chat / 宿主 transport（ExampleApp `ChatDemoViewModel` 契约，SwiftUI / UIKit 对称）**：
    - `onChunk` **仅**调用 `session.append(...)`。
-   - UIKit cell 高度重算：非 `@Published` 的 `PassthroughSubject` **pulse**；SwiftUI **不订阅**该 pulse；**不得**在 chunk 路径写入 `messages.content` 或提前切换静态视图。
-   - `handleStreamComplete()` 先 `session.finish()`，再等待 `session.isPromoted == true`，然后写入终态 `content` 并设 `isStreaming = false`。
+   - `streamDisplayPulse` 为链式 `onDisplayUpdate` 的宿主别名：UIKit 用于 cell 高度重算；SwiftUI **可** `onReceive` 该 pulse **仅** 驱动 `scrollTo`，**不得**用它修改 `@Published` 或重建 `InkStreamMarkdownView`。
+   - `handleStreamComplete()` 先 `session.finish()`，再等待 `session.isPromoted == true`，然后将 session 转移到 `messages[].renderSession` 并设 `isStreaming = false`；终态 UI 仍用 `InkStreamMarkdownView(session: msg.renderSession)`。
 4. 流式尺寸刷新仍依赖 [§3 高频流式 State Diff](#3-高频流式-state-diff) 中的 `onDisplayUpdate` + `invalidateIntrinsicContentSize`，而非每个 chunk 触发 SwiftUI 全量重建。
 
 ExampleApp 走查结论见 [P4.1 — Chat Publishing（SwiftUI + UIKit）](../qa/example-app-walkthrough-issues.md#p41-chat-publishing--更新风暴swiftui--uikit)。
@@ -291,6 +291,8 @@ ExampleApp 走查结论见 [P4.1 — Chat Publishing（SwiftUI + UIKit）](../qa
 | Mermaid / 网络图 | `GPU IdleExit`、`Failed to terminate`、`web-browser-engine` | WKWebView 子进程与 entitlement 提示 |
 | 流式 TextKit 1 | `layoutManager` 相关 | v1 刻意 TextKit 1，见 [FAQ §10](06-faq.md#10-会不会改成只支持-textkit-2) |
 | Chat 输入框 | 搜狗输入法、`usermanagerd` | 第三方 IME / 系统服务 |
+| Simulator 进程权限 | `RBSAssertionErrorDomain`、`task name port right` | RunningBoard 系统噪音，与 InkMarkdown 无关 |
+| 键盘占位 | `UIKeyboardImpl`、`placeholder`、InputSystem | 输入框聚焦/切换键盘时的 Simulator 占位日志 |
 
 ### 13.2 处理原则
 

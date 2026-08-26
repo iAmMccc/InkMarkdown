@@ -125,17 +125,20 @@ SwiftUI input + Environment
 ```text
 Application transport
   → render session (delta / finish / cancel / reset)
-  → InkStreamRenderer + bound UITextView
-  → visible streaming text
+  → InkThoughtScanner.splitStreamingSource(currentText)
+       ├ PREFIX 思考标签 → InkThoughtBlockView（identity-stable apply）
+       └ remainder → InkStreamRenderer + bound UITextView
+  → visible streaming text（vertical stack: [thoughtView?][textView]）
   → completed render
-  → InkBlockRenderer promotion
-  → final UIKit block container
+  → InkBlockRenderer promotion（`InkThoughtBlock.isCollapsed` SSOT 拷贝进 `session.blocks`）
+  → final UIKit block container（Coordinator `updateStreaming` promoted 分支 + `updateBlocks(session:)`，不 re-parse）
 ```
 
-- render session 是 canonical source authority；流中缓冲、最终 Markdown 和 promotion 不得各自截断或保存不一致版本。
+- render session 是 canonical source authority；`currentText` 为 SSOT，renderer 缓冲仅为 remainder 派生，不得各自截断或保存不一致版本。
+- PREFIX 思考标签在流式阶段即挂载 `InkThoughtBlockView`；用户折叠态写入 `InkThoughtBlock.isCollapsed`（经 `setStreamingThoughtCollapsed` / 视图 toggle）；promotion 时合并进 `session.blocks`；Chat 终态将 **同一会话实例** 挂到 `messages[].renderSession`，UI 仍用 `InkStreamMarkdownView(session:)`，**不得**切换为无 session 写回的 blocks 快照或 re-parse `content` 字符串。
 - “输入结束”“解析完成”“显示完成”“终态 block 可交互”是不同语义状态，必须被建模与测试，不能用一个布尔值掩盖。
 - 流式阶段与终态 block 阶段使用同一 resolved configuration snapshot 的语义；主题或宽度改变的刷新策略必须在会话内可解释。
-- adapter 的 attachment / detachment 是会话生命周期的一部分，重复 mount、controller 替换、取消与 reset 不得遗留 callback、display driver 或 UIKit view。
+- adapter 的 attachment / detachment 是会话生命周期的一部分，重复 mount、controller 替换、取消与 reset 不得遗留 callback、display driver 或 UIKit view；`onDisplayUpdate` 回调须链式转发，不得覆盖宿主已注册的回调。
 
 ### 5.3 配置、交互与 trait 变化
 

@@ -247,7 +247,9 @@ SwiftUI 与 UIKit **共用** `StreamingDemoViewModel` 与同一 `InkMarkdownRend
 
 对应示例：**5. AI SSE 对话问答**（`SwiftUIChatDemoView` / `SSEChatViewController`）。
 
-SwiftUI 与 UIKit **共用** `ChatDemoViewModel` 作为 Chat 状态机 SSOT；assistant 气泡在流式阶段用 `InkStreamMarkdownView(session:)`，promotion 完成后切 `InkMarkdownView(..., configuration: chatConfiguration)`。UIKit 经 `UIHostingController` 承载上述 SwiftUI 视图，**已无** `applyStreamingContent` 或独立 partition 引擎。
+SwiftUI 与 UIKit **共用** `ChatDemoViewModel` 作为 Chat 状态机 SSOT；assistant 气泡在流式与 promotion 后均用 `InkStreamMarkdownView(session:)`（活跃流绑定 `viewModel.session`，历史消息绑定 `msg.renderSession`）。折叠态 SSOT 为 session 内 `streamingThought` / `blocks` 的 `isCollapsed`，**不** re-parse Markdown。UIKit 经 `UIHostingController` 承载上述 SwiftUI 视图。
+
+滚动粘底 / 吐字暂停：`ChatScrollPolicy`（ExampleApp 内编译，120pt 阈值）为 **唯一** `shouldAutoScroll` 谓词；`session.isDisplayPaused` 绑定 `shouldPauseDisplay`。SwiftUI 在 `DragGesture` 期间 pause；手指抬起后靠 preference `offsetChanged` 刷新粘底 latch（iOS 14 ScrollView **无** `isDecelerating`，惯性滑动期间 pause 行为与 UIKit 不完全对称，见下方 P4.4）。
 
 ### P4.1 Chat Publishing / 更新风暴（SwiftUI + UIKit）
 
@@ -267,15 +269,16 @@ SwiftUI 与 UIKit **共用** `ChatDemoViewModel` 作为 Chat 状态机 SSOT；as
 #### 本次处理
 
 - **adapter（`InkStreamMarkdownView` + `InkMarkdownRenderSession`）**：
-  - **不得** `@ObservedObject` 整个 session；SwiftUI 流式入口**不订阅** session 高频 `@Published`（如 `state`）；仅 `onReceive(session.$isPromoted)` 驱动换树。
+  - **不得** `@ObservedObject` 整个 session；SwiftUI 流式入口**不订阅** session 高频 `@Published`（如 `state`）；`onReceive(session.$isPromoted)` 仅驱动 Representable `updateUIView`（`promotionGeneration`），**不**切换无 session 的 blocks 模式。
   - `state` 仍 `@Published` 供 UIKit Combine；finish 回调写 `state` 不驱动 SwiftUI 换树（`updateUIView` 方向 SwiftUI → UIKit）。
   - 仅 `isPromoted` 的 `@Published` 写入走 `NSObject.perform(_:with:afterDelay:inModes:)`（`afterDelay: 0`、`inModes: [.default]`）；**禁止** `main.async`。
   - `append` / `finish` / `cancel` / `reset` 状态机仍同步；流式阶段 `updateRenderEnvironment` **不** `objectWillChange`。
 - **Example（SwiftUI + UIKit 共用 `ChatDemoViewModel`）**：
   - `onChunk` **仅** `session.append(...)`。
-  - UIKit 用非 `@Published` 的 `PassthroughSubject` **pulse** 触发 cell 高度重算；SwiftUI **不订阅**该 pulse；**不**在 chunk 路径修改 `messages.content`。
-  - `handleStreamComplete()` 先 `session.finish()`，等 `isPromoted == true` 后写入 `messages[idx].content` 并设 `isStreaming = false`。
-  - 流式 UI：`InkStreamMarkdownView`；终态 UI：`InkMarkdownView(..., configuration: chatConfiguration)`。
+  - `streamDisplayPulse` = 链式 `onDisplayUpdate` 的宿主别名：UIKit 用于 cell 高度；SwiftUI **可** `onReceive` **仅** 驱动 `scrollTo`，**不得**修改 `@Published` / 重建流式视图。
+  - `handleStreamComplete()` 先 `session.finish()`，等 `isPromoted == true` 后将 session 挂到 `messages[].renderSession` 并设 `isStreaming = false`。
+  - 流式与终态 UI：`InkStreamMarkdownView(session:)`（含 PREFIX 思考卡片折叠态）；取消/错误回退 `InkMarkdownView`。
+  - 滚动：`ChatScrollPolicy.shouldAutoScroll` 为唯一谓词；ViewModel 不得二次 distance 判定。
 - UIKit `SSEChatViewController` 与 SwiftUI `SwiftUIChatDemoView` 均消费同一 ViewModel。
 
 依据见 [09 §12](../contributor-guide/09-swiftui-uiviewrepresentable-gotchas.md#12-publishing-与-session-defer)（Apple `ObservedObject` / `updateUIView`、TCA、MarkdownUI、RunLoop 语义）。
@@ -311,16 +314,16 @@ SwiftUI 与 UIKit **共用** `ChatDemoViewModel` 作为 Chat 状态机 SSOT；as
 
 ---
 
-### P4.3 搜狗输入法 / usermanagerd 日志
+### P4.3 搜狗输入法 / usermanagerd / RBS / 键盘占位日志
 
 #### 症状
 
-Chat 输入框聚焦或切换输入法时，控制台出现第三方 IME 或 `usermanagerd` 相关日志。
+Chat 输入框聚焦或切换输入法时，控制台出现第三方 IME、`usermanagerd`、`RBSAssertionErrorDomain` 或 `UIKeyboardImpl` / `placeholder` 相关日志。
 
 #### 复现路径
 
 1. Simulator 或真机使用搜狗等第三方输入法。
-2. 在 Chat 输入框编辑。
+2. 在 Chat 输入框编辑；或流式输出期间键盘弹出/收起。
 
 #### 归因分桶
 
@@ -328,11 +331,27 @@ Chat 输入框聚焦或切换输入法时，控制台出现第三方 IME 或 `us
 
 #### 本次处理
 
-**只文档化。**
+**只文档化。** 见 [FAQ §19](../contributor-guide/06-faq.md#19-控制台噪声simulator--系统)、[09 §13.1](../contributor-guide/09-swiftui-uiviewrepresentable-gotchas.md#131-问题现象)。
 
 #### 是否仍为已知限制
 
 **是** — 与 InkMarkdown 无关，可忽略。
+
+---
+
+### P4.4 SwiftUI ScrollView 惯性滑动 vs UIKit deceleration
+
+#### 症状
+
+SwiftUI Chat 在手指离开屏幕后惯性滑动（fling）期间，流式吐字 pause 行为与 UIKit `SSEChatViewController`（`willDecelerate` + `scrollViewDidEndDecelerating`）不完全一致。
+
+#### 归因
+
+iOS 14 `ScrollView` **无** `isDecelerating` API；ExampleApp **未** 引入第二套 `UIScrollView` 包装。SwiftUI 路径：`DragGesture` 仅在手指接触时 pause；手指抬起后通过 GeometryReader preference 的 `offsetChanged(distanceFromBottom:isDragging:false)` 刷新 **粘底 latch**（120pt），但不延长 pause。
+
+#### 是否仍为已知限制
+
+**是** — 文档化传感器差异；粘底与 auto-scroll 仍由单一 `ChatScrollPolicy` 驱动。UIKit 路径保留完整 deceleration 语义。
 
 ---
 

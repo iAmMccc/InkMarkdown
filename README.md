@@ -9,7 +9,7 @@
 
 InkMarkdown is a **UIKit-first** Markdown parsing and rendering framework built on Apple's [`swift-markdown`](https://github.com/swiftlang/swift-markdown). It transforms the Markup AST into native `NSAttributedString` rich text and native block `UIView`s, while providing a frame-paced incremental renderer for AI streaming applications.
 
-> 📌 **Product scope**: the released `0.0.1` public beta supports UIKit hosts. The unreleased `0.0.2` branch includes the optional `InkMarkdownSwiftUI` adapter product, so SwiftUI hosts reuse the same rendering semantics without a second native SwiftUI renderer. Its product scope is iOS/iPadOS 14+ only; other Apple platforms are not supported. The SwiftUI ExampleApp entry is now present; iPad/iOS 14 validation, accessibility coverage, and performance baselines remain `0.0.2` release blockers. See the [technical design](docs/contributor-guide/08-swiftui-adapter-architecture.md) and [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md). WebView/HTML wrappers remain outside the core path.
+> 📌 **Product scope**: the released `0.0.1` public beta supports UIKit hosts. The unreleased `0.0.2` branch includes the optional `InkMarkdownSwiftUI` adapter product, so SwiftUI hosts reuse the same rendering semantics without a second native SwiftUI renderer. Its product scope is iOS/iPadOS 14+ only; other Apple platforms are not supported. The SwiftUI ExampleApp now compiles with a 14.0 deployment target, while iPad/iOS 14 runtime validation, accessibility coverage, and performance baselines remain `0.0.2` release blockers. See the [technical design](docs/contributor-guide/08-swiftui-adapter-architecture.md) and [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md). WebView/HTML wrappers remain outside the core path.
 
 ---
 
@@ -21,6 +21,8 @@ InkMarkdown is a **UIKit-first** Markdown parsing and rendering framework built 
 - **Streaming AI Renderer (`InkStreamRenderer`)**:
   - Dual-buffer architecture (background parsing queue + CADisplayLink frame-driven output).
   - Frame-paced display with a background parsing queue and bound `UITextView` differential updates; performance claims require reproducible benchmarks.
+- **Thought Process Blocks**:
+  - Prefix `<think>` / `<thought>` streams become collapsible native `InkThoughtBlock` views; matching closing tags preserve the exact following Markdown suffix.
 - **Extensible Architecture**:
   - Host-definable inline syntax (`InkInlineSyntax`), block routing (`InkBlockHandler`), source filtering, and link tap interception.
 - **Opt-in Local Diagram & Math Support**:
@@ -193,6 +195,7 @@ For streaming, the host app feeds received deltas to `session.append(_:)`, then 
 | Block Math (`$$...$$`) | Supported (Opt-in) | generated `InkImageBlock` (`InkBlockRenderer` required) |
 | Mermaid Diagrams | Supported (Opt-in) | generated `InkImageBlock` (`InkBlockRenderer` required) |
 | Images | Supported (Opt-in) | Text placeholder by default; enabled inline images use `InkImageAttachment`, standalone blocks use `InkImageBlock` |
+| Thought Process (`<think>` / `<thought>`) | Supported | collapsible `InkThoughtBlock` from `InkBlockRenderer`; streaming prefix supported |
 
 > ℹ️ **Note**: For complete details on rendering behavior and edge cases, see [Current Project Status](docs/current-status.md) and [Rendering Spec](docs/spec/README.md).
 
