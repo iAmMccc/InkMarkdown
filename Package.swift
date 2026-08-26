@@ -65,5 +65,18 @@ let package = Package(
             dependencies: ["InkMarkdownSwiftUI"],
             path: "Tests/InkMarkdownSwiftUITests"
         ),
+        .target(
+            name: "ExampleAppChatPolicy",
+            path: "ExampleApp/ExampleApp/Presentation/Chat",
+            sources: ["ChatScrollPolicy.swift"],
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+            ]
+        ),
+        .testTarget(
+            name: "ExampleAppPolicyTests",
+            dependencies: ["ExampleAppChatPolicy"],
+            path: "Tests/ExampleAppPolicyTests"
+        ),
     ]
 )
