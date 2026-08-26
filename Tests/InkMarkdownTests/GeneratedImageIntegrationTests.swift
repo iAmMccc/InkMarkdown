@@ -155,7 +155,7 @@ private func latexConfiguration(
 }
 
 @Test @MainActor func latexInlineStyleIdentityFollowsDarkContextColor() {
-  var configuration = latexConfiguration(allowsInlineDollar: true, textColor: .white)
+  let configuration = latexConfiguration(allowsInlineDollar: true, textColor: .white)
   let appearance = configuration.appearance
 
   let rendered = InkAttributedRenderer.render("$x$", configuration: configuration)

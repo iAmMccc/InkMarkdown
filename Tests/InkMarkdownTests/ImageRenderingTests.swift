@@ -161,13 +161,12 @@ import Markdown
   let config = InkConfiguration(appearance: appearance)
   let md = "![test](https://example.com/img.png)"
 
-  await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-    DispatchQueue.global(qos: .userInitiated).async {
-      let result = InkAttributedRenderer.render(md, configuration: config)
-      #expect(result.length > 0)
-      continuation.resume()
-    }
-  }
+  nonisolated(unsafe) let capturedConfig = config
+  let length = await Task.detached {
+    let result = InkAttributedRenderer.render(md, configuration: capturedConfig)
+    return result.length
+  }.value
+  #expect(length > 0)
 }
 
 @Test func storeConfiguration_maxDataURLBytesApplied() {
@@ -485,13 +484,24 @@ struct InkImageStoreTests {
       _ = store.resolve(source: source, display: display, loader: loader)
     }
 
-    try? await Task.sleep(nanoseconds: 500_000_000)
-
-    for i in 0..<6 {
-      let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
-      let result = store.resolve(source: source, display: display, loader: loader)
-      if case .ready = result {} else { Issue.record("第 \(i) 张应该 ready") }
+    let deadline = Date().addingTimeInterval(3.0)
+    var allReady = false
+    while Date() < deadline {
+      var countReady = 0
+      for i in 0..<6 {
+        let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
+        if case .ready = store.resolve(source: source, display: display, loader: loader) {
+          countReady += 1
+        }
+      }
+      if countReady == 6 {
+        allReady = true
+        break
+      }
+      try? await Task.sleep(nanoseconds: 50_000_000)
     }
+
+    #expect(allReady, "所有 6 张图片应该在队列 drain 后全部处于 ready 状态")
   }
 }
 

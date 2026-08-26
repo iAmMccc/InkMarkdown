@@ -8,8 +8,8 @@ import WebKit
 /// Store。WebKit 和 UIKit 调用均限定在主 actor，等待 JavaScript / 快照期间不会阻塞主线程。
 @MainActor
 public final class InkMermaidImageRenderer: NSObject {
-  public static let rendererVersion = "ink-mermaid-renderer/1"
-  public static let mermaidVersion = "11.16.0"
+  nonisolated public static let rendererVersion = "ink-mermaid-renderer/1"
+  nonisolated public static let mermaidVersion = "11.16.0"
 
   public let limits: InkMermaidRenderLimits
 
@@ -37,20 +37,33 @@ public final class InkMermaidImageRenderer: NSObject {
   public func render(_ request: InkMermaidRenderRequest) async throws -> InkMermaidRenderResult {
     try validate(request)
     return try await InkMermaidRenderScheduler.shared.withPermit { [self] in
-      let state = InkMermaidRenderRequestState()
-      currentRequest = state
-      state.armTimeout(after: limits.timeout)
-      defer {
-        state.finish()
-        pageLoadRouter.clear(for: state)
-        if currentRequest === state { currentRequest = nil }
+      do {
+        return try await renderOnce(request)
+      } catch {
+        // 首次启动 Simulator WebProcess 偶尔会被系统挂起；丢弃未就绪的页面后仅重试一次。
+        // 其他渲染、输入和快照错误不重试，避免掩盖业务错误或无限拉长等待时间。
+        guard Self.shouldRetryColdStartFailure(error) else { throw error }
+        return try await renderOnce(request)
       }
+    }
+  }
 
-      let view = ensureWebView()
-      state.setInvalidationHandler { [weak self, weak state] in
-        guard let state else { return }
-        self?.discardWebView(for: state)
-      }
+  private func renderOnce(_ request: InkMermaidRenderRequest) async throws -> InkMermaidRenderResult {
+    let state = InkMermaidRenderRequestState()
+    currentRequest = state
+    state.armTimeout(after: limits.timeout)
+    defer {
+      state.finish()
+      pageLoadRouter.clear(for: state)
+      if currentRequest === state { currentRequest = nil }
+    }
+
+    let view = ensureWebView()
+    state.setInvalidationHandler { [weak self, weak state] in
+      guard let state else { return }
+      self?.discardWebView(for: state)
+    }
+    do {
       try await loadBridgeIfNeeded(using: view, state: state)
       // Mermaid 11 的 layout 会等待可度量视口；零 frame 时 render Promise 可能永不 settle。
       let provisionalWidth = max(request.display.maxPixelWidth / request.display.scale, 320)
@@ -83,6 +96,19 @@ public final class InkMermaidImageRenderer: NSObject {
         pngData: pngData,
         cacheIdentity: request.cacheIdentity()
       )
+    } catch {
+      discardWebView(for: state)
+      throw error
+    }
+  }
+
+  private static func shouldRetryColdStartFailure(_ error: Error) -> Bool {
+    guard let renderError = error as? InkMermaidRenderError else { return false }
+    switch renderError {
+    case .timedOut, .pageLoadFailed, .pageProcessTerminated:
+      return true
+    default:
+      return false
     }
   }
 
@@ -93,7 +119,10 @@ public final class InkMermaidImageRenderer: NSObject {
     let configuration = WKWebViewConfiguration()
     configuration.defaultWebpagePreferences = preferences
     configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
-    let view = WKWebView(frame: .zero, configuration: configuration)
+    // 离屏的零尺寸 WKWebView 在 Simulator 首次拉起 WebProcess 时可能被挂起，
+    // 导致本地 bridge 的 load callback 永不返回。先给出最小可布局 viewport，
+    // 后续会在每次渲染前按实际 raster plan 调整尺寸。
+    let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 320, height: 480), configuration: configuration)
     view.navigationDelegate = self
     view.isOpaque = false
     view.backgroundColor = .clear
@@ -158,21 +187,22 @@ public final class InkMermaidImageRenderer: NSObject {
     }
     let escapedJSON = try InkMermaidBridgeEncoding.javaScriptStringLiteral(json)
     _ = try await evaluate("window.inkMermaid.renderViaCallback(\(escapedJSON))", using: view, state: state)
-    var response = try await pollRenderResult(requestID: requestID, using: view, state: state)
+    let rawResponse = try await pollRenderResult(requestID: requestID, using: view, state: state)
+    var response = rawResponse
     // Bridge may wrap `{ ok, value|error }` so JS errors keep their message across WK evaluateJavaScript.
-    if let encoded = response as? String,
-       let data = encoded.data(using: .utf8),
+    if let data = rawResponse.data(using: .utf8),
        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
        object["ok"] is Bool {
       if object["ok"] as? Bool == true {
-        response = object["value"] as Any
+        if let val = object["value"] as? String {
+          response = val
+        }
       } else {
         let message = (object["error"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Mermaid render failed"
         throw InkMermaidRenderError.javaScript(message: message)
       }
     }
-    guard let encoded = response as? String,
-          let dimensionData = encoded.data(using: .utf8),
+    guard let dimensionData = response.data(using: .utf8),
           let object = try JSONSerialization.jsonObject(with: dimensionData) as? [String: Any],
           let width = object["width"] as? Double,
           let height = object["height"] as? Double else {
@@ -190,14 +220,14 @@ public final class InkMermaidImageRenderer: NSObject {
     _ javaScript: String,
     using view: WKWebView,
     state: InkMermaidRenderRequestState
-  ) async throws -> Any {
+  ) async throws -> Any? {
     try await state.awaitCallback { completion in
       view.evaluateJavaScript(javaScript) { response, error in
         Task { @MainActor in
           if let error {
             completion(.failure(InkMermaidRenderError.javaScript(message: Self.javaScriptErrorMessage(from: error))))
           } else {
-            completion(.success(response as Any))
+            completion(.success(response))
           }
         }
       }
@@ -222,7 +252,7 @@ public final class InkMermaidImageRenderer: NSObject {
     requestID: String,
     using view: WKWebView,
     state: InkMermaidRenderRequestState
-  ) async throws -> Any {
+  ) async throws -> String {
     let escapedID = try InkMermaidBridgeEncoding.javaScriptStringLiteral(requestID)
     while state.isOpen {
       try Task.checkCancellation()
@@ -232,12 +262,12 @@ public final class InkMermaidImageRenderer: NSObject {
           using: view,
           state: state
         )
-        if polled is NSNull {
+        guard let polledString = polled as? String else {
           try await state.pollSleep(nanoseconds: 50_000_000)
           continue
         }
         _ = try? await evaluate("window.inkMermaid.clearPendingRender()", using: view, state: state)
-        return polled
+        return polledString
       } catch {
         discardWebView(for: state)
         throw error

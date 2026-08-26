@@ -26,6 +26,9 @@ final class InkThematicBreakView: UIView {
     backgroundColor = .clear
     lineView.backgroundColor = config.color
     addSubview(lineView)
+
+    isAccessibilityElement = true
+    accessibilityLabel = "分割线"
   }
 
   @available(*, unavailable)

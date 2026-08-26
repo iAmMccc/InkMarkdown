@@ -555,6 +555,46 @@ import UIKit
   #expect(codeFont?.fontDescriptor.symbolicTraits.contains(.traitBold) == false)
 }
 
+/// 6. 硬换行（行尾双空格或反斜杠）产生真实换行符并保持行高
+@Test func lineBreak_hardLineBreakProducesNewline() async throws {
+  let source = "第一行  \n第二行"
+  let result = InkAttributedRenderer.render(source)
+  #expect(result.string.contains("第一行\n第二行"))
+
+  let para = extractParagraphStyle(from: result, at: 0)
+  #expect(para.minimumLineHeight == 28)
+  #expect(para.maximumLineHeight == 28)
+}
+
+/// 7. 删除线属性（strikethroughStyle）正确生效
+@Test func strikethrough_appliesUnderlineStyle() async throws {
+  let source = "这是~~被删除的文字~~内容"
+  let result = InkAttributedRenderer.render(source)
+
+  var hasStrikethrough = false
+  result.enumerateAttribute(.strikethroughStyle, in: NSRange(location: 0, length: result.length), options: []) { value, _, _ in
+    if let style = value as? Int, style == NSUnderlineStyle.single.rawValue {
+      hasStrikethrough = true
+    }
+  }
+  #expect(hasStrikethrough)
+  #expect(result.string.contains("被删除的文字"))
+}
+
+/// 8. 表格在富文本降级通道中格式化为清晰的单元格文本且不崩溃
+@Test func table_attributedFallbackRendersCleanText() async throws {
+  let source = """
+  | 标题1 | 标题2 |
+  |-------|-------|
+  | 单元格A | 单元格B |
+  """
+  let result = InkAttributedRenderer.render(source)
+  #expect(result.string.contains("标题1"))
+  #expect(result.string.contains("标题2"))
+  #expect(result.string.contains("单元格A"))
+  #expect(result.string.contains("单元格B"))
+}
+
 // MARK: - Helpers
 
 private func extractParagraphStyle(from attrStr: NSAttributedString, at location: Int) -> NSParagraphStyle {

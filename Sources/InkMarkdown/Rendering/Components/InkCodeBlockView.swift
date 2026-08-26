@@ -82,6 +82,10 @@ final class InkCodeBlockViewImpl: UIView {
         .baselineOffset: offset,
       ]
     )
+
+    isAccessibilityElement = true
+    accessibilityLabel = language.map { "\($0) 代码块" } ?? "代码块"
+    accessibilityValue = trimmed
   }
 
   override func sizeThatFits(_ size: CGSize) -> CGSize {

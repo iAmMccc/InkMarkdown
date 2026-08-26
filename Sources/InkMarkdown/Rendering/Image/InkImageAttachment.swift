@@ -117,10 +117,11 @@ public final class InkImageAttachment: NSTextAttachment {
   public static func bindAttachments(
     in textStorage: NSTextStorage,
     layoutManager: NSLayoutManager,
-    store: InkImageStore = .shared,
+    store: InkImageStore? = nil,
     onHeightChange: (() -> Void)? = nil,
     range: NSRange? = nil
   ) {
+    let resolvedStore = store ?? .shared
     guard textStorage.length > 0 else { return }
     let searchRange: NSRange
     if let range {
@@ -133,7 +134,7 @@ public final class InkImageAttachment: NSTextAttachment {
     }
     textStorage.enumerateAttribute(.attachment, in: searchRange, options: []) { value, _, _ in
       guard let attachment = value as? InkImageAttachment else { return }
-      attachment.bind(to: layoutManager, store: store, onHeightChange: onHeightChange)
+      attachment.bind(to: layoutManager, store: resolvedStore, onHeightChange: onHeightChange)
     }
   }
 
