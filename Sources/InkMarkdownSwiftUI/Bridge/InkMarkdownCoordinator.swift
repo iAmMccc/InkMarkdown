@@ -11,10 +11,14 @@ final class InkMarkdownCoordinator {
 
   weak var containerView: InkMarkdownContainerView?
   private var streamTextView: UITextView?
+  private var streamThoughtView: InkThoughtBlockView?
   private weak var currentSession: InkMarkdownRenderSession?
 
   private var lastRenderedMarkdown: String?
   private var lastRenderedConfiguration: InkConfiguration?
+
+  /// attach 前宿主已注册的 `onDisplayUpdate`；detach 时还原，避免 dismantle 杀死 Chat pulse。
+  private var hostDisplayUpdate: (() -> Void)?
 
   /// 使用当前完整输入和配置生成静态块级视图。
   ///
@@ -37,11 +41,32 @@ final class InkMarkdownCoordinator {
     containerView?.updateBlocks(blocks, configuration: configuration)
   }
 
+  /// 直接更新已解析块列表（promotion 快照 / Chat 终态，不重新 parse Markdown）。
+  func updateBlocks(
+    _ blocks: [InkRenderableBlock],
+    configuration: InkConfiguration,
+    session: InkMarkdownRenderSession? = nil
+  ) {
+    cleanupStreaming()
+
+    lastRenderedMarkdown = nil
+    lastRenderedConfiguration = configuration
+
+    containerView?.updateBlocks(
+      blocks,
+      configuration: configuration,
+      onThoughtCollapseChanged: session.map { sess in
+        { index, isCollapsed in sess.setPromotedThoughtCollapsed(at: index, isCollapsed: isCollapsed) }
+      }
+    )
+  }
+
   /// 驱动流式渲染会话并管理其 `UITextView` attachment。
   func updateStreaming(session: InkMarkdownRenderSession) {
     guard !session.isPromoted else {
-      cleanupStreaming()
-      containerView?.updateBlocks(session.blocks, configuration: session.configuration)
+      let displayedThoughtCollapsed = currentSession === session ? streamThoughtView?.isCollapsed : nil
+      session.syncStreamingThoughtCollapseIntoBlocks(streamViewCollapsed: displayedThoughtCollapsed)
+      updateBlocks(session.blocks, configuration: session.configuration, session: session)
       return
     }
     guard let container = containerView else { return }
@@ -49,19 +74,15 @@ final class InkMarkdownCoordinator {
     let textView = makeOrReuseStreamTextView(in: container)
 
     if currentSession !== session {
-      currentSession?.onDisplayUpdate = nil
-      currentSession?.unbindTextView()
+      detachFromCurrentSession()
       currentSession = session
       session.bindTextView(textView)
-      session.onDisplayUpdate = { [weak self, weak container] in
-        guard let self, let container else { return }
-        self.layoutStreamTextView(in: container)
-        container.invalidateIntrinsicContentSize()
-        container.setNeedsLayout()
-      }
+      chainDisplayUpdate(for: session)
     }
 
-    layoutStreamTextView(in: container)
+    updateStreamingThoughtView(for: session, in: container)
+    container.setNeedsLayout()
+    container.invalidateIntrinsicContentSize()
   }
 
   /// 释放对容器视图及会话的引用并重置内部状态。
@@ -73,6 +94,55 @@ final class InkMarkdownCoordinator {
   }
 
   // MARK: - Private Helpers
+
+  private func chainDisplayUpdate(for session: InkMarkdownRenderSession) {
+    hostDisplayUpdate = session.onDisplayUpdate
+    session.onDisplayUpdate = { [weak self] in
+      guard let self, let container = self.containerView else { return }
+      container.setNeedsLayout()
+      container.invalidateIntrinsicContentSize()
+      self.hostDisplayUpdate?()
+    }
+  }
+
+  private func detachFromCurrentSession() {
+    guard let session = currentSession else { return }
+    session.onDisplayUpdate = hostDisplayUpdate
+    hostDisplayUpdate = nil
+    session.unbindTextView()
+  }
+
+  private func updateStreamingThoughtView(for session: InkMarkdownRenderSession, in container: InkMarkdownContainerView) {
+    if let thoughtBlock = session.streamingThought {
+      if let existing = streamThoughtView {
+        existing.apply(
+          thought: thoughtBlock.thought,
+          isComplete: thoughtBlock.isComplete,
+          isCollapsed: thoughtBlock.isCollapsed,
+          config: thoughtBlock.config,
+          renderConfiguration: thoughtBlock.renderConfiguration
+        )
+      } else {
+        let view = InkThoughtBlockView(
+          thought: thoughtBlock.thought,
+          isComplete: thoughtBlock.isComplete,
+          config: thoughtBlock.config,
+          renderConfiguration: thoughtBlock.renderConfiguration,
+          isCollapsed: thoughtBlock.isCollapsed
+        )
+        view.onToggleCollapse = { [weak session, weak container] collapsed in
+          session?.setStreamingThoughtCollapsed(collapsed)
+          container?.setNeedsLayout()
+          container?.invalidateIntrinsicContentSize()
+        }
+        streamThoughtView = view
+        container.insertSubview(view, at: 0)
+      }
+    } else {
+      streamThoughtView?.removeFromSuperview()
+      streamThoughtView = nil
+    }
+  }
 
   private func makeOrReuseStreamTextView(in container: InkMarkdownContainerView) -> UITextView {
     let textView: UITextView
@@ -96,18 +166,12 @@ final class InkMarkdownCoordinator {
     return textView
   }
 
-  private func layoutStreamTextView(in container: InkMarkdownContainerView) {
-    guard let textView = streamTextView, container.bounds.width > 0 else { return }
-    let width = container.bounds.width
-    let height = textView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height
-    textView.frame = CGRect(x: 0, y: 0, width: width, height: height)
-  }
-
   private func cleanupStreaming() {
-    currentSession?.onDisplayUpdate = nil
-    currentSession?.unbindTextView()
+    detachFromCurrentSession()
+    currentSession = nil
+    streamThoughtView?.removeFromSuperview()
+    streamThoughtView = nil
     streamTextView?.removeFromSuperview()
     streamTextView = nil
-    currentSession = nil
   }
 }

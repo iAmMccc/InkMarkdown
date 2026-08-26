@@ -52,11 +52,29 @@ public final class InkMarkdownRenderSession: ObservableObject {
   /// 底层流式渲染器；仅供 adapter 内部与契约测试访问。
   private(set) var renderer: InkStreamRenderer
 
+  /// 流式 PREFIX 思考块快照；供 Coordinator 挂载 `InkThoughtBlockView`。
+  internal private(set) var streamingThought: InkThoughtBlock?
+
+  /// 供契约测试断言 remainder 派生缓冲（SSOT 仍为 `currentText`）。
+  internal var streamRemainder: String { remainderText }
+
+  /// 是否暂停逐字显示；转发至底层 renderer，供 Chat 滚动策略在用户拖拽时暂停吐字。
+  public var isDisplayPaused: Bool {
+    get { renderer.isDisplayPaused }
+    set { renderer.isDisplayPaused = newValue }
+  }
+
   /// 递增以作废已排队的 deferred `@Published` 写入（`reset` / `cancel` 时调用）。
   private var publishGeneration: UInt64 = 0
 
   /// 0-delay default-mode timer 载体，将 `@Published` 写入推迟到当前 view update 之外。
   private let publishHopper = PublishHopper()
+
+  /// 进入 `InkStreamRenderer` 的 remainder 派生文本（SSOT 为 `currentText`）。
+  private var remainderText: String = ""
+
+  /// 上一帧是否存在 PREFIX 思考块，用于检测 none→thought 转换。
+  private var hadStreamingThought: Bool = false
 
   /// 宿主用于跟随滚动或高度变化的显示刷新回调。
   ///
@@ -75,20 +93,40 @@ public final class InkMarkdownRenderSession: ObservableObject {
 
   /// 使用最新 trait 快照重渲染当前会话。
   ///
-  /// 该方法仅更新 `renderEnvironment`，不会引入第二套 SwiftUI 样式模型；若会话正在
-  /// 流式显示，会以同一份 canonical source 重新解析，保证流式和终态使用同一配置。
-  func updateRenderEnvironment(_ environment: InkRenderEnvironment) {
+  /// 宿主在 Dark Mode、Dynamic Type 或其它影响 ``InkConfiguration/renderEnvironment`` 的
+  /// trait 变化时，**必须**对每条消息各自持有的 ``InkMarkdownRenderSession`` 调用本方法。
+  /// 库不会在 SwiftUI 环境变化时自动遍历 Chat 历史中的 per-message session；若遗漏调用，
+  /// 已渲染消息会保留旧 trait 下的动态色与字号解析结果。
+  ///
+  /// 该方法仅更新 ``InkConfiguration/renderEnvironment``，不会引入第二套 SwiftUI 样式模型；
+  /// 若会话正在流式显示，会以 remainder 派生缓冲重新解析，避免把思考标签回灌 textView。
+  /// 流式阶段不触发 ``objectWillChange``，终态 Block Promotion 后会通知 SwiftUI 重建。
+  ///
+  /// - Parameter environment: 从当前 ``UITraitCollection`` 或 SwiftUI `colorScheme` 等
+  ///   捕获的 trait 快照；须与宿主界面实际外观一致。
+  public func updateRenderEnvironment(_ environment: InkRenderEnvironment) {
     precondition(Thread.isMainThread, "InkMarkdownRenderSession 必须在主线程调用")
     guard configuration.renderEnvironment != environment else { return }
 
     configuration.renderEnvironment = environment
-    renderer.updateConfiguration(configuration, source: currentText)
+    if var thought = streamingThought {
+      thought.config = configuration.appearance.thought
+      thought.renderConfiguration = configuration
+      streamingThought = thought
+    }
+    renderer.updateConfiguration(configuration, source: remainderText)
     if state == .finishing || state == .displayingFinalContent {
       renderer.finish()
     }
 
-    // 流式阶段 UIKit renderer 已 in-place 更新；仅终态 Representable 需重建。
+    // 流式阶段 UIKit renderer 已 in-place 更新；终态需重渲染 blocks 以应用新 trait。
     if isPromoted {
+      blocks = Self.renderBlocksPreservingThoughtCollapse(
+        from: currentText,
+        configuration: configuration,
+        streamingThought: streamingThought,
+        existingBlocks: blocks
+      )
       enqueuePublishedMutation { [weak self] in
         self?.objectWillChange.send()
       }
@@ -100,6 +138,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
   /// 追加接收到的 Markdown 文本分片。
   ///
   /// 若当前处于 `idle` 状态，将自动转换至 `streaming` 状态；终态或取消后的调用为 no-op。
+  /// PREFIX 思考标签进入 `streamingThought`，仅 remainder delta 喂入 renderer。
   /// - Parameter text: 新到达的 Markdown 文本片段。
   public func append(_ text: String) {
     precondition(Thread.isMainThread, "InkMarkdownRenderSession 必须在主线程调用")
@@ -111,8 +150,29 @@ public final class InkMarkdownRenderSession: ObservableObject {
     guard remainingCapacity > 0 else { return }
 
     let acceptedText = String(text.prefix(remainingCapacity))
+    let previousRemainder = remainderText
+    let previousHadThought = hadStreamingThought
+    let previousThoughtBody = streamingThought?.thought
     currentText += acceptedText
-    renderer.append(acceptedText)
+
+    let split = InkThoughtScanner.splitStreamingSource(currentText)
+    updateStreamingThought(from: split)
+    let newRemainder = split.remainder
+
+    if !previousHadThought && hadStreamingThought {
+      renderer.reset(to: newRemainder)
+    } else {
+      let remainderDelta = String(newRemainder.dropFirst(previousRemainder.count))
+      if !remainderDelta.isEmpty {
+        renderer.append(remainderDelta)
+      } else if hadStreamingThought,
+                streamingThought?.thought != previousThoughtBody {
+        // 仅思考正文增长、remainder 仍为空时，renderer 不会触发高度回调。
+        onDisplayUpdate?()
+      }
+    }
+
+    remainderText = newRemainder
   }
 
   /// 标记流式输入结束。
@@ -122,6 +182,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
   public func finish() {
     precondition(Thread.isMainThread, "InkMarkdownRenderSession 必须在主线程调用")
     guard state == .streaming else { return }
+    isDisplayPaused = false
     state = .finishing
     renderer.finish()
   }
@@ -136,6 +197,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
     invalidatePendingPublishedMutations()
     state = .cancelled
     renderer.reset()
+    clearStreamingSplitState()
   }
 
   /// 重置会话至初始状态。
@@ -150,6 +212,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
     blocks = []
     isPromoted = false
     state = .idle
+    clearStreamingSplitState()
   }
 
   // MARK: - Internal Helpers for Coordinator
@@ -165,7 +228,75 @@ public final class InkMarkdownRenderSession: ObservableObject {
     renderer.unbindTextView()
   }
 
+  /// 更新流式 PREFIX 思考块的折叠态（写入 `streamingThought` SSOT）。
+  func setStreamingThoughtCollapsed(_ isCollapsed: Bool) {
+    guard var thought = streamingThought else { return }
+    thought.isCollapsed = isCollapsed
+    streamingThought = thought
+  }
+
+  /// 更新终态 blocks 中指定索引思考块的折叠态。
+  func setPromotedThoughtCollapsed(at index: Int, isCollapsed: Bool) {
+    guard index < blocks.count, var thought = blocks[index] as? InkThoughtBlock else { return }
+    thought.isCollapsed = isCollapsed
+    blocks[index] = thought
+  }
+
+  /// 将流式思考块折叠态合并进终态 blocks（promotion 前最后一道同步）。
+  public func syncStreamingThoughtCollapseIntoBlocks(streamViewCollapsed: Bool? = nil) {
+    let collapsed = streamViewCollapsed ?? streamingThought?.isCollapsed
+    guard let collapsed else { return }
+    for index in blocks.indices {
+      guard var thought = blocks[index] as? InkThoughtBlock else { continue }
+      thought.isCollapsed = collapsed
+      blocks[index] = thought
+      break
+    }
+  }
+
   // MARK: - Private Helpers
+
+  private static func renderBlocksPreservingThoughtCollapse(
+    from text: String,
+    configuration: InkConfiguration,
+    streamingThought: InkThoughtBlock?,
+    existingBlocks: [InkRenderableBlock]? = nil
+  ) -> [InkRenderableBlock] {
+    var blocks = InkBlockRenderer.render(text, configuration: configuration)
+    let collapsed = (existingBlocks?.first(where: { $0 is InkThoughtBlock }) as? InkThoughtBlock)?.isCollapsed
+      ?? streamingThought?.isCollapsed
+    guard let collapsed else { return blocks }
+    for index in blocks.indices {
+      guard var thought = blocks[index] as? InkThoughtBlock else { continue }
+      thought.isCollapsed = collapsed
+      blocks[index] = thought
+      break
+    }
+    return blocks
+  }
+
+  private func updateStreamingThought(from split: InkThoughtScanner.StreamingSplit) {
+    let previousCollapsed = streamingThought?.isCollapsed
+    if let thoughtResult = split.thought {
+      streamingThought = InkThoughtBlock(
+        thought: thoughtResult.thoughtBody,
+        isComplete: thoughtResult.isComplete,
+        config: configuration.appearance.thought,
+        renderConfiguration: configuration,
+        isCollapsed: previousCollapsed
+      )
+      hadStreamingThought = true
+    } else {
+      streamingThought = nil
+      hadStreamingThought = false
+    }
+  }
+
+  private func clearStreamingSplitState() {
+    streamingThought = nil
+    remainderText = ""
+    hadStreamingThought = false
+  }
 
   /// 作废并清空 hopper 上排队的 deferred `@Published` 写入。
   private func invalidatePendingPublishedMutations() {
@@ -204,7 +335,11 @@ public final class InkMarkdownRenderSession: ObservableObject {
             !self.isPromoted
       else { return }
 
-      self.blocks = InkBlockRenderer.render(self.currentText, configuration: self.configuration)
+      self.blocks = Self.renderBlocksPreservingThoughtCollapse(
+        from: self.currentText,
+        configuration: self.configuration,
+        streamingThought: self.streamingThought
+      )
 
       self.enqueuePublishedMutation { [weak self] in
         guard let self,

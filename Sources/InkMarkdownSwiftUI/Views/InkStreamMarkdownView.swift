@@ -10,10 +10,11 @@ import InkMarkdown
 /// 流式 Markdown 渲染视图。
 ///
 /// 绑定 `InkMarkdownRenderSession` 流式会话，支持打字机式逐字渲染，并在显示完成后
-/// 自动提升为原生块级组件。会话持有从流式到终态共享的唯一 `InkConfiguration` 快照。
+/// 自动提升为原生块级组件。会话持有从流式到终态共享的唯一 `InkConfiguration` 快照
+/// 与思考块折叠态 SSOT；promotion 后仍绑定同一会话，由 Coordinator 在内部切换布局。
 ///
-/// - Important: 本视图不订阅 session 的状态机 `@Published state`，只订阅 `isPromoted`，
-///   避免 CADisplayLink / finish 回调触发 SwiftUI 全量 invalidation。
+/// - Important: 本视图始终通过 `.streaming(session:)` 驱动 Representable，不在 body 中
+///   切换为无 session 写回的 `.blocks` 模式，以免丢失 `isCollapsed` 等交互状态。
 ///
 /// ### 使用示例
 /// ```swift
@@ -58,19 +59,11 @@ public struct InkStreamMarkdownView: View {
   }
 
   public var body: some View {
-    Group {
-      if isPromoted {
-        InkMarkdownRepresentable(
-          mode: .static(markdown: session.currentText),
-          configuration: session.configuration
-        )
-      } else {
-        InkMarkdownRepresentable(
-          mode: .streaming(session: session),
-          configuration: session.configuration
-        )
-      }
-    }
+    InkMarkdownRepresentable(
+      mode: .streaming(session: session),
+      configuration: session.configuration,
+      promotionGeneration: isPromoted
+    )
     .onReceive(session.$isPromoted) { isPromoted = $0 }
     .onAppear(perform: updateRenderEnvironment)
     .onChange(of: colorScheme) { _ in

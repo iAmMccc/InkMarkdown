@@ -193,4 +193,147 @@ struct InkMarkdownRenderSessionTests {
     #expect(session.configuration.renderEnvironment.userInterfaceStyle == .dark)
     #expect(session.renderer.configuration.renderEnvironment.userInterfaceStyle == .dark)
   }
+
+  @Test("PREFIX 未闭合思考 append：streamingThought 未完成且 remainder 无标签")
+  func unclosedThoughtStreamingRemainderHasNoTags() {
+    let session = InkMarkdownRenderSession()
+    session.append("<think>\n正在深度思考")
+
+    #expect(session.streamingThought != nil)
+    #expect(session.streamingThought?.isComplete == false)
+    #expect(session.streamRemainder.isEmpty)
+    #expect(!session.streamRemainder.contains("<think>"))
+    #expect(!session.streamRemainder.contains("</think>"))
+  }
+
+  @Test("闭合思考后 remainder 进入 renderer；finish 后 blocks 含 InkThoughtBlock")
+  func closedThoughtThenAnswerAndFinish() async {
+    let session = InkMarkdownRenderSession()
+    session.append("<think>步骤</think>\n\n## 回答\n正文")
+
+    #expect(session.streamingThought?.isComplete == true)
+    #expect(session.streamRemainder.contains("回答"))
+
+    session.finish()
+    session.renderer.onFinishParse?()
+    session.renderer.onFinishDisplay?()
+    await waitForRunLoop { session.isPromoted }
+
+    #expect(session.blocks.first is InkThoughtBlock)
+    if let thought = session.blocks.first as? InkThoughtBlock {
+      #expect(thought.isComplete == true)
+      #expect(thought.thought.contains("步骤"))
+    }
+  }
+
+  @Test("流式 append 保留用户折叠态")
+  func streamingThoughtAppendPreservesCollapse() {
+    var config = InkConfiguration.standard
+    config.appearance.thought.isCollapsible = true
+    config.appearance.thought.isInitiallyCollapsed = false
+    let session = InkMarkdownRenderSession(configuration: config)
+    session.append("<think>\n第一步")
+    session.setStreamingThoughtCollapsed(true)
+    session.append("\n第二步")
+    #expect(session.streamingThought?.isCollapsed == true)
+  }
+
+  @Test("finish 后 blocks 继承 streamingThought 折叠态")
+  func promotedBlocksPreserveThoughtCollapse() async {
+    var config = InkConfiguration.standard
+    config.appearance.thought.isCollapsible = true
+    let session = InkMarkdownRenderSession(configuration: config)
+    session.append("<think>步骤</think>\n\n## 回答\n正文")
+    session.setStreamingThoughtCollapsed(true)
+
+    session.finish()
+    session.renderer.onFinishParse?()
+    session.renderer.onFinishDisplay?()
+    await waitForRunLoop { session.isPromoted }
+
+    if let thought = session.blocks.first as? InkThoughtBlock {
+      #expect(thought.isCollapsed == true)
+    }
+  }
+
+  @Test("finish 清除 isDisplayPaused，避免 promotion 后仍暂停")
+  func finishClearsDisplayPause() {
+    let session = InkMarkdownRenderSession()
+    session.append("流式文本")
+    session.isDisplayPaused = true
+    session.finish()
+    #expect(session.isDisplayPaused == false)
+  }
+
+  @Test("折叠后立即 append 仍保留 streamingThought 折叠态")
+  func collapseThenImmediateAppendPreservesStreamingCollapse() {
+    var config = InkConfiguration.standard
+    config.appearance.thought.isCollapsible = true
+    config.appearance.thought.isInitiallyCollapsed = false
+    let session = InkMarkdownRenderSession(configuration: config)
+    session.append("<think>\n第一步")
+
+    let view = InkThoughtBlockView(
+      thought: session.streamingThought!.thought,
+      isComplete: false,
+      config: config.appearance.thought,
+      renderConfiguration: config
+    )
+    view.onToggleCollapse = { session.setStreamingThoughtCollapsed($0) }
+
+    view.handleHeaderTap()
+    session.append("\n第二步")
+
+    #expect(session.streamingThought?.isCollapsed == true)
+    view.apply(
+      thought: session.streamingThought!.thought,
+      isComplete: session.streamingThought!.isComplete,
+      isCollapsed: session.streamingThought!.isCollapsed
+    )
+    #expect(view.isCollapsed == true)
+    let collapsedSize = view.sizeThatFits(CGSize(width: 320, height: 1000))
+    #expect(collapsedSize.height <= 60)
+  }
+
+  @Test("promoted 后 updateRenderEnvironment 重渲染 blocks 并保留折叠态")
+  func promotedUpdateRenderEnvironmentRerendersBlocksPreservingCollapse() async {
+    var config = InkConfiguration.standard
+    config.appearance.thought.isCollapsible = true
+    let session = InkMarkdownRenderSession(configuration: config)
+    session.append("<think>步骤</think>\n\n## 回答\n正文")
+    session.setStreamingThoughtCollapsed(true)
+
+    session.finish()
+    session.renderer.onFinishParse?()
+    session.renderer.onFinishDisplay?()
+    await waitForRunLoop { session.isPromoted }
+
+    if let thought = session.blocks.first as? InkThoughtBlock {
+      #expect(thought.isCollapsed == true)
+      #expect(thought.renderConfiguration.renderEnvironment.userInterfaceStyle == .unspecified)
+    }
+
+    session.updateRenderEnvironment(InkRenderEnvironment(userInterfaceStyle: .dark))
+    await waitForRunLoop { session.blocks.first != nil }
+
+    if let thought = session.blocks.first as? InkThoughtBlock {
+      #expect(thought.isCollapsed == true)
+      #expect(thought.renderConfiguration.renderEnvironment.userInterfaceStyle == .dark)
+    }
+    #expect(session.configuration.renderEnvironment.userInterfaceStyle == .dark)
+  }
+
+  @Test("流式进行中 updateRenderEnvironment 同步更新 streamingThought 配置")
+  func streamingUpdateRenderEnvironmentRefreshesStreamingThoughtConfiguration() {
+    let session = InkMarkdownRenderSession()
+    session.append("<think>\n思考正文")
+
+    #expect(session.streamingThought != nil)
+    #expect(session.streamingThought?.renderConfiguration.renderEnvironment.userInterfaceStyle == .unspecified)
+
+    session.updateRenderEnvironment(InkRenderEnvironment(userInterfaceStyle: .dark))
+
+    #expect(session.streamingThought?.renderConfiguration.renderEnvironment.userInterfaceStyle == .dark)
+    #expect(session.configuration.renderEnvironment.userInterfaceStyle == .dark)
+  }
 }

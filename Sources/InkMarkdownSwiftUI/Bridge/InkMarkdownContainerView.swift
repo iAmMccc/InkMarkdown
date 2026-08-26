@@ -13,7 +13,7 @@ import InkMarkdown
 final class InkMarkdownContainerView: UIView {
 
   private var blockViews: [UIView] = []
-  private var currentConfiguration: InkConfiguration?
+  internal private(set) var currentConfiguration: InkConfiguration?
   private var lastLayoutWidth: CGFloat = 0
 
   override init(frame: CGRect) {
@@ -35,13 +35,28 @@ final class InkMarkdownContainerView: UIView {
   /// - Parameters:
   ///   - blocks: 块级渲染单元数组。
   ///   - configuration: 当前生效的 Markdown 渲染配置。
-  func updateBlocks(_ blocks: [InkRenderableBlock], configuration: InkConfiguration) {
+  ///   - onThoughtCollapseChanged: 思考块折叠切换时回写模型（块索引, 折叠态）。
+  func updateBlocks(
+    _ blocks: [InkRenderableBlock],
+    configuration: InkConfiguration,
+    onThoughtCollapseChanged: ((Int, Bool) -> Void)? = nil
+  ) {
     blockViews.forEach { $0.removeFromSuperview() }
     blockViews.removeAll()
     currentConfiguration = configuration
 
-    for block in blocks {
+    for (index, block) in blocks.enumerated() {
       let view = block.makeView()
+
+      if let thoughtView = view as? InkThoughtBlockView {
+        thoughtView.onToggleCollapse = { [weak self] collapsed in
+          onThoughtCollapseChanged?(index, collapsed)
+          self?.setNeedsLayout()
+          self?.invalidateIntrinsicContentSize()
+          self?.superview?.setNeedsLayout()
+          self?.superview?.invalidateIntrinsicContentSize()
+        }
+      }
       addSubview(view)
       blockViews.append(view)
     }
@@ -82,30 +97,43 @@ final class InkMarkdownContainerView: UIView {
   }
 
   private func calculateHeight(for width: CGFloat) -> CGFloat {
-    guard !blockViews.isEmpty else {
-      return subviews.map {
-        $0.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height
-      }.max() ?? 0
+    if !blockViews.isEmpty {
+      let measurements = measuredBlocks(for: width)
+      return measurements.reduce(CGFloat.zero) { $0 + $1.size.height }
     }
 
-    let measurements = measuredBlocks(for: width)
-    return measurements.reduce(CGFloat.zero) { $0 + $1.size.height }
+    return stackedSubviewsHeight(for: width)
   }
 
   private func layoutBlocks(for width: CGFloat) {
-    guard !blockViews.isEmpty else {
-      for subview in subviews {
-        let size = subview.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        subview.frame = CGRect(x: 0, y: 0, width: width, height: size.height)
+    if !blockViews.isEmpty {
+      var y: CGFloat = 0
+      let measurements = measuredBlocks(for: width)
+      for measurement in measurements {
+        measurement.view.frame = CGRect(x: 0, y: y, width: width, height: measurement.size.height)
+        y += measurement.size.height
       }
       return
     }
 
+    layoutStackedSubviews(for: width)
+  }
+
+  private func stackedSubviewsHeight(for width: CGFloat) -> CGFloat {
+    var total: CGFloat = 0
+    for subview in subviews {
+      let size = subview.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+      total += size.height
+    }
+    return total
+  }
+
+  private func layoutStackedSubviews(for width: CGFloat) {
     var y: CGFloat = 0
-    let measurements = measuredBlocks(for: width)
-    for measurement in measurements {
-      measurement.view.frame = CGRect(x: 0, y: y, width: width, height: measurement.size.height)
-      y += measurement.size.height
+    for subview in subviews {
+      let size = subview.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+      subview.frame = CGRect(x: 0, y: y, width: width, height: size.height)
+      y += size.height
     }
   }
 

@@ -12,6 +12,8 @@ import InkMarkdown
 enum RenderMode {
   /// 静态渲染模式，接收完整的 Markdown 纯文本。
   case `static`(markdown: String)
+  /// 静态块级模式，直接消费已解析 blocks（避免重复解析丢失折叠态等 UI 状态）。
+  case blocks([InkRenderableBlock])
   /// 流式渲染模式，绑定活跃的流式渲染会话。
   case streaming(session: InkMarkdownRenderSession)
 }
@@ -22,6 +24,8 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
 
   let mode: RenderMode
   let configuration: InkConfiguration
+  /// promotion 代际；仅用于在 `isPromoted` 翻转时触发 `updateUIView`，不参与渲染语义。
+  var promotionGeneration: Bool = false
 
   /// 便捷静态初始化器。
   init(markdown: String, configuration: InkConfiguration) {
@@ -30,9 +34,10 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
   }
 
   /// 指定渲染模式的初始化器。
-  init(mode: RenderMode, configuration: InkConfiguration) {
+  init(mode: RenderMode, configuration: InkConfiguration, promotionGeneration: Bool = false) {
     self.mode = mode
     self.configuration = configuration
+    self.promotionGeneration = promotionGeneration
   }
 
   func makeUIView(context: Context) -> InkMarkdownContainerView {
@@ -55,6 +60,8 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
     switch mode {
     case .static(let markdown):
       context.coordinator.updateStatic(markdown: markdown, configuration: effectiveConfig)
+    case .blocks(let blocks):
+      context.coordinator.updateBlocks(blocks, configuration: effectiveConfig)
     case .streaming(let session):
       context.coordinator.updateStreaming(session: session)
     }
