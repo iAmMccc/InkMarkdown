@@ -118,49 +118,67 @@ SwiftUI 的总体设计、范围和退出标准以 [SwiftUI Adapter 总体技术
 
 ### 代码查询工具规则（强制）
 
-**默认入口必须是 `codebase-memory-mcp` 代码索引**，禁止把 Grep / Glob / Task(explore) / 目录遍历等简单探索工具当作首选。
+**默认入口必须是 `serena` MCP**（[oraios/serena](https://github.com/oraios/serena)），基于 LSP 做符号导航与引用追踪。Grep / Glob / Task(explore) / 目录遍历只作补搜，不作首选。
 
-适用场景（一律先走索引）：
+编码任务开始前先调用 `initial_instructions`，再按任务需要走符号工具。
+
+适用场景（一律先走 Serena）：
 - 符号定位、定义与引用、调用链 / 影响面追踪
 - 架构概览、模块边界、入口点与依赖关系
 - “某某功能在哪实现 / 谁调用了谁 / 改动会影响什么”
 
 推荐工具顺序：
-1. `list_projects` / `index_status` — 确认本仓库已索引；若未索引，先 `index_repository`
-2. `get_architecture` / `search_graph` / `semantic_query` — 定位符号、包与结构
-3. `trace_path` / `query_graph` / `detect_changes` — 追踪调用链、图查询、变更影响
-4. `get_code_snippet` — 按限定名读取目标实现；再按需 `Read` 具体文件
+1. `activate_project` — 确认当前仓库已激活（本仓库路径：仓库根目录）；未激活则先激活
+2. `get_symbols_overview` / `find_symbol` — 定位文件内符号与结构
+3. `find_referencing_symbols` / `find_implementations` / `find_declaration` — 引用链、实现与声明
+4. `search_for_pattern` — 符号名或位置尚不确定时的模式搜索
+5. `read_file`（或 Cursor `Read`）— 仅在需要阅读具体实现时读取
 
 硬性约束：
-- **禁止**在未先查询代码索引的情况下，直接用 `Grep`、`Glob`、`Task(explore)`、`rg`、`find` 或大范围目录浏览来“摸清代码结构”。
-- 若本仓库尚未构建索引，**先索引再查询**，不要用简单探索工具绕过。
-- 若当前调用环境未暴露 / 未安装 `codebase-memory-mcp`：
-  1. **必须向用户明确推荐安装并启用**该 MCP（仓库：https://github.com/DeusData/codebase-memory-mcp ；一键安装：`curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash`），并说明安装后需重启 / 重载 Agent 会话；
+- 摸清代码结构时，先走 Serena 符号工具，再决定是否补搜。
+- 若当前调用环境未暴露 / 未安装 `serena`：
+  1. **必须向用户明确推荐安装并启用**该 MCP（仓库：https://github.com/oraios/serena ；Cursor `~/.cursor/mcp.json` 示例：`"serena": { "command": "serena", "args": ["start-mcp-server", "--project-from-cwd"] }`），并说明安装后需重启 / 重载 Agent 会话；
   2. 在用户完成安装与会话重载前，可临时回退到 `Grep` / `rg` / `Glob` / 文件读取，但必须同时告知这是降级路径，并再次提醒安装 MCP。
 - **仅允许回退**到 `Grep` / `rg` / `Glob` / 文件读取的情况：
   1. MCP 当前会话不可用（已向用户推荐安装 / 重载），且已说明回退原因；
-  2. 索引查询结果明确不足（空结果 / 漏检），需要补搜；
-  3. 目标是字符串字面量、配置文件、文档、非代码资源，或索引刻意忽略的路径。
+  2. 符号查询结果明确不足（空结果 / 漏检），需要补搜；
+  3. 目标是字符串字面量、配置文件、文档、非代码资源。
 
 ### Apple 官方知识查询规则（强制）
 
-涉及 **Apple 平台官方知识**（UIKit / AppKit / Foundation / Swift / SwiftUI API、Developer Documentation、平台兼容性、Sample Code、WWDC 内容、技术概述与发布说明等）时，**必须优先使用 `apple-docs` MCP**（`@kimsungwhee/apple-docs-mcp`），不要先靠训练记忆或通用网页搜索猜测。
+涉及 **Apple 平台官方知识**（UIKit / AppKit / Foundation / Swift / SwiftUI API、Developer Documentation、平台兼容性等）时，**必须优先使用 `apple-docs` MCP**（`apple-doc-mcp-server`），不要先靠训练记忆或通用网页搜索猜测。
 
 推荐工具顺序：
-1. `search_apple_docs` / `list_technologies` / `search_framework_symbols` — 定位 API、框架与符号
-2. `get_apple_doc_content` / `resolve_references_batch` / `get_related_apis` / `find_similar_apis` — 读取完整文档与关联 API
-3. `get_platform_compatibility` — 核对部署版本与平台可用性（本项目硬边界：iOS 14+ / iPadOS 14+；不支持其他平台）
-4. `get_sample_code` / `get_technology_overviews` / `get_documentation_updates` — 示例、指南与更新说明
-5. `list_wwdc_videos` / `search_wwdc_content` / `get_wwdc_video` / `get_wwdc_code_examples` — WWDC 演讲与示例代码
+1. `discover_technologies` → `choose_technology` — 选定框架（如 UIKit / SwiftUI / Foundation）
+2. `search_symbols` — 符号优先检索；本项目可带 `platform: iOS`
+3. `get_documentation` — 读取选定技术内的符号文档
+4. `get_version` — 排查 MCP 版本与连通性
+
+本项目硬边界：iOS 14+ / iPadOS 14+；不支持其他平台。查到的 API 可用性必须对照该边界。
 
 硬性约束：
-- **禁止**在未先查询 `apple-docs` 的情况下，凭记忆断言 Apple API 签名、可用性、废弃状态或推荐替代方案。
+- 先查 `apple-docs`，再断言 Apple API 签名、可用性、废弃状态或推荐替代方案。
 - 若当前调用环境未暴露 / 未安装 `apple-docs` MCP：
-  1. **必须向用户明确推荐安装并启用**该 MCP（npm：`@kimsungwhee/apple-docs-mcp`；Cursor `~/.cursor/mcp.json` 示例：`"apple-docs": { "type": "stdio", "command": "npx", "args": ["-y", "@kimsungwhee/apple-docs-mcp@latest"] }`），并说明安装后需重启 / 重载 Agent 会话；
+  1. **必须向用户明确推荐安装并启用**该 MCP（npm：`apple-doc-mcp-server`；Cursor `~/.cursor/mcp.json` 示例：`"apple-docs": { "command": "npx", "args": ["-y", "apple-doc-mcp-server@latest"] }`），并说明安装后需重启 / 重载 Agent 会话；
   2. 在用户完成安装与会话重载前，可临时回退到 Context7 / 官方文档网页，但必须同时告知这是降级路径，并再次提醒安装 `apple-docs` MCP。
 - **仅允许回退**的情况：
   1. MCP 当前会话不可用（已向用户推荐安装 / 重载），且已说明回退原因；
   2. 查询目标明显不属于 Apple 官方文档范围（例如本仓库业务逻辑、第三方非 Apple SDK）。
+
+### 三方库文档查询（Context7）
+
+查询 **非 Apple** 的库 / SDK / 框架文档（例如 `swift-markdown`、SPM 依赖、CLI）时，优先使用 `context7` MCP，不要先靠训练记忆或通用网页搜索猜测。
+
+推荐工具顺序：
+1. `resolve-library-id` — 用官方库名解析 Context7 library ID（格式 `/org/project`）
+2. `query-docs` — 针对单一概念查询文档与示例
+
+硬性约束：
+- Context7 只用于三方库文档，不用于本仓库代码结构探索（代码结构走 Serena）。
+- Apple 平台官方知识仍走 `apple-docs`；Context7 是其降级路径，不是首选。
+- 若当前调用环境未暴露 / 未安装 `context7` MCP：
+  1. **必须向用户明确推荐安装并启用**该 MCP（npm：`@upstash/context7-mcp`；Cursor `~/.cursor/mcp.json` 示例：`"context7": { "command": "npx", "args": ["-y", "@upstash/context7-mcp@latest"] }`），并说明安装后需重启 / 重载 Agent 会话；
+  2. 在用户完成安装与会话重载前，可临时回退到官方文档网页，但必须同时告知这是降级路径。
 
 ### Xcode 构建、测试与运行工具规则
 

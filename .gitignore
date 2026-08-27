@@ -78,7 +78,6 @@ ExampleApp/Packages/Caches/
 
 # 本地代码索引与任务工具状态
 .serena/
-.codebase-memory/
 .freebuff/
 
 # Xcode DerivedData
