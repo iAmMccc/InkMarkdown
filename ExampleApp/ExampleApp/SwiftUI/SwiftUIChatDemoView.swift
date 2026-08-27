@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import InkMarkdown
 import InkMarkdownSwiftUI
 
 private struct ScrollBottomMaxYKey: PreferenceKey {

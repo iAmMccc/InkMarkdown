@@ -7,7 +7,7 @@ import Testing
 import UIKit
 import SwiftUI
 @testable import InkMarkdownSwiftUI
-import InkMarkdown
+@_spi(InkMarkdown) import InkMarkdown
 
 @Suite("InkMarkdownView 静态视图契约与集成测试")
 @MainActor

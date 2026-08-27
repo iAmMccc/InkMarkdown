@@ -7,7 +7,7 @@ import Testing
 import UIKit
 import SwiftUI
 @testable import InkMarkdownSwiftUI
-import InkMarkdown
+@_spi(InkMarkdown) import InkMarkdown
 
 @Suite("InkMarkdownRenderSession 契约测试")
 @MainActor

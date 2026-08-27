@@ -3,18 +3,69 @@
 //  InkMarkdownSwiftUI
 //
 
+@_spi(InkMarkdown) import InkMarkdown
 import UIKit
-import InkMarkdown
 
 /// 承载 Markdown 块级视图的 UIKit 容器视图。
 ///
-/// 采用 frame 布局，并通过 `sizeThatFits` 与 `intrinsicContentSize` 向 SwiftUI
-/// 提供 iOS 14–15 所需的尺寸协商依据。
+/// 测量入口唯一：`sizeThatFits` 与 `intrinsicContentSize` 调用 `measureContent`。
+/// `layoutSubviews` 仅把已缓存的测量结果写成 frame，禁止二次 `sizeThatFits`。
 final class InkMarkdownContainerView: UIView {
 
+  private struct MeasurementCacheKey: Hashable {
+    let identity: InkBlockIdentity
+    let widthBits: UInt64
+  }
+
+  private struct LayoutEntry {
+    let identity: InkBlockIdentity
+    weak var view: UIView?
+    var size: CGSize
+  }
+
   private var blockViews: [UIView] = []
+  private var blockIdentities: [InkBlockIdentity] = []
+  private var identityToView: [InkBlockIdentity: UIView] = [:]
+  private var contentFingerprints: [InkBlockIdentity: UInt64] = [:]
+  private var slotCache: [MeasurementCacheKey: CGSize] = [:]
+  private var layoutEntries: [LayoutEntry] = []
+
   internal private(set) var currentConfiguration: InkConfiguration?
-  private var lastLayoutWidth: CGFloat = 0
+  private var lastMeasuredWidth: CGFloat = 0
+
+  /// 流式 attachment（不在 blockViews 内，但参与测量序）。
+  private var streamThoughtIdentity: InkBlockIdentity?
+  private weak var streamThoughtView: UIView?
+  private var streamTextIdentity: InkBlockIdentity?
+  private weak var streamTextView: UIView?
+
+  internal private(set) var cachedTotalHeightForTesting: CGFloat = 0
+  internal private(set) var blockMeasurementInvocationCount = 0
+  internal private(set) var layoutSubviewsICSInvalidateCount = 0
+  internal private(set) var reservedHeightSlotUpdateCount = 0
+
+  internal func resetLayoutSubviewsICSInvalidateCountForTesting() {
+    layoutSubviewsICSInvalidateCount = 0
+  }
+
+  internal func cachedSlotHeight(for identity: InkBlockIdentity, width: CGFloat) -> CGFloat? {
+    slotCache[MeasurementCacheKey(identity: identity, widthBits: UInt64(width.bitPattern))]?.height
+  }
+
+  internal var effectiveMeasureWidth: CGFloat {
+    lastMeasuredWidth > 0 ? lastMeasuredWidth : resolvedWidth
+  }
+
+  private var isInsideLayoutSubviews = false
+  private var appliedEnvironmentTraits: UITraitCollection?
+  private var lastAppliedRenderEnvironment: InkRenderEnvironment?
+
+  override var traitCollection: UITraitCollection {
+    if let appliedEnvironmentTraits {
+      return UITraitCollection(traitsFrom: [super.traitCollection, appliedEnvironmentTraits])
+    }
+    return super.traitCollection
+  }
 
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -26,52 +77,167 @@ final class InkMarkdownContainerView: UIView {
     backgroundColor = .clear
   }
 
-  /// 当前容器中是否存在已创建的块级视图。
   var hasBlocks: Bool {
     !blockViews.isEmpty
   }
 
-  /// 更新待渲染的块列表及配置。
-  /// - Parameters:
-  ///   - blocks: 块级渲染单元数组。
-  ///   - configuration: 当前生效的 Markdown 渲染配置。
-  ///   - onThoughtCollapseChanged: 思考块折叠切换时回写模型（块索引, 折叠态）。
+  internal func invalidateAllMeasurementSlots() {
+    let preservedWidth = lastMeasuredWidth
+    slotCache.removeAll()
+    layoutEntries.removeAll()
+    lastMeasuredWidth = preservedWidth
+    cachedTotalHeightForTesting = 0
+  }
+
+  internal func preRegisterView(_ view: UIView, for identity: InkBlockIdentity) {
+    identityToView[identity] = view
+  }
+
+  internal func configureStreamingAttachments(
+    thought: (identity: InkBlockIdentity, view: UIView)?,
+    text: (identity: InkBlockIdentity, view: UIView)?
+  ) {
+    streamThoughtIdentity = thought?.identity
+    streamThoughtView = thought?.view
+    streamTextIdentity = text?.identity
+    streamTextView = text?.view
+  }
+
+  internal func clearStreamingAttachments() {
+    streamThoughtIdentity = nil
+    streamThoughtView = nil
+    streamTextIdentity = nil
+    streamTextView = nil
+  }
+
+  /// 单槽保留高更新：只改写对应 cache 项，再宣告 ICS 一次；不清整表。
+  internal func updateReservedHeightSlot(identity: InkBlockIdentity, view: UIView) {
+    reservedHeightSlotUpdateCount += 1
+    let width = lastMeasuredWidth > 0 ? lastMeasuredWidth : resolvedWidth
+    guard width > 0 else { return }
+
+    let size = view.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
+    slotCache[MeasurementCacheKey(identity: identity, widthBits: UInt64(width.bitPattern))] = size
+
+    if let index = layoutEntries.firstIndex(where: { $0.identity == identity }) {
+      layoutEntries[index].size = size
+      cachedTotalHeightForTesting = layoutEntries.reduce(0) { $0 + $1.size.height }
+    }
+
+    invalidateIntrinsicContentSize()
+    superview?.setNeedsLayout()
+  }
+
+  internal func invalidateMeasurementSlot(identity: InkBlockIdentity, width: CGFloat? = nil) {
+    let measureWidth = width ?? lastMeasuredWidth
+    guard measureWidth > 0 else { return }
+    slotCache.removeValue(forKey: MeasurementCacheKey(identity: identity, widthBits: UInt64(measureWidth.bitPattern)))
+  }
+
   func updateBlocks(
     _ blocks: [InkRenderableBlock],
     configuration: InkConfiguration,
-    onThoughtCollapseChanged: ((Int, Bool) -> Void)? = nil
+    documentEpoch: UInt64 = 0,
+    onThoughtCollapseChanged: (@MainActor (Int, Bool) -> Void)? = nil
   ) {
-    blockViews.forEach { $0.removeFromSuperview() }
-    blockViews.removeAll()
+    let configurationChanged = currentConfiguration.map { !$0.isSemanticallyEqualTo(configuration) } ?? true
+    if configurationChanged {
+      identityToView.removeAll()
+      contentFingerprints.removeAll()
+      invalidateAllMeasurementSlots()
+    }
+
     currentConfiguration = configuration
+    clearStreamingAttachments()
+
+    var newBlockViews: [UIView] = []
+    var newIdentities: [InkBlockIdentity] = []
+    var newIdentityMap: [InkBlockIdentity: UIView] = [:]
+    var newFingerprints: [InkBlockIdentity: UInt64] = [:]
+    var dirtySlotIdentities: Set<InkBlockIdentity> = []
 
     for (index, block) in blocks.enumerated() {
-      let view = block.makeView()
+      let identity = block.resolvedIdentity(documentEpoch: documentEpoch, blockIndex: index)
+      let fingerprint = block.contentFingerprint(documentEpoch: documentEpoch, blockIndex: index)
+      newFingerprints[identity] = fingerprint
+
+      let view: UIView
+      if let existing = identityToView[identity], contentFingerprints[identity] == fingerprint {
+        view = existing
+      } else if let existing = identityToView[identity] {
+        block.updateExistingView(existing)
+        view = existing
+        dirtySlotIdentities.insert(identity)
+      } else {
+        view = block.makeView()
+        dirtySlotIdentities.insert(identity)
+      }
+
+      wireHeightInvalidation(for: view, identity: identity)
 
       if let thoughtView = view as? InkThoughtBlockView {
         thoughtView.onToggleCollapse = { [weak self] collapsed in
           onThoughtCollapseChanged?(index, collapsed)
-          self?.setNeedsLayout()
-          self?.invalidateIntrinsicContentSize()
-          self?.superview?.setNeedsLayout()
-          self?.superview?.invalidateIntrinsicContentSize()
+          self?.updateReservedHeightSlot(identity: identity, view: thoughtView)
         }
       }
-      addSubview(view)
-      blockViews.append(view)
+
+      if view.superview !== self {
+        addSubview(view)
+      }
+
+      newBlockViews.append(view)
+      newIdentities.append(identity)
+      newIdentityMap[identity] = view
     }
 
-    setNeedsLayout()
-    invalidateIntrinsicContentSize()
+    let removedIdentities = Set(contentFingerprints.keys).subtracting(newFingerprints.keys)
+    for identity in removedIdentities {
+      slotCache = slotCache.filter { $0.key.identity != identity }
+    }
+    for identity in dirtySlotIdentities {
+      invalidateMeasurementSlot(identity: identity)
+    }
+
+    let removedViews = Set(blockViews).subtracting(newBlockViews)
+    for view in removedViews {
+      view.removeFromSuperview()
+    }
+
+    blockViews = newBlockViews
+    blockIdentities = newIdentities
+    identityToView = newIdentityMap
+    contentFingerprints = newFingerprints
+
+    applyRenderEnvironmentTraits(from: configuration)
+
+    if configurationChanged || !removedIdentities.isEmpty || !dirtySlotIdentities.isEmpty {
+      setNeedsLayout()
+      invalidateIntrinsicContentSize()
+    }
+  }
+
+  override func invalidateIntrinsicContentSize() {
+    if isInsideLayoutSubviews {
+      layoutSubviewsICSInvalidateCount += 1
+    }
+    super.invalidateIntrinsicContentSize()
   }
 
   override var intrinsicContentSize: CGSize {
-    CGSize(width: UIView.noIntrinsicMetric, height: calculateHeight(for: resolvedWidth))
+    let width = resolvedWidth
+    guard width > 0 else {
+      return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+    }
+    let height = measureContent(for: width)
+    return CGSize(width: UIView.noIntrinsicMetric, height: height)
   }
 
   override func sizeThatFits(_ size: CGSize) -> CGSize {
     let width = size.width > 0 ? size.width : resolvedWidth
-    return CGSize(width: width, height: calculateHeight(for: width))
+    guard width > 0 else { return .zero }
+    let height = measureContent(for: width)
+    return CGSize(width: width, height: height)
   }
 
   override func layoutSubviews() {
@@ -79,68 +245,103 @@ final class InkMarkdownContainerView: UIView {
     let width = bounds.width
     guard width > 0 else { return }
 
-    lastLayoutWidth = width
-    layoutBlocks(for: width)
+    isInsideLayoutSubviews = true
+    defer { isInsideLayoutSubviews = false }
+
+    var y: CGFloat = 0
+    for entry in layoutEntries {
+      guard let view = entry.view else { continue }
+      view.frame = CGRect(x: 0, y: y, width: width, height: entry.size.height)
+      y += entry.size.height
+    }
   }
 
   // MARK: - Private Helpers
 
   private var resolvedWidth: CGFloat {
-    if bounds.width > 0 {
-      return bounds.width
-    }
-    if let superviewWidth = superview?.bounds.width, superviewWidth > 0 {
-      return superviewWidth
-    }
-    // 首次测量尚无父容器宽度时的临时值；后续 layout 会按实际宽度重新失效尺寸。
-    return 320
+    if bounds.width > 0 { return bounds.width }
+    if let superviewWidth = superview?.bounds.width, superviewWidth > 0 { return superviewWidth }
+    return 0
   }
 
-  private func calculateHeight(for width: CGFloat) -> CGFloat {
-    if !blockViews.isEmpty {
-      let measurements = measuredBlocks(for: width)
-      return measurements.reduce(CGFloat.zero) { $0 + $1.size.height }
+  @discardableResult
+  private func measureContent(for width: CGFloat) -> CGFloat {
+    guard width > 0 else { return 0 }
+
+    if abs(lastMeasuredWidth - width) > 0.1 {
+      slotCache = slotCache.filter { $0.key.widthBits == UInt64(width.bitPattern) }
+      lastMeasuredWidth = width
     }
 
-    return stackedSubviewsHeight(for: width)
-  }
-
-  private func layoutBlocks(for width: CGFloat) {
-    if !blockViews.isEmpty {
-      var y: CGFloat = 0
-      let measurements = measuredBlocks(for: width)
-      for measurement in measurements {
-        measurement.view.frame = CGRect(x: 0, y: y, width: width, height: measurement.size.height)
-        y += measurement.size.height
-      }
-      return
-    }
-
-    layoutStackedSubviews(for: width)
-  }
-
-  private func stackedSubviewsHeight(for width: CGFloat) -> CGFloat {
+    blockMeasurementInvocationCount = 0
+    var entries: [LayoutEntry] = []
     var total: CGFloat = 0
-    for subview in subviews {
-      let size = subview.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+
+    for (identity, view) in orderedMeasureTargets() {
+      let key = MeasurementCacheKey(identity: identity, widthBits: UInt64(width.bitPattern))
+      let size: CGSize
+      if let cached = slotCache[key] {
+        size = cached
+      } else {
+        blockMeasurementInvocationCount += 1
+        size = view.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
+        slotCache[key] = size
+      }
+      entries.append(LayoutEntry(identity: identity, view: view, size: size))
       total += size.height
     }
+
+    layoutEntries = entries
+    cachedTotalHeightForTesting = total
     return total
   }
 
-  private func layoutStackedSubviews(for width: CGFloat) {
-    var y: CGFloat = 0
-    for subview in subviews {
-      let size = subview.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-      subview.frame = CGRect(x: 0, y: y, width: width, height: size.height)
-      y += size.height
+  private func orderedMeasureTargets() -> [(InkBlockIdentity, UIView)] {
+    var targets: [(InkBlockIdentity, UIView)] = []
+    if let identity = streamThoughtIdentity, let view = streamThoughtView {
+      targets.append((identity, view))
+    }
+    if let identity = streamTextIdentity, let view = streamTextView {
+      targets.append((identity, view))
+    }
+    for (identity, view) in zip(blockIdentities, blockViews) {
+      targets.append((identity, view))
+    }
+    return targets
+  }
+
+  private func wireHeightInvalidation(for view: UIView, identity: InkBlockIdentity) {
+    if let imageView = view as? InkImageBlockView {
+      imageView.onReservedHeightChanged = { [weak self, weak imageView] in
+        guard let self, let imageView else { return }
+        self.updateReservedHeightSlot(identity: identity, view: imageView)
+      }
+    }
+    if let thoughtView = view as? InkThoughtBlockView {
+      thoughtView.onReservedHeightChanged = { [weak self, weak thoughtView] in
+        guard let self, let thoughtView else { return }
+        self.updateReservedHeightSlot(identity: identity, view: thoughtView)
+      }
     }
   }
 
-  private func measuredBlocks(for width: CGFloat) -> [(view: UIView, size: CGSize)] {
-    blockViews.map { view in
-      (view, view.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)))
+  private func applyRenderEnvironmentTraits(from configuration: InkConfiguration) {
+    let environment = configuration.renderEnvironment
+    var traits: [UITraitCollection] = []
+    if environment.userInterfaceStyle != .unspecified {
+      traits.append(UITraitCollection(userInterfaceStyle: environment.userInterfaceStyle))
+    }
+    if environment.contentSizeCategory != .unspecified {
+      traits.append(UITraitCollection(preferredContentSizeCategory: environment.contentSizeCategory))
+    }
+    appliedEnvironmentTraits = traits.isEmpty ? nil : UITraitCollection(traitsFrom: traits)
+
+    if environment != lastAppliedRenderEnvironment {
+      lastAppliedRenderEnvironment = environment
+      if !traits.isEmpty {
+        invalidateAllMeasurementSlots()
+        setNeedsLayout()
+      }
     }
   }
 }
-

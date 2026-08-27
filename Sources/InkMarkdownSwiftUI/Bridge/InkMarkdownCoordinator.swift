@@ -3,10 +3,11 @@
 //  InkMarkdownSwiftUI
 //
 
+@_spi(InkMarkdown) import InkMarkdown
 import UIKit
-import InkMarkdown
 
 /// `InkMarkdownRepresentable` 的协调器，负责 UIKit 容器、流式文本视图与会话 attachment。
+@MainActor
 final class InkMarkdownCoordinator {
 
   weak var containerView: InkMarkdownContainerView?
@@ -16,80 +17,121 @@ final class InkMarkdownCoordinator {
 
   private var lastRenderedMarkdown: String?
   private var lastRenderedConfiguration: InkConfiguration?
+  private var lastContentSizeCategory: UIContentSizeCategory?
+  private var lastDocumentEpoch: UInt64?
 
-  /// attach 前宿主已注册的 `onDisplayUpdate`；detach 时还原，避免 dismantle 杀死 Chat pulse。
   private var hostDisplayUpdate: (() -> Void)?
 
-  /// 使用当前完整输入和配置生成静态块级视图。
-  ///
-  /// 仅当 Markdown 源码或渲染配置（外观/环境/扩展）发生语义变化，或容器尚未有渲染块时重新生成；
-  /// 避免 SwiftUI 布局和更新传递中无意义的重复解析与 TextKit 对象分配。
+  private lazy var defaultLinkTapHandler: @MainActor @Sendable (URL, UIView) -> Bool = { url, _ in
+    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+    return true
+  }
+
+  func resolvedConfiguration(_ configuration: InkConfiguration) -> InkConfiguration {
+    var effective = configuration
+    if effective.linkTapHandler == nil {
+      effective.linkTapHandler = defaultLinkTapHandler
+    }
+    return effective
+  }
+
   func updateStatic(markdown: String, configuration: InkConfiguration) {
-    cleanupStreaming()
+    cleanupStreamingAttachments()
+
+    let effective = resolvedConfiguration(configuration)
+    let currentCategory = effective.renderEnvironment.contentSizeCategory != .unspecified
+      ? effective.renderEnvironment.contentSizeCategory
+      : UITraitCollection.current.preferredContentSizeCategory
+    let epoch = InkDocumentEpoch.hash(markdown)
 
     if lastRenderedMarkdown == markdown,
        let lastConfig = lastRenderedConfiguration,
-       lastConfig.isSemanticallyEqualTo(configuration),
+       lastConfig.isSemanticallyEqualTo(effective),
+       lastContentSizeCategory == currentCategory,
+       lastDocumentEpoch == epoch,
        containerView?.hasBlocks == true {
       return
     }
 
     lastRenderedMarkdown = markdown
-    lastRenderedConfiguration = configuration
+    lastRenderedConfiguration = effective
+    lastContentSizeCategory = currentCategory
+    lastDocumentEpoch = epoch
 
-    let blocks = InkBlockRenderer.render(markdown, configuration: configuration)
-    containerView?.updateBlocks(blocks, configuration: configuration)
+    let blocks = InkBlockRenderer.render(markdown, configuration: effective)
+    containerView?.updateBlocks(blocks, configuration: effective, documentEpoch: epoch)
   }
 
-  /// 直接更新已解析块列表（promotion 快照 / Chat 终态，不重新 parse Markdown）。
   func updateBlocks(
     _ blocks: [InkRenderableBlock],
     configuration: InkConfiguration,
-    session: InkMarkdownRenderSession? = nil
+    session: InkMarkdownRenderSession? = nil,
+    documentEpoch: UInt64? = nil
   ) {
-    cleanupStreaming()
+    cleanupStreamingAttachments()
 
+    let effective = resolvedConfiguration(configuration)
     lastRenderedMarkdown = nil
-    lastRenderedConfiguration = configuration
+    lastRenderedConfiguration = effective
+    lastDocumentEpoch = documentEpoch
 
     containerView?.updateBlocks(
       blocks,
-      configuration: configuration,
+      configuration: effective,
+      documentEpoch: documentEpoch ?? session?.documentEpoch ?? 0,
       onThoughtCollapseChanged: session.map { sess in
         { index, isCollapsed in sess.setPromotedThoughtCollapsed(at: index, isCollapsed: isCollapsed) }
       }
     )
   }
 
-  /// 驱动流式渲染会话并管理其 `UITextView` attachment。
   func updateStreaming(session: InkMarkdownRenderSession) {
-    guard !session.isPromoted else {
+    if session.isPromoted {
       let displayedThoughtCollapsed = currentSession === session ? streamThoughtView?.isCollapsed : nil
       session.syncStreamingThoughtCollapseIntoBlocks(streamViewCollapsed: displayedThoughtCollapsed)
-      updateBlocks(session.blocks, configuration: session.configuration, session: session)
+      cleanupStreamingAttachments()
+
+      if let thoughtView = streamThoughtView,
+         let thoughtBlock = session.blocks.first(where: { $0 is InkThoughtBlock }) as? InkThoughtBlock,
+         let identity = thoughtBlock.blockIdentity,
+         let container = containerView {
+        container.preRegisterView(thoughtView, for: identity)
+      }
+
+      updateBlocks(
+        session.blocks,
+        configuration: session.configuration,
+        session: session,
+        documentEpoch: session.documentEpoch
+      )
+      streamThoughtView = nil
       return
     }
+
     guard let container = containerView else { return }
 
     let textView = makeOrReuseStreamTextView(in: container)
 
     if currentSession !== session {
       detachFromCurrentSession()
+      container.invalidateAllMeasurementSlots()
       currentSession = session
       session.bindTextView(textView)
       chainDisplayUpdate(for: session)
     }
 
-    updateStreamingThoughtView(for: session, in: container)
+    applyStreamingThoughtView(for: session, in: container)
+    syncStreamingAttachments(for: session)
+    syncStreamTextContainerWidth(in: container)
+    syncStreamingReservedHeights(for: session, in: container)
     container.setNeedsLayout()
-    container.invalidateIntrinsicContentSize()
   }
 
-  /// 释放对容器视图及会话的引用并重置内部状态。
   func teardown() {
-    cleanupStreaming()
+    cleanupStreamingAttachments()
     lastRenderedMarkdown = nil
     lastRenderedConfiguration = nil
+    lastDocumentEpoch = nil
     containerView = nil
   }
 
@@ -99,8 +141,29 @@ final class InkMarkdownCoordinator {
     hostDisplayUpdate = session.onDisplayUpdate
     session.onDisplayUpdate = { [weak self] in
       guard let self, let container = self.containerView else { return }
-      container.setNeedsLayout()
-      container.invalidateIntrinsicContentSize()
+
+      guard let streamingSession = self.currentSession else {
+        self.hostDisplayUpdate?()
+        return
+      }
+
+      switch streamingSession.lastDisplayUpdateTarget {
+      case .streamingThought:
+        if streamingSession.streamingThought != nil {
+          self.applyStreamingThoughtView(for: streamingSession, in: container)
+          if let thoughtView = self.streamThoughtView,
+             let identity = streamingSession.streamingThought?.blockIdentity {
+            container.updateReservedHeightSlot(identity: identity, view: thoughtView)
+          }
+        }
+      case .streamText:
+        if let textView = self.streamTextView {
+          self.syncStreamTextContainerWidth(in: container)
+          let identity = self.streamTextIdentity(for: streamingSession)
+          container.updateReservedHeightSlot(identity: identity, view: textView)
+        }
+      }
+
       self.hostDisplayUpdate?()
     }
   }
@@ -112,36 +175,61 @@ final class InkMarkdownCoordinator {
     session.unbindTextView()
   }
 
-  private func updateStreamingThoughtView(for session: InkMarkdownRenderSession, in container: InkMarkdownContainerView) {
-    if let thoughtBlock = session.streamingThought {
-      if let existing = streamThoughtView {
-        existing.apply(
-          thought: thoughtBlock.thought,
-          isComplete: thoughtBlock.isComplete,
-          isCollapsed: thoughtBlock.isCollapsed,
-          config: thoughtBlock.config,
-          renderConfiguration: thoughtBlock.renderConfiguration
-        )
-      } else {
-        let view = InkThoughtBlockView(
-          thought: thoughtBlock.thought,
-          isComplete: thoughtBlock.isComplete,
-          config: thoughtBlock.config,
-          renderConfiguration: thoughtBlock.renderConfiguration,
-          isCollapsed: thoughtBlock.isCollapsed
-        )
-        view.onToggleCollapse = { [weak session, weak container] collapsed in
-          session?.setStreamingThoughtCollapsed(collapsed)
-          container?.setNeedsLayout()
-          container?.invalidateIntrinsicContentSize()
-        }
-        streamThoughtView = view
-        container.insertSubview(view, at: 0)
+  private func applyStreamingThoughtView(for session: InkMarkdownRenderSession, in container: InkMarkdownContainerView) {
+    guard let thoughtBlock = session.streamingThought else {
+      if streamThoughtView != nil {
+        streamThoughtView?.removeFromSuperview()
+        streamThoughtView = nil
       }
-    } else {
-      streamThoughtView?.removeFromSuperview()
-      streamThoughtView = nil
+      return
     }
+
+    guard let identity = thoughtBlock.blockIdentity else { return }
+
+    if let existing = streamThoughtView {
+      thoughtBlock.updateExistingView(existing)
+    } else {
+      let view = thoughtBlock.makeView() as! InkThoughtBlockView
+      view.onToggleCollapse = { [weak session, weak container, weak view] collapsed in
+        session?.setStreamingThoughtCollapsed(collapsed)
+        guard let container, let view, let identity = session?.streamingThought?.blockIdentity else { return }
+        container.updateReservedHeightSlot(identity: identity, view: view)
+      }
+      view.onReservedHeightChanged = { [weak session, weak container, weak view] in
+        guard let container, let view, let identity = session?.streamingThought?.blockIdentity else { return }
+        container.updateReservedHeightSlot(identity: identity, view: view)
+      }
+      streamThoughtView = view
+      container.preRegisterView(view, for: identity)
+      container.insertSubview(view, at: 0)
+    }
+  }
+
+  private func syncStreamingAttachments(for session: InkMarkdownRenderSession) {
+    guard let container = containerView else { return }
+
+    var thoughtPair: (InkBlockIdentity, UIView)?
+    if let thought = session.streamingThought, let view = streamThoughtView, let identity = thought.blockIdentity {
+      thoughtPair = (identity, view)
+    }
+
+    var textPair: (InkBlockIdentity, UIView)?
+    if let textView = streamTextView {
+      textPair = (streamTextIdentity(for: session), textView)
+    }
+
+    container.configureStreamingAttachments(
+      thought: thoughtPair.map { ($0.0, $0.1) },
+      text: textPair.map { ($0.0, $0.1) }
+    )
+  }
+
+  private func streamTextIdentity(for session: InkMarkdownRenderSession) -> InkBlockIdentity {
+    InkBlockIdentity(
+      documentEpoch: session.streamingSlotEpoch,
+      blockIndex: -1,
+      kind: InkStreamingSlotKind.streamText
+    )
   }
 
   private func makeOrReuseStreamTextView(in container: InkMarkdownContainerView) -> UITextView {
@@ -153,6 +241,7 @@ final class InkMarkdownCoordinator {
       newTextView.isEditable = false
       newTextView.isSelectable = true
       newTextView.isScrollEnabled = false
+      newTextView.adjustsFontForContentSizeCategory = true
       newTextView.backgroundColor = .clear
       newTextView.textContainerInset = .zero
       newTextView.textContainer.lineFragmentPadding = 0
@@ -166,12 +255,36 @@ final class InkMarkdownCoordinator {
     return textView
   }
 
-  private func cleanupStreaming() {
+  private func syncStreamTextContainerWidth(in container: InkMarkdownContainerView) {
+    guard let textView = streamTextView else { return }
+    let width = container.effectiveMeasureWidth
+    guard width > 0 else { return }
+    textView.textContainer.size = CGSize(width: width, height: CGFloat.greatestFiniteMagnitude)
+  }
+
+  private func syncStreamingReservedHeights(
+    for session: InkMarkdownRenderSession,
+    in container: InkMarkdownContainerView
+  ) {
+    guard session.state == .streaming, container.effectiveMeasureWidth > 0 else { return }
+    if let thought = session.streamingThought,
+       let view = streamThoughtView,
+       let identity = thought.blockIdentity {
+      container.updateReservedHeightSlot(identity: identity, view: view)
+    }
+    if let textView = streamTextView {
+      container.updateReservedHeightSlot(
+        identity: streamTextIdentity(for: session),
+        view: textView
+      )
+    }
+  }
+
+  private func cleanupStreamingAttachments() {
     detachFromCurrentSession()
     currentSession = nil
-    streamThoughtView?.removeFromSuperview()
-    streamThoughtView = nil
     streamTextView?.removeFromSuperview()
     streamTextView = nil
+    containerView?.clearStreamingAttachments()
   }
 }

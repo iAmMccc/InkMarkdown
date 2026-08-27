@@ -8,7 +8,7 @@
 import Testing
 import SwiftUI
 @testable import InkMarkdownSwiftUI
-import InkMarkdown
+@_spi(InkMarkdown) import InkMarkdown
 
 @Suite("InkConfigurationModifier 契约测试")
 @MainActor

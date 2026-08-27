@@ -63,7 +63,8 @@ public struct InkMarkdownView: View {
   private var resolvedConfiguration: InkConfiguration {
     var resolved = configuration ?? environmentConfiguration ?? .standard
     resolved.renderEnvironment = InkRenderEnvironment(
-      userInterfaceStyle: colorScheme == .dark ? .dark : .light
+      userInterfaceStyle: colorScheme == .dark ? .dark : .light,
+      contentSizeCategory: UITraitCollection.current.preferredContentSizeCategory
     )
     return resolved
   }

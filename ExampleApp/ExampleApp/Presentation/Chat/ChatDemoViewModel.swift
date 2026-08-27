@@ -215,7 +215,6 @@ final class ChatDemoViewModel: ObservableObject {
         promotionCancellable = nil
 
         guard idx < messages.count, messages[idx].isStreaming else { return }
-        session.syncStreamingThoughtCollapseIntoBlocks()
         messages[idx].content = session.currentText
         messages[idx].renderSession = session
         messages[idx].isStreaming = false

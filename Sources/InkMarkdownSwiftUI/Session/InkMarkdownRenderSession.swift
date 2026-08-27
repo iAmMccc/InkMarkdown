@@ -3,9 +3,9 @@
 //  InkMarkdownSwiftUI
 //
 
+@_spi(InkMarkdown) import InkMarkdown
 import Combine
 import UIKit
-import InkMarkdown
 
 /// 流式 Markdown 渲染会话管理类。
 ///
@@ -16,6 +16,7 @@ import InkMarkdown
 /// - Note: `@ObservedObject` 会订阅对象上任意 `@Published` 变更；SwiftUI 入口不得
 ///   `@ObservedObject` 整个 session。`isPromoted` 是唯一会驱动 SwiftUI 换树的发布，
 ///   通过 0-delay default-mode timer 离开当前 view update 后再写入。
+@MainActor
 public final class InkMarkdownRenderSession: ObservableObject {
 
   /// 流式渲染会话状态。
@@ -54,6 +55,25 @@ public final class InkMarkdownRenderSession: ObservableObject {
 
   /// 流式 PREFIX 思考块快照；供 Coordinator 挂载 `InkThoughtBlockView`。
   internal private(set) var streamingThought: InkThoughtBlock?
+
+  /// 文档 epoch，供 promotion 终态块 identity 与 diff 使用。
+  internal var documentEpoch: UInt64 {
+    InkDocumentEpoch.hash(currentText)
+  }
+
+  /// 流式 slot 固定 epoch；单条流内不变，reset/cancel 后递增，禁止编入 `hash(currentText)`。
+  internal private(set) var streamingSlotEpoch: UInt64 = 0
+
+  /// 下一条流式会话将使用的 slot epoch（`reset` / `cancel` 后递增）。
+  private var nextStreamingSlotEpoch: UInt64 = 0
+
+  /// 最近一次 `onDisplayUpdate` 应刷新的流式槽位（供 Coordinator 按变化选槽）。
+  internal enum StreamingDisplayUpdateTarget: Sendable {
+    case streamText
+    case streamingThought
+  }
+
+  internal private(set) var lastDisplayUpdateTarget: StreamingDisplayUpdateTarget = .streamText
 
   /// 供契约测试断言 remainder 派生缓冲（SSOT 仍为 `currentText`）。
   internal var streamRemainder: String { remainderText }
@@ -105,7 +125,6 @@ public final class InkMarkdownRenderSession: ObservableObject {
   /// - Parameter environment: 从当前 ``UITraitCollection`` 或 SwiftUI `colorScheme` 等
   ///   捕获的 trait 快照；须与宿主界面实际外观一致。
   public func updateRenderEnvironment(_ environment: InkRenderEnvironment) {
-    precondition(Thread.isMainThread, "InkMarkdownRenderSession 必须在主线程调用")
     guard configuration.renderEnvironment != environment else { return }
 
     configuration.renderEnvironment = environment
@@ -141,10 +160,10 @@ public final class InkMarkdownRenderSession: ObservableObject {
   /// PREFIX 思考标签进入 `streamingThought`，仅 remainder delta 喂入 renderer。
   /// - Parameter text: 新到达的 Markdown 文本片段。
   public func append(_ text: String) {
-    precondition(Thread.isMainThread, "InkMarkdownRenderSession 必须在主线程调用")
     guard state == .idle || state == .streaming else { return }
     if state == .idle {
       state = .streaming
+      streamingSlotEpoch = nextStreamingSlotEpoch
     }
     let remainingCapacity = InkStreamRenderer.maximumSourceLength - currentText.count
     guard remainingCapacity > 0 else { return }
@@ -167,8 +186,8 @@ public final class InkMarkdownRenderSession: ObservableObject {
         renderer.append(remainderDelta)
       } else if hadStreamingThought,
                 streamingThought?.thought != previousThoughtBody {
-        // 仅思考正文增长、remainder 仍为空时，renderer 不会触发高度回调。
-        onDisplayUpdate?()
+        // 思考正文增长：由 Coordinator 单槽 updateReservedHeightSlot 处理，不清整表 cache。
+        notifyDisplayUpdate(target: .streamingThought)
       }
     }
 
@@ -180,7 +199,6 @@ public final class InkMarkdownRenderSession: ObservableObject {
   /// 状态会依次经过 `finishing`、`displayingFinalContent`，最后在完成 Block Promotion 后进入
   /// `finished`。若当前不处于 `streaming` 状态，此调用为 no-op。
   public func finish() {
-    precondition(Thread.isMainThread, "InkMarkdownRenderSession 必须在主线程调用")
     guard state == .streaming else { return }
     isDisplayPaused = false
     state = .finishing
@@ -192,7 +210,6 @@ public final class InkMarkdownRenderSession: ObservableObject {
   /// 取消会使底层 renderer 丢弃进行中的后台解析结果。若会话已终态、已取消或仍为空闲，
   /// 此调用为 no-op。
   public func cancel() {
-    precondition(Thread.isMainThread, "InkMarkdownRenderSession 必须在主线程调用")
     guard state == .streaming || state == .finishing || state == .displayingFinalContent else { return }
     invalidatePendingPublishedMutations()
     state = .cancelled
@@ -204,7 +221,6 @@ public final class InkMarkdownRenderSession: ObservableObject {
   ///
   /// 清空唯一输入源、终态块列表及底层 renderer；随后可安全复用同一会话。
   public func reset() {
-    precondition(Thread.isMainThread, "InkMarkdownRenderSession 必须在主线程调用")
     invalidatePendingPublishedMutations()
     renderer.reset()
     setupCallbacks()
@@ -243,7 +259,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
   }
 
   /// 将流式思考块折叠态合并进终态 blocks（promotion 前最后一道同步）。
-  public func syncStreamingThoughtCollapseIntoBlocks(streamViewCollapsed: Bool? = nil) {
+  internal func syncStreamingThoughtCollapseIntoBlocks(streamViewCollapsed: Bool? = nil) {
     let collapsed = streamViewCollapsed ?? streamingThought?.isCollapsed
     guard let collapsed else { return }
     for index in blocks.indices {
@@ -278,13 +294,19 @@ public final class InkMarkdownRenderSession: ObservableObject {
   private func updateStreamingThought(from split: InkThoughtScanner.StreamingSplit) {
     let previousCollapsed = streamingThought?.isCollapsed
     if let thoughtResult = split.thought {
-      streamingThought = InkThoughtBlock(
+      var block = InkThoughtBlock(
         thought: thoughtResult.thoughtBody,
         isComplete: thoughtResult.isComplete,
         config: configuration.appearance.thought,
         renderConfiguration: configuration,
         isCollapsed: previousCollapsed
       )
+      block.blockIdentity = InkBlockIdentity(
+        documentEpoch: streamingSlotEpoch,
+        blockIndex: -2,
+        kind: ObjectIdentifier(InkThoughtBlock.self).hashValue
+      )
+      streamingThought = block
       hadStreamingThought = true
     } else {
       streamingThought = nil
@@ -296,6 +318,14 @@ public final class InkMarkdownRenderSession: ObservableObject {
     streamingThought = nil
     remainderText = ""
     hadStreamingThought = false
+    lastDisplayUpdateTarget = .streamText
+    nextStreamingSlotEpoch += 1
+    streamingSlotEpoch = nextStreamingSlotEpoch
+  }
+
+  private func notifyDisplayUpdate(target: StreamingDisplayUpdateTarget) {
+    lastDisplayUpdateTarget = target
+    onDisplayUpdate?()
   }
 
   /// 作废并清空 hopper 上排队的 deferred `@Published` 写入。
@@ -321,7 +351,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
 
   private func setupCallbacks() {
     renderer.onDisplayUpdate = { [weak self] in
-      self?.onDisplayUpdate?()
+      self?.notifyDisplayUpdate(target: .streamText)
     }
 
     renderer.onFinishParse = { [weak self] in

@@ -5,6 +5,7 @@
 
 import Combine
 import Foundation
+import InkMarkdown
 import InkMarkdownSwiftUI
 import UIKit
 

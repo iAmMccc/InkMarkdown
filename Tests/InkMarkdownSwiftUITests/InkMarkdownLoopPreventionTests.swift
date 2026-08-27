@@ -9,7 +9,7 @@ import Testing
 import UIKit
 import SwiftUI
 @testable import InkMarkdownSwiftUI
-import InkMarkdown
+@_spi(InkMarkdown) import InkMarkdown
 
 @Suite("InkMarkdown SwiftUI 混编防死循环与尺寸测量测试")
 @MainActor

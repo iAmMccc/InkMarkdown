@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import InkMarkdown
 import InkMarkdownSwiftUI
 
 /// 展示宿主驱动 `InkMarkdownRenderSession` 的流式 Markdown 用法（支持本地模拟与真实 OpenAI SSE 请求）。

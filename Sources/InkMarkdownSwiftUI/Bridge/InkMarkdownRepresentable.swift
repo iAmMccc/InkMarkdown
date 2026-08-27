@@ -2,11 +2,9 @@
 //  InkMarkdownRepresentable.swift
 //  InkMarkdownSwiftUI
 //
-//  Created by InkMarkdown on 2026/8/18.
-//
 
+@_spi(InkMarkdown) import InkMarkdown
 import SwiftUI
-import InkMarkdown
 
 /// 渲染模式定义。
 enum RenderMode {
@@ -26,6 +24,9 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
   let configuration: InkConfiguration
   /// promotion 代际；仅用于在 `isPromoted` 翻转时触发 `updateUIView`，不参与渲染语义。
   var promotionGeneration: Bool = false
+
+  @Environment(\.sizeCategory) private var sizeCategory
+  @Environment(\.colorScheme) private var colorScheme
 
   /// 便捷静态初始化器。
   init(markdown: String, configuration: InkConfiguration) {
@@ -47,15 +48,9 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
   }
 
   func updateUIView(_ uiView: InkMarkdownContainerView, context: Context) {
-    var effectiveConfig = configuration
-    // 在 SwiftUI 环境中，若未设置自定义 linkTapHandler，提供安全的默认跳转逻辑，
-    // 避免底层 UITextView 在 UIHostingController 中触发原生预览而造成 AttributeGraph 依赖循环。
-    if effectiveConfig.linkTapHandler == nil {
-      effectiveConfig.linkTapHandler = { url, _ in
-        UIApplication.shared.open(url, options: [:], completionHandler: nil)
-        return true
-      }
-    }
+    let effectiveConfig = context.coordinator.resolvedConfiguration(
+      configurationWithEnvironmentSnapshot(configuration)
+    )
 
     switch mode {
     case .static(let markdown):
@@ -79,5 +74,32 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
 
   static func dismantleUIView(_ uiView: InkMarkdownContainerView, coordinator: InkMarkdownCoordinator) {
     coordinator.teardown()
+  }
+
+  private func configurationWithEnvironmentSnapshot(_ base: InkConfiguration) -> InkConfiguration {
+    var snapshot = base
+    snapshot.renderEnvironment = InkRenderEnvironment(
+      userInterfaceStyle: colorScheme == .dark ? .dark : .light,
+      contentSizeCategory: uiContentSizeCategory(from: sizeCategory)
+    )
+    return snapshot
+  }
+
+  private func uiContentSizeCategory(from swiftUICategory: ContentSizeCategory) -> UIContentSizeCategory {
+    switch swiftUICategory {
+    case .extraSmall: return .extraSmall
+    case .small: return .small
+    case .medium: return .medium
+    case .large: return .large
+    case .extraLarge: return .extraLarge
+    case .extraExtraLarge: return .extraExtraLarge
+    case .extraExtraExtraLarge: return .extraExtraExtraLarge
+    case .accessibilityMedium: return .accessibilityMedium
+    case .accessibilityLarge: return .accessibilityLarge
+    case .accessibilityExtraLarge: return .accessibilityExtraLarge
+    case .accessibilityExtraExtraLarge: return .accessibilityExtraExtraLarge
+    case .accessibilityExtraExtraExtraLarge: return .accessibilityExtraExtraExtraLarge
+    @unknown default: return .large
+    }
   }
 }

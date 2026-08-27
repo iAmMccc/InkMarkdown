@@ -15,6 +15,7 @@ import InkMarkdown
 ///
 /// - Important: 本视图始终通过 `.streaming(session:)` 驱动 Representable，不在 body 中
 ///   切换为无 session 写回的 `.blocks` 模式，以免丢失 `isCollapsed` 等交互状态。
+/// - Important: 宿主勿 `@ObservedObject` 整份 session；仅 `isPromoted` 会驱动 SwiftUI 换树。
 ///
 /// ### 使用示例
 /// ```swift
@@ -40,6 +41,7 @@ public struct InkStreamMarkdownView: View {
   private let session: InkMarkdownRenderSession
   @State private var isPromoted: Bool
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.sizeCategory) private var sizeCategory
 
   /// 创建一个流式 Markdown 渲染视图。
   ///
@@ -66,14 +68,34 @@ public struct InkStreamMarkdownView: View {
     )
     .onReceive(session.$isPromoted) { isPromoted = $0 }
     .onAppear(perform: updateRenderEnvironment)
-    .onChange(of: colorScheme) { _ in
-      updateRenderEnvironment()
-    }
+    .onChange(of: colorScheme) { _ in updateRenderEnvironment() }
+    .onChange(of: sizeCategory) { _ in updateRenderEnvironment() }
   }
 
   private func updateRenderEnvironment() {
     session.updateRenderEnvironment(
-      InkRenderEnvironment(userInterfaceStyle: colorScheme == .dark ? .dark : .light)
+      InkRenderEnvironment(
+        userInterfaceStyle: colorScheme == .dark ? .dark : .light,
+        contentSizeCategory: uiContentSizeCategory(from: sizeCategory)
+      )
     )
+  }
+
+  private func uiContentSizeCategory(from swiftUICategory: ContentSizeCategory) -> UIContentSizeCategory {
+    switch swiftUICategory {
+    case .extraSmall: return .extraSmall
+    case .small: return .small
+    case .medium: return .medium
+    case .large: return .large
+    case .extraLarge: return .extraLarge
+    case .extraExtraLarge: return .extraExtraLarge
+    case .extraExtraExtraLarge: return .extraExtraExtraLarge
+    case .accessibilityMedium: return .accessibilityMedium
+    case .accessibilityLarge: return .accessibilityLarge
+    case .accessibilityExtraLarge: return .accessibilityExtraLarge
+    case .accessibilityExtraExtraLarge: return .accessibilityExtraExtraLarge
+    case .accessibilityExtraExtraExtraLarge: return .accessibilityExtraExtraExtraLarge
+    @unknown default: return .large
+    }
   }
 }
