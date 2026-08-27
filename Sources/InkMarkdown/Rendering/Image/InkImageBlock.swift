@@ -6,15 +6,48 @@ import UIKit
 /// 使用 `loadToken` 丢弃过期的异步回调，避免复用或快速重配时错图。
 ///
 /// 须在主线程使用：内部依赖 ``InkImageStore``（``@MainActor``）。
-public final class InkImageBlock: UIView, InkRenderableBlock {
-
-  /// 规范化后的图片来源。
+public struct InkImageBlock: InkRenderableBlock {
+  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
   public let source: ImageSource
+  private let rendering: InkImageRendering
 
+  public init(source: ImageSource, rendering: InkImageRendering) {
+    self.source = source
+    self.rendering = rendering
+  }
+
+  @MainActor
+  public func makeView() -> UIView {
+    InkImageBlockView(source: source, store: .shared, rendering: rendering)
+  }
+
+  @MainActor
+  public func updateExistingView(_ view: UIView) {
+    guard view is InkImageBlockView else { return }
+    view.setNeedsLayout()
+  }
+
+  @MainActor
+  @_spi(InkMarkdown)
+  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
+    InkFingerprint.combine(
+      documentEpoch,
+      UInt64(bitPattern: Int64(blockIndex)),
+      InkFingerprint.hash(source.rawURL.absoluteString)
+    )
+  }
+}
+
+public final class InkImageBlockView: UIView {
+  public let source: ImageSource
+  /// 保留高变化时通知宿主 adapter；由 SwiftUI/UIKit adapter 绑定，非公开渲染契约。
+  public var onReservedHeightChanged: (() -> Void)?
+
+  private var lastReservedHeight: CGFloat = -1
   private let store: InkImageStore
   private let rendering: InkImageRendering
   private var loadToken: UUID = UUID()
-  private var subscription: InkImageStore.ImageLoadSubscription?
+  nonisolated(unsafe) private var subscription: InkImageStore.ImageLoadSubscription?
   private var isConfigured = false
   private var configuredMaxWidth: CGFloat = 0
   private var failureContentView: UIView?
@@ -35,10 +68,6 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     return v
   }()
 
-  /// - Parameters:
-  ///   - source: 图片来源。
-  ///   - store: 图片状态管理器（可由外部注入，或传入 ``InkImageStore/shared``）。
-  ///   - rendering: 图片渲染配置。
   public init(
     source: ImageSource,
     store: InkImageStore,
@@ -49,12 +78,6 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     self.rendering = rendering
     super.init(frame: .zero)
     setupViews()
-  }
-
-  /// 使用共享 Store 创建（须在主线程调用）。
-  @MainActor
-  public convenience init(source: ImageSource, rendering: InkImageRendering) {
-    self.init(source: source, store: .shared, rendering: rendering)
   }
 
   public required init?(coder: NSCoder) {
@@ -196,9 +219,17 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     placeholderView.isHidden = true
     imageView.isHidden = false
     imageView.image = img
-    invalidateIntrinsicContentSize()
+    notifyReservedHeightChangedIfNeeded(maxWidth: maxWidth)
     setNeedsLayout()
     rendering.onLoadFinished?(source, img)
+  }
+
+  private func notifyReservedHeightChangedIfNeeded(maxWidth: CGFloat? = nil) {
+    let width = maxWidth ?? resolvedMaxWidth()
+    let height = sizeThatFits(CGSize(width: max(width, 1), height: .greatestFiniteMagnitude)).height
+    guard abs(height - lastReservedHeight) > 0.5 else { return }
+    lastReservedHeight = height
+    onReservedHeightChanged?()
   }
 
   private func showPlaceholder(maxWidth: CGFloat) {
@@ -212,7 +243,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     )
     placeholderView.isHidden = false
     imageView.isHidden = true
-    invalidateIntrinsicContentSize()
+    notifyReservedHeightChangedIfNeeded(maxWidth: maxWidth)
   }
 
   private func showError() {
@@ -265,12 +296,13 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     let height = measuredFailureContentHeight(maxWidth: maxWidth)
     cachedFailureContentHeight = height
     failureContentView.frame = CGRect(x: 0, y: 0, width: maxWidth, height: height)
-    invalidateIntrinsicContentSize()
+    notifyReservedHeightChangedIfNeeded(maxWidth: maxWidth)
     setNeedsLayout()
   }
 
   private func makeCompactFailureLabel() -> UILabel {
     let label = UILabel()
+    label.adjustsFontForContentSizeCategory = true
     label.numberOfLines = 0
     label.font = UIFont.systemFont(ofSize: UIFont.labelFontSize)
     label.textColor = UIColor.secondaryLabel
@@ -345,10 +377,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     return CGSize(width: UIView.noIntrinsicMetric, height: 0)
   }
 
-  public func makeView() -> UIView {
-    setNeedsLayout()
-    return self
-  }
+
 
   /// 取消订阅并重置为占位态，供列表复用。
   @MainActor

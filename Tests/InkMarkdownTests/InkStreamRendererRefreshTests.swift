@@ -11,7 +11,7 @@ import UIKit
 // 注意：字符串长度按 UTF-16 单元计（"AB\nCD" = 5 单元）。
 
 /// 变更点完全落在已显示范围之外、且显示长度与 textStorage 一致时：不重写、返回 nil。
-@Test func refreshTextStorage_skipsWhenChangeOutsideVisibleRange() {
+@Test @MainActor func refreshTextStorage_skipsWhenChangeOutsideVisibleRange() {
   let content = NSAttributedString(string: "AB\nCD")
   let storage = NSTextStorage(string: "AB")
   // displayIndex = 2（已显示 "AB"），变更点在 2 之后，textStorage 无需裁剪 → 跳过
@@ -26,7 +26,7 @@ import UIKit
 }
 
 /// 尾部追加：只重写 [refreshLocation, showLength) 一段，已显示前缀原样保留。
-@Test func refreshTextStorage_appendsTailOnly() {
+@Test @MainActor func refreshTextStorage_appendsTailOnly() {
   let content = NSAttributedString(string: "AB\nCD", attributes: [.foregroundColor: UIColor.label])
   // 已显示前缀由同一配置渲染，属性与 content 前缀一致（真实显示链的既成状态）。
   let storage = NSTextStorage(string: "AB", attributes: [.foregroundColor: UIColor.label])
@@ -47,7 +47,7 @@ import UIKit
 }
 
 /// 内容收缩（filter/语法解析使文本变短）：把 textStorage 裁剪到 showLength。
-@Test func refreshTextStorage_truncatesShrunkContent() {
+@Test @MainActor func refreshTextStorage_truncatesShrunkContent() {
   let content = NSAttributedString(string: "AB")
   let storage = NSTextStorage(string: "AB\nCD")
   let range = InkStreamRenderer.refreshTextStorage(
@@ -61,7 +61,7 @@ import UIKit
 }
 
 /// 前缀变化（如段落被重解析成 setext heading）：refreshLocation = 0 → 全量重写。
-@Test func refreshTextStorage_fullRewriteOnPrefixChange() {
+@Test @MainActor func refreshTextStorage_fullRewriteOnPrefixChange() {
   let content = NSAttributedString(string: "**bold**", attributes: [.font: UIFont.boldSystemFont(ofSize: 17)])
   let storage = NSTextStorage(string: "plain", attributes: [.font: UIFont.systemFont(ofSize: 17)])
   let range = InkStreamRenderer.refreshTextStorage(
@@ -75,7 +75,7 @@ import UIKit
 }
 
 /// 端到端：sourceFilter 流式 + 显示链（分帧刷新 seam）收敛到与一次性全量渲染一致。
-@Test func sourceFilterStream_displayChainMatchesFullRender() async throws {
+@Test @MainActor func sourceFilterStream_displayChainMatchesFullRender() async throws {
   let config = InkConfiguration(sourceFilter: { $0.replacingOccurrences(of: "<ref/>", with: "") })
   let renderer = InkStreamRenderer(configuration: config)
   renderer.append("<ref")

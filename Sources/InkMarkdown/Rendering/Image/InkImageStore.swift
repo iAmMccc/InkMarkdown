@@ -29,7 +29,7 @@ public final class InkImageStore {
   public private(set) var configuration: Configuration
 
   /// 进程内共享的默认 Store，供块级 / 行内图片通道在未注入实例时使用。
-  public static let shared = InkImageStore()
+  @MainActor public static let shared = InkImageStore()
 
   // MARK: - 缓存
 

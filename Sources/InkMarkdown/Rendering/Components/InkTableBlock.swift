@@ -2,7 +2,7 @@ import UIKit
 import Markdown
 
 /// 表格布局策略
-public enum InkTableLayoutMode {
+public enum InkTableLayoutMode: Sendable {
   /// 固定宽度，内容换行（适合列少、内容长的场景）
   case wrap
   /// 横向可滑动，单行不换行（适合列多、需要完整展示的场景）
@@ -12,6 +12,7 @@ public enum InkTableLayoutMode {
 
 /// 表格 Block：解析 Markdown Table 后渲染为原生 UIView 表格。
 public struct InkTableBlock: InkRenderableBlock {
+  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
   public let headers: [String]
   public let rows: [[String]]
   public let alignments: [Table.ColumnAlignment?]
@@ -20,12 +21,22 @@ public struct InkTableBlock: InkRenderableBlock {
   /// 完整渲染配置：单元格行内内容据此复用 `inlineSyntaxes` / `linkTapHandler`。
   public var configuration: InkConfiguration
 
+  @MainActor
+  public init(
+    headers: [String],
+    rows: [[String]],
+    alignments: [Table.ColumnAlignment?],
+    layoutMode: InkTableLayoutMode = .wrap
+  ) {
+    self.init(headers: headers, rows: rows, alignments: alignments, layoutMode: layoutMode, configuration: .standard)
+  }
+
   public init(
     headers: [String],
     rows: [[String]],
     alignments: [Table.ColumnAlignment?],
     layoutMode: InkTableLayoutMode = .wrap,
-    configuration: InkConfiguration = .standard
+    configuration: InkConfiguration
   ) {
     self.headers = headers
     self.rows = rows
@@ -35,8 +46,32 @@ public struct InkTableBlock: InkRenderableBlock {
     self.configuration = configuration
   }
 
-  public func makeView() -> UIView {
+  @MainActor public func makeView() -> UIView {
     InkTableBlockView(headers: headers, rows: rows, alignments: alignments, layoutMode: layoutMode, config: config, configuration: configuration)
+  }
+
+  @MainActor
+  public func updateExistingView(_ view: UIView) {
+    guard let tableView = view as? InkTableBlockView else { return }
+    tableView.apply(
+      headers: headers,
+      rows: rows,
+      alignments: alignments,
+      layoutMode: layoutMode,
+      config: config,
+      configuration: configuration
+    )
+  }
+
+  @MainActor
+  @_spi(InkMarkdown)
+  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
+    InkFingerprint.combine(
+      documentEpoch,
+      UInt64(bitPattern: Int64(blockIndex)),
+      InkFingerprint.hash(headers.joined(separator: "\u{1f}")),
+      InkFingerprint.hash(rows.flatMap { $0 }.joined(separator: "\u{1f}"))
+    )
   }
 }
 
@@ -45,10 +80,18 @@ public struct InkTableBlock: InkRenderableBlock {
 public extension InkTableBlock {
   /// 从 swift-markdown 的 Table 节点构造。
   /// 保留单元格内的 Markdown 内联标记（如 `**加粗**`），渲染时解析。
+  @MainActor
   static func from(
-    _ table: Table,
-    layoutMode: InkTableLayoutMode = .wrap,
-    configuration: InkConfiguration = .standard
+    _ table: Markdown.Table,
+    layoutMode: InkTableLayoutMode = .scroll
+  ) -> InkTableBlock {
+    from(table, layoutMode: layoutMode, configuration: .standard)
+  }
+
+  static func from(
+    _ table: Markdown.Table,
+    layoutMode: InkTableLayoutMode = .scroll,
+    configuration: InkConfiguration
   ) -> InkTableBlock {
     let headCells = Array(table.head.cells)
     let headers = headCells.map { Self.cellMarkdownText($0) }

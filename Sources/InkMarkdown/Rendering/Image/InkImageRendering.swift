@@ -76,7 +76,7 @@ enum InkImageFailureFallback: Hashable {
 ///
 /// 聚合开关、加载器、缓存、安全策略、尺寸与交互行为。
 /// 因含闭包与协议类型，本结构体不 conform `Sendable`。
-public struct InkImageRendering {
+public struct InkImageRendering: Sendable {
 
   /// 是否启用图片渲染。默认 `false`，保持 v1 占位行为。
   public var isEnabled: Bool = false
@@ -109,16 +109,12 @@ public struct InkImageRendering {
   /// 点击图片时的默认行为。块级 ``InkImageBlock`` 会自动分发；默认 `.none`。
   public var tapAction: ImageTapAction = .none
 
-  /// 图片点击回调。
-  ///
-  /// 在 ``tapAction`` 为 `.callback` 时由 ``InkImageBlock`` 调用；为 `.openURL` 时也会先调用本回调再打开 URL。
-  /// 行内图片需宿主自行命中后调用。
-  public var onImageTap: ((ImageSource, UIImage?) -> Void)?
+  /// 图片点击回调（仅在 ``tapAction`` 为 `.callback` 或 `.openURL` 时触发）。
+  public var onImageTap: (@MainActor @Sendable (ImageSource, UIImage?) -> Void)?
 
-  /// 块级加载结束回调：成功传入图片，失败时图片为 `nil`。
-  ///
-  /// 宿主可用其挂接显式错误 UI；库默认失败路径仍走 ``failureFallback``（如源码回退），二者互不替代。
-  public var onLoadFinished: ((ImageSource, UIImage?) -> Void)?
+  /// 加载完成回调（成功返回图片，失败返回 nil）。
+  /// 在块级图片等展示层收到 Store 结果并应用后触发。
+  public var onLoadFinished: (@MainActor @Sendable (ImageSource, UIImage?) -> Void)?
 
   /// 动图播放策略。
   public var animatedImagePolicy: AnimatedImagePolicy = .staticFirstFrame

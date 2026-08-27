@@ -1,7 +1,7 @@
 import Foundation
 
 /// HTTP 重定向拦截器：限制次数并在每次跳转后重新校验目标主机。
-final class RedirectValidator: NSObject, URLSessionTaskDelegate {
+final class RedirectValidator: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
 
   let policy: ImageSecurityPolicy
   private let lock = NSLock()

@@ -4,7 +4,7 @@ import Markdown
 // MARK: - 内部公共渲染工具
 
 /// 表格行/单元格/分割线的共享构建逻辑，供 InkTableBlockView 和 InkStreamTableView 复用。
-enum InkTableRenderHelper {
+@MainActor enum InkTableRenderHelper {
 
   /// 列宽分配方式
   enum ColumnWidthMode {
@@ -92,10 +92,10 @@ enum InkTableRenderHelper {
     let baseFont: UIFont
     let textColor: UIColor
     if isHeader {
-      baseFont = .systemFont(ofSize: config.headerFontSize, weight: .bold)
+      baseFont = configuration.appearance.scaledFont(.systemFont(ofSize: config.headerFontSize, weight: .bold), textStyle: .body)
       textColor = config.headerColor
     } else {
-      baseFont = .systemFont(ofSize: config.bodyFontSize, weight: .regular)
+      baseFont = configuration.appearance.scaledFont(.systemFont(ofSize: config.bodyFontSize, weight: .regular), textStyle: .body)
       textColor = config.bodyColor
     }
 
@@ -110,9 +110,10 @@ enum InkTableRenderHelper {
       textAlignment = .left
     }
 
+    let scaledLineHeight = configuration.appearance.scaledValue(config.lineHeight, textStyle: .body)
     let paragraphStyle = NSMutableParagraphStyle()
-    paragraphStyle.minimumLineHeight = config.lineHeight
-    paragraphStyle.maximumLineHeight = config.lineHeight
+    paragraphStyle.minimumLineHeight = scaledLineHeight
+    paragraphStyle.maximumLineHeight = scaledLineHeight
     paragraphStyle.alignment = textAlignment
     paragraphStyle.lineBreakMode = .byCharWrapping
 
@@ -184,6 +185,7 @@ enum InkTableRenderHelper {
       return
     }
     let toast = UILabel()
+    toast.adjustsFontForContentSizeCategory = true
     toast.text = "已复制"
     toast.font = .systemFont(ofSize: 13)
     toast.textColor = .white

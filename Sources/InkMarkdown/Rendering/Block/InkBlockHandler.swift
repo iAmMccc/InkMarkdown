@@ -18,7 +18,7 @@ import Markdown
 ///   }
 /// }
 /// ```
-public protocol InkBlockHandler {
+public protocol InkBlockHandler: Sendable {
   /// 判断本 handler 是否能处理该 Markup 节点。
   func canHandle(_ markup: Markup) -> Bool
 

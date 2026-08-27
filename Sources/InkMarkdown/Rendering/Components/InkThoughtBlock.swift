@@ -7,6 +7,7 @@ import UIKit
 
 /// 思考过程（`<think>...</think>` / `<thought>...</thought>`）Block：展示为可折叠/展开的深度思考卡片。
 public struct InkThoughtBlock: InkRenderableBlock {
+  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
   /// 思考过程的 Markdown 源码。
   public let thought: String
   /// 思考过程是否已结束（影响标题文案与指示器）。
@@ -18,11 +19,20 @@ public struct InkThoughtBlock: InkRenderableBlock {
   /// 用户折叠态（SSOT）；仅当 `config.isCollapsible == true` 时生效。
   public var isCollapsed: Bool
 
+  @MainActor
   public init(
     thought: String,
     isComplete: Bool = true,
-    config: InkAppearance.Thought = InkAppearance.shared.thought,
-    renderConfiguration: InkConfiguration = .standard,
+    isCollapsed: Bool? = nil
+  ) {
+    self.init(thought: thought, isComplete: isComplete, config: InkAppearance.shared.thought, renderConfiguration: .standard, isCollapsed: isCollapsed)
+  }
+
+  public init(
+    thought: String,
+    isComplete: Bool = true,
+    config: InkAppearance.Thought,
+    renderConfiguration: InkConfiguration,
     isCollapsed: Bool? = nil
   ) {
     self.thought = thought
@@ -32,13 +42,37 @@ public struct InkThoughtBlock: InkRenderableBlock {
     self.isCollapsed = isCollapsed ?? (config.isCollapsible && config.isInitiallyCollapsed)
   }
 
-  public func makeView() -> UIView {
+  @MainActor public func makeView() -> UIView {
     InkThoughtBlockView(
       thought: thought,
       isComplete: isComplete,
       config: config,
       renderConfiguration: renderConfiguration,
       isCollapsed: isCollapsed
+    )
+  }
+
+  @MainActor
+  public func updateExistingView(_ view: UIView) {
+    guard let thoughtView = view as? InkThoughtBlockView else { return }
+    thoughtView.apply(
+      thought: thought,
+      isComplete: isComplete,
+      isCollapsed: isCollapsed,
+      config: config,
+      renderConfiguration: renderConfiguration
+    )
+  }
+
+  @MainActor
+  @_spi(InkMarkdown)
+  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
+    InkFingerprint.combine(
+      documentEpoch,
+      UInt64(bitPattern: Int64(blockIndex)),
+      InkFingerprint.hash(thought),
+      isComplete ? 1 : 0,
+      isCollapsed ? 1 : 0
     )
   }
 }
@@ -55,6 +89,10 @@ public final class InkThoughtBlockView: UIView {
 
   public private(set) var isCollapsed: Bool
   public var onToggleCollapse: ((Bool) -> Void)?
+  /// 保留高变化时通知宿主 adapter；由 SwiftUI/UIKit adapter 绑定，非公开渲染契约。
+  public var onReservedHeightChanged: (() -> Void)?
+
+  private var lastNotifiedHeight: CGFloat = 0
 
   private let container = UIView()
   public let headerContainer = UIControl()
@@ -141,7 +179,7 @@ public final class InkThoughtBlockView: UIView {
     headerContainer.addSubview(iconImageView)
 
     // 标题
-    titleLabel.font = .systemFont(ofSize: config.headerFontSize, weight: .medium)
+    titleLabel.font = renderConfiguration.appearance.scaledFont(.systemFont(ofSize: config.headerFontSize, weight: .medium), textStyle: .body)
     titleLabel.textColor = config.headerColor
     titleLabel.text = isComplete ? config.completedTitle : config.title
     headerContainer.addSubview(titleLabel)
@@ -184,11 +222,8 @@ public final class InkThoughtBlockView: UIView {
       self.chevronImageView.transform = self.isCollapsed ? .identity : CGAffineTransform(rotationAngle: .pi / 2)
       self.bodyContainer.isHidden = self.isCollapsed
       self.bodyContainer.alpha = self.isCollapsed ? 0 : 1
-      self.invalidateIntrinsicContentSize()
-      self.superview?.invalidateIntrinsicContentSize()
-      self.superview?.setNeedsLayout()
-      self.superview?.layoutIfNeeded()
     } completion: { _ in
+      self.notifyReservedHeightIfNeeded()
       UIAccessibility.post(
         notification: .announcement,
         argument: self.isCollapsed ? "已折叠思考过程" : "已展开思考过程"
@@ -211,7 +246,7 @@ public final class InkThoughtBlockView: UIView {
       container.backgroundColor = config.backgroundColor
       container.layer.cornerRadius = config.cornerRadius
       iconImageView.tintColor = config.headerColor
-      titleLabel.font = .systemFont(ofSize: config.headerFontSize, weight: .medium)
+      titleLabel.font = (renderConfiguration ?? self.renderConfiguration).appearance.scaledFont(.systemFont(ofSize: config.headerFontSize, weight: .medium), textStyle: .body)
       titleLabel.textColor = config.headerColor
       chevronImageView.tintColor = config.headerColor
     }
@@ -250,10 +285,23 @@ public final class InkThoughtBlockView: UIView {
 
     invalidateIntrinsicContentSize()
     setNeedsLayout()
+    notifyReservedHeightIfNeeded()
+  }
+
+  private func notifyReservedHeightIfNeeded() {
+    let width = bounds.width > 0 ? bounds.width : (superview?.bounds.width ?? 0)
+    guard width > 0 else { return }
+    let height = sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height
+    guard abs(height - lastNotifiedHeight) > 0.5 else { return }
+    lastNotifiedHeight = height
+    onReservedHeightChanged?()
   }
 
   public override func sizeThatFits(_ size: CGSize) -> CGSize {
-    let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 320)
+    let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 0)
+    guard targetWidth > 0 else {
+      return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+    }
     let insets = config.insets
     let headerH = config.headerHeight
 

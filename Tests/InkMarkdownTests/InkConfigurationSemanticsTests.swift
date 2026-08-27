@@ -8,7 +8,7 @@ private struct TestTagSyntax: InkInlineSyntax {
 }
 
 @Suite("InkConfiguration 语义等价与渲染环境注入测试")
-struct InkConfigurationSemanticsTests {
+@MainActor struct InkConfigurationSemanticsTests {
 
   @Test("capturingRenderEnvironmentForBackgroundParse 保留已注入环境，仅未注入时自动捕获")
   @MainActor

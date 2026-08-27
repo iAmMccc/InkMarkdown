@@ -2,7 +2,7 @@ import Testing
 import UIKit
 @testable import InkMarkdown
 
-private func latexBlockConfiguration(isEnabled: Bool = true) -> InkConfiguration {
+@MainActor private func latexBlockConfiguration(isEnabled: Bool = true) -> InkConfiguration {
   var appearance = InkAppearance()
   appearance.latexRendering.isEnabled = isEnabled
   var configuration = InkConfiguration(appearance: appearance)

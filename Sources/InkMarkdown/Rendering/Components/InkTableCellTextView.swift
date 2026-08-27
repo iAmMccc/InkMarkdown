@@ -27,6 +27,7 @@ final class InkTableCellTextView: UITextView, UITextViewDelegate {
     isEditable = false
     isSelectable = true
     isScrollEnabled = false
+    adjustsFontForContentSizeCategory = true
     backgroundColor = .clear
     textContainerInset = .zero
     dataDetectorTypes = []

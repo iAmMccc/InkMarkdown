@@ -19,7 +19,7 @@ import UIKit
 /// )
 /// let attr = InkAttributedRenderer.render(source, configuration: config)
 /// ```
-public struct InkConfiguration {
+public struct InkConfiguration: Sendable {
 
   /// 样式配置。默认读全局 `InkAppearance.shared`。
   public var appearance: InkAppearance
@@ -28,7 +28,7 @@ public struct InkConfiguration {
   public var inlineSyntaxes: [InkInlineSyntax]
 
   /// 源文本预处理：在交给 Markdown 解析器之前对原始文本做变换。
-  public var sourceFilter: ((String) -> String)?
+  public var sourceFilter: (@Sendable (String) -> String)?
 
   /// 块级路由处理器列表，按顺序匹配。默认内置代码块和表格。
   ///
@@ -50,14 +50,15 @@ public struct InkConfiguration {
   ///   - url: 被点击链接的 URL。
   ///   - view: 触发点击的视图（业务方可沿其响应链定位当前 VC）。
   /// - Returns: `true` 表示业务已处理（拦截默认行为）；`false` 交还系统默认处理。
-  public var linkTapHandler: ((URL, UIView) -> Bool)?
+  public var linkTapHandler: (@MainActor @Sendable (URL, UIView) -> Bool)?
 
+  @MainActor
   public init(
     appearance: InkAppearance = .shared,
     inlineSyntaxes: [InkInlineSyntax] = [],
-    sourceFilter: ((String) -> String)? = nil,
+    sourceFilter: (@Sendable (String) -> String)? = nil,
     blockHandlers: [InkBlockHandler] = InkConfiguration.defaultBlockHandlers,
-    linkTapHandler: ((URL, UIView) -> Bool)? = nil
+    linkTapHandler: (@MainActor @Sendable (URL, UIView) -> Bool)? = nil
   ) {
     self.appearance = appearance
     self.inlineSyntaxes = inlineSyntaxes
@@ -86,7 +87,7 @@ public struct InkConfiguration {
   ]
 
   /// 标准配置：全局样式 + 无行内扩展 + 默认块级路由。
-  public static var standard: InkConfiguration { InkConfiguration() }
+  @MainActor public static var standard: InkConfiguration { InkConfiguration() }
 
   /// 判断两个配置是否在渲染语义上等价（包含样式、环境、语法扩展与处理器）。
   ///

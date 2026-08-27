@@ -2,29 +2,55 @@ import UIKit
 
 /// 代码块 Block：圆角灰背容器内渲染等宽字体代码。
 public struct InkCodeBlock: InkRenderableBlock {
+  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
   public let code: String
   public let language: String?
   public var config: InkAppearance.CodeBlock
 
+  @MainActor
+  public init(
+    code: String,
+    language: String? = nil
+  ) {
+    self.init(code: code, language: language, config: InkAppearance.shared.codeBlock)
+  }
+
   public init(
     code: String,
     language: String? = nil,
-    config: InkAppearance.CodeBlock = InkAppearance.shared.codeBlock
+    config: InkAppearance.CodeBlock
   ) {
     self.code = code
     self.language = language
     self.config = config
   }
 
-  public func makeView() -> UIView {
+  @MainActor public func makeView() -> UIView {
     InkCodeBlockViewFactory.makeView(code: code, language: language, config: config)
+  }
+
+  @MainActor
+  public func updateExistingView(_ view: UIView) {
+    guard let impl = view as? InkCodeBlockViewImpl else { return }
+    impl.apply(code: code, language: language, config: config)
+  }
+
+  @MainActor
+  @_spi(InkMarkdown)
+  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
+    InkFingerprint.combine(
+      documentEpoch,
+      UInt64(bitPattern: Int64(blockIndex)),
+      InkFingerprint.hash(code),
+      InkFingerprint.hash(language ?? "")
+    )
   }
 }
 
 // MARK: - 内部工厂
 
 enum InkCodeBlockViewFactory {
-  static func makeView(code: String, language: String?, config: InkAppearance.CodeBlock) -> UIView {
+  @MainActor static func makeView(code: String, language: String?, config: InkAppearance.CodeBlock) -> UIView {
     InkCodeBlockViewImpl(code: code, language: language, config: config)
   }
 }
@@ -53,6 +79,10 @@ final class InkCodeBlockViewImpl: UIView {
   }
 
   private func setup() {
+    apply(code: code, language: language, config: config)
+  }
+
+  func apply(code: String, language: String?, config: InkAppearance.CodeBlock) {
     container.backgroundColor = config.backgroundColor
     container.layer.cornerRadius = config.cornerRadius
     container.layer.cornerCurve = .continuous
@@ -60,13 +90,15 @@ final class InkCodeBlockViewImpl: UIView {
     addSubview(container)
 
     label.numberOfLines = 0
+    label.adjustsFontForContentSizeCategory = true
     container.addSubview(label)
 
-    let font = UIFont.monospacedSystemFont(ofSize: config.fontSize, weight: .regular)
+    let font = InkAppearance.shared.scaledFont(UIFont.monospacedSystemFont(ofSize: config.fontSize, weight: .regular), textStyle: .body)
 
+    let scaledLineHeight = InkAppearance.shared.scaledValue(config.lineHeight, textStyle: .body)
     let para = NSMutableParagraphStyle()
-    para.minimumLineHeight = config.lineHeight
-    para.maximumLineHeight = config.lineHeight
+    para.minimumLineHeight = scaledLineHeight
+    para.maximumLineHeight = scaledLineHeight
     para.lineSpacing = 0
 
     let offset = max(0, (config.lineHeight - font.lineHeight) / 2)
@@ -86,6 +118,7 @@ final class InkCodeBlockViewImpl: UIView {
     isAccessibilityElement = true
     accessibilityLabel = language.map { "\($0) 代码块" } ?? "代码块"
     accessibilityValue = trimmed
+    invalidateIntrinsicContentSize()
   }
 
   override func sizeThatFits(_ size: CGSize) -> CGSize {

@@ -1,26 +1,35 @@
 import UIKit
 
 /// 兜底块：把非自定义 UIView 的部分塞回 NSAttributedString，用 UITextView 渲染。
-public struct InkAttributedTextBlock: InkRenderableBlock {
+public struct InkAttributedTextBlock: InkRenderableBlock, @unchecked Sendable {
+  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
   public let attributedText: NSAttributedString
   /// 文本容器内边距。
   public let insets: UIEdgeInsets
   /// 链接点击回调。命中 `.link` 属性时交还业务方处理；返回 `true` 拦截默认行为。
   /// 与表格单元格 `InkTableCellTextView` 共用同一套 `linkTapHandler` 语义，
   /// 使富文本兜底块里的链接（含业务自定义 scheme，如 `$标签$`）也能被拦截。
-  public let linkTapHandler: ((URL, UIView) -> Bool)?
+  public let linkTapHandler: (@MainActor @Sendable (URL, UIView) -> Bool)?
+
+  @MainActor
+  public init(
+    attributedText: NSAttributedString,
+    linkTapHandler: (@MainActor @Sendable (URL, UIView) -> Bool)? = nil
+  ) {
+    self.init(attributedText: attributedText, insets: InkAppearance.shared.text.blockInsets, linkTapHandler: linkTapHandler)
+  }
 
   public init(
     attributedText: NSAttributedString,
-    insets: UIEdgeInsets = InkAppearance.shared.text.blockInsets,
-    linkTapHandler: ((URL, UIView) -> Bool)? = nil
+    insets: UIEdgeInsets,
+    linkTapHandler: (@MainActor @Sendable (URL, UIView) -> Bool)? = nil
   ) {
     self.attributedText = attributedText
     self.insets = insets
     self.linkTapHandler = linkTapHandler
   }
 
-  public func makeView() -> UIView {
+  @MainActor public func makeView() -> UIView {
     let textContainer = NSTextContainer(size: CGSize(width: 0, height: CGFloat.greatestFiniteMagnitude))
     textContainer.lineFragmentPadding = 0
     let layoutManager = InkMarkdownLayoutManager()
@@ -37,11 +46,35 @@ public struct InkAttributedTextBlock: InkRenderableBlock {
     textView.dataDetectorTypes = []
     textView.backgroundColor = UIColor.clear
     textView.isScrollEnabled = false
+    textView.adjustsFontForContentSizeCategory = true
     textView.textContainerInset = insets
     MainActor.assumeIsolated {
       InkImageAttachment.bindAttachments(in: textStorage, layoutManager: layoutManager)
     }
     return textView
+  }
+
+  @MainActor
+  public func updateExistingView(_ view: UIView) {
+    guard let textView = view as? InkAttributedBlockTextView else { return }
+    textView.linkTapHandler = linkTapHandler
+    textView.textStorage.setAttributedString(attributedText)
+    if let layoutManager = textView.textContainer.layoutManager {
+      InkImageAttachment.bindAttachments(in: textView.textStorage, layoutManager: layoutManager)
+    }
+    textView.textContainerInset = insets
+    textView.invalidateIntrinsicContentSize()
+  }
+
+  @MainActor
+  @_spi(InkMarkdown)
+  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
+    InkFingerprint.combine(
+      documentEpoch,
+      UInt64(bitPattern: Int64(blockIndex)),
+      UInt64(attributedText.length),
+      InkFingerprint.hash(attributedText.string.prefix(64).description)
+    )
   }
 }
 

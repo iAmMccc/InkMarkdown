@@ -5,27 +5,27 @@ import Markdown
 
 // MARK: - #1 ImageSource scheme 解析
 
-@Test func imageSource_httpScheme() {
+@Test @MainActor func imageSource_httpScheme() {
   let source = ImageSource(url: URL(string: "https://example.com/image.png")!)
   #expect(source.scheme == .https)
 }
 
-@Test func imageSource_fileScheme() {
+@Test @MainActor func imageSource_fileScheme() {
   let source = ImageSource(url: URL(string: "file:///path/to/image.png")!)
   #expect(source.scheme == .file)
 }
 
-@Test func imageSource_dataScheme() {
+@Test @MainActor func imageSource_dataScheme() {
   let source = ImageSource(url: URL(string: "data:image/png;base64,abc")!)
   #expect(source.scheme == .data)
 }
 
-@Test func imageSource_unknownScheme() {
+@Test @MainActor func imageSource_unknownScheme() {
   let source = ImageSource(url: URL(string: "ftp://example.com/image.png")!)
   #expect(source.scheme == .unknown)
 }
 
-@Test func generatedImageSource_hasBoundedStableIdentity() {
+@Test @MainActor func generatedImageSource_hasBoundedStableIdentity() {
   let source = ImageSource(generated: InkGeneratedImageRequest(
     owner: "test",
     rendererVersion: "v1",
@@ -37,7 +37,7 @@ import Markdown
   #expect(!source.canonicalID.contains(String(repeating: "x", count: 32)))
 }
 
-@Test func generatedImageSource_usesSHA256Identity() {
+@Test @MainActor func generatedImageSource_usesSHA256Identity() {
   let base = InkGeneratedImageRequest(owner: "test", rendererVersion: "v1", source: "a", styleIdentity: "light")
   let changed = InkGeneratedImageRequest(owner: "test", rendererVersion: "v1", source: "b", styleIdentity: "light")
   let prefix = "ink-generated://sha256/"
@@ -49,7 +49,7 @@ import Markdown
 
 // MARK: - #2 DisplayKey bucket 量化
 
-@Test func displayKey_bucketQuantization() {
+@Test @MainActor func displayKey_bucketQuantization() {
   let source = ImageSource(url: URL(string: "https://example.com/img.png")!)
   // 375pt × 3x = 1125px → ceil(1125/64) * 64 = 1152
   let display = DisplayContext(maxPixelWidth: 1125, scale: 3, contentMode: .fit)
@@ -58,7 +58,7 @@ import Markdown
   #expect(key.scale == 3)
 }
 
-@Test func displayKey_exactMultiple() {
+@Test @MainActor func displayKey_exactMultiple() {
   let source = ImageSource(url: URL(string: "https://example.com/img.png")!)
   // 768px → ceil(768/64) * 64 = 768
   let display = DisplayContext(maxPixelWidth: 768, scale: 2, contentMode: .fit)
@@ -66,14 +66,14 @@ import Markdown
   #expect(key.bucketedWidth == 768)
 }
 
-@Test func displayKey_distinguishesContentMode() {
+@Test @MainActor func displayKey_distinguishesContentMode() {
   let source = ImageSource(generated: InkGeneratedImageRequest(owner: "test", rendererVersion: "v1", source: "a", styleIdentity: "b"))
   let fit = DisplayKey(source: source, display: DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit))
   let fill = DisplayKey(source: source, display: DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fill))
   #expect(fit != fill)
 }
 
-@Test func displayContext_sanitizesNonFiniteAndNonPositiveInputs() {
+@Test @MainActor func displayContext_sanitizesNonFiniteAndNonPositiveInputs() {
   let invalidWidths: [CGFloat] = [.nan, .infinity, -.infinity, 0, -1]
   let invalidScales: [CGFloat] = [.nan, .infinity, -.infinity, 0, -1, 0.5]
 
@@ -87,7 +87,7 @@ import Markdown
   #expect(DisplayKey(source: source, display: DisplayContext(maxPixelWidth: 300, scale: 0.5)).scale == 1)
 }
 
-@Test func displayContext_clampsOverlargeInputsBeforeDisplayKeyConversion() {
+@Test @MainActor func displayContext_clampsOverlargeInputsBeforeDisplayKeyConversion() {
   let context = DisplayContext(maxPixelWidth: .greatestFiniteMagnitude, scale: .greatestFiniteMagnitude)
   let source = ImageSource(url: URL(string: "https://example.com/img.png")!)
   let key = DisplayKey(source: source, display: context)
@@ -98,7 +98,7 @@ import Markdown
   #expect(key.scale == Int(DisplayContext.maximumScale))
 }
 
-@Test func displayContext_preservesNormalInputsAndExistingDisplayKey() {
+@Test @MainActor func displayContext_preservesNormalInputsAndExistingDisplayKey() {
   let context = DisplayContext(maxPixelWidth: 1125, scale: 3, contentMode: .fit)
   let source = ImageSource(url: URL(string: "https://example.com/img.png")!)
   let key = DisplayKey(source: source, display: context)
@@ -111,7 +111,7 @@ import Markdown
 
 // MARK: - #3 SecurityPolicy 门禁
 
-@Test func securityPolicy_emptyHostsRejectsAll() {
+@Test @MainActor func securityPolicy_emptyHostsRejectsAll() {
   var policy = ImageSecurityPolicy()
   policy.allowedHosts = []
   policy.emptyHostPolicy = .rejectAll
@@ -120,12 +120,12 @@ import Markdown
   #expect(policy.emptyHostPolicy == .rejectAll)
 }
 
-@Test func securityPolicy_stripsQueryDefaultIsFalse() {
+@Test @MainActor func securityPolicy_stripsQueryDefaultIsFalse() {
   let policy = ImageSecurityPolicy()
   #expect(!policy.stripsQuery)
 }
 
-@Test func securityPolicy_stripsQueryWhenEnabled() {
+@Test @MainActor func securityPolicy_stripsQueryWhenEnabled() {
   let url = URL(string: "https://example.com/img.png?token=secret")!
   let source = ImageSource(url: url, stripsQuery: true)
   #expect(!source.canonicalID.contains("token=secret"))
@@ -133,7 +133,7 @@ import Markdown
   #expect(source.canonicalID == source.requestURL.absoluteString)
 }
 
-@Test func securityPolicy_defaultPreservesQueryInRequestURL() {
+@Test @MainActor func securityPolicy_defaultPreservesQueryInRequestURL() {
   let url = URL(string: "https://example.com/img.png?token=secret")!
   let policy = ImageSecurityPolicy()
   let source = ImageSource(
@@ -145,7 +145,7 @@ import Markdown
   #expect(source.canonicalID.contains("token=secret"))
 }
 
-@Test func imageSource_requestURLMatchesCanonicalID() {
+@Test @MainActor func imageSource_requestURLMatchesCanonicalID() {
   let url = URL(string: "https://cdn.example.com/a.png?v=1#frag")!
   let source = ImageSource(url: url, stripsQuery: true, stripsFragment: true)
   #expect(source.requestURL.absoluteString == "https://cdn.example.com/a.png")
@@ -154,14 +154,14 @@ import Markdown
 
 // MARK: - 后台 render 与 storeConfiguration
 
-@Test func backgroundRender_withImagesEnabled_doesNotCrash() async {
+@Test @MainActor func backgroundRender_withImagesEnabled_doesNotCrash() async {
   var appearance = InkAppearance()
   appearance.imageRendering.isEnabled = true
   appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
   let config = InkConfiguration(appearance: appearance)
   let md = "![test](https://example.com/img.png)"
 
-  nonisolated(unsafe) let capturedConfig = config
+  let capturedConfig = config
   let length = await Task.detached {
     let result = InkAttributedRenderer.render(md, configuration: capturedConfig)
     return result.length
@@ -169,7 +169,7 @@ import Markdown
   #expect(length > 0)
 }
 
-@Test func storeConfiguration_maxDataURLBytesApplied() {
+@Test @MainActor func storeConfiguration_maxDataURLBytesApplied() {
   var appearance = InkAppearance()
   appearance.imageRendering.isEnabled = true
   appearance.imageRendering.storeConfiguration.maxDataURLBytes = 50
@@ -199,7 +199,7 @@ import Markdown
 }
 
 
-@Test func dataURL_withinLimit() {
+@Test @MainActor func dataURL_withinLimit() {
   let small = "data:image/png;base64," + String(repeating: "A", count: 100)
   let source = ImageSource(url: URL(string: small)!)
   #expect(source.scheme == .data)
@@ -507,7 +507,7 @@ struct InkImageStoreTests {
 
 // MARK: - #9 ImageIO 降采样正确性
 
-@Test func imageIODownsampler_respectsMaxPixel() throws {
+@Test @MainActor func imageIODownsampler_respectsMaxPixel() throws {
   let renderer = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 100))
   let testImage = renderer.image { ctx in
     UIColor.red.setFill()
@@ -524,28 +524,28 @@ struct InkImageStoreTests {
 
 // MARK: - #10 fitted 函数
 
-@Test func fitted_smallImageNoUpscale() {
+@Test @MainActor func fitted_smallImageNoUpscale() {
   let size = CGSize(width: 100, height: 50)
   let result = fitted(size, maxWidth: 300, upscales: false, minPlaceholder: 80, maxHeight: nil)
   #expect(result.width == 100)
   #expect(result.height == 50)
 }
 
-@Test func fitted_largeImageScalesDown() {
+@Test @MainActor func fitted_largeImageScalesDown() {
   let size = CGSize(width: 600, height: 300)
   let result = fitted(size, maxWidth: 300, upscales: false, minPlaceholder: 80, maxHeight: nil)
   #expect(result.width == 300)
   #expect(result.height == 150)
 }
 
-@Test func fitted_upscalesWhenEnabled() {
+@Test @MainActor func fitted_upscalesWhenEnabled() {
   let size = CGSize(width: 100, height: 50)
   let result = fitted(size, maxWidth: 300, upscales: true, minPlaceholder: 80, maxHeight: nil)
   #expect(result.width == 300)
   #expect(result.height == 150)
 }
 
-@Test func fitted_respectsMaxHeight() {
+@Test @MainActor func fitted_respectsMaxHeight() {
   let size = CGSize(width: 100, height: 2000)
   let result = fitted(size, maxWidth: 300, upscales: true, minPlaceholder: 80, maxHeight: 500)
   #expect(result.height <= 500)
@@ -553,19 +553,19 @@ struct InkImageStoreTests {
 
 // MARK: - #11 Promote 判定
 
-@Test func promote_singleImage() {
+@Test @MainActor func promote_singleImage() {
   let doc = Document(parsing: "![alt](https://example.com/img.png)")
   let paragraph = Array(doc.children).first!
   #expect(isPromotableImageParagraph(paragraph))
 }
 
-@Test func promote_imageWithSurroundingWhitespace() {
+@Test @MainActor func promote_imageWithSurroundingWhitespace() {
   let doc = Document(parsing: " ![alt](https://example.com/img.png) ")
   let paragraph = Array(doc.children).first!
   #expect(isPromotableImageParagraph(paragraph))
 }
 
-@Test func promote_mixedTextAndImage() {
+@Test @MainActor func promote_mixedTextAndImage() {
   let doc = Document(parsing: "some text ![alt](https://example.com/img.png)")
   let paragraph = Array(doc.children).first!
   #expect(!isPromotableImageParagraph(paragraph))
@@ -573,7 +573,7 @@ struct InkImageStoreTests {
 
 // MARK: - #12 行高策略（via 渲染结果）
 
-@Test func lineHeight_noImageKeepsLocked() {
+@Test @MainActor func lineHeight_noImageKeepsLocked() {
   let md = "Hello world"
   let result = InkAttributedRenderer.render(md)
   let para = result.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle
@@ -584,7 +584,7 @@ struct InkImageStoreTests {
 
 // MARK: - #13 错误降级
 
-@Test func errorDegradation_disabledShowsPlaceholder() {
+@Test @MainActor func errorDegradation_disabledShowsPlaceholder() {
   var appearance = InkAppearance()
   appearance.imageRendering.isEnabled = false
   let config = InkConfiguration(appearance: appearance)
@@ -876,7 +876,7 @@ private func makeImageTextStorage(
   rendering.loader = loader
 
   let store = InkImageStore()
-  let block = InkImageBlock(
+  let block = InkImageBlockView(
     source: ImageSource(url: url),
     store: store,
     rendering: rendering
@@ -898,7 +898,7 @@ private func makeImageTextStorage(
 @Test @MainActor func imageBlock_noneTapActionDoesNotInstallGesture() {
   var rendering = InkImageRendering()
   rendering.tapAction = .none
-  let block = InkImageBlock(
+  let block = InkImageBlockView(
     source: ImageSource(url: URL(string: "https://example.com/none.png")!),
     store: InkImageStore(),
     rendering: rendering
@@ -928,7 +928,7 @@ private func makeImageTextStorage(
   }
 
   let store = InkImageStore()
-  let block = InkImageBlock(
+  let block = InkImageBlockView(
     source: ImageSource(url: url),
     store: store,
     rendering: rendering
@@ -960,7 +960,7 @@ private func makeImageTextStorage(
     callCount += 1
   }
 
-  let block = InkImageBlock(
+  let block = InkImageBlockView(
     source: ImageSource(url: url),
     store: InkImageStore(),
     rendering: rendering
@@ -1012,7 +1012,7 @@ private func makeImageTextStorage(
   var rendering = InkImageRendering()
   rendering.isEnabled = true
   rendering.placeholderHeight = 160
-  let block = InkImageBlock(
+  let block = InkImageBlockView(
     source: ImageSource(url: URL(string: "https://example.com/unconfigured.png")!),
     store: InkImageStore(),
     rendering: rendering
@@ -1031,7 +1031,7 @@ private func makeImageTextStorage(
   rendering.loader = loader
 
   let store = InkImageStore()
-  let block = InkImageBlock(
+  let block = InkImageBlockView(
     source: ImageSource(url: url),
     store: store,
     rendering: rendering
@@ -1075,13 +1075,16 @@ private func makeImageTextStorage(
     try? await Task.sleep(nanoseconds: 10_000_000)
   }
 
-  let block = InkImageBlock(source: source, store: store, rendering: rendering)
+  let block = InkImageBlockView(source: source, store: store, rendering: rendering)
   #expect(block.intrinsicContentSize.height == 0)
 
   block.configure(containerWidth: containerWidth, loader: loader)
 
-  #expect(block.intrinsicContentSize.height == 100)
-  #expect(block.intrinsicContentSize.height != 160)
+  let measuredHeight = block.sizeThatFits(
+    CGSize(width: containerWidth, height: CGFloat.greatestFiniteMagnitude)
+  ).height
+  #expect(measuredHeight == 100)
+  #expect(measuredHeight != rendering.placeholderHeight)
 }
 
 @Test @MainActor func inlineAttachment_unloadedBoundsHeightIsCompact() {

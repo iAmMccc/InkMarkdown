@@ -6,7 +6,7 @@ import UIKit
 /// **显示层**（textStorage 安装 / ``bindAttachments`` / 主线程 ``attachmentBounds``）
 /// 绑定 `layoutManager` 后惰性 ``materialize(display:loader:)``；加载完成回调只更新
 /// 已有实例的 `image` / `bounds` 并触发布局失效。
-public final class InkImageAttachment: NSTextAttachment {
+public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
 
   /// 图片加载完成时发送；宿主可监听并刷新 `UITextView` 布局。
   public static let imageDidLoadNotification = Notification.Name("InkImageAttachmentDidLoad")
@@ -62,8 +62,8 @@ public final class InkImageAttachment: NSTextAttachment {
   ) -> CGRect {
     if Thread.isMainThread {
       lastLineFragmentWidth = lineFrag.width
-      MainActor.assumeIsolated {
-        scheduleMaterializeFromLayoutIfNeeded(lineFragmentWidth: lineFrag.width)
+      MainActor.assumeIsolated { [unowned self] in
+        self.scheduleMaterializeFromLayoutIfNeeded(lineFragmentWidth: lineFrag.width)
       }
     }
 

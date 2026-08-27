@@ -12,7 +12,7 @@ import UIKit
 // benchmark artifact。若阈值在 CI 上频繁红，按 roadmap R1 的策略按机器/版本
 // 分桶 baseline，而不是在缺少证据时直接放宽。
 
-@Suite struct StreamingPerformanceTests {
+@Suite @MainActor struct StreamingPerformanceTests {
 
   /// 正确性不变量：增量渲染的最终字符输出必须与全量渲染完全一致。
   /// 这是所有性能指标的前提——快但错了不能接受。

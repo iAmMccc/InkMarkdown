@@ -2,7 +2,7 @@ import Testing
 import UIKit
 @testable import InkMarkdown
 
-private func latexConfiguration(
+@MainActor private func latexConfiguration(
   allowsInlineDollar: Bool = false,
   textColor: UIColor = .label,
   userInterfaceStyle: UIUserInterfaceStyle = .unspecified
@@ -19,13 +19,13 @@ private func latexConfiguration(
   return configuration
 }
 
-@Test func latexLabelColorDiffersBetweenLightAndDarkSnapshots() {
+@Test @MainActor func latexLabelColorDiffersBetweenLightAndDarkSnapshots() {
   let light = InkLaTeXColor(resolving: .label, environment: InkRenderEnvironment(userInterfaceStyle: .light))
   let dark = InkLaTeXColor(resolving: .label, environment: InkRenderEnvironment(userInterfaceStyle: .dark))
   #expect(light != dark)
 }
 
-@Test func latexExplicitColorOverridesDynamicLabelInStableIdentity() {
+@Test @MainActor func latexExplicitColorOverridesDynamicLabelInStableIdentity() {
   var appearance = InkAppearance()
   appearance.latexRendering.isEnabled = true
   appearance.latexRendering.allowsInlineDollarDelimiter = true
@@ -68,7 +68,7 @@ private func latexConfiguration(
   )
 }
 
-@Test func latexAppearanceFlagEnablesInlineSyntaxWithoutRegistration() {
+@Test @MainActor func latexAppearanceFlagEnablesInlineSyntaxWithoutRegistration() {
   let rendered = InkAttributedRenderer.render(
     "\\(x\\)",
     configuration: latexConfiguration()
@@ -76,7 +76,7 @@ private func latexConfiguration(
   #expect(rendered.attribute(.attachment, at: 0, effectiveRange: nil) is InkImageAttachment)
 }
 
-@Test func latexDefaultLeavesDollarDelimitedTextUntouched() {
+@Test @MainActor func latexDefaultLeavesDollarDelimitedTextUntouched() {
   let rendered = InkAttributedRenderer.render(
     "价格是 $5",
     configuration: latexConfiguration()
@@ -85,7 +85,7 @@ private func latexConfiguration(
   #expect(rendered.string.contains("$5"))
 }
 
-@Test func latexDollarOptInRendersAttachment() {
+@Test @MainActor func latexDollarOptInRendersAttachment() {
   let rendered = InkAttributedRenderer.render(
     "$x$",
     configuration: latexConfiguration(allowsInlineDollar: true)
@@ -93,7 +93,7 @@ private func latexConfiguration(
   #expect(rendered.attribute(.attachment, at: 0, effectiveRange: nil) is InkImageAttachment)
 }
 
-@Test func latexParenthesesAndBareDollarDoNotCrossContaminate() {
+@Test @MainActor func latexParenthesesAndBareDollarDoNotCrossContaminate() {
   let rendered = InkAttributedRenderer.render(
     "已知 \\(a\\) 与 $5",
     configuration: latexConfiguration()
@@ -106,7 +106,7 @@ private func latexConfiguration(
   #expect(rendered.string.contains("$5"))
 }
 
-@Test func latexEscapedParenthesesAreNotPromotedThroughMarkupPath() {
+@Test @MainActor func latexEscapedParenthesesAreNotPromotedThroughMarkupPath() {
   let rendered = InkAttributedRenderer.render(
     "路径 \\\\(not math\\\\) 结束",
     configuration: latexConfiguration()
@@ -122,7 +122,7 @@ private func latexConfiguration(
   #expect(rendered.string.contains("\\("))
 }
 
-@Test func latexPlainParenthesesAreNotPromotedThroughMarkupPath() {
+@Test @MainActor func latexPlainParenthesesAreNotPromotedThroughMarkupPath() {
   let rendered = InkAttributedRenderer.render(
     "普通 (x) 括号",
     configuration: latexConfiguration()
@@ -174,7 +174,7 @@ private func latexConfiguration(
   )
 }
 
-@Test func latexExplicitColorOverridesContextInStableIdentity() {
+@Test @MainActor func latexExplicitColorOverridesContextInStableIdentity() {
   var appearance = InkAppearance()
   appearance.latexRendering.isEnabled = true
   appearance.latexRendering.allowsInlineDollarDelimiter = true

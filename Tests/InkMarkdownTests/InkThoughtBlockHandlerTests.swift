@@ -217,7 +217,7 @@ struct InkThoughtBlockHandlerTests {
     let block = InkThoughtBlock(
       thought: longThought,
       isComplete: true,
-      config: thoughtAppearance
+      config: thoughtAppearance, renderConfiguration: .standard
     )
     guard let view = block.makeView() as? InkThoughtBlockView else {
       Issue.record("Expected InkThoughtBlockView")
@@ -254,7 +254,7 @@ struct InkThoughtBlockHandlerTests {
     config.isCollapsible = false
     config.isInitiallyCollapsed = true // 冲突非法配置
 
-    let block = InkThoughtBlock(thought: "思考细节", isComplete: true, config: config)
+    let block = InkThoughtBlock(thought: "思考细节", isComplete: true, config: config, renderConfiguration: .standard)
     guard let view = block.makeView() as? InkThoughtBlockView else {
       Issue.record("Expected InkThoughtBlockView")
       return
@@ -303,7 +303,7 @@ struct InkThoughtBlockHandlerTests {
     let view = InkThoughtBlockView(
       thought: "初始思考",
       isComplete: false,
-      config: thoughtAppearance
+      config: thoughtAppearance, renderConfiguration: .standard
     )
     #expect(view.isCollapsed == true)
 
@@ -327,7 +327,7 @@ struct InkThoughtBlockHandlerTests {
     let view = InkThoughtBlockView(
       thought: "思考正文",
       isComplete: true,
-      config: thoughtAppearance
+      config: thoughtAppearance, renderConfiguration: .standard
     )
     view.onToggleCollapse = { callbackCollapsed = $0 }
 
@@ -351,7 +351,7 @@ struct InkThoughtBlockHandlerTests {
     let view = InkThoughtBlockView(
       thought: longThought,
       isComplete: true,
-      config: thoughtAppearance
+      config: thoughtAppearance, renderConfiguration: .standard
     )
     let expandedSize = view.sizeThatFits(CGSize(width: 320, height: 1000))
 

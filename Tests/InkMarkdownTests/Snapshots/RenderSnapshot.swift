@@ -90,10 +90,17 @@ public struct RenderSnapshot: Equatable, CustomStringConvertible {
 
 public enum RenderSnapshotting {
 
-  /// 把 Markdown 渲染后抽成语义快照。
+  @MainActor
   public static func snapshot(
     _ source: String,
-    configuration: InkConfiguration = .standard,
+    appearance: InkAppearance = InkAppearance()
+  ) -> RenderSnapshot {
+    snapshot(source, configuration: .standard, appearance: appearance)
+  }
+
+  public static func snapshot(
+    _ source: String,
+    configuration: InkConfiguration,
     appearance: InkAppearance = InkAppearance()
   ) -> RenderSnapshot {
     let attr = InkAttributedRenderer.render(source, configuration: configuration)

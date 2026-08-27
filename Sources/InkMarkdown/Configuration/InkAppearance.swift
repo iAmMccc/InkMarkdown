@@ -19,10 +19,10 @@ import UIKit
 /// custom.heading.h1FontSize = 32
 /// let attr = InkAttributedRenderer.render(source, configuration: InkConfiguration(appearance: custom))
 /// ```
-public struct InkAppearance {
+public struct InkAppearance: Sendable {
 
   /// 全局默认样式（可变单例）。App 启动时配置一次，后续渲染自动读取。
-  public static var shared = InkAppearance()
+  @MainActor public static var shared = InkAppearance()
 
   // MARK: - 子配置
 
@@ -53,6 +53,10 @@ public struct InkAppearance {
   /// 思考过程块样式（<think>...</think> 或 <thought>...</thought>）。
   public var thought: Thought = .init()
 
+  /// 是否支持系统动态字号（Dynamic Type）。默认为 `true`。
+  /// 开启时，所有基于基础磅值的字号/行高均会根据当前系统的 `UIContentSizeCategory` 自动缩放。
+  public var supportsDynamicType: Bool = true
+
   public init() {}
 }
 
@@ -60,7 +64,7 @@ public struct InkAppearance {
 
 public extension InkAppearance {
 
-  struct Text {
+  struct Text: Sendable {
     /// 正文字号。
     public var fontSize: CGFloat = 17
     /// 正文行高（min=max 双向锁死）。
@@ -85,7 +89,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct Heading {
+  struct Heading: Sendable {
     /// H1 字号。
     public var h1FontSize: CGFloat = 19
     /// H2~H5 统一字号。
@@ -127,7 +131,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct Blockquote {
+  struct Blockquote: Sendable {
     /// 引用块文字字号。
     public var fontSize: CGFloat = 15
     /// 引用块行高。
@@ -153,7 +157,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct List {
+  struct List: Sendable {
     /// 列表条目之间间距。
     public var itemSpacing: CGFloat = 12
     /// 列表结束后距下方内容间距。
@@ -167,7 +171,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct CodeBlock {
+  struct CodeBlock: Sendable {
     /// 代码字号。
     public var fontSize: CGFloat = 14
     /// 代码行高。
@@ -184,6 +188,11 @@ public extension InkAppearance {
     public var textColor: UIColor = .label
     /// 代码块背景色。
     public var backgroundColor: UIColor = .secondarySystemFill
+    
+    /// VoiceOver label when language is known. `%@` is replaced by the language name.
+    public var accessibilityLabelFormat: String = "%@ code block"
+    /// VoiceOver label when no language is specified.
+    public var defaultAccessibilityLabel: String = "Code block"
 
     public init() {}
   }
@@ -193,7 +202,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct InlineCode {
+  struct InlineCode: Sendable {
     /// 行内代码字号。
     public var fontSize: CGFloat = 14
     /// 背景圆角。
@@ -219,7 +228,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct Table {
+  struct Table: Sendable {
     /// 表头字号。
     public var headerFontSize: CGFloat = 14
     /// 数据行字号。
@@ -254,7 +263,7 @@ public extension InkAppearance {
     public var enableLongPressCopy: Bool = false
     /// 复制成功后的 UI 反馈回调。传入触发复制的 view，由调用方决定如何展示 toast。
     /// 为 nil 时使用内置默认 toast。
-    public var onCopyFeedback: ((UIView) -> Void)?
+    public var onCopyFeedback: (@MainActor @Sendable (UIView) -> Void)?
 
     public init() {}
   }
@@ -264,7 +273,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct ThematicBreak {
+  struct ThematicBreak: Sendable {
     /// 分割线粗细。
     public var lineThickness: CGFloat = 1
     /// 分割线颜色。
@@ -280,7 +289,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct Link {
+  struct Link: Sendable {
     /// 链接颜色。
     public var color: UIColor = .link
 
@@ -292,7 +301,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct Thought {
+  struct Thought: Sendable {
     /// 思考中状态标题。
     public var title: String = "思考过程"
     /// 思考完成状态标题。
@@ -361,4 +370,21 @@ extension InkAppearance.Table: Equatable {
 extension InkAppearance.ThematicBreak: Equatable {}
 extension InkAppearance.Link: Equatable {}
 extension InkAppearance: Equatable {}
+
+// MARK: - Dynamic Type Helpers
+
+public extension InkAppearance {
+  /// 根据给定的文本样式和原始字体，返回经过 Dynamic Type 缩放的字体（若开启了支持）。
+  func scaledFont(_ font: UIFont, textStyle: UIFont.TextStyle = .body) -> UIFont {
+    guard supportsDynamicType else { return font }
+    return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: font)
+  }
+
+  /// 根据给定的文本样式和原始标量，返回经过 Dynamic Type 缩放的标量值（若开启了支持）。
+  func scaledValue(_ value: CGFloat, textStyle: UIFont.TextStyle = .body) -> CGFloat {
+    guard supportsDynamicType else { return value }
+    return UIFontMetrics(forTextStyle: textStyle).scaledValue(for: value)
+  }
+}
+
 

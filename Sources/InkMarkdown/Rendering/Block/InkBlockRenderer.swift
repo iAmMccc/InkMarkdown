@@ -10,9 +10,14 @@ import Markdown
 /// 业务方可覆盖或追加自定义 handler，实现 Open-Closed 扩展。
 public enum InkBlockRenderer {
 
+  @MainActor
+  public static func render(_ source: String) -> [InkRenderableBlock] {
+    render(source, configuration: .standard)
+  }
+
   public static func render(
     _ source: String,
-    configuration: InkConfiguration = .standard
+    configuration: InkConfiguration
   ) -> [InkRenderableBlock] {
     let filtered = configuration.sourcePreparedForParsing(source)
     let document = InkParser.parse(filtered)
@@ -59,6 +64,6 @@ public enum InkBlockRenderer {
       }
     }
     flushPendingAsAttributed()
-    return blocks
+    return InkBlockIdentityStamper.stamp(blocks, documentEpoch: InkDocumentEpoch.hash(filtered))
   }
 }

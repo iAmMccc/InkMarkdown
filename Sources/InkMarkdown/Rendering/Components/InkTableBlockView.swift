@@ -5,12 +5,12 @@ import Markdown
 
 final class InkTableBlockView: UIView {
 
-  private let headers: [String]
-  private let rows: [[String]]
-  private let alignments: [Table.ColumnAlignment?]
-  private let layoutMode: InkTableLayoutMode
-  private let config: InkAppearance.Table
-  private let configuration: InkConfiguration
+  private var headers: [String]
+  private var rows: [[String]]
+  private var alignments: [Table.ColumnAlignment?]
+  private var layoutMode: InkTableLayoutMode
+  private var config: InkAppearance.Table
+  private var configuration: InkConfiguration
 
   private var contentStack: UIStackView?
 
@@ -28,6 +28,26 @@ final class InkTableBlockView: UIView {
   @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+
+  func apply(
+    headers: [String],
+    rows: [[String]],
+    alignments: [Table.ColumnAlignment?],
+    layoutMode: InkTableLayoutMode,
+    config: InkAppearance.Table,
+    configuration: InkConfiguration
+  ) {
+    self.headers = headers
+    self.rows = rows
+    self.alignments = alignments
+    self.layoutMode = layoutMode
+    self.config = config
+    self.configuration = configuration
+    contentStack?.removeFromSuperview()
+    contentStack = nil
+    setup()
+    invalidateIntrinsicContentSize()
   }
 
   override func sizeThatFits(_ size: CGSize) -> CGSize {

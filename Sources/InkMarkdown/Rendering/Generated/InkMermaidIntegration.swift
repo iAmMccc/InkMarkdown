@@ -2,7 +2,7 @@ import UIKit
 import Markdown
 
 /// Mermaid 的公共开关与主题。默认关闭，因而不会接管既有 `mermaid` 代码围栏。
-public struct InkMermaidRendering: Equatable {
+public struct InkMermaidRendering: Equatable, Sendable {
   public var isEnabled: Bool = false
   public var theme: InkMermaidTheme = .light
   public var limits: InkMermaidRenderLimits = .init()
@@ -62,8 +62,6 @@ public struct InkMermaidBlockHandler: InkBlockHandler {
     imageRendering.generatedLoader = InkMermaidGeneratedImageLoader(limits: mermaid.limits)
     imageRendering.failureFallback = .sourceCode(code.code, language: code.language)
     imageRendering.failureCodeBlockStyle = configuration.appearance.codeBlock
-    return MainActor.assumeIsolated {
-      InkImageBlock(source: source, store: .shared, rendering: imageRendering)
-    }
+    return InkImageBlock(source: source, rendering: imageRendering)
   }
 }

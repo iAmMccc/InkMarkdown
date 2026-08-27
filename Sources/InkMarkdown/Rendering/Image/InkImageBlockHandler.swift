@@ -34,10 +34,7 @@ public struct InkImageBlockHandler: InkBlockHandler {
       return nil
     }
 
-    // Block 路由在 UIKit 主线程调用；Store 为 @MainActor。
-    return MainActor.assumeIsolated {
-      InkImageBlock(source: source, store: .shared, rendering: rendering)
-    }
+    return InkImageBlock(source: source, rendering: rendering)
   }
 }
 

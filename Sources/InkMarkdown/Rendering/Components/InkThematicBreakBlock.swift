@@ -2,14 +2,32 @@ import UIKit
 
 /// 分割线 Block：顶部一条细线 + 下方留白。
 public struct InkThematicBreakBlock: InkRenderableBlock {
+  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
   public let config: InkAppearance.ThematicBreak
 
-  public init(config: InkAppearance.ThematicBreak = InkAppearance.shared.thematicBreak) {
+  @MainActor
+  public init() {
+    self.init(config: InkAppearance.shared.thematicBreak)
+  }
+
+  public init(config: InkAppearance.ThematicBreak) {
     self.config = config
   }
 
-  public func makeView() -> UIView {
+  @MainActor public func makeView() -> UIView {
     InkThematicBreakView(config: config)
+  }
+
+  @MainActor
+  public func updateExistingView(_ view: UIView) {
+    guard let breakView = view as? InkThematicBreakView else { return }
+    breakView.apply(config: config)
+  }
+
+  @MainActor
+  @_spi(InkMarkdown)
+  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
+    InkFingerprint.combine(documentEpoch, UInt64(bitPattern: Int64(blockIndex)), 1)
   }
 }
 
@@ -17,7 +35,7 @@ public struct InkThematicBreakBlock: InkRenderableBlock {
 
 final class InkThematicBreakView: UIView {
 
-  private let config: InkAppearance.ThematicBreak
+  private var config: InkAppearance.ThematicBreak
   private let lineView = UIView()
 
   init(config: InkAppearance.ThematicBreak) {
@@ -34,6 +52,12 @@ final class InkThematicBreakView: UIView {
   @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+
+  func apply(config: InkAppearance.ThematicBreak) {
+    self.config = config
+    lineView.backgroundColor = config.color
+    invalidateIntrinsicContentSize()
   }
 
   override func sizeThatFits(_ size: CGSize) -> CGSize {

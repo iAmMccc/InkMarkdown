@@ -2,13 +2,28 @@ import UIKit
 import Markdown
 
 /// LaTeX 图片渲染的公开配置。默认关闭，保持既有 Markdown 文本行为。
-public struct InkLaTeXRendering: Equatable {
+public struct InkLaTeXRendering: Equatable, Sendable {
   /// 是否启用 LaTeX 渲染总开关。开启后默认识别 `\\(...\\)`、`$$...$$` 与 `\\[...\\]`。
   public var isEnabled: Bool = false
   /// 是否识别 `$...$` 行内分隔符。默认 `false`；即使总开关开启，也需显式 opt-in 才会渲染美元符公式。
   public var allowsInlineDollarDelimiter: Bool = false
   public var inlineStyle: InkLaTeXStyle = .init()
   public var blockStyle: InkLaTeXStyle = .init(fontSize: 20, horizontalPadding: 6, verticalPadding: 6)
+  
+  /// 本地化错误提示信息配置
+  public var errorMessages: ErrorMessages = .init()
+
+  public struct ErrorMessages: Equatable, Sendable {
+    public var emptyExpression: String = "LaTeX expression is empty."
+    public var contentTooLongFormat: String = "LaTeX expression exceeds %d character limit."
+    public var unclosedDelimiterFormat: String = "Unclosed LaTeX delimiter: %@"
+    public var unbalancedBraces: String = "Unbalanced LaTeX braces."
+    public var invalidDisplayContext: String = "Invalid LaTeX display context."
+    public var imageTooLarge: String = "LaTeX rendered image exceeds allowed size."
+    public var renderingFailedFormat: String = "LaTeX rendering failed: %@"
+
+    public init() {}
+  }
 
   public init() {}
 
@@ -216,8 +231,6 @@ public struct InkLaTeXBlockHandler: InkBlockHandler {
     var imageRendering = configuration.appearance.imageRendering
     imageRendering.isEnabled = true
     imageRendering.generatedLoader = InkLaTeXGeneratedImageLoader(mode: .block, style: resolvedStyle)
-    return MainActor.assumeIsolated {
-      InkImageBlock(source: source, store: .shared, rendering: imageRendering)
-    }
+    return InkImageBlock(source: source, rendering: imageRendering)
   }
 }

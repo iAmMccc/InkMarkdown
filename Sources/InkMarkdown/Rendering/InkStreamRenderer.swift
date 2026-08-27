@@ -33,7 +33,7 @@ import Markdown
 /// let blocks = InkBlockRenderer.render(fullSource, configuration: config)
 /// ```
 /// 流式渲染器：所有公开 API（append/finish/reset/updateConfiguration/bindTextView/unbindTextView）必须在主线程调用。
-public final class InkStreamRenderer {
+public final class InkStreamRenderer: @unchecked Sendable {
 
   // MARK: - Public Properties
 
@@ -129,6 +129,7 @@ public final class InkStreamRenderer {
 
   // MARK: - Init
 
+  @MainActor
   public init(configuration: InkConfiguration = .standard) {
     self.configuration = configuration
   }
@@ -139,19 +140,21 @@ public final class InkStreamRenderer {
   /// - Parameters:
   ///   - configuration: 后续解析与显示使用的新配置快照。
   ///   - source: 作为唯一输入源重新解析的完整 Markdown 文本。
+  @MainActor
   public func updateConfiguration(_ configuration: InkConfiguration, source: String) {
     self.configuration = configuration
     reset(to: source)
   }
 
   deinit {
-    stopDisplayLink()
+    displayLink?.invalidate()
   }
 
   // MARK: - Public API
 
   /// 绑定 UITextView，后续 append/finish 会自动驱动其 textStorage 更新。
   /// 如果已有已显示内容（displayIndex > 0），会同步到新 textView。
+  @MainActor
   public func bindTextView(_ tv: UITextView) {
     self.textView = tv
 
@@ -175,6 +178,7 @@ public final class InkStreamRenderer {
 
   /// 解绑 textView 并快进 displayIndex 到当前已解析位置。
   /// 用于 cell 离开屏幕时：不再做 textStorage 操作，但逻辑上视为已吐出。
+  @MainActor
   public func unbindTextView() {
     textView = nil
     // 快进到已解析的最新位置。
@@ -190,6 +194,7 @@ public final class InkStreamRenderer {
 
   /// 追加一段新到达的 Markdown 文本分片。
   /// 内部将在后台队列异步解析，不阻塞主线程。超过 ``maximumSourceLength`` 的尾部不会进入会话。
+  @MainActor
   public func append(_ chunk: String) {
     // finish() 已把 buffer 固化为终态：此后到达的分片一律安全忽略。
     // 若放行会污染终态——incrementalRenderer 已在 finish() 里 reset，追加会基于空状态
@@ -240,6 +245,7 @@ public final class InkStreamRenderer {
   }
 
   /// 用完整文本整体重置。
+  @MainActor
   public func reset(to source: String = "") {
     stopDisplayLink()
     buffer = source
@@ -307,6 +313,7 @@ public final class InkStreamRenderer {
   /// 此方法仅 finalized 当前 buffer 的 **attributed-string 通道**结果；
   /// 块级 LaTeX（`$$...$$`、`\\[...\\]`）与 Mermaid 围栏不会被转为 `UIView`。
   /// 若宿主需要块级图片渲染，请在流结束后对完整源文本调用 ``InkBlockRenderer/render(_:configuration:)``。
+  @MainActor
   public func finish() {
     let currentBuffer = buffer
     let config = configuration.capturingRenderEnvironmentForBackgroundParse()
@@ -406,6 +413,7 @@ public final class InkStreamRenderer {
   /// 为什么抽成静态方法：显示刷新是"节流 + 差量重写"的纯函数逻辑，抽离后可以被
   /// 单元测试直接驱动——CADisplayLink 在主 RunLoop 上运行，集成测试环境无法触发
   /// `onDisplayFrame`，若不抽离，这个分支将永远处于测试盲区（曾经如此）。
+  @MainActor
   static func refreshTextStorage(
     textStorage: NSTextStorage,
     content: NSAttributedString,
@@ -428,6 +436,7 @@ public final class InkStreamRenderer {
 
   // MARK: - Display Link
 
+  @MainActor
   private func startDisplayLink() {
     guard displayLink == nil else { return }
     let link = CADisplayLink(target: DisplayLinkTarget(renderer: self), selector: #selector(DisplayLinkTarget.onFrame))
@@ -438,12 +447,14 @@ public final class InkStreamRenderer {
     displayLink = link
   }
 
+  @MainActor
   private func stopDisplayLink() {
     displayLink?.invalidate()
     displayLink = nil
   }
 
   /// CADisplayLink 每帧回调
+  @MainActor
   fileprivate func onDisplayFrame() {
     guard !isDisplayPaused else { return }
 
@@ -534,6 +545,7 @@ public final class InkStreamRenderer {
     }
   }
 
+  @MainActor
   private func handleFinalParseCompleted() {
     guard isFinished else { return }
     onFinishParse?()
@@ -551,6 +563,7 @@ public final class InkStreamRenderer {
     completeFinishDisplay()
   }
 
+  @MainActor
   private func completeFinishDisplay() {
     guard isFinished else { return }
     stopDisplayLink()
@@ -559,6 +572,7 @@ public final class InkStreamRenderer {
     callback?()
   }
 
+  @MainActor
   private func notifyHeightChangeIfNeeded() {
     let containerWidth = textView?.textContainer.size.width ?? 0
     guard containerWidth > 0, let tv = textView else { return }
@@ -569,6 +583,7 @@ public final class InkStreamRenderer {
     }
   }
 
+  @MainActor
   private func bindImageAttachmentsIfNeeded(in range: NSRange? = nil) {
     // 为什么 用 assumeIsolated 而不是 await MainActor.run：
     // 本方法所有调用点（bindTextView / onDisplayFrame / _flushDisplay）都保证在主线程——
@@ -593,6 +608,7 @@ public final class InkStreamRenderer {
   // MARK: - Flush
 
   /// 立即将所有已解析内容显示完毕
+  @MainActor
   private func _flushDisplay() {
     preloadLock.lock()
     let content = preloadContent
@@ -921,6 +937,7 @@ struct InkIncrementalMarkdownRenderer {
   }
 
   /// 每次追加分片后重新渲染完整 Markdown。
+  @MainActor
   public static func renderFullyAfterEachChunk(_ chunks: [String], configuration: InkConfiguration = .standard) -> NSAttributedString {
     var buffer = ""
     var result = NSAttributedString()
@@ -932,6 +949,7 @@ struct InkIncrementalMarkdownRenderer {
   }
 
   /// 使用增量渲染处理全部分片。
+  @MainActor
   public static func renderIncrementally(_ chunks: [String], configuration: InkConfiguration = .standard) -> NSAttributedString {
     var renderer = InkIncrementalMarkdownRenderer()
     var result = NSAttributedString()
@@ -942,6 +960,7 @@ struct InkIncrementalMarkdownRenderer {
   }
 
   /// 测量全量重渲染和增量渲染的耗时。
+  @MainActor
   public static func measure(chunks: [String] = makeChunks(), configuration: InkConfiguration = .standard) -> Result {
     let fullStart = CACurrentMediaTime()
     let fullResult = renderFullyAfterEachChunk(chunks, configuration: configuration)
@@ -981,6 +1000,7 @@ struct InkIncrementalMarkdownRenderer {
 
 // MARK: - DisplayLink Target (避免循环引用)
 
+@MainActor
 private final class DisplayLinkTarget {
   weak var renderer: InkStreamRenderer?
 

@@ -24,7 +24,7 @@ struct AccessibilityAndDynamicTypeTests {
     let block = InkThoughtBlock(
       thought: "推导过程第 1 步\n推导过程第 2 步",
       isComplete: true,
-      config: thoughtConfig
+      config: thoughtConfig, renderConfiguration: .standard
     )
 
     let view = block.makeView() as! InkThoughtBlockView
@@ -45,7 +45,7 @@ struct AccessibilityAndDynamicTypeTests {
     let streamingBlock = InkThoughtBlock(
       thought: "实时思考中...",
       isComplete: false,
-      config: thoughtConfig
+      config: thoughtConfig, renderConfiguration: .standard
     )
     let streamingView = streamingBlock.makeView() as! InkThoughtBlockView
     #expect(streamingView.headerContainer.accessibilityLabel == "正在思考中")
@@ -59,7 +59,7 @@ struct AccessibilityAndDynamicTypeTests {
     let block = InkThoughtBlock(
       thought: "思考细节内容",
       isComplete: true,
-      config: thoughtConfig
+      config: thoughtConfig, renderConfiguration: .standard
     )
 
     let view = block.makeView() as! InkThoughtBlockView
