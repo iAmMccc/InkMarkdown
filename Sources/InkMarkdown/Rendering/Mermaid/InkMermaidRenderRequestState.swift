@@ -6,7 +6,7 @@ import Foundation
 /// 独占，超时或取消时会先恢复当前等待者；此后同一 generation 的迟到 callback 会被忽略，
 /// 因此调用方不需要等待 WebKit 协作取消即可释放渲染 permit。
 @MainActor
-final class InkMermaidRenderRequestState {
+final class InkMermaidRenderRequestState: Sendable {
   let generation = UUID()
 
   private var isActive = true
@@ -34,7 +34,7 @@ final class InkMermaidRenderRequestState {
     invalidationHandler = handler
   }
 
-  func awaitCallback<T>(
+  func awaitCallback<T: Sendable>(
     _ start: @escaping (@escaping (Result<T, Error>) -> Void) -> Void
   ) async throws -> T {
     try throwIfInactive()
@@ -60,10 +60,8 @@ final class InkMermaidRenderRequestState {
         }
       }
     }, onCancel: { [weak self] in
-      DispatchQueue.main.async {
-        MainActor.assumeIsolated {
-          self?.invalidate(with: CancellationError())
-        }
+      Task { @MainActor in
+        self?.invalidate(with: CancellationError())
       }
     })
   }
@@ -108,7 +106,7 @@ final class InkMermaidRenderRequestState {
     pendingID = nil
   }
 
-  private func complete<T>(
+  private func complete<T: Sendable>(
     operationID: UUID,
     result: Result<T, Error>,
     continuation: CheckedContinuation<T, Error>

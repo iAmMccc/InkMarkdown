@@ -22,7 +22,11 @@ public final class InkMermaidImageRenderer: NSObject {
 
   public init(limits: InkMermaidRenderLimits = .init()) {
     self.limits = limits
-    self.bridgeURL = Bundle.module.url(forResource: "InkMermaidBridge", withExtension: "html")
+    var bundle = Bundle.main
+    if let cls = NSClassFromString("InkMarkdownMermaid.InkMarkdownMermaid") {
+      bundle = Bundle(for: cls)
+    }
+    self.bridgeURL = bundle.url(forResource: "InkMermaidBridge", withExtension: "html") ?? Bundle.main.url(forResource: "InkMermaidBridge", withExtension: "html")
     super.init()
   }
 
@@ -220,14 +224,14 @@ public final class InkMermaidImageRenderer: NSObject {
     _ javaScript: String,
     using view: WKWebView,
     state: InkMermaidRenderRequestState
-  ) async throws -> Any? {
+  ) async throws -> String? {
     try await state.awaitCallback { completion in
       view.evaluateJavaScript(javaScript) { response, error in
         Task { @MainActor in
           if let error {
             completion(.failure(InkMermaidRenderError.javaScript(message: Self.javaScriptErrorMessage(from: error))))
           } else {
-            completion(.success(response))
+            completion(.success(response as? String))
           }
         }
       }
@@ -262,7 +266,7 @@ public final class InkMermaidImageRenderer: NSObject {
           using: view,
           state: state
         )
-        guard let polledString = polled as? String else {
+        guard let polledString = polled else {
           try await state.pollSleep(nanoseconds: 50_000_000)
           continue
         }
@@ -349,7 +353,7 @@ extension InkMermaidImageRenderer: WKNavigationDelegate {
   public func webView(
     _ webView: WKWebView,
     decidePolicyFor navigationAction: WKNavigationAction,
-    decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+    decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
   ) {
     guard self.webView === webView,
           let state = currentRequest,

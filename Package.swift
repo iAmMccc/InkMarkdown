@@ -18,6 +18,14 @@ let package = Package(
             name: "InkMarkdownSwiftUI",
             targets: ["InkMarkdownSwiftUI"]
         ),
+        .library(
+            name: "InkMarkdownLaTeX",
+            targets: ["InkMarkdownLaTeX"]
+        ),
+        .library(
+            name: "InkMarkdownMermaid",
+            targets: ["InkMarkdownMermaid"]
+        ),
     ],
     dependencies: [
         // Apple 官方 Markdown 解析器：固定 revision，保证可重复构建（ADR-001）
@@ -34,17 +42,14 @@ let package = Package(
             name: "InkMarkdown",
             dependencies: [
                 .product(name: "Markdown", package: "swift-markdown"),
-                .product(name: "iosMath", package: "iosMath"),
             ],
             path: "Sources/InkMarkdown",
             exclude: [
                 "Rendering/Components/TABLE_INTEGRATION_GUIDE.md",
             ],
-            resources: [
-                .process("Rendering/Mermaid/Resources"),
-            ],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
+                .enableExperimentalFeature("StrictConcurrency"),
             ]
         ),
         .target(
@@ -53,11 +58,12 @@ let package = Package(
             path: "Sources/InkMarkdownSwiftUI",
             swiftSettings: [
                 .swiftLanguageMode(.v5),
+                .enableExperimentalFeature("StrictConcurrency"),
             ]
         ),
         .testTarget(
             name: "InkMarkdownTests",
-            dependencies: ["InkMarkdown"],
+            dependencies: ["InkMarkdown", "InkMarkdownLaTeX", "InkMarkdownMermaid"],
             path: "Tests/InkMarkdownTests"
         ),
         .testTarget(
@@ -77,6 +83,28 @@ let package = Package(
             name: "ExampleAppPolicyTests",
             dependencies: ["ExampleAppChatPolicy"],
             path: "Tests/ExampleAppPolicyTests"
+        ),
+        .target(
+            name: "InkMarkdownLaTeX",
+            dependencies: [
+                "InkMarkdown",
+                .product(name: "iosMath", package: "iosMath"),
+            ],
+            path: "Sources/InkMarkdownLaTeX",
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+                .enableExperimentalFeature("StrictConcurrency"),
+            ]
+        ),
+        .target(
+            name: "InkMarkdownMermaid",
+            dependencies: ["InkMarkdown"],
+            path: "Sources/InkMarkdownMermaid",
+            resources: [.process("Resources")],
+            swiftSettings: [
+                .swiftLanguageMode(.v5),
+                .enableExperimentalFeature("StrictConcurrency"),
+            ]
         ),
     ]
 )

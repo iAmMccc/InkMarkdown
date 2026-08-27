@@ -1,8 +1,9 @@
+#if canImport(iosMath)
 import iosMath
 import UIKit
 
 /// 一个由 LaTeX 生成的内存图片；图片缓存与订阅由调用方的通用图片管线管理。
-public struct InkLaTeXRenderResult {
+public struct InkLaTeXRenderResult: @unchecked Sendable {
   public let image: UIImage
   public let stableID: String
   public let size: CGSize
@@ -12,7 +13,7 @@ public struct InkLaTeXRenderResult {
 ///
 /// 此类型不持有缓存、不写入磁盘，也不直接调用 ``InkImageStore``；接入层应以
 /// ``InkLaTeXRenderRequest/stableID`` 作为生成图片源的 identity，并把结果交给既有 Store。
-public struct InkLaTeXImageRenderer {
+public struct InkLaTeXImageRenderer: Sendable {
   /// 变更图片生成逻辑时递增，以使既有缓存自然失效。
   public static let rendererVersion = "iosMath-2.3.1-r1"
 
@@ -120,3 +121,24 @@ public struct InkLaTeXImageRenderer {
     )
   }
 }
+#else
+import UIKit
+
+/// iosMath 未导入时的桩实现
+public struct InkLaTeXRenderResult: Sendable {
+  public let image: UIImage
+  public let stableID: String
+  public let size: CGSize
+}
+
+public struct InkLaTeXImageRenderer: Sendable {
+  public static let rendererVersion = "iosMath-not-imported"
+  public static let maximumContentLength = 8_192
+  public static let maximumPixelDimension: CGFloat = 4_096
+
+  public init() {}
+  public func render(_ request: InkLaTeXRenderRequest) async throws -> InkLaTeXRenderResult {
+    throw NSError(domain: "InkLaTeXImageRenderer", code: 1, userInfo: [NSLocalizedDescriptionKey: "LaTeX rendering requires the iosMath module."])
+  }
+}
+#endif

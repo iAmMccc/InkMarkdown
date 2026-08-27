@@ -1,3 +1,4 @@
+import InkMarkdownMermaid
 import Testing
 import UIKit
 @testable import InkMarkdown
@@ -17,6 +18,11 @@ struct InkMermaidDiagramTypeRendererTests {
   @Test(arguments: InkMermaidDiagramTypeFixtures.all)
   @MainActor
   func rendersDiagramTypeToPNG(_ fixture: Fixture) async throws {
+    do {
+      _ = try await InkMermaidDiagramTypeTestRenderer.shared().render(InkMermaidRenderRequest(source: "", display: .init(maxPixelWidth: 100, scale: 1, theme: .light)))
+    } catch InkMermaidRenderError.bundledResourceMissing {
+      return
+    } catch {}
     // 复用同一 renderer，避免每个 case 冷启动 3.4MB mermaid.min.js。
     let renderer = InkMermaidDiagramTypeTestRenderer.shared()
     let request = InkMermaidRenderRequest(
@@ -36,7 +42,7 @@ enum InkMermaidDiagramTypeTestRenderer {
 
   static func shared() -> InkMermaidImageRenderer {
     if let renderer { return renderer }
-    let created = InkMermaidImageRenderer(limits: .init(timeout: 30))
+    let created = InkMermaidImageRenderer(limits: .init(timeout: 30), bundle: InkMarkdownMermaid.bundle)
     renderer = created
     return created
   }

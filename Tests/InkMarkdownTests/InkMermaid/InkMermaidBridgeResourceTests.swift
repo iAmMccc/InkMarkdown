@@ -1,10 +1,11 @@
+import InkMarkdownMermaid
 import Foundation
 import Testing
 @testable import InkMarkdown
 
 struct InkMermaidBridgeResourceTests {
   @Test func bridgeUsesStrictCSPAndOrderedExternalScripts() throws {
-    let resourceURL = try #require(Bundle.module.url(
+    let resourceURL = try #require(InkMarkdownMermaid.bundle.url(
       forResource: "InkMermaidBridge",
       withExtension: "html"
     ))
@@ -21,7 +22,7 @@ struct InkMermaidBridgeResourceTests {
     let bridge = try #require(html.range(of: #"<script src="InkMermaidBridge.js"></script>"#))
     #expect(mermaid.lowerBound < bridge.lowerBound)
 
-    let bridgeURL = try #require(Bundle.module.url(
+    let bridgeURL = try #require(InkMarkdownMermaid.bundle.url(
       forResource: "InkMermaidBridge",
       withExtension: "js"
     ))
