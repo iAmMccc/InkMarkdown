@@ -9,8 +9,8 @@
 | Framework | **Swift Testing + XCTest** | `import Testing` / `@Test` / `@Suite`；现有 XCTest 测试 |
 | Location | `Tests/InkMarkdownTests/`、`Tests/InkMarkdownSwiftUITests/` | `Package.swift` testTarget |
 | Host requirement | **iOS Simulator**（UIKit / SwiftUI adapter） | `docs/current-status.md`、`AGENTS.md` |
-| Last runner result | **178 passed, 0 failed**（2026-08-18，XcodeBuildMCP / iPhone 16 与 iPad Pro 11-inch (M4) / iOS 18.5）；同日 iPhone 17 Pro / iOS Simulator latest 全量 **192 passed / 1 failed**（`InkMermaidDiagramTypeRendererTests` / fixture `flowchart` / `.timedOut` @ 30s）；过滤该套件 **25/26 passed**；另一次全量曾 193 passed | `current-status.md` |
-| Static declarations | Core 的 142 个 `@Test` declaration + 16 个 XCTest test method；另有 SwiftUI adapter 契约测试；参数化 `@Test(arguments:)` 会展开为额外 execution case | 测试源码统计 |
+| P0 release gate | SwiftUI adapter P0 闸门：`Tests/InkMarkdownSwiftUITests/InkMarkdownP0GateTests.swift`（静态/流式测量、thought identity、promotion、trait 重测）；iOS 14 ICS 用例标记 `.disabled`（**实测未交付**） | `@Suite("SwiftUI Adapter P0 闸门")` |
+| Static declarations | Core `@Test` + XCTest；SwiftUI adapter 契约与 P0 闸门；参数化 `@Test(arguments:)` 会展开为额外 execution case | 测试源码 |
 | Coverage gate | 无强制 coverage 阈值文件 | scan / 仓库根 |
 
 ### 2) Test File Map
@@ -22,7 +22,8 @@
 | `InkMermaid/InkMermaidDiagramTypeRendererTests.swift` | Mermaid 各 diagram type 离线 PNG 渲染；共享 `InkMermaidImageRenderer`（30s timeout）；首 case `flowchart` 在 iPhone 17 Pro 上偶发 `.timedOut`（见已知测试限制） |
 | `Snapshots/RenderSnapshot.swift` | 快照模型 + `RenderContractAssertions` 助手 |
 | `Snapshots/SnapshotScaffoldTests.swift` | 快照基建冒烟 |
-| `../InkMarkdownSwiftUITests/` | 静态 configuration 刷新、session 状态机、headless finish、重置与 configuration snapshot |
+| `../InkMarkdownSwiftUITests/InkMarkdownAdapterWorkloadTests.swift` | Adapter 单环境工作负载回归闸门（静态长文测量、百片流式、promotion 时长；非 FPS/hitch 签收） |
+| `../InkMarkdownSwiftUITests/` | P0 闸门（`InkMarkdownP0GateTests`）、单次测量、性能基线、VoiceOver/Dynamic Type adapter 契约 |
 
 ### 3) Assertion and Access Patterns
 
@@ -36,15 +37,18 @@
 
 ### 4) How to Run
 
+**推荐：** 使用 [XcodeBuildMCP](https://www.xcodebuildmcp.com/) 配置 session defaults 后执行 `test_sim`；scheme 为 **`InkMarkdown-Package`**，destination 须为 **iOS Simulator**（UIKit / SwiftUI adapter 依赖）。
+
+P0 闸门位于 `Tests/InkMarkdownSwiftUITests/InkMarkdownP0GateTests.swift`，随上述 iOS Simulator 测试一并运行；勿以 macOS host 结果判定库是否可用。
+
 ```bash
-# 推荐：XcodeBuildMCP 发现 destination 后 test
-# 回退：
-xcodebuild -scheme InkMarkdown \
+# XcodeBuildMCP 不可用时的回退：
+xcodebuild -scheme InkMarkdown-Package \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
   test
 ```
 
-**错误做法：** 在 macOS host 直接执行 `swift test`，会报 `no such module 'UIKit'`。
+**错误做法：** 在 macOS host 直接执行 `swift test` 会报 `no such module 'UIKit'`——这是 host 平台限制，**不算** InkMarkdown 库逻辑失败。
 
 ### 5) What Is Covered vs Gaps
 

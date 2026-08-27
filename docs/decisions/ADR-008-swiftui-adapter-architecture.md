@@ -80,7 +80,7 @@ Accepted
 | `InkMarkdownRenderSession` | `public final class InkMarkdownRenderSession: ObservableObject` | 流式会话状态机，单条流式 Markdown 的唯一输入源与生命周期所有者；公开 `State: Sendable, Equatable` 枚举、`append(_:)` / `finish()` / `cancel()` / `reset()`、`onDisplayUpdate` 回调与 `isPromoted` 发布 |
 | `.inkConfiguration(_:)` | `public extension View { func inkConfiguration(_ configuration: InkConfiguration) -> some View }` | 为视图层级注入统一渲染配置的环境修饰符；配套 `EnvironmentValues.inkConfiguration` 环境值 |
 
-> 注：本清单是文档与源码之间可核对的 API 基线；类型名如有演进，以 `Sources/InkMarkdownSwiftUI/` 源码为准。
+> 注：本清单是文档与源码之间可核对的 API 基线；类型名如有演进，以 `Sources/InkMarkdownSwiftUI/` 源码为准。`InkMarkdownSwiftUI` 不再 `@_exported import InkMarkdown`；调用方需显式 `import InkMarkdown` 以使用 `InkConfiguration` 等核心类型。
 
 ## Related Documents
 

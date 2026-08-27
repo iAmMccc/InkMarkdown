@@ -148,9 +148,11 @@ let attributed = InkAttributedRenderer.render(markdown, configuration: config)
 
 ```swift
 import SwiftUI
+import InkMarkdown
 import InkMarkdownSwiftUI
 
 struct MarkdownScreen: View {
+    // 勿 @ObservedObject 整份 session；仅 isPromoted 会驱动 SwiftUI 换树。
     @StateObject private var session = InkMarkdownRenderSession()
 
     var body: some View {
@@ -174,7 +176,7 @@ InkMarkdownView(markdown)
     .inkConfiguration(configuration)
 ```
 
-流式场景由宿主把收到的 delta 交给 `session.append(_:)`，并在适当时调用 `finish()`、`cancel()` 或 `reset()`。三个 adapter 示例的入口和说明见 [SwiftUI ExampleApp 指南](docs/contributor-guide/10-swiftui-example-app.md)。
+流式场景由宿主把收到的 delta 交给 `session.append(_:)`，并在适当时调用 `finish()`、`cancel()` 或 `reset()`。六个对称 adapter 示例的入口和说明见 [SwiftUI ExampleApp 指南](docs/contributor-guide/10-swiftui-example-app.md)。
 
 ---
 

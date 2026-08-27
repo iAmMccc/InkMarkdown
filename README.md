@@ -148,9 +148,11 @@ Add the `InkMarkdownSwiftUI` product when integrating a SwiftUI host. The adapte
 
 ```swift
 import SwiftUI
+import InkMarkdown
 import InkMarkdownSwiftUI
 
 struct MarkdownScreen: View {
+    // 勿 @ObservedObject 整份 session；仅 isPromoted 会驱动 SwiftUI 换树。
     @StateObject private var session = InkMarkdownRenderSession()
 
     var body: some View {
@@ -174,7 +176,7 @@ InkMarkdownView(markdown)
     .inkConfiguration(configuration)
 ```
 
-For streaming, the host app feeds received deltas to `session.append(_:)`, then calls `finish()`, `cancel()`, or `reset()` as appropriate. See the [SwiftUI ExampleApp guide](docs/contributor-guide/10-swiftui-example-app.md) for the three adapter examples.
+For streaming, the host app feeds received deltas to `session.append(_:)`, then calls `finish()`, `cancel()`, or `reset()` as appropriate. See the [SwiftUI ExampleApp guide](docs/contributor-guide/10-swiftui-example-app.md) for the six symmetric adapter examples.
 
 ---
 

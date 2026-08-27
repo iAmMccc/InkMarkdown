@@ -118,7 +118,7 @@ SwiftUI input + Environment
 
 - 配置 snapshot 是一次 render 的唯一输入；不能同时把全局 mutable appearance、Environment 与 Coordinator cache 当作独立真相。
 - 内容或影响语义的配置变化必须进入相同的更新判定；不能只比较 Markdown 字符串。
-- UIKit block 的创建、替换与清理封装在 adapter implementation，调用者不需要管理 UIKit child view。
+- UIKit block 按 ``InkBlockIdentity`` diff 复用子视图；``InkMarkdownContainerView`` 单次 `measureContent` 供 `sizeThatFits` / `intrinsicContentSize` / `layoutSubviews` 共用，禁止在 `layoutSubviews` 内 `invalidateIntrinsicContentSize`。
 
 ### 5.2 流式 Markdown
 
