@@ -6,12 +6,17 @@ import Foundation
 /// 等价的回调或 loader 时，可使用同一身份声明其行为等价，以便 adapter 安全跳过
 /// 无效重渲染。只有行为与所有捕获状态都等价时，才能复用同一值。
 public struct InkSemanticIdentity: Hashable, Sendable, ExpressibleByStringLiteral {
+  /// 调用方提供的不透明稳定值；仅用于比较，不承载业务含义。
   public let rawValue: String
 
+  /// 使用稳定字符串创建语义身份。
+  ///
+  /// 只有动态类型、行为与全部捕获状态均等价时，才应复用同一字符串。
   public init(_ rawValue: String) {
     self.rawValue = rawValue
   }
 
+  /// 由字符串字面量创建语义身份。
   public init(stringLiteral value: StringLiteralType) {
     self.init(value)
   }
@@ -26,10 +31,12 @@ public struct InkSemanticIdentity: Hashable, Sendable, ExpressibleByStringLitera
 /// 默认返回 `nil`，因此既有第三方实现无需修改。实现者只能在动态类型、
 /// 所有行为与捕获状态都等价时复用同一身份。
 public protocol InkSemanticIdentityProviding {
+  /// 当前不透明值的稳定语义身份；无法证明等价时返回 `nil`。
   var semanticIdentity: InkSemanticIdentity? { get }
 }
 
 public extension InkSemanticIdentityProviding {
+  /// 默认不声明稳定身份，确保未知实现按保守路径比较。
   var semanticIdentity: InkSemanticIdentity? { nil }
 }
 

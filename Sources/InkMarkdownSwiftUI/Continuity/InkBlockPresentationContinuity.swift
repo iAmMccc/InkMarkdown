@@ -4,7 +4,15 @@
 //
 
 @_spi(InkMarkdown) import InkMarkdown
+import os.log
 import UIKit
+
+#if DEBUG
+private let inkBlockPresentationContinuityLog = OSLog(
+  subsystem: "com.inkmarkdown.InkMarkdownSwiftUI",
+  category: "BlockPresentationContinuity"
+)
+#endif
 
 /// 当前 SwiftUI adapter 呈现周期的 opaque identity。
 @MainActor
@@ -1370,9 +1378,12 @@ final class InkBlockPresentationContinuity {
     reason: String
   ) {
 #if DEBUG
-    print(
-      "[InkBlockPresentationContinuity] local fallback at structural slot "
-        + "\(candidate.structuralSlot): \(reason)"
+    os_log(
+      .error,
+      log: inkBlockPresentationContinuityLog,
+      "local fallback at structural slot %{public}d: %{public}@",
+      candidate.structuralSlot,
+      reason
     )
 #else
     _ = candidate

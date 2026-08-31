@@ -6,9 +6,12 @@ public struct InkMermaidRendering: Equatable, Sendable {
   /// 是否启用 Mermaid 渲染。开启前必须链接 `InkMarkdownMermaid` product 并调用
   /// `InkMarkdownMermaid.register()`；未注册的生成图请求会报告对应 owner 不可用。
   public var isEnabled: Bool = false
+  /// 生成图使用的 Mermaid 主题。
   public var theme: InkMermaidTheme = .light
+  /// 源码长度、输出尺寸和超时限制。
   public var limits: InkMermaidRenderLimits = .init()
 
+  /// 创建默认关闭的 Mermaid 渲染配置。
   public init() {}
 }
 
@@ -18,10 +21,12 @@ public struct InkMermaidRendering: Equatable, Sendable {
 public final class InkMermaidGeneratedImageLoader: InkGeneratedImageLoading, InkConfigurationSemanticsProviding, @unchecked Sendable {
   private let limits: InkMermaidRenderLimits
 
+  /// 创建不持有位图缓存的 Mermaid loader。
   public init(limits: InkMermaidRenderLimits = .init()) {
     self.limits = limits
   }
 
+  /// 由 renderer 版本、Mermaid 版本和全部限制派生的稳定语义身份。
   public var semanticIdentity: InkSemanticIdentity? {
     InkSemanticIdentity([
       InkMermaidImageRenderer.rendererVersion,
@@ -34,11 +39,16 @@ public final class InkMermaidGeneratedImageLoader: InkGeneratedImageLoading, Ink
     ].joined(separator: "|"))
   }
 
+  /// 比较另一 loader 是否使用相同限制。
   public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
     guard let other = other as? InkMermaidGeneratedImageLoader else { return false }
     return limits == other.limits
   }
 
+  /// 将 Mermaid 请求交给已注册 addon，并返回生成图片。
+  ///
+  /// 未注册 `InkMarkdownMermaid` 或请求 owner 不匹配时抛出明确错误；缓存由外层
+  /// ``InkImageStore`` 管理。
   public func loadGeneratedImage(
     request: InkGeneratedImageRequest,
     display: DisplayContext
@@ -63,17 +73,21 @@ public final class InkMermaidGeneratedImageLoader: InkGeneratedImageLoading, Ink
 /// 将精确标记为 `mermaid` 的围栏代码转为图片块。
 /// 宿主须在首次渲染前调用 `InkMarkdownMermaid.register()`。
 public struct InkMermaidBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+  /// 创建无状态的 Mermaid 围栏 handler。
   public init() {}
 
+  /// Mermaid handler 无实例配置，因此同类型实例始终语义等价。
   public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
     other is InkMermaidBlockHandler
   }
 
+  /// 判断节点是否为语言标记精确匹配 Mermaid 的围栏代码块。
   public func canHandle(_ markup: Markup) -> Bool {
     guard let code = markup as? Markdown.CodeBlock else { return false }
     return InkMermaidFence.isMermaid(language: code.language)
   }
 
+  /// 将已启用的 Mermaid 围栏转换为生成图片块；配置关闭或类型不匹配时返回 `nil`。
   @MainActor
   public func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
     guard let code = markup as? Markdown.CodeBlock else { return nil }

@@ -9,24 +9,36 @@ public struct InkLaTeXRendering: Equatable, Sendable {
   public var isEnabled: Bool = false
   /// 是否识别 `$...$` 行内分隔符。默认 `false`；即使总开关开启，也需显式 opt-in 才会渲染美元符公式。
   public var allowsInlineDollarDelimiter: Bool = false
+  /// 行内公式生成图片时使用的字号、颜色和内边距。
   public var inlineStyle: InkLaTeXStyle = .init()
+  /// 独占块级公式生成图片时使用的字号、颜色和内边距。
   public var blockStyle: InkLaTeXStyle = .init(fontSize: 20, horizontalPadding: 6, verticalPadding: 6)
-  
-  /// 本地化错误提示信息配置
+
+  /// 解析与生成失败时使用的本地化提示文案。
   public var errorMessages: ErrorMessages = .init()
 
+  /// LaTeX 解析与图片生成错误的可本地化文案集合。
   public struct ErrorMessages: Equatable, Sendable {
+    /// 表达式为空时的提示文案。
     public var emptyExpression: String = "LaTeX expression is empty."
+    /// 表达式超过长度限制时的格式；`%d` 替换为允许的字符数。
     public var contentTooLongFormat: String = "LaTeX expression exceeds %d character limit."
+    /// 定界符未闭合时的格式；`%@` 替换为起始定界符。
     public var unclosedDelimiterFormat: String = "Unclosed LaTeX delimiter: %@"
+    /// 花括号不平衡时的提示文案。
     public var unbalancedBraces: String = "Unbalanced LaTeX braces."
+    /// 行内或块级上下文与表达式不匹配时的提示文案。
     public var invalidDisplayContext: String = "Invalid LaTeX display context."
+    /// 生成图片超过尺寸限制时的提示文案。
     public var imageTooLarge: String = "LaTeX rendered image exceeds allowed size."
+    /// renderer 失败时的格式；`%@` 替换为底层错误说明。
     public var renderingFailedFormat: String = "LaTeX rendering failed: %@"
 
+    /// 创建默认英文错误文案集合。
     public init() {}
   }
 
+  /// 创建默认关闭的 LaTeX 渲染配置。
   public init() {}
 
   var parseOptions: InkLaTeXParseOptions {
@@ -42,14 +54,18 @@ public struct InkLaTeXRendering: Equatable, Sendable {
 /// 未在渲染前调用 `InkMarkdownLaTeX.register()` 时，loader 会抛出
 /// `ImageLoadError.generatedLoaderUnavailable(owner: "latex")`。
 public struct InkLaTeXGeneratedImageLoader: InkGeneratedImageLoading, InkConfigurationSemanticsProviding {
+  /// 当前请求采用的行内或块级渲染模式。
   public let mode: InkLaTeXRenderMode
+  /// 传给已注册 addon renderer 的稳定样式快照。
   public let style: InkLaTeXStyle
 
+  /// 创建不持有缓存的 LaTeX 生成图片 loader。
   public init(mode: InkLaTeXRenderMode, style: InkLaTeXStyle) {
     self.mode = mode
     self.style = style
   }
 
+  /// 由 renderer 版本、模式和完整样式派生的稳定语义身份。
   public var semanticIdentity: InkSemanticIdentity? {
     let colorIdentity = style.color.map {
       "\($0.red),\($0.green),\($0.blue),\($0.alpha)"
@@ -65,11 +81,16 @@ public struct InkLaTeXGeneratedImageLoader: InkGeneratedImageLoading, InkConfigu
     ].joined(separator: "|"))
   }
 
+  /// 比较另一扩展是否使用相同模式与样式。
   public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
     guard let other = other as? InkLaTeXGeneratedImageLoader else { return false }
     return mode == other.mode && style == other.style
   }
 
+  /// 将 LaTeX 生成请求转交给已注册的 addon renderer。
+  ///
+  /// 未注册 `InkMarkdownLaTeX` 或请求 owner 不匹配时抛出明确错误；缓存仍由外层
+  /// ``InkImageStore`` 管理。
   public func loadGeneratedImage(
     request: InkGeneratedImageRequest,
     display: DisplayContext
@@ -91,17 +112,23 @@ public struct InkLaTeXGeneratedImageLoader: InkGeneratedImageLoading, InkConfigu
 ///
 /// Attachment 仅持有生成来源；实际图像仍在显示层绑定时经 `InkImageStore` 加载。
 public struct InkLaTeXInlineSyntax: InkInlineSyntax, InkConfigurationSemanticsProviding {
+  /// 当前行内语法使用的 LaTeX 配置快照。
   public let rendering: InkLaTeXRendering
 
+  /// 创建只处理完整行内公式集合的语法扩展。
   public init(rendering: InkLaTeXRendering) {
     self.rendering = rendering
   }
 
+  /// 比较另一行内扩展是否使用相同渲染配置。
   public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
     guard let other = other as? InkLaTeXInlineSyntax else { return false }
     return rendering == other.rendering
   }
 
+  /// 把文本中的完整行内公式转为延迟加载 attachment。
+  ///
+  /// 配置关闭、无公式或混入块级公式时返回 `nil`，让统一富文本管线继续降级处理。
   public func render(text: String, context: InkInlineContext) -> NSAttributedString? {
     guard rendering.isEnabled else { return nil }
     guard case .success(let expressions) = InkLaTeXSyntax.parse(text, options: rendering.parseOptions),
@@ -153,8 +180,10 @@ public struct InkLaTeXInlineSyntax: InkInlineSyntax, InkConfigurationSemanticsPr
 
 /// 独占一段的 `$$...$$` 或 `\\[...\\]` 转为图片块；不完整或混合文本保持富文本降级。
 public struct InkLaTeXBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+  /// 创建无状态的块级 LaTeX handler。
   public init() {}
 
+  /// 块级 handler 无实例配置，因此同类型实例始终语义等价。
   public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
     other is InkLaTeXBlockHandler
   }
@@ -164,6 +193,7 @@ public struct InkLaTeXBlockHandler: InkBlockHandler, InkConfigurationSemanticsPr
     case bracket
   }
 
+  /// 判断节点是否是单段内完整闭合的块级公式。
   public func canHandle(_ markup: Markup) -> Bool {
     guard let paragraph = markup as? Paragraph else { return false }
     let text = paragraph.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -174,6 +204,7 @@ public struct InkLaTeXBlockHandler: InkBlockHandler, InkConfigurationSemanticsPr
     return false
   }
 
+  /// 从当前位置消费单段或跨段块级公式；不完整输入返回 `nil` 交给后续 handler。
   @MainActor
   public func consume(
     from children: [Markup],
@@ -215,6 +246,7 @@ public struct InkLaTeXBlockHandler: InkBlockHandler, InkConfigurationSemanticsPr
     return nil
   }
 
+  /// 将单个完整块级公式节点转换为生成图片块。
   @MainActor
   public func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
     guard let paragraph = markup as? Paragraph else { return nil }

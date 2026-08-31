@@ -88,6 +88,7 @@ public struct InkAppearance: Sendable {
   /// 开启时，所有基于基础磅值的字号/行高均会根据当前系统的 `UIContentSizeCategory` 自动缩放。
   public var supportsDynamicType: Bool = true
 
+  /// 创建全部语法元素的默认样式。
   public init() {}
 }
 
@@ -112,6 +113,7 @@ public extension InkAppearance {
     /// 接入方可覆盖此值为自己想要的内容内边距。
     public var blockInsets: UIEdgeInsets = .zero
 
+    /// 创建默认正文样式。
     public init() {}
   }
 }
@@ -136,6 +138,7 @@ public extension InkAppearance {
     /// 标题颜色。
     public var color: UIColor = .label
 
+    /// 创建默认标题样式。
     public init() {}
 
     /// 取指定标题级别的字号。
@@ -180,6 +183,7 @@ public extension InkAppearance {
     /// 左侧竖线颜色。
     public var barColor: UIColor = UIColor(red: 0x66/255.0, green: 0x66/255.0, blue: 0x66/255.0, alpha: 0.1)
 
+    /// 创建默认引用块样式。
     public init() {}
   }
 }
@@ -194,6 +198,7 @@ public extension InkAppearance {
     /// 列表结束后距下方内容间距。
     public var spacingAfter: CGFloat = 24
 
+    /// 创建默认列表样式。
     public init() {}
   }
 }
@@ -219,12 +224,13 @@ public extension InkAppearance {
     public var textColor: UIColor = .label
     /// 代码块背景色。
     public var backgroundColor: UIColor = .secondarySystemFill
-    
-    /// VoiceOver label when language is known. `%@` is replaced by the language name.
+
+    /// 已知代码语言时的 VoiceOver 标签格式；`%@` 会替换为语言名称。
     public var accessibilityLabelFormat: String = "%@ code block"
-    /// VoiceOver label when no language is specified.
+    /// 未指定代码语言时使用的 VoiceOver 标签。
     public var defaultAccessibilityLabel: String = "Code block"
 
+    /// 创建默认围栏代码块样式。
     public init() {}
   }
 }
@@ -251,6 +257,7 @@ public extension InkAppearance {
     /// 背景色。
     public var backgroundColor: UIColor = .secondarySystemFill
 
+    /// 创建默认行内代码样式。
     public init() {}
   }
 }
@@ -306,6 +313,7 @@ public extension InkAppearance {
       }
     }
 
+    /// 创建默认表格样式。
     public init() {}
 
     /// 设置复制反馈回调，并显式声明其交互语义身份。
@@ -331,6 +339,7 @@ public extension InkAppearance {
     /// 分割线下方间距。
     public var spacingAfter: CGFloat = 24
 
+    /// 创建默认分割线样式。
     public init() {}
   }
 }
@@ -343,6 +352,7 @@ public extension InkAppearance {
     /// 链接颜色。
     public var color: UIColor = .link
 
+    /// 创建默认链接样式。
     public init() {}
   }
 }
@@ -351,6 +361,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
+  /// Thought 卡片的文字、容器、折叠能力与间距配置。
   struct Thought: Sendable {
     /// 思考中状态标题。
     public var title: String = "思考过程"
@@ -381,6 +392,7 @@ public extension InkAppearance {
     /// 卡片下方间距。
     public var spacingAfter: CGFloat = 12
 
+    /// 创建默认可折叠、初始展开的 Thought 样式。
     public init() {}
   }
 }
@@ -396,6 +408,7 @@ extension InkAppearance.InlineCode: Equatable {}
 extension InkAppearance.Thought: Equatable {}
 
 extension InkAppearance.Table: Equatable {
+  /// 比较表格视觉、交互回调存在性与稳定语义身份。
   public static func == (lhs: InkAppearance.Table, rhs: InkAppearance.Table) -> Bool {
     lhs.headerFontSize == rhs.headerFontSize &&
     lhs.bodyFontSize == rhs.bodyFontSize &&
