@@ -26,7 +26,9 @@ struct InkMarkdownMeasurementTests {
     ]
 
     let container = InkMarkdownContainerView()
-    container.updateBlocks(blocks, configuration: .standard)
+    let coordinator = InkMarkdownCoordinator()
+    coordinator.containerView = container
+    coordinator.updateBlocks(blocks, configuration: .standard)
 
     let blockCount = blocks.count
     _ = container.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -43,7 +45,9 @@ struct InkMarkdownMeasurementTests {
   func layoutSubviewsDoesNotInvalidateICS() {
     let width: CGFloat = 360
     let container = InkMarkdownContainerView(frame: CGRect(x: 0, y: 0, width: width, height: 0))
-    container.updateBlocks(
+    let coordinator = InkMarkdownCoordinator()
+    coordinator.containerView = container
+    coordinator.updateBlocks(
       [InkCodeBlock(code: "hello", language: nil)],
       configuration: .standard
     )
@@ -61,7 +65,9 @@ struct InkMarkdownMeasurementTests {
   @Test("宽度变化时在 measure 入口重测且 layout 复用高度数组")
   func widthChangeRemeasuresOnceAtMeasureEntry() {
     let container = InkMarkdownContainerView()
-    container.updateBlocks(
+    let coordinator = InkMarkdownCoordinator()
+    coordinator.containerView = container
+    coordinator.updateBlocks(
       [InkCodeBlock(code: "multi\nline\ncode", language: "swift")],
       configuration: .standard
     )

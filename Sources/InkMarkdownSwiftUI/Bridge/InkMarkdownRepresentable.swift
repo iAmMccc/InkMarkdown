@@ -73,7 +73,7 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
   }
 
   static func dismantleUIView(_ uiView: InkMarkdownContainerView, coordinator: InkMarkdownCoordinator) {
-    coordinator.teardown()
+    coordinator.teardown(from: uiView)
   }
 
   private func configurationWithEnvironmentSnapshot(_ base: InkConfiguration) -> InkConfiguration {

@@ -38,17 +38,44 @@ struct InkMarkdownAccessibilityTests {
     large.renderEnvironment = InkRenderEnvironment(contentSizeCategory: .large)
     let largeBlocks = InkBlockRenderer.render(thoughtMarkdown, configuration: large)
     let largeContainer = InkMarkdownContainerView()
-    largeContainer.updateBlocks(largeBlocks, configuration: large)
+    let largeCoordinator = InkMarkdownCoordinator()
+    largeCoordinator.containerView = largeContainer
+    largeCoordinator.updateBlocks(largeBlocks, configuration: large)
     let largeHeight = largeContainer.sizeThatFits(CGSize(width: 360, height: CGFloat.greatestFiniteMagnitude)).height
 
     var ax = config
     ax.renderEnvironment = InkRenderEnvironment(contentSizeCategory: .accessibilityLarge)
     let axBlocks = InkBlockRenderer.render(thoughtMarkdown, configuration: ax)
     let axContainer = InkMarkdownContainerView()
-    axContainer.updateBlocks(axBlocks, configuration: ax)
+    let axCoordinator = InkMarkdownCoordinator()
+    axCoordinator.containerView = axContainer
+    axCoordinator.updateBlocks(axBlocks, configuration: ax)
     let axHeight = axContainer.sizeThatFits(CGSize(width: 360, height: CGFloat.greatestFiniteMagnitude)).height
 
-    #expect(axHeight >= largeHeight)
+    #expect(axHeight > largeHeight)
+  }
+
+  @Test("Dynamic Type 下思考块 header 字号严格随 category 放大")
+  func dynamicTypeScalesThoughtHeaderPointSize() throws {
+    var config = InkConfiguration.standard
+    config.appearance.thought.isCollapsible = false
+    let thoughtMarkdown = "<think>\n字号测试。"
+
+    var large = config
+    large.renderEnvironment = InkRenderEnvironment(contentSizeCategory: .large)
+    let largeBlock = try #require(InkBlockRenderer.render(thoughtMarkdown, configuration: large).first as? InkThoughtBlock)
+    let largeView = largeBlock.makeView() as! InkThoughtBlockView
+    let largePointSize = largeView.headerContainer.subviews.compactMap { $0 as? UILabel }.first?.font.pointSize
+
+    var ax = config
+    ax.renderEnvironment = InkRenderEnvironment(contentSizeCategory: .accessibilityLarge)
+    let axBlock = try #require(InkBlockRenderer.render(thoughtMarkdown, configuration: ax).first as? InkThoughtBlock)
+    let axView = axBlock.makeView() as! InkThoughtBlockView
+    let axPointSize = axView.headerContainer.subviews.compactMap { $0 as? UILabel }.first?.font.pointSize
+
+    #expect(largePointSize != nil)
+    #expect(axPointSize != nil)
+    #expect(axPointSize! > largePointSize!)
   }
 
   private func renderInWindow<V: View>(_ view: V) -> UIHostingController<V> {

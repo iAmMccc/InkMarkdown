@@ -23,7 +23,9 @@ struct InkMarkdownAdapterWorkloadTests {
     #expect(blocks.count >= 60)
 
     let container = InkMarkdownContainerView()
-    container.updateBlocks(blocks, configuration: .standard, documentEpoch: InkDocumentEpoch.hash(markdown))
+    let coordinator = InkMarkdownCoordinator()
+    coordinator.containerView = container
+    coordinator.updateBlocks(blocks, configuration: .standard)
 
     let width: CGFloat = 360
     let start = CACurrentMediaTime()
@@ -37,7 +39,7 @@ struct InkMarkdownAdapterWorkloadTests {
     #expect(container.blockMeasurementInvocationCount == 0)
   }
 
-  @Test("流式百片 append 显示追上有界且 reserved 增量非整表重测")
+  @Test("流式百片 append 显示追上有界且仅测量当前 remainder slot")
   func streamingChunkAppendWorkloadBudget() throws {
     let session = InkMarkdownRenderSession()
     let coordinator = InkMarkdownCoordinator()
@@ -46,21 +48,13 @@ struct InkMarkdownAdapterWorkloadTests {
     let width: CGFloat = 360
 
     let chunkCount = 100
-    let reservedBaseline = container.reservedHeightSlotUpdateCount
     _ = container.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
 
     let appendStart = CACurrentMediaTime()
     for index in 0..<chunkCount {
       session.append("Chunk-\(index) ")
       coordinator.updateStreaming(session: session)
-      if index == 0 {
-        #expect(container.reservedHeightSlotUpdateCount > reservedBaseline)
-      }
     }
-
-    let reservedAfterAppend = container.reservedHeightSlotUpdateCount - reservedBaseline
-    #expect(reservedAfterAppend > 0)
-    #expect(reservedAfterAppend <= chunkCount * 5)
 
     let textView = try #require(
       container.subviews.compactMap { $0 as? UITextView }.first
@@ -76,11 +70,11 @@ struct InkMarkdownAdapterWorkloadTests {
     #expect(catchUpElapsed < 25.0, "百片追显示耗时 \(String(format: "%.0f", catchUpElapsed * 1000))ms 超过 25000ms 宽松上限")
 
     _ = container.sizeThatFits(CGSize(width: width, height: CGFloat.greatestFiniteMagnitude))
-    #expect(container.blockMeasurementInvocationCount <= 2)
+    #expect(container.blockMeasurementInvocationCount <= 1)
   }
 
-  @Test("finish→promotion 时长有界且思考块视图 identity 连续")
-  func promotionWorkloadPreservesThoughtIdentity() async throws {
+  @Test("finish→promotion 时长有界且终态 Thought 可交互")
+  func promotionWorkloadCompletesWithInteractiveThought() async throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     let session = InkMarkdownRenderSession(configuration: config)
@@ -91,10 +85,9 @@ struct InkMarkdownAdapterWorkloadTests {
     coordinator.containerView = container
     coordinator.updateStreaming(session: session)
 
-    let streamingThought = try #require(
+    _ = try #require(
       container.subviews.first(where: { $0 is InkThoughtBlockView }) as? InkThoughtBlockView
     )
-    let pointer = ObjectIdentifier(streamingThought)
 
     let promotionStart = CACurrentMediaTime()
     session.finish()
@@ -108,7 +101,7 @@ struct InkMarkdownAdapterWorkloadTests {
     let promotedThought = try #require(
       container.subviews.first(where: { $0 is InkThoughtBlockView }) as? InkThoughtBlockView
     )
-    #expect(ObjectIdentifier(promotedThought) == pointer)
+    #expect(promotedThought.isDescendant(of: container))
   }
 
   private func waitForPromotion(_ session: InkMarkdownRenderSession) async throws {

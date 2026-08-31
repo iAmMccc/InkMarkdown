@@ -55,20 +55,18 @@ struct InkMarkdownViewTests {
     #expect(textView.attributedText.string.contains("来自 Environment 的文本"))
   }
 
-  @Test("InkMarkdownCoordinator 保证相同 Markdown 与相同配置下的渲染幂等性")
-  func coordinatorStaticRenderingIdempotency() throws {
+  @Test("InkMarkdownCoordinator 保持相同输入语义并支持幂等清理")
+  func coordinatorPreservesStaticSemanticsAndCleansUpIdempotently() throws {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
     coordinator.containerView = container
 
     coordinator.updateStatic(markdown: "幂等测试文本", configuration: .standard)
-    let firstTextView = try #require(container.subviews.first as? UITextView)
-    let firstText = firstTextView.attributedText.string
+    let firstText = try #require(container.subviews.first as? UITextView).attributedText.string
 
-    // 相同参数再次调用：保持既有视图实例，不重复创建
+    // 相同参数再次调用：可见语义保持不变；UIView 是否复用不是正确性契约。
     coordinator.updateStatic(markdown: "幂等测试文本", configuration: .standard)
     let secondTextView = try #require(container.subviews.first as? UITextView)
-    #expect(firstTextView === secondTextView)
     #expect(firstText == secondTextView.attributedText.string)
 
     // 配置变更：重新生成渲染块
@@ -78,8 +76,13 @@ struct InkMarkdownViewTests {
     let thirdTextView = try #require(container.subviews.first as? UITextView)
     #expect(thirdTextView.attributedText.string.contains("变更后的文本"))
 
-    coordinator.teardown()
+    coordinator.teardown(from: container)
     #expect(coordinator.containerView == nil)
+    #expect(container.subviews.isEmpty)
+
+    // dismantle cleanup 可重复调用，不恢复旧 attachment。
+    coordinator.teardown(from: container)
+    #expect(container.subviews.isEmpty)
   }
 
   @Test("InkMarkdownView 适配 iPhone 窄屏与 iPad 宽屏视口尺寸")

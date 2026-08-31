@@ -11,11 +11,20 @@ import SwiftUI
 @testable import InkMarkdownSwiftUI
 @_spi(InkMarkdown) import InkMarkdown
 
+private final class TestLinkHandlerState: @unchecked Sendable {
+  var callCount = 0
+  let result: Bool
+
+  init(result: Bool) {
+    self.result = result
+  }
+}
+
 @Suite("InkMarkdown SwiftUI 混编防死循环与尺寸测量测试")
 @MainActor
 struct InkMarkdownLoopPreventionTests {
 
-  @Test("Coordinator updateStatic 在相同输入与配置下保持幂等，不重新分配子视图")
+  @Test("Coordinator updateStatic 在相同输入与配置下保持幂等且不重复测量")
   func coordinatorUpdateStaticIsIdempotent() throws {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
@@ -35,18 +44,26 @@ struct InkMarkdownLoopPreventionTests {
     coordinator.updateStatic(markdown: markdown, configuration: .standard)
     let initialSubviews = container.subviews
     #expect(!initialSubviews.isEmpty)
+    let firstSize = container.sizeThatFits(
+      CGSize(width: 360, height: CGFloat.greatestFiniteMagnitude)
+    )
+    let firstMeasurementCount = container.blockMeasurementInvocationCount
 
     // 第二次传入相同内容与配置
     coordinator.updateStatic(markdown: markdown, configuration: .standard)
     let secondSubviews = container.subviews
+    let secondSize = container.sizeThatFits(
+      CGSize(width: 360, height: CGFloat.greatestFiniteMagnitude)
+    )
+    let secondMeasurementCount = container.blockMeasurementInvocationCount
 
     #expect(initialSubviews.count == secondSubviews.count)
-    for (i, view) in initialSubviews.enumerated() {
-      #expect(view === secondSubviews[i], "视图指针应完全一致，不应重建")
-    }
+    #expect(secondSize == firstSize)
+    #expect(firstMeasurementCount > 0)
+    #expect(secondMeasurementCount == 0)
   }
 
-  @Test("Coordinator updateStatic 在配置发生语义变化时会重新渲染")
+  @Test("Coordinator updateStatic 在配置发生语义变化时更新可见语义")
   func coordinatorRerendersOnSemanticConfigurationChange() throws {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
@@ -58,16 +75,78 @@ struct InkMarkdownLoopPreventionTests {
     coordinator.updateStatic(markdown: markdown, configuration: config1)
 
     let firstTextView = try #require(container.subviews.first as? UITextView)
-    let initialPointer = ObjectIdentifier(firstTextView)
+    let firstFont = try #require(
+      firstTextView.attributedText.attribute(.font, at: 0, effectiveRange: nil) as? UIFont
+    )
+    #expect(firstFont.pointSize == 16)
 
     var config2 = InkConfiguration.standard
     config2.appearance.text.fontSize = 22
     coordinator.updateStatic(markdown: markdown, configuration: config2)
 
     let secondTextView = try #require(container.subviews.first as? UITextView)
-    let secondPointer = ObjectIdentifier(secondTextView)
+    let secondFont = try #require(
+      secondTextView.attributedText.attribute(.font, at: 0, effectiveRange: nil) as? UIFont
+    )
+    #expect(secondFont.pointSize == 22)
+  }
 
-    #expect(initialPointer != secondPointer, "配置变更后应重新生成新视图")
+  @Test("Coordinator 依据稳定语义身份保持或更新链接回调")
+  func coordinatorUpdatesLinkBehaviorForSemanticIdentity() throws {
+    let container = InkMarkdownContainerView()
+    let coordinator = InkMarkdownCoordinator()
+    coordinator.containerView = container
+    let markdown = "[链接](https://example.com)"
+    let url = URL(string: "https://example.com")!
+
+    let firstState = TestLinkHandlerState(result: true)
+    var first = InkConfiguration.standard
+    first.setLinkTapHandler({ _, _ in
+      firstState.callCount += 1
+      return firstState.result
+    }, semanticIdentity: "links.v1")
+    coordinator.updateStatic(markdown: markdown, configuration: first)
+    let firstTextView = try #require(container.subviews.first as? UITextView)
+    #expect(firstTextView.delegate?.textView?(
+      firstTextView,
+      shouldInteractWith: url,
+      in: NSRange(location: 0, length: 2),
+      interaction: .invokeDefaultAction
+    ) == false)
+    #expect(firstState.callCount == 1)
+
+    let equivalentState = TestLinkHandlerState(result: true)
+    var equivalent = InkConfiguration.standard
+    equivalent.setLinkTapHandler({ _, _ in
+      equivalentState.callCount += 1
+      return equivalentState.result
+    }, semanticIdentity: "links.v1")
+    coordinator.updateStatic(markdown: markdown, configuration: equivalent)
+    let equivalentTextView = try #require(container.subviews.first as? UITextView)
+    #expect(equivalentTextView.delegate?.textView?(
+      equivalentTextView,
+      shouldInteractWith: url,
+      in: NSRange(location: 0, length: 2),
+      interaction: .invokeDefaultAction
+    ) == false)
+    #expect(firstState.callCount == 2)
+    #expect(equivalentState.callCount == 0)
+
+    let changedState = TestLinkHandlerState(result: false)
+    var changed = InkConfiguration.standard
+    changed.setLinkTapHandler({ _, _ in
+      changedState.callCount += 1
+      return changedState.result
+    }, semanticIdentity: "links.v2")
+    coordinator.updateStatic(markdown: markdown, configuration: changed)
+    let changedTextView = try #require(container.subviews.first as? UITextView)
+    #expect(changedTextView.delegate?.textView?(
+      changedTextView,
+      shouldInteractWith: url,
+      in: NSRange(location: 0, length: 2),
+      interaction: .invokeDefaultAction
+    ) == true)
+    #expect(changedState.callCount == 1)
   }
 
   @Test("InkConfiguration.isSemanticallyEqualTo 准确识别字号、间距与环境变化")
@@ -122,7 +201,9 @@ struct InkMarkdownLoopPreventionTests {
     // 4. Container View
     let container = InkMarkdownContainerView()
     let blocks: [InkRenderableBlock] = [codeBlock, breakBlock, tableBlock]
-    container.updateBlocks(blocks, configuration: .standard)
+    let coordinator = InkMarkdownCoordinator()
+    coordinator.containerView = container
+    coordinator.updateBlocks(blocks, configuration: .standard)
 
     let containerSize = container.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
     #expect(containerSize.height >= codeSize.height + breakSize.height + tableSize.height)
@@ -145,4 +226,3 @@ struct InkMarkdownLoopPreventionTests {
     #expect(string.contains("│"))
   }
 }
-
