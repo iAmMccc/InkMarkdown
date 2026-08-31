@@ -29,7 +29,7 @@ enum DemoInkConfigurationBuilder {
 
         var config = InkConfiguration(appearance: appearance)
         config.renderEnvironment = InkRenderEnvironment(userInterfaceStyle: userInterfaceStyle)
-        config.linkTapHandler = DemoLinkOpening.inkHandler
+        DemoLinkOpening.configure(&config)
         return config
     }
 
@@ -39,7 +39,7 @@ enum DemoInkConfigurationBuilder {
     ) -> InkConfiguration {
         var config = InkConfiguration.standard
         config.renderEnvironment = InkRenderEnvironment(userInterfaceStyle: userInterfaceStyle)
-        config.linkTapHandler = DemoLinkOpening.inkHandler
+        DemoLinkOpening.configure(&config)
         return config
     }
 
@@ -52,7 +52,7 @@ enum DemoInkConfigurationBuilder {
 
         var config = InkConfiguration(appearance: appearance)
         config.renderEnvironment = InkRenderEnvironment(userInterfaceStyle: userInterfaceStyle)
-        config.linkTapHandler = DemoLinkOpening.inkHandler
+        DemoLinkOpening.configure(&config)
         return config
     }
 }

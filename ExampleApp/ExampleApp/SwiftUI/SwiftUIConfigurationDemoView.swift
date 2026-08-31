@@ -1,4 +1,5 @@
 import SwiftUI
+import InkMarkdown
 import InkMarkdownSwiftUI
 
 /// 展示显式配置和 `.inkConfiguration(...)` 环境注入两种用法。
@@ -6,11 +7,18 @@ struct SwiftUIConfigurationDemoView: View {
 
   @State private var usesLargeText = false
   @State private var usesCompactSpacing = false
+  @State private var usesInitiallyCollapsed = false
 
   private let markdown = """
   # 配置驱动的 Markdown
 
   当前配置会同时影响显式传入配置的视图和通过 Environment 获取配置的视图。
+
+  <think>
+  配置页 Thought：先手动折叠，再观察配置变化是否保留状态。
+  </think>
+
+  Thought 后的普通段落用于检查间距和高度变化。
 
   ## 配置项
 
@@ -28,6 +36,7 @@ struct SwiftUIConfigurationDemoView: View {
     config.appearance.heading.h1FontSize = usesLargeText ? 28 : 21
     config.appearance.heading.h1LineHeight = usesLargeText ? 36 : 30
     config.appearance.link.color = .systemBlue
+    config.appearance.thought.isInitiallyCollapsed = usesInitiallyCollapsed
     return config
   }
 
@@ -46,6 +55,10 @@ struct SwiftUIConfigurationDemoView: View {
         VStack(alignment: .leading, spacing: 10) {
           Toggle("放大正文与标题", isOn: $usesLargeText)
           Toggle("收紧段落间距", isOn: $usesCompactSpacing)
+          Toggle("调用方初始折叠（显式 override）", isOn: $usesInitiallyCollapsed)
+          Text("先折叠 Thought，再切换字号或间距：这些是普通配置变化，应保留当前折叠态。切换调用方初始折叠则是显式 override。")
+            .font(.footnote)
+            .foregroundColor(.secondary)
         }
 
         Divider()

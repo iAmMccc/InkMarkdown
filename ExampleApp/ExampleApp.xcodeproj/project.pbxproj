@@ -12,6 +12,8 @@
 		55213DD35161629611C75A5E /* JXPagingView in Frameworks */ = {isa = PBXBuildFile; productRef = AF528F36372CBC6E5E68064C /* JXPagingView */; };
 		7FE2795B44A24588AE06FC5F /* InkMarkdownSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EE1912A30A14D67A9100889 /* InkMarkdownSwiftUI */; };
 		9E2F7F4D9285150605A329D4 /* InkMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = B80102C1FE644144E059F7B0 /* InkMarkdown */; };
+		A1B2C3D4E5F60718293A4B5C /* InkMarkdownLaTeX in Frameworks */ = {isa = PBXBuildFile; productRef = D4E5F60718293A4B5C6D7E8F /* InkMarkdownLaTeX */; };
+		B2C3D4E5F60718293A4B5C6D /* InkMarkdownMermaid in Frameworks */ = {isa = PBXBuildFile; productRef = E5F60718293A4B5C6D7E8F90 /* InkMarkdownMermaid */; };
 		CCFBF002C0DC775CA9478E16 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2D146DF8365BC373D85A7B22 /* SnapKit */; };
 /* End PBXBuildFile section */
 
@@ -47,6 +49,8 @@
 			files = (
 				9E2F7F4D9285150605A329D4 /* InkMarkdown in Frameworks */,
 				7FE2795B44A24588AE06FC5F /* InkMarkdownSwiftUI in Frameworks */,
+				A1B2C3D4E5F60718293A4B5C /* InkMarkdownLaTeX in Frameworks */,
+				B2C3D4E5F60718293A4B5C6D /* InkMarkdownMermaid in Frameworks */,
 				138FC356DC189F0649256A42 /* SmartCodable in Frameworks */,
 				430EA368AB68A3F6535F8B71 /* JXSegmentedView in Frameworks */,
 				55213DD35161629611C75A5E /* JXPagingView in Frameworks */,
@@ -95,6 +99,8 @@
 			packageProductDependencies = (
 				B80102C1FE644144E059F7B0 /* InkMarkdown */,
 				5EE1912A30A14D67A9100889 /* InkMarkdownSwiftUI */,
+				D4E5F60718293A4B5C6D7E8F /* InkMarkdownLaTeX */,
+				E5F60718293A4B5C6D7E8F90 /* InkMarkdownMermaid */,
 				50432D2B957FD0F6D01F4059 /* SmartCodable */,
 				C21F260C507C6395CB305FE7 /* JXSegmentedView */,
 				AF528F36372CBC6E5E68064C /* JXPagingView */,
@@ -448,6 +454,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = DF119174817259714A1DAAF1 /* XCRemoteSwiftPackageReference "JXSegmentedView" */;
 			productName = JXSegmentedView;
+		};
+		D4E5F60718293A4B5C6D7E8F /* InkMarkdownLaTeX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3AE376F2769F086B656D004 /* XCLocalSwiftPackageReference ".." */;
+			productName = InkMarkdownLaTeX;
+		};
+		E5F60718293A4B5C6D7E8F90 /* InkMarkdownMermaid */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3AE376F2769F086B656D004 /* XCLocalSwiftPackageReference ".." */;
+			productName = InkMarkdownMermaid;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -300,7 +300,7 @@ final class RenderedListViewController: UIViewController, PagerListController {
 
 // MARK: - H1 Action Card Block Handler
 
-private struct H1ActionCardBlockHandler: InkBlockHandler {
+struct H1ActionCardBlockHandler: InkBlockHandler {
   func canHandle(_ markup: Markup) -> Bool {
     (markup as? Markdown.Heading)?.level == 1
   }

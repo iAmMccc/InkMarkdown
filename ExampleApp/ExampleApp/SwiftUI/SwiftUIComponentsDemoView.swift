@@ -16,20 +16,34 @@ struct SwiftUIComponentsDemoView: View {
   @State private var enableLaTeX = true
   @State private var enableMermaid = true
   @State private var enableImage = true
+  @State private var usesUpdatedHeading = false
 
   private var configuration: InkConfiguration {
-    DemoInkConfigurationBuilder.makeComponentsConfiguration(
+    var config = DemoInkConfigurationBuilder.makeComponentsConfiguration(
       enableLaTeX: enableLaTeX,
       enableMermaid: enableMermaid,
       enableImage: enableImage,
       userInterfaceStyle: colorScheme == .dark ? .dark : .light
     )
+    config.blockHandlers = [H1ActionCardBlockHandler()] + InkConfiguration.defaultBlockHandlers
+    return config
   }
 
-  private let sampleMarkdown = """
-  # SwiftUI 自定义组件与富媒体
+  private var sampleMarkdown: String {
+    let heading = usesUpdatedHeading
+      ? "SwiftUI 自定义组件与富媒体（更新版）"
+      : "SwiftUI 自定义组件与富媒体"
+
+    return """
+  # \(heading)
 
   本页面展示在 `InkMarkdownView` 中启用的各类扩展组件：
+
+  <think>
+  组件页 Thought：先折叠我，再更新上方自定义 H1。
+  </think>
+
+  Thought 后的普通段落应保持可见，其他组件也不应受局部更新影响。
 
   ## 1. 表格（可滑动、带边框与长按复制）
 
@@ -53,6 +67,7 @@ struct SwiftUIComponentsDemoView: View {
   行内公式：勾股定理 \\(a^2 + b^2 = c^2\\) 与欧拉恒等式 \\(e^{i\\pi} + 1 = 0\\)。
 
   块级积分公式：
+
   $$
   \\int_{-\\infty}^{+\\infty} e^{-x^2} dx = \\sqrt{\\pi}
   $$
@@ -71,6 +86,7 @@ struct SwiftUIComponentsDemoView: View {
       F --> G
   ```
   """
+  }
 
   var body: some View {
     ScrollView {
@@ -82,12 +98,19 @@ struct SwiftUIComponentsDemoView: View {
           Toggle("启用 LaTeX 数学公式", isOn: $enableLaTeX)
           Toggle("启用 Mermaid 流程图", isOn: $enableMermaid)
           Toggle("启用网络图片加载", isOn: $enableImage)
+          Button(usesUpdatedHeading ? "恢复自定义 H1" : "更新自定义 H1") {
+            usesUpdatedHeading.toggle()
+          }
         }
         .padding(14)
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(10)
 
         Divider()
+
+        Text("验收顺序：先折叠 Thought，再切换自定义 H1。H1 更新允许局部 fallback；确认 Thought 与其他 blocks 的状态、顺序和布局不受影响。")
+          .font(.footnote)
+          .foregroundColor(.secondary)
 
         InkMarkdownView(markdown: sampleMarkdown, configuration: configuration)
           .frame(maxWidth: .infinity, alignment: .leading)

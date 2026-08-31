@@ -36,6 +36,7 @@ final class SSEChatViewController: UIViewController {
     private let suggestionsStackView = UIStackView()
 
     private var heightUpdateScheduled = false
+    private var heightUpdateNeedsAnotherPass = false
     private var lastHeightUpdateTime: CFTimeInterval = 0
 
     override func viewDidLoad() {
@@ -162,6 +163,7 @@ final class SSEChatViewController: UIViewController {
             .sink { [weak self] _ in
                 guard let self else { return }
                 self.tableView.reloadData()
+                self.requestCellHeightUpdate()
                 if self.viewModel.shouldAutoScroll() {
                     self.scrollToBottom(animated: true)
                 }
@@ -307,35 +309,58 @@ final class SSEChatViewController: UIViewController {
     }
 
     private func requestCellHeightUpdate() {
-        guard !heightUpdateScheduled else { return }
+        refreshActiveStreamingCell()
+        guard !heightUpdateScheduled else {
+            heightUpdateNeedsAnotherPass = true
+            return
+        }
         heightUpdateScheduled = true
 
         let now = CACurrentMediaTime()
         let interval = now - lastHeightUpdateTime
         let minInterval: CFTimeInterval = 0.05
 
-        if interval >= minInterval {
-            lastHeightUpdateTime = now
-            heightUpdateScheduled = false
+        // Adapter invalidation and SwiftUI host sizing settle at the end of the current
+        // main-loop turn. Coalesce pulses, then ask UITableView on a later turn so it
+        // reads the new intrinsic height instead of keeping the initial one-line height.
+        let delay = max(0, minInterval - interval)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self else { return }
+            self.lastHeightUpdateTime = CACurrentMediaTime()
+            self.heightUpdateScheduled = false
+            self.refreshVisibleAssistantCellSizes()
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            tableView.beginUpdates()
-            tableView.endUpdates()
+            self.tableView.beginUpdates()
+            self.tableView.endUpdates()
+            self.tableView.layoutIfNeeded()
             CATransaction.commit()
-            performAutoScrollIfNeeded()
-        } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + (minInterval - interval)) { [weak self] in
-                guard let self else { return }
-                self.lastHeightUpdateTime = CACurrentMediaTime()
-                self.heightUpdateScheduled = false
-                CATransaction.begin()
-                CATransaction.setDisableActions(true)
-                self.tableView.beginUpdates()
-                self.tableView.endUpdates()
-                CATransaction.commit()
-                self.performAutoScrollIfNeeded()
-            }
+            self.performAutoScrollIfNeeded()
+
+            guard self.heightUpdateNeedsAnotherPass else { return }
+            self.heightUpdateNeedsAnotherPass = false
+            self.requestCellHeightUpdate()
         }
+    }
+
+    private func refreshVisibleAssistantCellSizes() {
+        for case let cell as SSEAssistantCell in tableView.visibleCells {
+            cell.refreshHostedContentSize()
+        }
+    }
+
+    private func refreshActiveStreamingCell() {
+        guard let activeMessageID = viewModel.activeStreamingMessageID,
+              let row = viewModel.messages.firstIndex(where: { $0.id == activeMessageID }),
+              let cell = tableView.cellForRow(at: IndexPath(row: row, section: 0)) as? SSEAssistantCell
+        else { return }
+
+        let message = viewModel.messages[row]
+        cell.ensureActiveStream(
+            messageContent: message.content,
+            session: viewModel.session,
+            parent: self
+        )
     }
 
     private func performAutoScrollIfNeeded() {
@@ -521,7 +546,10 @@ private final class SSEAssistantCell: UITableViewCell {
 
         NSLayoutConstraint.activate([
             bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            bubbleView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -40),
+            // Assistant Markdown needs a finite host width before SwiftUI can measure
+            // wrapped blocks. Keep the chat column deterministic instead of letting
+            // the initial empty streaming view collapse the bubble to its minimum width.
+            bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
             bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
             bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
 
@@ -542,21 +570,11 @@ private final class SSEAssistantCell: UITableViewCell {
         parent: UIViewController
     ) {
         if isActiveStream, let activeSession {
-            if message.content.isEmpty && activeSession.currentText.isEmpty {
-                removeHostingController()
-                showThinking()
-            } else {
-                hideThinking()
-                if embeddedSession === activeSession, hostingController != nil {
-                    hostingController?.rootView = AnyView(InkStreamMarkdownView(session: activeSession))
-                } else {
-                    embeddedSession = activeSession
-                    embed(
-                        InkStreamMarkdownView(session: activeSession),
-                        parent: parent
-                    )
-                }
-            }
+            ensureActiveStream(
+                messageContent: message.content,
+                session: activeSession,
+                parent: parent
+            )
         } else if message.content.isEmpty && message.isStreaming {
             removeHostingController()
             showThinking()
@@ -585,10 +603,31 @@ private final class SSEAssistantCell: UITableViewCell {
         }
     }
 
+    func ensureActiveStream(
+        messageContent: String,
+        session: InkMarkdownRenderSession,
+        parent: UIViewController
+    ) {
+        if messageContent.isEmpty && session.currentText.isEmpty {
+            removeHostingController()
+            showThinking()
+            return
+        }
+
+        hideThinking()
+        guard embeddedSession !== session || hostingController == nil else { return }
+        embeddedSession = session
+        embed(InkStreamMarkdownView(session: session), parent: parent)
+    }
+
     private func embed<V: View>(_ view: V, parent: UIViewController) {
         if hostingController == nil {
             let hosting = UIHostingController(rootView: AnyView(view))
             hosting.view.backgroundColor = .clear
+            hosting.view.setContentCompressionResistancePriority(.required, for: .vertical)
+            if #available(iOS 16.0, *) {
+                hosting.sizingOptions = .intrinsicContentSize
+            }
             hostingController = hosting
 
             parent.addChild(hosting)
@@ -604,6 +643,11 @@ private final class SSEAssistantCell: UITableViewCell {
         } else {
             hostingController?.rootView = AnyView(view)
         }
+    }
+
+    func refreshHostedContentSize() {
+        hostingController?.view.invalidateIntrinsicContentSize()
+        hostingController?.view.setNeedsLayout()
     }
 
     private func removeHostingController() {

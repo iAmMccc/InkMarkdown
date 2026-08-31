@@ -42,6 +42,7 @@ final class UIKitComponentsDemoViewController: UIViewController {
     行内公式：勾股定理 \\(a^2 + b^2 = c^2\\) 与欧拉恒等式 \\(e^{i\\pi} + 1 = 0\\)。
 
     块级积分公式：
+
     $$
     \\int_{-\\infty}^{+\\infty} e^{-x^2} dx = \\sqrt{\\pi}
     $$

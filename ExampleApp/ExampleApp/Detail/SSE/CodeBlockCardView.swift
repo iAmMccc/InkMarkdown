@@ -1,5 +1,5 @@
 import UIKit
-import InkMarkdown
+@_spi(InkMarkdown) import InkMarkdown
 
 /// 可逐字吐字的片段视图协议。
 ///
@@ -16,7 +16,7 @@ protocol SSETypewriterSegment: UIView {
 
 /// 代码块自定义块：命中 ``` ``` ``` 围栏代码块时，由 `InkBlockRenderer` 路由到此，
 /// 渲染成带 header 的卡片 UIView，而非塞进 NSAttributedString。
-struct CodeBlockCardBlock: InkRenderableBlock {
+struct CodeBlockCardBlock: InkRenderableBlock, InkReusableBlock {
     /// 代码正文（swift-markdown 的 `CodeBlock.code`，含末尾换行）。
     let code: String
     /// 围栏语言标识（```swift 中的 swift），可为空。
@@ -25,6 +25,15 @@ struct CodeBlockCardBlock: InkRenderableBlock {
     func makeView() -> UIView {
         CodeBlockCardView(code: code, language: language)
     }
+
+    func updateExistingView(_ view: UIView) -> Bool {
+        false
+    }
+
+    func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+        guard let previous = previous as? CodeBlockCardBlock else { return false }
+        return code == previous.code && language == previous.language
+    }
 }
 
 // MARK: - 自定义代码块视图
@@ -32,7 +41,7 @@ struct CodeBlockCardBlock: InkRenderableBlock {
 /// 代码块卡片：顶部 header（「代码块」文案 + 语言标签 + 圆点装饰），下方等宽正文。
 ///
 /// 正文支持逐字显示，配合 SSE 吐字——代码会一行行「敲」出来。
-private final class CodeBlockCardView: UIView, SSETypewriterSegment {
+final class CodeBlockCardView: UIView, SSETypewriterSegment {
 
     private let headerView = UIView()
     private let titleLabel = UILabel()
@@ -144,5 +153,12 @@ private final class CodeBlockCardView: UIView, SSETypewriterSegment {
     func setVisibleLength(_ length: Int) {
         let clamped = max(0, min(length, codeScalars.count))
         bodyLabel.text = String(codeScalars[0..<clamped])
+    }
+
+    func apply(code: String, language: String?) {
+        let trimmed = code.hasSuffix("\n") ? String(code.dropLast()) : code
+        bodyLabel.text = trimmed
+        languageLabel.text = (language?.isEmpty == false) ? language : "text"
+        setNeedsLayout()
     }
 }
