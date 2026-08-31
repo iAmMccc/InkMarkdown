@@ -1,7 +1,7 @@
 # 八、SwiftUI Adapter 总体技术设计（v0.0.2）
 
-> **状态：Accepted design**  
-> **适用版本：v0.0.2 开发阶段**  
+> **状态：Accepted design**
+> **适用版本：v0.0.2 开发阶段**
 > **相关决策：[ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)、[ADR-009](../decisions/ADR-009-block-presentation-continuity.md)**
 
 本文是 InkMarkdown 正式支持 SwiftUI 的总体技术设计。它定义产品范围、设计思想、依赖方向、module 划分、端到端数据流和 v0.0.2 的验收标准；具体类型、方法、状态转换和测试 fixture 由后续 module 技术文档定义。
@@ -42,6 +42,8 @@ SwiftUI adapter 的价值不是“另一种普通 Markdown view”。它应让 i
 ### 3.1 一个语义真相，多种宿主 adapter
 
 `InkConfiguration` 与现有 UIKit renderer 是 v0.0.2 的语义真相。SwiftUI 不复制 Markdown parser、样式规则或 block 分派；它在正确的 seam 将 SwiftUI 状态转换为一次 render 所需的 configuration snapshot，并托管 UIKit 视图。
+
+基础 CommonMark / GFM 结构始终由 `swift-markdown` 解析为 `Markup` AST。`InkThoughtScanner` 及 LaTeX / Mermaid 等 opt-in 扩展 scanner 只识别各自领域语法的边界，再把内部 Markdown 与 suffix 交回同一 `swift-markdown` 管线；它们不解释标准 Markdown，也不构成第二套 Markdown parser。
 
 这使 UIKit rendering engine 成为 deep module：调用者只学习少量 SwiftUI interface，却可获得富文本、复杂 block、配置、生命周期与流式完成态背后的大量 implementation。复杂度集中带来 locality，复用同一语义带来 leverage。
 

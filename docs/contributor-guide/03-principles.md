@@ -46,7 +46,7 @@ baselineOffset = max(0, (fixedLineHeight - font.lineHeight) / 2)
 
 颜色不进 `monospaced()`：要不要回落环境色，由 `renderInlineCode` + `appearance.inlineCode` 决定。
 
-现有相关测试：`headingInlineCode_*`、`blockquoteLink_*`、`strongInlineCode_*`。`strikethrough_*` 是 v0.0.2 前必须补充的语义契约测试族，当前尚未实现。
+现有相关测试已覆盖标题、引用、strong 与 inline code 的组合语义，也覆盖删除线在普通文本和 inline code 叶子上的属性契约。自定义 `inlineSyntaxes` 与图片叶子仍遵守已记录的删除线组合限制。
 
 ### 范式 A 的缺点：叶子必须逐个读 context
 
