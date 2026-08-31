@@ -13,7 +13,7 @@ struct InkThoughtBlockHandlerTests {
   // MARK: - 1. 终止性与边界扫描测试
 
   @Test("InkThoughtScanner 精确匹配思考标签，严格排除非法前缀")
-  func scannerExactTagMatching() {
+  func scanner_exactTagMatching() {
     #expect(InkThoughtScanner.startsWithThoughtTag("<think>"))
     #expect(InkThoughtScanner.startsWithThoughtTag("<thought>"))
     #expect(InkThoughtScanner.startsWithThoughtTag("  <think >  "))
@@ -30,7 +30,7 @@ struct InkThoughtBlockHandlerTests {
   }
 
   @Test("开闭思考标签必须同名，错误别名不能提前闭合")
-  func scannerRequiresMatchingClosingTag() {
+  func scanner_requiresMatchingClosingTag() {
     let result = InkThoughtScanner.scan(from: "<think>第一步</thought>第二步</think>\n\n正式回答")
 
     #expect(result?.isComplete == true)
@@ -44,7 +44,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("非法标签 <think class=\"x\"> 与 <thinker> 不会触发递归死循环并安全降级")
   @MainActor
-  func illegalTagsTerminateWithoutRecursion() {
+  func illegalTags_terminateWithoutRecursion() {
     let illegalSource1 = "<think class=\"x\">这是非法属性标签</think>"
     let blocks1 = InkBlockRenderer.render(illegalSource1)
     #expect(!blocks1.contains(where: { $0 is InkThoughtBlock }))
@@ -65,7 +65,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("同节点内闭标签后的正文（Suffix Preservation）在 Block 路由通道 100% 保全")
   @MainActor
-  func singleNodeSuffixPreservedInBlockRendering() {
+  func singleNodeSuffix_preservedInBlockRendering() {
     let source = "<think>思考过程第一步</think>这是正式回答的第一段。"
     let blocks = InkBlockRenderer.render(source)
 
@@ -85,7 +85,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("闭标签后的前导空行与代码缩进在 suffix 中保全")
   @MainActor
-  func indentedSuffixPreservesMarkdownSemantics() throws {
+  func indentedSuffix_preservesMarkdownSemantics() throws {
     let source = "<think>思考过程</think>\n\n    let preserved = true\n"
     let result = try #require(InkThoughtScanner.scan(from: source))
     #expect(result.suffixContent == "\n\n    let preserved = true\n")
@@ -97,7 +97,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("同节点内闭标签后的正文在富文本降级通道中 100% 保全且包含思考与正式正文")
   @MainActor
-  func singleNodeSuffixPreservedInAttributedRendering() {
+  func singleNodeSuffix_preservedInAttributedRendering() {
     let source = """
     <think>
     思考过程步骤
@@ -113,7 +113,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("单行行内 <think> 标签在富文本通道中剥离标签并保留全部文本内容")
   @MainActor
-  func inlineThoughtTagPreservesAllTextInAttributedRendering() {
+  func inlineThoughtTag_preservesAllTextInAttributedRendering() {
     let source = "<think>思考过程步骤</think>正式回答正文。"
     let attr = InkAttributedRenderer.render(source)
 
@@ -125,7 +125,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("多段跨行 <think> 标签（含空行）正确合并且保留后续 Markdown 节点")
   @MainActor
-  func multiParagraphThoughtBlockWithBlankLinesAndSubsequentMarkdown() {
+  func multiParagraphThoughtBlock_withBlankLinesAndSubsequentMarkdown() {
     let source = """
     <think>
     第一步：理解用户需求。
@@ -157,7 +157,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("<thought> 别名标签完整支持")
   @MainActor
-  func thoughtAliasTag() {
+  func thoughtAlias_tag() {
     let source = """
     <thought>
     思考一下...
@@ -178,7 +178,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("未闭合的 <think> 标签（流式中途态）解析为 isComplete == false 并展示进行中文案")
   @MainActor
-  func unclosedStreamingThoughtBlockLifecycle() {
+  func unclosedStreamingThoughtBlock_lifecycle() {
     let source = """
     <think>
     正在深度思考中，尚未闭合标签...
@@ -203,7 +203,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("InkThoughtBlockView 点击 Header 触发折叠展开切换及尺寸动态变化")
   @MainActor
-  func thoughtBlockViewHeaderTapInteractionAndSizing() {
+  func thoughtBlockView_headerTapInteractionAndSizing() {
     var thoughtAppearance = InkAppearance.Thought()
     thoughtAppearance.isCollapsible = true
     thoughtAppearance.isInitiallyCollapsed = true
@@ -249,7 +249,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("非可折叠配置（isCollapsible == false）严格归一化为不可折叠态")
   @MainActor
-  func nonCollapsibleConfigurationNormalization() {
+  func nonCollapsibleConfiguration_normalization() {
     var config = InkAppearance.Thought()
     config.isCollapsible = false
     config.isInitiallyCollapsed = true // 冲突非法配置
@@ -269,7 +269,7 @@ struct InkThoughtBlockHandlerTests {
   // MARK: - 5. splitStreamingSource 与 apply 契约
 
   @Test("splitStreamingSource：未闭合 PREFIX 思考标签 remainder 为空")
-  func splitStreamingSourceUnclosedPrefix() {
+  func splitStreamingSource_unclosedPrefix() {
     let source = "<think>\n正在思考..."
     let split = InkThoughtScanner.splitStreamingSource(source)
     #expect(split.thought != nil)
@@ -278,7 +278,7 @@ struct InkThoughtBlockHandlerTests {
   }
 
   @Test("splitStreamingSource：已闭合 PREFIX 思考标签 remainder 为闭标签后 suffix")
-  func splitStreamingSourceClosedWithSuffix() {
+  func splitStreamingSource_closedWithSuffix() {
     let source = "<think>步骤一</think>\n\n正式回答"
     let split = InkThoughtScanner.splitStreamingSource(source)
     #expect(split.thought?.isComplete == true)
@@ -286,7 +286,7 @@ struct InkThoughtBlockHandlerTests {
   }
 
   @Test("splitStreamingSource：行内代码中的闭标签不提前结束 Thought")
-  func splitStreamingSourceIgnoresClosingTagInsideInlineCode() {
+  func splitStreamingSource_ignoresClosingTagInsideInlineCode() {
     let cases: [
       (
         source: String,
@@ -484,7 +484,7 @@ struct InkThoughtBlockHandlerTests {
   }
 
   @Test("splitStreamingSource：非 PREFIX 文本 thought 为 nil，remainder 为全文")
-  func splitStreamingSourceNonPrefix() {
+  func splitStreamingSource_nonPrefix() {
     let source = "普通回答 <think>不应匹配</think>"
     let split = InkThoughtScanner.splitStreamingSource(source)
     #expect(split.thought == nil)
@@ -493,7 +493,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("InkThoughtBlockView.apply 更新正文与标题但不重置 isCollapsed")
   @MainActor
-  func applyPreservesCollapsedState() {
+  func apply_preservesCollapsedState() {
     var thoughtAppearance = InkAppearance.Thought()
     thoughtAppearance.isCollapsible = true
     thoughtAppearance.isInitiallyCollapsed = true
@@ -516,7 +516,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("handleHeaderTap 同步写入 onToggleCollapse，不等待动画完成")
   @MainActor
-  func handleHeaderTapWritesCollapseImmediately() {
+  func handleHeaderTap_writesCollapseImmediately() {
     var thoughtAppearance = InkAppearance.Thought()
     thoughtAppearance.isCollapsible = true
     thoughtAppearance.isInitiallyCollapsed = false
@@ -536,7 +536,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("apply(isCollapsed:) 同步折叠可见性，避免 alpha 与折叠态不一致")
   @MainActor
-  func applySyncsCollapsedVisualState() {
+  func apply_syncsCollapsedVisualState() {
     var thoughtAppearance = InkAppearance.Thought()
     thoughtAppearance.isCollapsible = true
     thoughtAppearance.isInitiallyCollapsed = false
@@ -560,8 +560,112 @@ struct InkThoughtBlockHandlerTests {
     #expect(collapsedSize.height <= 60)
   }
 
+  @Test("复用 Thought view 在 false → true → false 时同步折叠交互、视图与可访问性")
+  @MainActor
+  func apply_reconcilesCollapsibilityOnReusedView() {
+    var nonCollapsibleAppearance = InkAppearance.Thought()
+    nonCollapsibleAppearance.isCollapsible = false
+    nonCollapsibleAppearance.isInitiallyCollapsed = true
+
+    var collapsibleAppearance = nonCollapsibleAppearance
+    collapsibleAppearance.isCollapsible = true
+
+    let view = InkThoughtBlockView(
+      thought: "思考正文",
+      isComplete: true,
+      config: nonCollapsibleAppearance,
+      renderConfiguration: .standard
+    )
+    guard
+      let container = view.subviews.first,
+      let bodyContainer = container.subviews.first(where: { $0 !== view.headerContainer })
+    else {
+      Issue.record("Expected Thought container and body container")
+      return
+    }
+
+    var callbackValues: [Bool] = []
+    view.onToggleCollapse = { callbackValues.append($0) }
+
+    #expect((view.headerContainer.actions(forTarget: view, forControlEvent: .touchUpInside) ?? []).isEmpty)
+    #expect(view.headerContainer.subviews.compactMap { $0 as? UIImageView }.count == 1)
+    #expect(view.isCollapsed == false)
+    #expect(bodyContainer.isHidden == false)
+    #expect(view.headerContainer.accessibilityTraits.contains(.header))
+    #expect(!view.headerContainer.accessibilityTraits.contains(.button))
+    #expect(view.headerContainer.accessibilityValue == nil)
+    #expect(view.headerContainer.accessibilityHint == nil)
+
+    view.apply(
+      thought: "思考正文",
+      isComplete: true,
+      isCollapsed: true,
+      config: collapsibleAppearance
+    )
+
+    let enabledImageViews = view.headerContainer.subviews.compactMap { $0 as? UIImageView }
+    #expect((view.headerContainer.actions(forTarget: view, forControlEvent: .touchUpInside) ?? []).count == 1)
+    #expect(enabledImageViews.count == 2)
+    #expect(enabledImageViews.last?.image != nil)
+    #expect(enabledImageViews.last?.isHidden == false)
+    #expect(view.isCollapsed == true)
+    #expect(bodyContainer.isHidden == true)
+    #expect(view.headerContainer.accessibilityTraits.contains(.button))
+    #expect(!view.headerContainer.accessibilityTraits.contains(.header))
+    #expect(view.headerContainer.accessibilityValue == "已折叠")
+    #expect(view.headerContainer.accessibilityHint == "连按两次展开思考过程")
+
+    let bodySubviewCount = bodyContainer.subviews.count
+    view.apply(
+      thought: "思考正文",
+      isComplete: true,
+      isCollapsed: true,
+      config: collapsibleAppearance
+    )
+    #expect((view.headerContainer.actions(forTarget: view, forControlEvent: .touchUpInside) ?? []).count == 1)
+    #expect(view.headerContainer.subviews.compactMap { $0 as? UIImageView }.count == 2)
+    #expect(bodyContainer.subviews.count == bodySubviewCount)
+    #expect(callbackValues.isEmpty)
+
+    view.handleHeaderTap()
+    #expect(callbackValues == [false])
+    #expect(view.isCollapsed == false)
+    #expect(bodyContainer.isHidden == false)
+    #expect(view.headerContainer.accessibilityValue == "已展开")
+    #expect(view.headerContainer.accessibilityHint == "连按两次折叠思考过程")
+
+    view.apply(
+      thought: "思考正文",
+      isComplete: true,
+      isCollapsed: true,
+      config: collapsibleAppearance
+    )
+    #expect(view.isCollapsed == true)
+    #expect(callbackValues == [false])
+
+    view.apply(
+      thought: "思考正文",
+      isComplete: true,
+      isCollapsed: true,
+      config: nonCollapsibleAppearance
+    )
+    #expect((view.headerContainer.actions(forTarget: view, forControlEvent: .touchUpInside) ?? []).isEmpty)
+    #expect(view.headerContainer.subviews.compactMap { $0 as? UIImageView }.count == 1)
+    #expect(view.isCollapsed == false)
+    #expect(bodyContainer.isHidden == false)
+    #expect(bodyContainer.alpha == 1)
+    #expect(view.headerContainer.accessibilityTraits.contains(.header))
+    #expect(!view.headerContainer.accessibilityTraits.contains(.button))
+    #expect(view.headerContainer.accessibilityValue == nil)
+    #expect(view.headerContainer.accessibilityHint == nil)
+
+    view.headerContainer.sendActions(for: .touchUpInside)
+    #expect(callbackValues == [false])
+    #expect(view.isCollapsed == false)
+  }
+
   @Test("InkThoughtScanner.stripThoughtTags 剥离非首位及成对标签并保留合法文本")
-  func stripThoughtTagsRemovesInlineAndMiddleTags() {
+  func stripThoughtTags_removesInlineAndMiddleTags() {
     let source1 = "前置文本 <think> 思考正文 </think> 后置文本"
     let stripped1 = InkThoughtScanner.stripThoughtTags(from: source1)
     #expect(stripped1 == "前置文本  思考正文  后置文本")
@@ -578,7 +682,7 @@ struct InkThoughtBlockHandlerTests {
 
   @Test("apply(config:renderConfiguration:) 同步刷新配置与外观样式")
   @MainActor
-  func applyUpdatesConfigurationAndAppearance() {
+  func apply_updatesConfigurationAndAppearance() {
     var initialAppearance = InkAppearance.Thought()
     initialAppearance.backgroundColor = .systemGray
     initialAppearance.headerColor = .black

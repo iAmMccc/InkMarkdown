@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 import InkMarkdown
 import InkMarkdownSwiftUI
 
@@ -16,6 +17,7 @@ struct SwiftUIStreamingMarkdownDemoView: View {
   @ObservedObject private var configStore = LLMConfigurationStore.shared
   @State private var isStreamRendererMounted = true
   @State private var usesNarrowStreamWidth = false
+  @State private var usesAccessibilityStreamText = false
   @State private var thoughtDemoStep = 0
 
   private var canAppendThought: Bool {
@@ -132,7 +134,7 @@ struct SwiftUIStreamingMarkdownDemoView: View {
           VStack(alignment: .leading, spacing: 10) {
             Text("连续性手工验收")
               .font(.headline)
-            Text("重置后按顺序：追加 Thought 分片 → 折叠/展开 → 继续追加 → 切换宽度 → 卸载/重新挂载 → 结束 Thought 并完成输入观察 promotion；最后用取消/重置验证新周期。")
+            Text("重置后按顺序：追加 Thought 分片、折叠/展开、继续追加、切换宽度、卸载/重新挂载、结束并完成输入；promotion 后切换字号，确认已挂载内容立即刷新。")
               .font(.footnote)
               .foregroundColor(.secondary)
             HStack(spacing: 8) {
@@ -142,6 +144,15 @@ struct SwiftUIStreamingMarkdownDemoView: View {
               Button(usesNarrowStreamWidth ? "切换全宽" : "切换窄宽") {
                 usesNarrowStreamWidth.toggle()
               }
+            }
+            Button(usesAccessibilityStreamText ? "恢复标准字号" : "切换特大字号") {
+              usesAccessibilityStreamText.toggle()
+              let category: UIContentSizeCategory = usesAccessibilityStreamText
+                ? .accessibilityExtraLarge
+                : .large
+              viewModel.session.updateRenderEnvironment(
+                InkRenderEnvironment(contentSizeCategory: category)
+              )
             }
           }
 
@@ -265,10 +276,10 @@ struct SwiftUIStreamingMarkdownDemoView: View {
     }
     .navigationBarTitle("流式 Markdown", displayMode: .inline)
     .navigationBarItems(trailing: Button(action: {
-      viewModel.showingConfigSheet = true
-    }) {
-      Image(systemName: "gearshape")
-    })
+        viewModel.showingConfigSheet = true
+      }) {
+        Image(systemName: "gearshape")
+      })
     .sheet(isPresented: $viewModel.showingConfigSheet) {
       LLMConfigView()
     }

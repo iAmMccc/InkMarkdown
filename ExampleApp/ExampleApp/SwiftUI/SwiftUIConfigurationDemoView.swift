@@ -7,6 +7,7 @@ struct SwiftUIConfigurationDemoView: View {
 
   @State private var usesLargeText = false
   @State private var usesCompactSpacing = false
+  @State private var isThoughtCollapsible = true
   @State private var usesInitiallyCollapsed = false
 
   private let markdown = """
@@ -15,7 +16,7 @@ struct SwiftUIConfigurationDemoView: View {
   当前配置会同时影响显式传入配置的视图和通过 Environment 获取配置的视图。
 
   <think>
-  配置页 Thought：先手动折叠，再观察配置变化是否保留状态。
+  配置页 Thought：先检查 `inline code` 背景，再手动折叠并观察配置变化。
   </think>
 
   Thought 后的普通段落用于检查间距和高度变化。
@@ -36,6 +37,7 @@ struct SwiftUIConfigurationDemoView: View {
     config.appearance.heading.h1FontSize = usesLargeText ? 28 : 21
     config.appearance.heading.h1LineHeight = usesLargeText ? 36 : 30
     config.appearance.link.color = .systemBlue
+    config.appearance.thought.isCollapsible = isThoughtCollapsible
     config.appearance.thought.isInitiallyCollapsed = usesInitiallyCollapsed
     return config
   }
@@ -55,8 +57,9 @@ struct SwiftUIConfigurationDemoView: View {
         VStack(alignment: .leading, spacing: 10) {
           Toggle("放大正文与标题", isOn: $usesLargeText)
           Toggle("收紧段落间距", isOn: $usesCompactSpacing)
+          Toggle("允许 Thought 折叠", isOn: $isThoughtCollapsible)
           Toggle("调用方初始折叠（显式 override）", isOn: $usesInitiallyCollapsed)
-          Text("先折叠 Thought，再切换字号或间距：这些是普通配置变化，应保留当前折叠态。切换调用方初始折叠则是显式 override。")
+          Text("检查 Thought 底色、inline code 背景与卡片外正文边界；再切换折叠能力、字号和初始折叠，确认交互与布局同步。")
             .font(.footnote)
             .foregroundColor(.secondary)
         }

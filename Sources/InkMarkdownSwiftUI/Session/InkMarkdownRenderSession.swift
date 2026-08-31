@@ -87,6 +87,8 @@ public final class InkMarkdownRenderSession: ObservableObject {
     static let streamingThought = StreamingDirtySlots(rawValue: 1 << 1)
     /// 会话级 presentation 作废（cancel / reset）；Coordinator 需同步拆除流式 attachment。
     static let presentationInvalidated = StreamingDirtySlots(rawValue: 1 << 2)
+    /// 已挂载终态的 render environment 更新；Coordinator 需重算 presentation 与 measurement。
+    static let presentationEnvironment = StreamingDirtySlots(rawValue: 1 << 3)
   }
 
   /// remainder 每次可见内容刷新递增；只参与 adapter candidate 的 semantic revision。
@@ -198,6 +200,8 @@ public final class InkMarkdownRenderSession: ObservableObject {
         currentText,
         configuration: configuration
       )
+      notifyDisplayUpdate(slots: .presentationEnvironment)
+      flushDisplayUpdateIfNeeded()
       enqueuePublishedMutation { [weak self] in
         self?.objectWillChange.send()
       }

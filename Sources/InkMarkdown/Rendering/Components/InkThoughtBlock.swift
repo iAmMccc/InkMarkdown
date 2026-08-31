@@ -18,6 +18,10 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
   /// 初始或调用方提供的状态；同一呈现周期内的 live state 由 SwiftUI continuity module 持有。
   public var isCollapsed: Bool
 
+  /// 使用全局 Thought 样式和标准渲染配置创建思考块。
+  ///
+  /// `isCollapsed` 为 `nil` 时遵循当前样式的初始折叠配置；生成视图时会把
+  /// 不可折叠样式归一化为展开状态。
   @MainActor
   public init(
     thought: String,
@@ -27,6 +31,9 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
     self.init(thought: thought, isComplete: isComplete, config: InkAppearance.shared.thought, renderConfiguration: .standard, isCollapsed: isCollapsed)
   }
 
+  /// 使用显式样式与渲染配置创建思考块。
+  ///
+  /// 调用方负责传入与外层渲染一致的配置，使内部 Markdown 共享扩展和链接语义。
   public init(
     thought: String,
     isComplete: Bool = true,
@@ -41,6 +48,7 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
     self.isCollapsed = isCollapsed ?? (config.isCollapsible && config.isInitiallyCollapsed)
   }
 
+  /// 创建承载当前思考内容和交互状态的 UIKit 视图。
   @MainActor public func makeView() -> UIView {
     InkThoughtBlockView(
       thought: thought,
@@ -51,6 +59,9 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
     )
   }
 
+  /// 尝试把当前完整呈现状态应用到既有 Thought 视图。
+  ///
+  /// 仅接受 ``InkThoughtBlockView``；类型不匹配时返回 `false`，由调用方安全重建。
   @MainActor
   public func updateExistingView(_ view: UIView) -> Bool {
     guard let thoughtView = view as? InkThoughtBlockView else { return false }
@@ -64,6 +75,7 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
     return true
   }
 
+  /// 比较正文、完成态、折叠态、样式和扩展语义是否等价。
   @MainActor
   public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
     guard let previous = previous as? InkThoughtBlock else { return false }
@@ -80,19 +92,28 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
 /// 原生可折叠思考过程卡片视图。
 public final class InkThoughtBlockView: UIView {
 
+  /// 当前展示的 Thought Markdown 源码。
   public private(set) var thought: String
+  /// 当前 Thought 是否已经结束。
   public private(set) var isComplete: Bool
+  /// 当前卡片样式快照。
   public private(set) var config: InkAppearance.Thought
+  /// 渲染 Thought 正文时使用的完整配置。
   public private(set) var renderConfiguration: InkConfiguration
 
+  /// 当前正文是否折叠；不可折叠配置下始终为 `false`。
   public private(set) var isCollapsed: Bool
+  /// 用户切换折叠状态后的回调，参数为切换后的状态。
   public var onToggleCollapse: ((Bool) -> Void)?
-  /// 保留高变化时通知宿主 adapter；由 SwiftUI/UIKit adapter 绑定，非公开渲染契约。
+  /// 内容保留高度发生变化时通知宿主 adapter 重新测量。
+  ///
+  /// 该回调用于承载层协调布局，不替代 ``onToggleCollapse`` 的交互语义。
   public var onReservedHeightChanged: (() -> Void)?
 
   private var lastNotifiedHeight: CGFloat = 0
 
   private let container = UIView()
+  /// 承载标题、折叠交互与 VoiceOver 语义的头部控件。
   public let headerContainer = UIControl()
   private let iconImageView = UIImageView()
   private let titleLabel = UILabel()
@@ -100,6 +121,9 @@ public final class InkThoughtBlockView: UIView {
   private let bodyContainer = UIView()
   private let bodyTextView: UIView
 
+  /// 创建可复用 Thought 卡片视图。
+  ///
+  /// 不可折叠配置会忽略传入的折叠态并保持正文可见。
   public init(
     thought: String,
     isComplete: Bool = true,
@@ -156,16 +180,11 @@ public final class InkThoughtBlockView: UIView {
 
     // 头部区域（点击触发折叠）
     headerContainer.backgroundColor = .clear
-    if config.isCollapsible {
-      headerContainer.addTarget(self, action: #selector(handleHeaderTap), for: .touchUpInside)
-    }
     container.addSubview(headerContainer)
 
     // 可访问性配置
     headerContainer.isAccessibilityElement = true
-    headerContainer.accessibilityTraits = config.isCollapsible ? [.button] : [.header]
     headerContainer.accessibilityLabel = isComplete ? config.completedTitle : config.title
-    updateAccessibility()
 
     // 图标
     iconImageView.contentMode = .scaleAspectFit
@@ -187,15 +206,8 @@ public final class InkThoughtBlockView: UIView {
     titleLabel.text = isComplete ? config.completedTitle : config.title
     headerContainer.addSubview(titleLabel)
 
-    // 折叠箭头
-    if config.isCollapsible {
-      chevronImageView.contentMode = .scaleAspectFit
-      chevronImageView.tintColor = config.headerColor
-      let configSym = UIImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
-      chevronImageView.image = UIImage(systemName: "chevron.right", withConfiguration: configSym)
-      chevronImageView.transform = isCollapsed ? .identity : CGAffineTransform(rotationAngle: .pi / 2)
-      headerContainer.addSubview(chevronImageView)
-    }
+    syncCollapsibility()
+    updateAccessibility()
 
     // 正文区域
     bodyContainer.backgroundColor = .clear
@@ -205,7 +217,26 @@ public final class InkThoughtBlockView: UIView {
     bodyContainer.addSubview(bodyTextView)
   }
 
+  private func syncCollapsibility() {
+    headerContainer.removeTarget(self, action: #selector(handleHeaderTap), for: .touchUpInside)
+
+    if config.isCollapsible {
+      headerContainer.addTarget(self, action: #selector(handleHeaderTap), for: .touchUpInside)
+      chevronImageView.contentMode = .scaleAspectFit
+      chevronImageView.tintColor = config.headerColor
+      let configSym = UIImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
+      chevronImageView.image = UIImage(systemName: "chevron.right", withConfiguration: configSym)
+      chevronImageView.transform = isCollapsed ? .identity : CGAffineTransform(rotationAngle: .pi / 2)
+      if chevronImageView.superview == nil {
+        headerContainer.addSubview(chevronImageView)
+      }
+    } else {
+      chevronImageView.removeFromSuperview()
+    }
+  }
+
   private func updateAccessibility() {
+    headerContainer.accessibilityTraits = config.isCollapsible ? [.button] : [.header]
     guard config.isCollapsible else {
       headerContainer.accessibilityValue = nil
       headerContainer.accessibilityHint = nil
@@ -215,6 +246,7 @@ public final class InkThoughtBlockView: UIView {
     headerContainer.accessibilityHint = isCollapsed ? "连按两次展开思考过程" : "连按两次折叠思考过程"
   }
 
+  /// 处理头部激活事件；不可折叠配置下不产生状态变化或回调。
   @objc public func handleHeaderTap() {
     guard config.isCollapsible else { return }
     isCollapsed.toggle()
@@ -234,7 +266,10 @@ public final class InkThoughtBlockView: UIView {
     }
   }
 
-  /// 流式/终态切换时原地更新思考正文、标题与配置，**不**重置 `isCollapsed`。
+  /// 流式更新、终态 promotion 或配置变化时原地更新卡片。
+  ///
+  /// 未显式传入折叠态且配置仍可折叠时保留 live state；切换为不可折叠时
+  /// 归一化为展开，并同步 target、chevron、正文可见性和 VoiceOver 语义。
   public func apply(
     thought: String,
     isComplete: Bool,
@@ -261,10 +296,15 @@ public final class InkThoughtBlockView: UIView {
       self.renderConfiguration = renderConfiguration
     }
 
+    syncCollapsibility()
     if let isCollapsed, self.config.isCollapsible {
       self.isCollapsed = isCollapsed
-      bodyContainer.isHidden = self.isCollapsed
-      bodyContainer.alpha = self.isCollapsed ? 0 : 1
+    } else if !self.config.isCollapsible {
+      self.isCollapsed = false
+    }
+    bodyContainer.isHidden = self.isCollapsed
+    bodyContainer.alpha = self.isCollapsed ? 0 : 1
+    if self.config.isCollapsible {
       chevronImageView.transform = self.isCollapsed ? .identity : CGAffineTransform(rotationAngle: .pi / 2)
     }
 

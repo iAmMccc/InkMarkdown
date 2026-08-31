@@ -33,7 +33,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("InkStreamMarkdownView 绑定 session 并共享唯一配置真相")
-  func sessionConfigurationIsSharedSnapshot() {
+  func session_configurationIsSharedSnapshot() {
     var config = InkConfiguration.standard
     config.appearance.text.fontSize = 21
     let session = InkMarkdownRenderSession(configuration: config)
@@ -46,7 +46,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("InkStreamMarkdownView 在 UIHostingController 中完成流式装载")
-  func streamingViewLoadsInUIHostingController() throws {
+  func streamingView_loadsInUIHostingController() throws {
     let session = InkMarkdownRenderSession()
     session.append("## 流式测试标题\n分片1内容")
 
@@ -58,7 +58,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("InkStreamMarkdownView body 驱动流式到终态生命周期")
-  func streamViewBodyStreamingToPromotedLifecycle() async throws {
+  func streamView_streamingToPromotedLifecycle() async throws {
     let session = InkMarkdownRenderSession()
     session.append("## 实时标题\n内容第一段")
 
@@ -82,7 +82,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("PREFIX 思考流式阶段挂载可折叠 InkThoughtBlockView")
-  func streamingThoughtPrefixShowsCollapsibleCard() throws {
+  func streamingThought_showsCollapsibleCard() throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     let session = InkMarkdownRenderSession(configuration: config)
@@ -97,7 +97,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("流式 append 后 InkStreamMarkdownView 仍保留折叠态")
-  func streamingAppendPreservesCollapseInStreamView() async throws {
+  func streamingAppend_preservesCollapseInStreamView() async throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     config.appearance.thought.isInitiallyCollapsed = false
@@ -121,7 +121,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("promotion 后 InkStreamMarkdownView body 仍保留折叠态")
-  func collapsePreservedAfterPromotionViaStreamViewBody() async throws {
+  func collapse_persistsAfterPromotionViaStreamViewBody() async throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     config.appearance.thought.isInitiallyCollapsed = false
@@ -150,7 +150,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("无 PREFIX 思考时流式阶段仅单一 UITextView")
-  func streamingWithoutThoughtUsesSingleTextView() throws {
+  func streamingView_withoutThoughtUsesSingleTextView() throws {
     let session = InkMarkdownRenderSession()
     session.append("## 普通流式\n正文")
 
@@ -162,7 +162,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("挂载 Representable 后首次 append 思考标签即显示 thought 视图")
-  func deferredThoughtAppendAfterMountShowsThoughtView() throws {
+  func deferredThoughtAppend_showsThoughtViewAfterMount() throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     let session = InkMarkdownRenderSession(configuration: config)
@@ -183,7 +183,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("空会话不挂载 remainder，开始流式后挂载并保持")
-  func insertingThoughtMountsAndKeepsRemainderAttached() throws {
+  func insertingThought_mountsAndKeepsRemainderAttached() throws {
     let session = InkMarkdownRenderSession()
     let coordinator = InkMarkdownCoordinator()
     let container = InkMarkdownContainerView()
@@ -207,7 +207,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("同一 chunk 含 thought 与 remainder 同时挂载双槽")
-  func mixedChunkThoughtAndRemainderBothAttach() throws {
+  func mixedChunk_attachesThoughtAndRemainder() throws {
     let session = InkMarkdownRenderSession()
     session.append("<think>\n分析\n</think>\n\n## 回答")
 
@@ -220,7 +220,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("挂载后仅追加 thought 闭标签也刷新完成态")
-  func closeOnlyThoughtChunkRefreshesCompletionState() throws {
+  func closeOnlyThoughtChunk_refreshesCompletionState() throws {
     let session = InkMarkdownRenderSession()
     let coordinator = InkMarkdownCoordinator()
     let container = InkMarkdownContainerView()
@@ -246,7 +246,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("cancel 后流式 thought 视图被移除")
-  func cancelRemovesStreamingThoughtView() throws {
+  func cancel_removesStreamingThoughtView() throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     let session = InkMarkdownRenderSession(configuration: config)
@@ -264,7 +264,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("session A→B 切换后折叠仅影响当前 session B")
-  func sessionSwitchCollapseOnlyAffectsActiveSession() throws {
+  func sessionSwitch_collapseOnlyAffectsActiveSession() throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     config.appearance.thought.isInitiallyCollapsed = false
@@ -301,7 +301,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("session A 切到空 B 会立即卸载复用 text view")
-  func sessionSwitchToEmptyUnmountsReusedTextView() async {
+  func sessionSwitchToEmpty_unmountsReusedTextView() async {
     let sessionA = InkMarkdownRenderSession()
     sessionA.append("会话 A 正文")
     let sessionB = InkMarkdownRenderSession()
@@ -321,7 +321,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("session A 切到已有内容 B 后只显示并追加 B 内容")
-  func sessionSwitchToNonEmptyReplacesReusedTextView() async {
+  func sessionSwitchToNonEmpty_replacesReusedTextView() async {
     let sessionA = InkMarkdownRenderSession()
     sessionA.append("会话 A 正文")
     let sessionB = InkMarkdownRenderSession()
@@ -357,7 +357,7 @@ struct InkStreamMarkdownViewTests {
   }
 
   @Test("流式 updateRenderEnvironment 后 thought 可见高度随 Dynamic Type 变化")
-  func streamingUpdateRenderEnvironmentChangesThoughtHeight() throws {
+  func streamingEnvironmentUpdate_changesThoughtHeight() throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = false
     let session = InkMarkdownRenderSession(configuration: config)
@@ -384,8 +384,66 @@ struct InkStreamMarkdownViewTests {
     #expect(axHeight > baseHeight)
   }
 
+  @Test("promotion 后挂载流式视图在无新流式事件时响应环境更新")
+  func promotedStreamView_refreshesMountedPresentationAfterEnvironmentUpdate() async throws {
+    var config = InkConfiguration.standard
+    config.appearance.thought.isCollapsible = true
+    config.appearance.thought.isInitiallyCollapsed = false
+    let session = InkMarkdownRenderSession(configuration: config)
+    session.append(
+      "<think>\n"
+        + String(repeating: "思考正文行。\n", count: 8)
+        + "</think>\n\n正文"
+    )
+
+    let host = renderInWindow(InkStreamMarkdownView(session: session))
+    let container = try #require(findContainerView(in: host.view))
+    settleLayout(host)
+
+    session.finish()
+    session.renderer.onFinishParse?()
+    session.renderer.onFinishDisplay?()
+    await waitForRunLoop { session.isPromoted }
+    settleLayout(host)
+
+    let promotedThought = try #require(
+      container.subviews.first(where: { $0 is InkThoughtBlockView }) as? InkThoughtBlockView
+    )
+    let width: CGFloat = 320
+    let baseHeight = promotedThought.sizeThatFits(
+      CGSize(width: width, height: CGFloat.greatestFiniteMagnitude)
+    ).height
+    let sourceBeforeEnvironmentUpdate = session.currentText
+
+    session.updateRenderEnvironment(
+      InkRenderEnvironment(contentSizeCategory: .accessibilityExtraLarge)
+    )
+    host.view.setNeedsLayout()
+    host.view.layoutIfNeeded()
+
+    let updatedThought = try #require(
+      container.subviews.first(where: { $0 is InkThoughtBlockView }) as? InkThoughtBlockView
+    )
+    let updatedHeight = updatedThought.sizeThatFits(
+      CGSize(width: width, height: CGFloat.greatestFiniteMagnitude)
+    ).height
+
+    #expect(session.isPromoted)
+    #expect(session.currentText == sourceBeforeEnvironmentUpdate)
+    #expect(
+      updatedThought.renderConfiguration.renderEnvironment.contentSizeCategory
+        == .accessibilityExtraLarge
+    )
+    #expect(updatedThought.isCollapsed == false)
+    #expect(updatedHeight > baseHeight)
+    #expect(
+      container.currentConfiguration?.renderEnvironment.contentSizeCategory
+        == .accessibilityExtraLarge
+    )
+  }
+
   @Test("复用 Coordinator 时不同终态内容不会命中陈旧 block 缓存")
-  func reusedCoordinatorRendersLatestBlocks() throws {
+  func reusedCoordinator_rendersLatestBlocks() throws {
     let coordinator = InkMarkdownCoordinator()
     let container = InkMarkdownContainerView()
     coordinator.containerView = container
