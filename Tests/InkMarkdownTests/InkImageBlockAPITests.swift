@@ -12,7 +12,7 @@ import UIKit
 struct InkImageBlockAPITests {
 
   @Test("InkImageBlock 是 UIView 子类")
-  func inkImageBlockIsUIViewSubclass() {
+  func imageBlock_isUIViewSubclass() {
     #expect(InkImageBlock.self is UIView.Type)
     let block = InkImageBlock(
       source: ImageSource(url: URL(string: "https://example.com/a.png")!),
@@ -22,7 +22,7 @@ struct InkImageBlockAPITests {
   }
 
   @Test("deprecated init(source:store:rendering:) 可编译并创建视图")
-  func deprecatedStoreInitCompiles() {
+  func imageBlock_deprecatedStoreInitCompiles() {
     let store = InkImageStore()
     var rendering = InkImageRendering()
     rendering.isEnabled = true
@@ -35,7 +35,7 @@ struct InkImageBlockAPITests {
   }
 
   @Test("makeView 返回 UIView 且为 InkImageBlock 实例")
-  func makeViewReturnsInkImageBlockView() {
+  func imageBlock_makeViewReturnsInkImageBlockView() {
     let block = InkImageBlock(
       source: ImageSource(url: URL(string: "https://example.com/b.png")!),
       rendering: InkImageRendering()
@@ -47,7 +47,7 @@ struct InkImageBlockAPITests {
   }
 
   @Test("InkImageBlockView 为 InkImageBlock 兼容别名")
-  func inkImageBlockViewTypealias() {
+  func imageBlock_viewTypealias() {
     let legacy = InkImageBlockView(
       source: ImageSource(url: URL(string: "https://example.com/alias.png")!),
       store: InkImageStore(),

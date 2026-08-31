@@ -74,7 +74,7 @@ private func makeLegacyPublicAPIFixture() -> InkConfiguration {
 struct InkRenderableBlockPublicAPIContractTests {
 
   @Test("普通 import 可实现 InkRenderableBlock 并通过自定义 handler 渲染")
-  func publicConsumerCanImplementRenderableBlock() {
+  func publicConsumer_canImplementRenderableBlock() {
     _ = makeLegacyPublicAPIFixture()
 
     var config = InkConfiguration.standard

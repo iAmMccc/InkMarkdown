@@ -33,7 +33,7 @@ struct InkMermaidRendererTests {
     ).cacheIdentity())
   }
 
-  @Test @MainActor func inputLimitsFailBeforeWebKitLoads() async {
+  @Test @MainActor func mermaidRenderer_inputLimitsFailBeforeWebKitLoads() async {
     let renderer = InkMermaidImageRenderer(limits: .init(maximumSourceCharacters: 3), bundle: InkMarkdownMermaid.bundle)
     let request = InkMermaidRenderRequest(
       source: "four",
@@ -53,7 +53,7 @@ struct InkMermaidRendererTests {
     #expect(encoded.hasPrefix("\""))
   }
 
-  @Test @MainActor func nonPositiveTimeoutIsClassifiedAsInvalidLimits() async {
+  @Test @MainActor func mermaidRenderer_nonPositiveTimeoutIsClassifiedAsInvalidLimits() async {
     let renderer = InkMermaidImageRenderer(limits: .init(timeout: 0), bundle: InkMarkdownMermaid.bundle)
     let request = InkMermaidRenderRequest(
       source: "graph TD; A-->B",
@@ -64,7 +64,7 @@ struct InkMermaidRendererTests {
     }
   }
 
-  @Test @MainActor func subUIKitScaleIsRejectedBeforeWebKitLoads() async {
+  @Test @MainActor func mermaidRenderer_subUIKitScaleIsRejectedBeforeWebKitLoads() async {
     let renderer = InkMermaidImageRenderer(limits: .init(), bundle: InkMarkdownMermaid.bundle)
     let request = InkMermaidRenderRequest(
       source: "graph TD; A-->B",
@@ -75,7 +75,7 @@ struct InkMermaidRendererTests {
     }
   }
 
-  @Test func bridgePollIgnoresStaleRequestID() throws {
+  @Test func mermaidBridge_pollIgnoresStaleRequestID() throws {
     let bundle = InkMarkdownMermaid.bundle
     guard let bridgeURL = bundle.url(forResource: "InkMermaidBridge", withExtension: "js") else { return }
     let bridge = try String(contentsOf: bridgeURL, encoding: .utf8)

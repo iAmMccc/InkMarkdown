@@ -14,7 +14,7 @@ import SwiftUI
 struct InkMarkdownViewTests {
 
   @Test("InkMarkdownView 在 UIHostingController 中完成全链路静态渲染")
-  func viewRendersContentThroughUIHostingController() throws {
+  func markdownView_rendersContentThroughUIHostingController() throws {
     let view = InkMarkdownView("## 测试标题\n正文第一段内容。")
     let host = renderInWindow(view)
 
@@ -27,7 +27,7 @@ struct InkMarkdownViewTests {
   }
 
   @Test("InkMarkdownView 接受显式 configuration 并正确生效")
-  func viewAppliesExplicitConfiguration() throws {
+  func markdownView_appliesExplicitConfiguration() throws {
     var config = InkConfiguration.standard
     config.sourceFilter = { _ in "被 sourceFilter 重写的内容" }
 
@@ -41,7 +41,7 @@ struct InkMarkdownViewTests {
   }
 
   @Test("InkMarkdownView 组合 .inkConfiguration 修饰符由环境注入配置")
-  func viewAppliesEnvironmentConfigurationModifier() throws {
+  func environmentModifier_appliesConfiguration() throws {
     var customConfig = InkConfiguration.standard
     customConfig.sourceFilter = { _ in "来自 Environment 的文本" }
 
@@ -56,7 +56,7 @@ struct InkMarkdownViewTests {
   }
 
   @Test("InkMarkdownCoordinator 保持相同输入语义并支持幂等清理")
-  func coordinatorPreservesStaticSemanticsAndCleansUpIdempotently() throws {
+  func coordinator_preservesStaticSemanticsAndCleansUpIdempotently() throws {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
     coordinator.containerView = container
@@ -86,7 +86,7 @@ struct InkMarkdownViewTests {
   }
 
   @Test("InkMarkdownView 适配 iPhone 窄屏与 iPad 宽屏视口尺寸")
-  func viewAdaptsToVariousDeviceWidthsAndiPadViewports() throws {
+  func markdownView_adaptsToVariousDeviceWidthsAndiPadViewports() throws {
     let markdown = """
     # 跨平台视口排版测试
     这是一段用于验证各种屏幕宽度自适应的段落文本。
@@ -105,7 +105,7 @@ struct InkMarkdownViewTests {
   }
 
   @Test("InkMarkdownView 在深色模式环境下正确解析为 dark style")
-  func viewResolvesDarkColorSchemeInSwiftUIEnvironment() throws {
+  func markdownView_resolvesDarkColorSchemeInSwiftUIEnvironment() throws {
     let view = InkMarkdownView("## 深色环境测试")
       .preferredColorScheme(.dark)
     let host = renderInWindow(view)

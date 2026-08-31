@@ -31,7 +31,7 @@ struct InkRenderSessionSourceLimitTests {
   }
 
   @Test("session 与 renderer 在创建时共享同一个不可变上限 snapshot")
-  func sessionAndRendererShareSourceLimitSnapshot() {
+  func renderSession_sessionAndRendererShareSourceLimitSnapshot() {
     let session = InkMarkdownRenderSession(maximumSourceLength: 4)
 
     #expect(session.maximumSourceLength == 4)
@@ -47,7 +47,7 @@ struct InkRenderSessionSourceLimitTests {
   }
 
   @Test("小于、等于、超过上限时 currentText 只保留 canonical source")
-  func currentTextUsesCanonicalSource() {
+  func currentText_usesCanonicalSource() {
     let session = InkMarkdownRenderSession(maximumSourceLength: 5)
 
     session.append("ab")
@@ -59,7 +59,7 @@ struct InkRenderSessionSourceLimitTests {
   }
 
   @Test("非法 session 上限回退默认值")
-  func invalidSessionSourceLimitFallsBackToDefault() {
+  func sessionSourceLimit_invalidFallsBackToDefault() {
     let zero = InkMarkdownRenderSession(maximumSourceLength: 0)
     let negative = InkMarkdownRenderSession(maximumSourceLength: -1)
 
@@ -70,7 +70,7 @@ struct InkRenderSessionSourceLimitTests {
   }
 
   @Test("finish 与 promotion 只消费 canonical source")
-  func finishAndPromotionUseCanonicalSource() async {
+  func promotion_finishAndPromotionUseCanonicalSource() async {
     let session = InkMarkdownRenderSession(maximumSourceLength: 10)
     let source = "# accepted\nTAIL"
     session.append(source)

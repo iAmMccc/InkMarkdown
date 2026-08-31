@@ -15,13 +15,13 @@ import SwiftUI
 struct InkConfigurationModifierTests {
 
   @Test("Environment key 默认值为 nil")
-  func environmentDefaultValueIsNil() {
+  func environment_defaultValueIsNil() {
     let env = EnvironmentValues()
     #expect(env.inkConfiguration == nil)
   }
 
   @Test("手动设置 EnvironmentValues.inkConfiguration 可读写")
-  func environmentValuesExplicitAssignment() {
+  func environment_explicitAssignment() {
     var env = EnvironmentValues()
     #expect(env.inkConfiguration == nil)
 
@@ -34,7 +34,7 @@ struct InkConfigurationModifierTests {
   }
 
   @Test("View.inkConfiguration 修饰符可正确调用并返回 View")
-  func viewModifierApplication() {
+  func viewModifier_application() {
     var config = InkConfiguration.standard
     config.appearance.text.fontSize = 22
     config.appearance.codeBlock.fontSize = 16
@@ -46,7 +46,7 @@ struct InkConfigurationModifierTests {
   }
 
   @Test("嵌套视图使用 inkConfiguration 修饰符可链式构建")
-  func chainedModifierHierarchy() {
+  func modifier_chainedHierarchy() {
     var config = InkConfiguration.standard
     config.appearance.heading.h1FontSize = 26
 

@@ -14,7 +14,7 @@ struct AccessibilityAndDynamicTypeTests {
   // MARK: - 1. 思考过程块 (InkThoughtBlockView) 可访问性
 
   @Test("InkThoughtBlockView 折叠与展开状态下提供精准的 VoiceOver 语义与提示")
-  func thoughtBlockAccessibilitySemantics() {
+  func thoughtBlock_accessibilitySemantics() {
     var thoughtConfig = InkAppearance.Thought()
     thoughtConfig.isCollapsible = true
     thoughtConfig.isInitiallyCollapsed = true
@@ -52,7 +52,7 @@ struct AccessibilityAndDynamicTypeTests {
   }
 
   @Test("不可折叠思考卡片 (isCollapsible == false) 的 VoiceOver 特征降级为 .header")
-  func nonCollapsibleThoughtBlockAccessibilityTraits() {
+  func nonCollapsibleThoughtBlock_accessibilityTraits() {
     var thoughtConfig = InkAppearance.Thought()
     thoughtConfig.isCollapsible = false
 
@@ -72,7 +72,7 @@ struct AccessibilityAndDynamicTypeTests {
   // MARK: - 2. 代码块与分割线可访问性
 
   @Test("InkCodeBlockView 提供代码语言与代码内容的无障碍辅助描述")
-  func codeBlockAccessibilityDescription() {
+  func codeBlock_accessibilityDescription() {
     let block = InkCodeBlock(code: "let answer = 42\nprint(answer)", language: "swift")
     let view = block.makeView()
 
@@ -82,7 +82,7 @@ struct AccessibilityAndDynamicTypeTests {
   }
 
   @Test("InkThematicBreakView 提供分割线无障碍标签")
-  func thematicBreakAccessibilityLabel() {
+  func thematicBreak_accessibilityLabel() {
     let block = InkThematicBreakBlock()
     let view = block.makeView()
 
@@ -93,7 +93,7 @@ struct AccessibilityAndDynamicTypeTests {
   // MARK: - 3. Dynamic Type 与自适应字号排版
 
   @Test("大字号 Dynamic Type 配置下正文与标题行高正确缩放且不截断")
-  func dynamicTypeScalingRendersValidLineHeights() {
+  func dynamicType_scalingRendersValidLineHeights() {
     var config = InkConfiguration.standard
     // 模拟超大字体辅助模式 (Accessibility XXL)
     config.appearance.text.fontSize = 28
@@ -120,7 +120,7 @@ struct AccessibilityAndDynamicTypeTests {
   }
 
   @Test("表格列宽测量、流式 cell 字体与行高使用同一 Dynamic Type trait")
-  func tableWidthMeasurementUsesScaledFont() {
+  func tableWidthMeasurement_usesScaledFont() {
     var normal = InkConfiguration.standard
     normal.renderEnvironment = InkRenderEnvironment(contentSizeCategory: .large)
     var accessibility = normal

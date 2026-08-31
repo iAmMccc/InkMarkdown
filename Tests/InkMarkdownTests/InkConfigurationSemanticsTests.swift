@@ -20,7 +20,7 @@ private struct TestSemanticImageLoader: InkImageLoading {
 
   @Test("capturingRenderEnvironmentForBackgroundParse 保留已注入环境，仅未注入时自动捕获")
   @MainActor
-  func capturingPreservesInjectedRenderEnvironment() {
+  func renderEnvironment_capturingPreservesInjectedRenderEnvironment() {
     // 用户已注入 .dark：必须原样保留，不能被主线程当前 trait 覆盖。
     var injected = InkConfiguration.standard
     injected.renderEnvironment = InkRenderEnvironment(userInterfaceStyle: .dark)
@@ -35,7 +35,7 @@ private struct TestSemanticImageLoader: InkImageLoading {
 
   @Test("withResolvedRenderEnvironmentIfNeeded 仅补全 unspecified 字段，不覆盖已注入 category")
   @MainActor
-  func resolvedEnvironmentPreservesInjectedContentSizeCategory() {
+  func renderEnvironment_resolvedPreservesInjectedContentSizeCategory() {
     var config = InkConfiguration.standard
     config.renderEnvironment = InkRenderEnvironment(
       userInterfaceStyle: .unspecified,
@@ -47,7 +47,7 @@ private struct TestSemanticImageLoader: InkImageLoading {
   }
 
   @Test("isSemanticallyEqualTo 按内容比较语法与处理器，而非仅数量")
-  func semanticEqualityComparesContentNotJustCount() {
+  func configuration_semanticEqualityComparesContentNotJustCount() {
     let base = InkConfiguration.standard
 
     // 同类型、同顺序 → 语义等价（保持 Coordinator 幂等）。
@@ -92,7 +92,7 @@ private struct TestSemanticImageLoader: InkImageLoading {
   }
 
   @Test("isSemanticallyEqualTo 严格识别 appearance、renderEnvironment 与 closure 注入差异")
-  func semanticEqualityDetectsAppearanceAndEnvironmentChanges() {
+  func configuration_semanticEqualityDetectsAppearanceAndEnvironmentChanges() {
     let base = InkConfiguration.standard
 
     // 1. Appearance 属性变化
@@ -119,7 +119,7 @@ private struct TestSemanticImageLoader: InkImageLoading {
   }
 
   @Test("不透明闭包默认保守刷新，显式语义身份可安全复用")
-  func opaqueClosuresUseExplicitSemanticIdentity() {
+  func configuration_opaqueClosuresUseExplicitSemanticIdentity() {
     let base = InkConfiguration.standard
 
     var first = base
@@ -141,7 +141,7 @@ private struct TestSemanticImageLoader: InkImageLoading {
   }
 
   @Test("表格回调与图片加载配置参与完整语义比较")
-  func appearanceAndImageRenderingCompareOpaqueSemantics() {
+  func configuration_appearanceAndImageRenderingCompareOpaqueSemantics() {
     var firstTable = InkAppearance.Table()
     firstTable.setCopyFeedback({ _ in }, semanticIdentity: "table.copy.v1")
     var equivalentTable = InkAppearance.Table()
@@ -174,7 +174,7 @@ private struct TestSemanticImageLoader: InkImageLoading {
   }
 
   @Test("内置生成图 loader 以值状态比较而非实例身份")
-  func generatedLoadersProvideStableSemantics() {
+  func generatedLoader_providesStableSemantics() {
     var latexA = InkImageRendering()
     latexA.generatedLoader = InkLaTeXGeneratedImageLoader(mode: .inline, style: .init(fontSize: 18))
     var latexB = InkImageRendering()
@@ -194,7 +194,7 @@ private struct TestSemanticImageLoader: InkImageLoading {
   }
 
   @Test("表格复用语义包含 alignment、行边界与 layout mode")
-  func tableReuseComparesAllLayoutSemantics() {
+  func tableReuse_comparesAllLayoutSemantics() {
     let base = InkTableBlock(
       headers: ["A", "B"],
       rows: [["1", "2"], ["3", "4"]],
@@ -226,7 +226,7 @@ private struct TestSemanticImageLoader: InkImageLoading {
   }
 
   @Test("内置块的复用比较包含样式与完整渲染配置")
-  func reusableBlocksCompareConfigurationSemantics() {
+  func reusableBlock_comparesConfigurationSemantics() {
     var baseConfiguration = InkConfiguration.standard
     baseConfiguration.setLinkTapHandler({ _, _ in true }, semanticIdentity: "links.v1")
     var changedConfiguration = baseConfiguration

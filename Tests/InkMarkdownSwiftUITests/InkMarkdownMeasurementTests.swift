@@ -13,7 +13,7 @@ import UIKit
 struct InkMarkdownMeasurementTests {
 
   @Test("同一宽度连续 sizeThatFits 子视图测量次数不超过块数")
-  func consecutiveMeasureReusesCache() {
+  func consecutiveMeasure_reusesCache() {
     let width: CGFloat = 360
     let blocks: [InkRenderableBlock] = [
       InkCodeBlock(code: "let x = 1", language: "swift"),
@@ -42,7 +42,7 @@ struct InkMarkdownMeasurementTests {
   }
 
   @Test("layoutSubviews 内不触发 invalidateIntrinsicContentSize")
-  func layoutSubviewsDoesNotInvalidateICS() {
+  func layoutSubviews_doesNotInvalidateICS() {
     let width: CGFloat = 360
     let container = InkMarkdownContainerView(frame: CGRect(x: 0, y: 0, width: width, height: 0))
     let coordinator = InkMarkdownCoordinator()
@@ -63,7 +63,7 @@ struct InkMarkdownMeasurementTests {
   }
 
   @Test("宽度变化时在 measure 入口重测且 layout 复用高度数组")
-  func widthChangeRemeasuresOnceAtMeasureEntry() {
+  func widthChange_remeasuresOnceAtMeasureEntry() {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
     coordinator.containerView = container

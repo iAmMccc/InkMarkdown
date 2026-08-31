@@ -25,7 +25,7 @@ private final class TestLinkHandlerState: @unchecked Sendable {
 struct InkMarkdownLoopPreventionTests {
 
   @Test("Coordinator updateStatic 在相同输入与配置下保持幂等且不重复测量")
-  func coordinatorUpdateStaticIsIdempotent() throws {
+  func coordinator_updateStaticIsIdempotent() throws {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
     coordinator.containerView = container
@@ -64,7 +64,7 @@ struct InkMarkdownLoopPreventionTests {
   }
 
   @Test("Coordinator updateStatic 在配置发生语义变化时更新可见语义")
-  func coordinatorRerendersOnSemanticConfigurationChange() throws {
+  func coordinator_rerendersOnSemanticConfigurationChange() throws {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
     coordinator.containerView = container
@@ -92,7 +92,7 @@ struct InkMarkdownLoopPreventionTests {
   }
 
   @Test("Coordinator 依据稳定语义身份保持或更新链接回调")
-  func coordinatorUpdatesLinkBehaviorForSemanticIdentity() throws {
+  func coordinator_updatesLinkBehaviorForSemanticIdentity() throws {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
     coordinator.containerView = container
@@ -150,7 +150,7 @@ struct InkMarkdownLoopPreventionTests {
   }
 
   @Test("InkConfiguration.isSemanticallyEqualTo 准确识别字号、间距与环境变化")
-  func configurationEqualityCheck() {
+  func configuration_equalityCheck() {
     let config1 = InkConfiguration.standard
     var config2 = InkConfiguration.standard
     #expect(config1.isSemanticallyEqualTo(config2))
@@ -170,7 +170,7 @@ struct InkMarkdownLoopPreventionTests {
   }
 
   @Test("各 Block View 在 sizeThatFits 下返回有效正数高度且无约束冲突")
-  func blockViewsMeasureValidHeight() {
+  func blockViews_measureValidHeight() {
     let width: CGFloat = 360
 
     // 1. Code Block
@@ -210,7 +210,7 @@ struct InkMarkdownLoopPreventionTests {
   }
 
   @Test("InkAttributedRenderer 能够在流式富文本阶段格式化输出表格内容")
-  func attributedTableRendering() {
+  func attributedTable_rendering() {
     let markdown = """
     | 语言 | 平台 |
     |---|---|

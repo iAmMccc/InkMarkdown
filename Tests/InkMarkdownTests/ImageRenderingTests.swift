@@ -471,7 +471,7 @@ struct InkImageStoreTests {
   }
 
   /// #18 queued drain
-  @Test @MainActor func queuedDrain() async {
+  @Test @MainActor func imageStore_queuedDrain() async {
     var config = InkImageStore.Configuration()
     config.maxConcurrentLoads = 4
     let store = InkImageStore(configuration: config)

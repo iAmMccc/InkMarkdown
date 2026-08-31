@@ -72,7 +72,7 @@ final class InkLaTeXImageRendererTests: XCTestCase {
     }
   }
 
-  func testRendererProducesImageForBasicExpression() async throws {
+  func latexImageRenderer_producesImageForBasicExpression() async throws {
     XCTAssertEqual(InkLaTeXImageRenderer.rendererVersion, "iosMath-2.3.1-r1")
     let result = try await InkLaTeXImageRenderer().render(makeRequest(latex: "x^2 + y^2"))
 

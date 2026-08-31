@@ -38,7 +38,7 @@ private struct ImmediateMermaidProvider: InkMermaidRenderingProviding {
 struct GeneratedAddonPipelineTests {
 
   @Test("LaTeX 注册后经 BlockRenderer-ImageBlock-Store 产出图片")
-  func registeredLaTeXCompletesFullPipeline() async throws {
+  func registeredLaTeX_completesFullPipeline() async throws {
     _ = InkMarkdownLaTeX.register()
     var appearance = InkAppearance()
     appearance.latexRendering.isEnabled = true
@@ -50,7 +50,7 @@ struct GeneratedAddonPipelineTests {
   }
 
   @Test("Mermaid 注册后经 BlockRenderer-ImageBlock-Store 产出图片")
-  func registeredMermaidCompletesFullPipeline() async throws {
+  func registeredMermaid_completesFullPipeline() async throws {
     _ = InkMarkdownMermaid.register()
     #expect(InkGeneratedAddonRuntime.makeLoader(owner: "mermaid") is any InkMermaidRenderingProviding)
     defer { _ = InkMarkdownMermaid.register() }

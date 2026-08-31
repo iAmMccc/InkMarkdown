@@ -63,7 +63,7 @@ private final class TestWeakReference<Value: AnyObject> {
 struct InkPartialBlockReuseTests {
 
   @Test("第三方 InkReusableBlock 内容变化后显示最新内容")
-  func customReusableBlockUpdatesExistingView() throws {
+  func reusableBlock_updatesExistingView() throws {
     let container = InkMarkdownContainerView()
     let coordinator = makeCoordinator(for: container)
     let configuration = InkConfiguration.standard
@@ -78,7 +78,7 @@ struct InkPartialBlockReuseTests {
   }
 
   @Test("InkCodeBlock 三参数 initializer 保留自定义样式")
-  func codeBlockThreeArgumentInitializerAppliesConfiguration() throws {
+  func codeBlock_threeArgumentInitializerAppliesConfiguration() throws {
     var style = InkAppearance.CodeBlock()
     style.backgroundColor = .systemPink
     style.fontSize = 23
@@ -94,7 +94,7 @@ struct InkPartialBlockReuseTests {
   }
 
   @Test("富文本后缀、样式或链接变化会更新完整 attributed 语义")
-  func attributedContentChangesUpdateTextView() throws {
+  func attributedContent_changesUpdateTextView() throws {
     let container = InkMarkdownContainerView()
     let coordinator = makeCoordinator(for: container)
     let prefix = String(repeating: "A", count: 65)
@@ -125,7 +125,7 @@ struct InkPartialBlockReuseTests {
   }
 
   @Test("富文本 attachment source 变化会更新 text view 内容")
-  func attachmentChangeUpdatesTextView() throws {
+  func attachment_changesUpdateTextView() throws {
     let container = InkMarkdownContainerView()
     let coordinator = makeCoordinator(for: container)
     var rendering = InkImageRendering()
@@ -163,7 +163,7 @@ struct InkPartialBlockReuseTests {
   }
 
   @Test("图片 source 变化后显示新 source")
-  func imageSourceChangeDisplaysNewSource() throws {
+  func imageSource_changeDisplaysNewSource() throws {
     let container = InkMarkdownContainerView()
     let coordinator = makeCoordinator(for: container)
     var rendering = InkImageRendering()
@@ -180,7 +180,7 @@ struct InkPartialBlockReuseTests {
   }
 
   @Test("图片块注入不同 Store 时视图语义不等价")
-  func imageStoreDifferenceChangesImageSemantics() {
+  func imageStore_differenceChangesImageSemantics() {
     var rendering = InkImageRendering()
     rendering.isEnabled = true
     let source = ImageSource(url: URL(string: "https://example.com/image.png")!)
@@ -191,7 +191,7 @@ struct InkPartialBlockReuseTests {
   }
 
   @Test("图片 source 替换后取消旧订阅并只展示新请求结果")
-  func replacingImageBlockCancelsOldSubscriptionAndShowsNewImage() async throws {
+  func imageBlock_replacingCancelsOldSubscriptionAndShowsNewImage() async throws {
     let oldURL = URL(string: "https://example.com/old.png")!
     let newURL = URL(string: "https://example.com/new.png")!
     let oldImage = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 240)).image { context in
@@ -260,7 +260,7 @@ struct InkPartialBlockReuseTests {
   }
 
   @Test("LaTeX 与 Mermaid generated source 变化后均显示新 source")
-  func generatedImageSourceChangesDisplayNewSource() throws {
+  func generatedImageSource_changesDisplayNewSource() throws {
     for owner in ["latex", "mermaid"] {
       let container = InkMarkdownContainerView()
       let coordinator = makeCoordinator(for: container)
@@ -296,7 +296,7 @@ struct InkPartialBlockReuseTests {
   }
 
   @Test("表格 alignment 与 layout mode 变化后更新可见层级")
-  func tableLayoutChangesUpdateRenderedStructure() throws {
+  func tableLayout_changesUpdateRenderedStructure() throws {
     let container = InkMarkdownContainerView()
     let coordinator = makeCoordinator(for: container)
     let first = InkTableBlock(

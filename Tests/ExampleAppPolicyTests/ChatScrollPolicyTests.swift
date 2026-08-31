@@ -10,7 +10,7 @@ import Testing
 struct ChatScrollPolicyTests {
 
   @Test("粘底且内容增长时应自动滚动")
-  func stickToBottomContentGrewShouldAutoScroll() {
+  func stickToBottom_contentGrewShouldAutoScroll() {
     var policy = ChatScrollPolicy()
     policy.offsetChanged(distanceFromBottom: 0, isDragging: false)
     policy.contentGrew()
@@ -18,7 +18,7 @@ struct ChatScrollPolicyTests {
   }
 
   @Test("上滑超出 120pt 阈值后不再自动滚动")
-  func scrollUpBeyondThresholdDisablesAutoScroll() {
+  func scrollUpBeyondThreshold_disablesAutoScroll() {
     var policy = ChatScrollPolicy()
     policy.dragBegan()
     policy.dragEnded(distanceFromBottom: 200, isDecelerating: false)
@@ -27,7 +27,7 @@ struct ChatScrollPolicyTests {
   }
 
   @Test("新消息发送重置粘底")
-  func messagesCountChangedResetsStickToBottom() {
+  func messagesCountChanged_resetsStickToBottom() {
     var policy = ChatScrollPolicy()
     policy.dragEnded(distanceFromBottom: 200, isDecelerating: false)
     #expect(policy.stickToBottom == false)
@@ -36,7 +36,7 @@ struct ChatScrollPolicyTests {
   }
 
   @Test("offsetChanged 在非拖拽时刷新粘底 latch")
-  func offsetChangedUpdatesStickToBottomWhileNotDragging() {
+  func offsetChanged_updatesStickToBottomWhileNotDragging() {
     var policy = ChatScrollPolicy()
     policy.offsetChanged(distanceFromBottom: 200, isDragging: false)
     #expect(policy.stickToBottom == false)
@@ -48,7 +48,7 @@ struct ChatScrollPolicyTests {
   }
 
   @Test("shouldPauseDisplay 仅在拖拽/减速期间为 true")
-  func shouldPauseDisplayOnlyWhileActivelyScrolling() {
+  func displayPause_shouldPauseOnlyWhileActivelyScrolling() {
     var policy = ChatScrollPolicy()
     #expect(policy.shouldPauseDisplay == false)
 

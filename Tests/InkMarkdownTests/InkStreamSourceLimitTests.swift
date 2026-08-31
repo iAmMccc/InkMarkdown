@@ -30,7 +30,7 @@ struct InkStreamSourceLimitTests {
   }
 
   @Test("默认上限保持 50_000，并在 renderer 创建时固化")
-  func defaultSourceLimitSnapshot() {
+  func sourceLimit_defaultSourceLimitSnapshot() {
     let renderer = InkStreamRenderer()
 
     #expect(InkStreamRenderer.maximumSourceLength == 50_000)
@@ -39,7 +39,7 @@ struct InkStreamSourceLimitTests {
   }
 
   @Test("自定义上限覆盖小于、等于与超过三种输入")
-  func customSourceLimitAcceptsOnlyCanonicalPrefix() {
+  func sourceLimit_customAcceptsOnlyCanonicalPrefix() {
     let renderer = InkStreamRenderer(maximumSourceLength: 4)
 
     renderer.append("ab")
@@ -53,7 +53,7 @@ struct InkStreamSourceLimitTests {
   }
 
   @Test("reset 与 finish 均只使用已接受 canonical source")
-  func resetAndFinishUseCanonicalSource() async {
+  func sourceLimit_resetAndFinishUseCanonicalSource() async {
     let renderer = InkStreamRenderer(maximumSourceLength: 6)
     renderer.reset(to: "# keep\nDROP")
 
@@ -71,7 +71,7 @@ struct InkStreamSourceLimitTests {
   }
 
   @Test("非法上限回退默认值且不取消长度保护")
-  func invalidSourceLimitFallsBackToDefault() {
+  func sourceLimit_invalidFallsBackToDefault() {
     let zero = InkStreamRenderer(maximumSourceLength: 0)
     let negative = InkStreamRenderer(maximumSourceLength: -1)
 

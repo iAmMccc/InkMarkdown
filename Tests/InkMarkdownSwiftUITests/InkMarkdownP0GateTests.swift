@@ -14,7 +14,7 @@ import SwiftUI
 struct InkMarkdownP0GateTests {
 
   @Test("静态长文 sizeThatFits 次数不超过块数且 layout 不再 sizeThatFits")
-  func staticLongDocumentMeasureOncePerBlock() throws {
+  func staticLongDocument_measureOncePerBlock() throws {
     let markdown = Self.longStaticFixture
     let blocks = InkBlockRenderer.render(markdown, configuration: .standard)
     let container = InkMarkdownContainerView()
@@ -36,7 +36,7 @@ struct InkMarkdownP0GateTests {
   }
 
   @Test("宽度变化仅在前缀 measure 入口重测一次")
-  func widthChangeRemeasuresAtMeasureEntryOnly() {
+  func widthChange_remeasuresAtMeasureEntryOnly() {
     let blocks = InkBlockRenderer.render("# Title\n\nBody paragraph.", configuration: .standard)
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
@@ -62,7 +62,7 @@ struct InkMarkdownP0GateTests {
   }
 
   @Test("流式 append 不触发 isPromoted")
-  func streamingAppendDoesNotPromote() {
+  func streamingAppend_doesNotPromote() {
     let session = InkMarkdownRenderSession()
     _ = InkStreamMarkdownView(session: session)
     session.append("delta-1")
@@ -72,7 +72,7 @@ struct InkMarkdownP0GateTests {
   }
 
   @Test("Trait 变化触发一次前缀重测")
-  func traitChangeTriggersPrefixRemeasure() {
+  func traitChange_triggersPrefixRemeasure() {
     let markdown = "# Trait"
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
@@ -92,7 +92,7 @@ struct InkMarkdownP0GateTests {
   }
 
   @Test("iOS 14 ICS 回传高度", .disabled("本机无 iOS 14 Simulator runtime，未交付"))
-  func ios14ICSHeightNotDelivered() {
+  func ios14ICS_heightNotDelivered() {
     Issue.record("iOS 14 ICS 回传高度需在 iOS 14 runtime 上实测；当前环境未交付")
   }
 

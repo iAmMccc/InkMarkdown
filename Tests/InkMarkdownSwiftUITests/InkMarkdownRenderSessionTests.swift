@@ -34,7 +34,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("初始状态验证：idle、空文本、空块列表、未提升")
-  func initialState() {
+  func renderSession_initialState() {
     let session = InkMarkdownRenderSession()
     #expect(session.state == .idle)
     #expect(session.currentText.isEmpty)
@@ -43,7 +43,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("append 状态转移：idle -> streaming，连续 append 保持 streaming")
-  func appendStateTransition() {
+  func renderSession_appendStateTransition() {
     let session = InkMarkdownRenderSession()
     session.append("")
     #expect(session.state == .idle, "空 delta 不得创建活跃流式呈现周期")
@@ -58,7 +58,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("会话与底层 renderer 使用相同的输入长度上限")
-  func canonicalSourceLengthLimit() {
+  func sourceLimit_canonicalSourceLengthLimit() {
     let session = InkMarkdownRenderSession()
     session.append(String(repeating: "a", count: InkStreamRenderer.maximumSourceLength + 1))
 
@@ -66,7 +66,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("finish 区分输入结束、最终解析完成、显示完成与终态提升")
-  func finishStateTransition() async {
+  func renderSession_finishStateTransition() async {
     let session = InkMarkdownRenderSession()
     session.append("正在生成的文本...")
     let textView = UITextView()
@@ -91,7 +91,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("finish 回调在同 runloop 触发时不在回调栈内同步 publish，下一 runloop 仍完成 promotion")
-  func finishCallbacksDeferSameRunLoop() async {
+  func renderSession_finishCallbacksDeferSameRunLoop() async {
     let session = InkMarkdownRenderSession()
     session.append("# 同 runloop 终态")
     session.finish()
@@ -108,7 +108,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("未 attach 文本视图时 finish 仍会完成终态提升")
-  func headlessFinishPromotes() async {
+  func renderSession_headlessFinishPromotes() async {
     let session = InkMarkdownRenderSession()
     session.append("# 终态内容")
     session.finish()
@@ -128,7 +128,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("cancel 可终止接收、解析或最终显示阶段")
-  func cancelStateTransition() {
+  func renderSession_cancelStateTransition() {
     let session = InkMarkdownRenderSession()
     session.append("流式内容")
     session.cancel()
@@ -143,7 +143,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("reset 可在全部状态复用，并重新安装终态回调")
-  func resetStateTransition() async {
+  func renderSession_resetStateTransition() async {
     let session = InkMarkdownRenderSession()
     session.reset()
     #expect(session.state == .idle)
@@ -177,7 +177,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("终态与取消状态会拒绝后续输入")
-  func terminalStateGuards() async {
+  func renderSession_terminalStateGuards() async {
     let finished = InkMarkdownRenderSession()
     finished.append("完成前的文本")
     finished.finish()
@@ -200,7 +200,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("配置与 trait 快照由会话集中管理")
-  func configurationAndTraitSnapshot() {
+  func renderSession_configurationAndTraitSnapshot() {
     var config = InkConfiguration.standard
     config.appearance.text.fontSize = 24
     let session = InkMarkdownRenderSession(configuration: config)
@@ -212,7 +212,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("PREFIX 未闭合思考 append：streamingThought 未完成且 remainder 无标签")
-  func unclosedThoughtStreamingRemainderHasNoTags() {
+  func streamingThought_unclosedRemainderHasNoTags() {
     let session = InkMarkdownRenderSession()
     session.append("<think>\n正在深度思考")
 
@@ -224,7 +224,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("闭合思考后 remainder 进入 renderer；finish 后 blocks 含 InkThoughtBlock")
-  func closedThoughtThenAnswerAndFinish() async {
+  func renderSession_closedThoughtThenAnswerAndFinish() async {
     let chunkedSession = InkMarkdownRenderSession()
     chunkedSession.append("<think>\n`code\n</think>\nstill code")
     #expect(chunkedSession.streamingThought?.isComplete == false)
@@ -261,7 +261,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("finish 清除 isDisplayPaused，避免 promotion 后仍暂停")
-  func finishClearsDisplayPause() {
+  func renderSession_finishClearsDisplayPause() {
     let session = InkMarkdownRenderSession()
     session.append("流式文本")
     session.isDisplayPaused = true
@@ -270,7 +270,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("promoted 后 updateRenderEnvironment 重渲染 semantic blocks")
-  func promotedUpdateRenderEnvironmentRerendersSemanticBlocks() async {
+  func renderSession_promotedUpdateRenderEnvironmentRerendersSemanticBlocks() async {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     let session = InkMarkdownRenderSession(configuration: config)
@@ -294,7 +294,7 @@ struct InkMarkdownRenderSessionTests {
   }
 
   @Test("流式进行中 updateRenderEnvironment 同步更新 streamingThought 配置")
-  func streamingUpdateRenderEnvironmentRefreshesStreamingThoughtConfiguration() {
+  func streamingThought_updateRenderEnvironmentRefreshesConfiguration() {
     let session = InkMarkdownRenderSession()
     session.append("<think>\n思考正文")
 

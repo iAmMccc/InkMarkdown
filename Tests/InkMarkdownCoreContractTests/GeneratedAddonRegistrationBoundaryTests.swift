@@ -7,14 +7,14 @@ import UIKit
 struct GeneratedAddonRegistrationBoundaryTests {
 
   @Test("仅链接 InkMarkdown 时已知 addon owner 不得隐式注册")
-  func knownAddonOwnersStartUnregistered() {
+  func addonRegistration_knownAddonOwnersStartUnregistered() {
     #expect(InkGeneratedAddonRuntime.rendererVersion(owner: "latex") == nil)
     #expect(InkGeneratedAddonRuntime.rendererVersion(owner: "mermaid") == nil)
     #expect(InkGeneratedAddonRuntime.resourceBundle(owner: "mermaid") == nil)
   }
 
   @Test("LaTeX 未注册时完整 block-store 链路明确失败")
-  func unregisteredLaTeXFailsThroughBlockAndStorePipeline() async throws {
+  func latexRegistration_unregisteredLaTeXFailsThroughBlockAndStorePipeline() async throws {
     try await assertUnregisteredGeneratedBlockFails(
       markdown: "$$x + y$$",
       configure: { appearance in
@@ -25,7 +25,7 @@ struct GeneratedAddonRegistrationBoundaryTests {
   }
 
   @Test("Mermaid 未注册时完整 block-store 链路明确失败")
-  func unregisteredMermaidFailsThroughBlockAndStorePipeline() async throws {
+  func mermaidRegistration_unregisteredMermaidFailsThroughBlockAndStorePipeline() async throws {
     try await assertUnregisteredGeneratedBlockFails(
       markdown: """
       ```mermaid

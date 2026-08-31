@@ -14,7 +14,7 @@ import SwiftUI
 struct InkMarkdownAccessibilityTests {
 
   @Test("思考块折叠控件具备 VoiceOver 可访问性标签")
-  func thoughtBlockHasAccessibilityLabel() throws {
+  func thoughtBlock_accessibilityLabel() throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     let session = InkMarkdownRenderSession(configuration: config)
@@ -29,7 +29,7 @@ struct InkMarkdownAccessibilityTests {
   }
 
   @Test("Dynamic Type 环境写入 renderEnvironment 并影响思考块测量高度")
-  func dynamicTypeAffectsMeasuredHeight() throws {
+  func dynamicType_affectsMeasuredHeight() throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = false
     let thoughtMarkdown = "<think>\nDynamic Type 思考正文测试。"
@@ -56,7 +56,7 @@ struct InkMarkdownAccessibilityTests {
   }
 
   @Test("Dynamic Type 下思考块 header 字号严格随 category 放大")
-  func dynamicTypeScalesThoughtHeaderPointSize() throws {
+  func dynamicType_scalesThoughtHeaderPointSize() throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = false
     let thoughtMarkdown = "<think>\n字号测试。"

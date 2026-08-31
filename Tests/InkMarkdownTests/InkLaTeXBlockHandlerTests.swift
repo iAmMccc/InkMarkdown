@@ -10,7 +10,7 @@ import UIKit
   return configuration
 }
 
-@Test @MainActor func latexBlockHandlerPromotesMultiParagraphDollarBlock() {
+@Test @MainActor func latexBlockHandler_promotesMultiParagraphDollarBlock() {
   let source = """
   块级积分公式：
 
@@ -32,7 +32,7 @@ import UIKit
   )
 }
 
-@Test @MainActor func latexBlockHandlerPromotesSingleLineDollarBlock() {
+@Test @MainActor func latexBlockHandler_promotesSingleLineDollarBlock() {
   let blocks = InkBlockRenderer.render(
     "$$a^2$$",
     configuration: latexBlockConfiguration()
@@ -43,7 +43,7 @@ import UIKit
   #expect((blocks[0] as! InkImageBlock).source.generatedRequest?.source == "a^2")
 }
 
-@Test @MainActor func latexBlockHandlerDoesNotPromoteWhenDisabled() {
+@Test @MainActor func latexBlockHandler_doesNotPromoteWhenDisabled() {
   let source = """
   $$
   \\int_{-\\infty}^{+\\infty} e^{-x^2} dx = \\sqrt{\\pi}
@@ -59,7 +59,7 @@ import UIKit
   #expect(!(blocks[0] is InkImageBlock))
 }
 
-@Test @MainActor func latexBlockHandlerDoesNotPromoteMixedParagraph() {
+@Test @MainActor func latexBlockHandler_doesNotPromoteMixedParagraph() {
   let blocks = InkBlockRenderer.render(
     "前缀 $$a^2$$ 后缀",
     configuration: latexBlockConfiguration()
@@ -70,7 +70,7 @@ import UIKit
   #expect(!(blocks[0] is InkImageBlock))
 }
 
-@Test @MainActor func latexBlockHandlerPromotesMultiParagraphBracketBlock() {
+@Test @MainActor func latexBlockHandler_promotesMultiParagraphBracketBlock() {
   let source = """
   \\[
   E = mc^2

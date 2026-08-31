@@ -14,7 +14,7 @@ import SwiftUI
 struct InkMarkdownPerformanceBaselineTests {
 
   @Test("流式 append 不触发 SwiftUI body 级 blocks 切换")
-  func streamingAppendDoesNotPromoteEarly() {
+  func streamingAppend_doesNotPromoteEarly() {
     let session = InkMarkdownRenderSession()
     _ = InkStreamMarkdownView(session: session)
 
@@ -26,7 +26,7 @@ struct InkMarkdownPerformanceBaselineTests {
   }
 
   @Test("Dynamic Type 档位变化触发 Coordinator 重测")
-  func dynamicTypeChangeTriggersRemeasure() throws {
+  func dynamicType_triggersRemeasure() throws {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
     coordinator.containerView = container

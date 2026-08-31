@@ -44,7 +44,7 @@ private final class TestSelfReturningPresentationBlock: UIView, InkRenderableBlo
 struct InkBlockPresentationContinuityTests {
 
   @Test("initial → user mutation → content/environment update → caller override → promotion")
-  func staticThoughtStateChain() throws {
+  func blockPresentation_staticThoughtStateChain() throws {
     var configuration = InkConfiguration.standard
     configuration.appearance.thought.isCollapsible = true
 
@@ -398,7 +398,7 @@ struct InkBlockPresentationContinuityTests {
   }
 
   @Test("严格证据 → 歧义降级 → 新周期重置 → custom block 安全重建")
-  func strictEvidenceAmbiguityCycleResetAndCustomFallback() throws {
+  func blockContinuity_strictEvidenceAmbiguityCycleResetAndCustomFallback() throws {
     var configuration = InkConfiguration.standard
     configuration.appearance.thought.isCollapsible = true
 
@@ -712,7 +712,7 @@ struct InkBlockPresentationContinuityTests {
   }
 
   @Test("detach → same-session reattach → stale callbacks ignored → affected Thought slot revision +1")
-  func detachReattachPreservesDurableStateAndScopesRevision() async throws {
+  func blockContinuity_detachReattachPreservesDurableStateAndScopesRevision() async throws {
     var configuration = InkConfiguration.standard
     configuration.appearance.thought.isCollapsible = true
 

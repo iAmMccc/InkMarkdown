@@ -17,7 +17,7 @@ import SwiftUI
 struct InkMarkdownAdapterWorkloadTests {
 
   @Test("静态长文首测块数有界且同宽二次测量为 0")
-  func staticLongDocumentMeasurementBudget() throws {
+  func staticLongDocument_measurementBudget() throws {
     let markdown = Self.workloadStaticMarkdown
     let blocks = InkBlockRenderer.render(markdown, configuration: .standard)
     #expect(blocks.count >= 60)
@@ -40,7 +40,7 @@ struct InkMarkdownAdapterWorkloadTests {
   }
 
   @Test("流式百片 append 显示追上有界且仅测量当前 remainder slot")
-  func streamingChunkAppendWorkloadBudget() throws {
+  func streamingChunkAppend_workloadBudget() throws {
     let session = InkMarkdownRenderSession()
     let coordinator = InkMarkdownCoordinator()
     let container = InkMarkdownContainerView()
@@ -74,7 +74,7 @@ struct InkMarkdownAdapterWorkloadTests {
   }
 
   @Test("finish→promotion 时长有界且终态 Thought 可交互")
-  func promotionWorkloadCompletesWithInteractiveThought() async throws {
+  func promotion_workloadCompletesWithInteractiveThought() async throws {
     var config = InkConfiguration.standard
     config.appearance.thought.isCollapsible = true
     let session = InkMarkdownRenderSession(configuration: config)

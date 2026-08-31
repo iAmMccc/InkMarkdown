@@ -4,7 +4,7 @@ import Testing
 @testable import InkMarkdown
 
 struct InkMermaidBridgeResourceTests {
-  @Test func bridgeUsesStrictCSPAndOrderedExternalScripts() throws {
+  @Test func mermaidBridge_usesStrictCSPAndOrderedExternalScripts() throws {
     let resourceURL = try #require(InkMarkdownMermaid.bundle.url(
       forResource: "InkMermaidBridge",
       withExtension: "html"

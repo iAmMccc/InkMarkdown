@@ -168,7 +168,7 @@ private func waitForGeneratedLoaderCompletion(
     #expect(block.intrinsicContentSize.height < config.appearance.imageRendering.placeholderHeight)
   }
 
-  @Test func mermaidBlockRejectedShowsSourceCodeImmediately() {
+  @Test func mermaidBlock_rejectedShowsSourceCodeImmediately() {
     var storeConfig = InkImageStore.Configuration()
     storeConfig.maxConcurrentLoads = 1
     storeConfig.maxPendingLoads = 0
@@ -204,7 +204,7 @@ private func waitForGeneratedLoaderCompletion(
     #expect(block.intrinsicContentSize.height >= expectedHeight - 1)
   }
 
-  @Test func imageBlockFailureWithoutFallbackShowsCompactLabel() async {
+  @Test func imageBlock_failureWithoutFallbackShowsCompactLabel() async {
     let url = URL(string: "https://example.com/fail.png")!
     let loader = FailingURLImageLoader()
     var rendering = InkImageRendering()
@@ -224,7 +224,7 @@ private func waitForGeneratedLoaderCompletion(
     #expect(block.intrinsicContentSize.height < rendering.placeholderHeight)
   }
 
-  @Test func imageBlockReuseClearsFailureFallbackAfterSuccess() async {
+  @Test func imageBlock_reuseClearsFailureFallbackAfterSuccess() async {
     let mermaidSource = "graph LR\n  X-->Y"
     let generatedSource = ImageSource(generated: InkGeneratedImageRequest(
       owner: "mermaid",
@@ -259,7 +259,7 @@ private func waitForGeneratedLoaderCompletion(
     #expect(block.intrinsicContentSize.height == 60 || block.frame.height == 60)
   }
 
-  @Test func imageBlockPrepareForReuseRemovesFailureFallback() async {
+  @Test func imageBlock_prepareForReuseRemovesFailureFallback() async {
     var rendering = InkImageRendering()
     rendering.isEnabled = true
     rendering.failureFallback = .sourceCode("flowchart TD\n  Q-->R", language: "mermaid")
