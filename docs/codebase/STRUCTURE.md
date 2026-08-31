@@ -10,7 +10,7 @@
 | `Sources/InkMarkdownSwiftUI/` | 未发布 v0.0.2 的 SwiftUI presentation adapter（SPM target） | `Package.swift` `path: "Sources/InkMarkdownSwiftUI"` |
 | `Tests/InkMarkdownTests/` | UIKit core 测试集（SPM test target） | `Package.swift` `path: "Tests/InkMarkdownTests"` |
 | `Tests/InkMarkdownSwiftUITests/` | SwiftUI adapter 契约测试（SPM test target） | `Package.swift` `path: "Tests/InkMarkdownSwiftUITests"` |
-| `ExampleApp/` | UIKit 示例应用工程 | `ExampleApp/ExampleApp.xcodeproj` |
+| `ExampleApp/` | UIKit + SwiftUI adapter 示例应用工程 | `ExampleApp/ExampleApp.xcodeproj` |
 | `Packages/` | 本地依赖拉取脚本与缓存目录 `Caches/` | `Packages/scripts/fetch-packages.sh` |
 | `docs/` | 项目文档与工程事实基线 | `docs/README.md` |
 | `Package.swift` / `Package.resolved` | SPM 配置与依赖锁定文件 | 根目录 |
@@ -50,7 +50,7 @@ Sources/InkMarkdown/
 
 | 模块 | 目录布局 | 说明 |
 |------|--------|-------|
-| Tests | `InkMarkdownTests.swift`、`StreamingPerformanceTests.swift`、`Snapshots/`、`InkMarkdownSwiftUITests/` | 使用 Swift Testing 与 XCTest；2026-08-18 的 iPhone/iPad Simulator 验证均为 178 项测试通过 |
+| Tests | `InkMarkdownTests.swift`、`StreamingPerformanceTests.swift`、`Snapshots/`、`InkMarkdownSwiftUITests/`、`InkMarkdownCoreContractTests/` | 使用 Swift Testing 与 XCTest；2026-08-28 的 iPhone 17 / iOS 26.5 全量共 340 项：339 项通过、0 失败、1 项跳过 |
 | ExampleApp | `AppDelegate` / `SceneDelegate`、列表与详情页（块渲染、SSE、Pager 等） | 独立 Xcode 工程，提供宿主集成示例 |
 
 ### 4) 公开入口
@@ -77,4 +77,4 @@ Sources/InkMarkdown/
 - `Sources/InkMarkdown/**`
 - `Tests/InkMarkdownTests/**`
 - `docs/codebase/.codebase-scan.txt`
-- 当前已跟踪 `Sources` 下的 53 个 Swift 源文件
+- 当前已跟踪 `Sources` 下的 66 个 Swift 源文件；工作区另有 2 个待跟踪 Swift 文件

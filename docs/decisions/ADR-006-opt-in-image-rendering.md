@@ -13,7 +13,7 @@ Accepted
 - [ADR-004](ADR-004-v1-image-and-strikethrough-contract.md) 将 v1 **默认**图片行为定为文本占位（`[🖼 …]`），不内置下载、缓存或附件布局；宿主可在块扩展或应用层自行处理。
 - AI 流式对话等场景对 Markdown 图片展示有 **P1** 需求：宿主希望库内提供可组合的加载、缓存与安全策略，而非每处重复实现 `NSTextAttachment` 与 URL 会话。
 - `Image` 为 **行内** Markup 节点，纯块路由无法拦截；独占段「大图」需块级提升才能避免固定行高与附件布局冲突。
-- 实现已落地（`Sources/InkMarkdown/Rendering/Image/`），稳定性修复进行中；本文记录架构决策，与 ADR-004 **默认契约向后兼容**。
+- 实现已落地（`Sources/InkMarkdown/Rendering/Image/`），本轮审查涉及的稳定性修复已完成；最低版本、完整人工交互和真机性能仍由 `current-status.md` 跟踪。本文记录架构决策，与 ADR-004 **默认契约向后兼容**。
 
 ## Decision
 
@@ -50,5 +50,5 @@ Accepted
 
 - `current-status.md`、`spec/common-syntax.md`、FAQ 与 codebase 证据层须区分 **默认占位** 与 **opt-in 真图**，并链接本 ADR。
 - ADR-004 状态标记为 **Amended**；历史正文保留，不 rewrite。
-- 测试矩阵须补充 opt-in 图片契约（占位默认、开启后附件/块行为）；实现稳定性项单独跟进，不写入 ADR 正文。
+- 测试矩阵须补充 opt-in 图片契约（占位默认、开启后附件/块行为）；已完成的实现修复不回写为新的架构决策，剩余发布证据继续由 `current-status.md` 跟踪。
 - 宿主文档须说明：未开启 `isEnabled` 时行为与 ADR-004 一致；开启后须配置 `ImageSecurityPolicy` 与 loader 以满足其安全与网络策略。

@@ -73,6 +73,7 @@ docs/
 
 **查阅原则**：
 - 涉及"当前到底做到哪" → 查 [docs/current-status.md](docs/current-status.md)
+- 继续本轮审查修复任务 → 先查 [docs/qa/InkMarkdown-current-task-summary-2026-08-28.md](docs/qa/InkMarkdown-current-task-summary-2026-08-28.md)，再核对当前状态、源码和最新测试证据
 - 涉及"架构为什么这样 / 怎么开发" → 查 [docs/contributor-guide/](docs/contributor-guide/README.md)
 - 涉及"解析层 API / 三方库怎么用" → 查 [docs/references/](docs/references/)
 - 涉及"Markdown 该渲染什么 / 各语法语义" → 查 [docs/spec/](docs/spec/)
@@ -262,10 +263,24 @@ open ExampleApp/ExampleApp.xcodeproj
 - `.build/`、`Packages/Caches/`、`xcuserdata/`、`DerivedData/` 均已在 [.gitignore](.gitignore) 中忽略
 - 不要提交 SPM 缓存目录中的三方库源码
 
+## Agent skills
+
+### Issue tracker
+
+Issues 与 specs 以本地 Markdown 文件托管于 `.scratch/<feature-slug>/`。见 [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)。
+
+### Triage labels
+
+使用 Matt 默认五角色 triage 标签。见 [docs/agents/triage-labels.md](docs/agents/triage-labels.md)。
+
+### Domain docs
+
+Single-context：根目录 [CONTEXT.md](CONTEXT.md) + [docs/decisions/](docs/decisions/) ADR。见 [docs/agents/domain.md](docs/agents/domain.md)。
+
 ## 当前状态
 
 - ✅ `0.0.1` 已作为 UIKit-first public beta 发布。
 - ✅ `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer`、`InkAppearance` / `InkConfiguration` 与 UIKit ExampleApp 已具备。
-- ✅ 2026-08-18 通过 XcodeBuildMCP 在 iPhone 16 / iOS 18.5 与 iPad Pro 11-inch (M4) / iPadOS 18.5 验证 `InkMarkdown-Package` scheme：均为 178 项测试通过；具体证据以 [docs/current-status.md](docs/current-status.md) 为准。
+- ✅ 2026-08-27 通过 XcodeBuildMCP 在 iPhone 17 / iOS 26.5 验证 `InkMarkdown-Package` scheme：313 项总计，312 项通过，0 项失败，1 项跳过；具体证据以 [docs/current-status.md](docs/current-status.md) 为准。
 - ⏳ `InkMarkdownSwiftUI` adapter 源码已按 ADR-008 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 等公开类型），基础契约测试与 ExampleApp 的静态、配置、流式示例入口已具备；完整语义对齐测试、iOS/iPadOS 14 验证、可访问性、性能基线和发布文档仍为 v0.0.2 release blocker。
 - ⚠️ 此前被拒绝的 SwiftUI spike 已移出仓库；当前 v0.0.2 adapter 已按 ADR-008 作为独立 product 完整实现，基础契约测试与 ExampleApp 示例入口已验证，完整发布验收仍待完成。

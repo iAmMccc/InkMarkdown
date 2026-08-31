@@ -3,13 +3,13 @@
 [English](README.md)
 
 [![Swift](https://img.shields.io/badge/Swift-6.2+-orange.svg)](https://swift.org)
-[![Platform](https://img.shields.io/badge/Platform-iOS%2014+-lightgrey.svg)](https://developer.apple.com/ios/)
+[![Deployment](https://img.shields.io/badge/Deployment-iOS%2014.0-lightgrey.svg)](https://developer.apple.com/ios/)
 [![UIKit](https://img.shields.io/badge/Framework-UIKit%20First-blue.svg)](https://developer.apple.com/documentation/uikit)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 InkMarkdown 是基于 Apple [`swift-markdown`](https://github.com/swiftlang/swift-markdown) 的 **UIKit-first** Markdown 解析与渲染库。它将 Markup 语法树转换为 iOS 原生 `NSAttributedString` 富文本与块级 `UIView` 组件，并为 AI 流式文本场景提供按帧控制的增量渲染器。
 
-> 📌 **产品范围**：已发布的 `0.0.1` public beta 支持 UIKit 宿主；尚未发布的 `0.0.2` 分支已包含可选 `InkMarkdownSwiftUI` adapter product，使 SwiftUI 宿主复用同一套渲染语义，而不是开发第二套 native SwiftUI renderer。其产品范围仅为 iOS/iPadOS 14+，不支持其他 Apple 平台；SwiftUI ExampleApp 已以 14.0 部署目标完成编译验证，但 iOS/iPadOS 14 运行验证、可访问性覆盖与性能基线仍是 `0.0.2` 的 release blocker。详见 [总体技术设计](docs/contributor-guide/08-swiftui-adapter-architecture.md) 与 [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md)。WebView/HTML 仍不作为核心路径。
+> 📌 **产品范围**：已发布的 `0.0.1` public beta 支持 UIKit 宿主；尚未发布的 `0.0.2` 分支已包含可选 `InkMarkdownSwiftUI` adapter product，使 SwiftUI 宿主复用同一套渲染语义，而不是开发第二套 native SwiftUI renderer。Manifest 将 iOS/iPadOS 14.0 声明为部署边界并排除其他 Apple 平台，但这尚不代表已交付最低系统运行支持。SwiftUI ExampleApp 已以 14.0 部署目标完成编译验证，但 iOS/iPadOS 14 运行验证、可访问性覆盖与性能基线仍是 `0.0.2` 的 release blocker。详见 [总体技术设计](docs/contributor-guide/08-swiftui-adapter-architecture.md) 与 [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md)。WebView/HTML 仍不作为核心路径。
 
 ---
 
@@ -37,7 +37,7 @@ InkMarkdown 是基于 Apple [`swift-markdown`](https://github.com/swiftlang/swif
 | 工具链 / 平台 | 约束要求 |
 | --- | --- |
 | Swift 工具链 | 6.2+ (包内采用 Swift 5 语言模式) |
-| 目标平台 | 已发布 `0.0.1`：iOS 14.0+；尚未发布的 `0.0.2`：iOS / iPadOS 14.0+（iPad 验证待完成） |
+| 部署范围 | Manifest 最低声明：iOS / iPadOS 14.0；尚未发布的 `0.0.2` 仍待完成最低系统运行验证 |
 | UI 框架 | UIKit rendering engine；尚未发布的 `0.0.2` 提供可选 SwiftUI adapter |
 
 ---
@@ -119,6 +119,11 @@ streamRenderer.finish()
 配置自定义外观、行内语法拦截与链接回调：
 
 ```swift
+import InkMarkdown
+import InkMarkdownLaTeX
+import InkMarkdownMermaid
+import UIKit
+
 struct CustomMentionSyntax: InkInlineSyntax {
     let pattern = #"@(\w+)"#
     func match(in text: String) -> [NSRange] { /* 正则匹配逻辑 */ }
@@ -136,6 +141,10 @@ var config = InkConfiguration(
 )
 
 // 开启 Opt-in 本地 LaTeX 与 Mermaid 渲染支持
+// 先添加 InkMarkdownLaTeX、InkMarkdownMermaid product 并导入模块，
+// 再在 App 启动阶段各注册一次；完成注册后才能开启对应渲染开关。
+InkMarkdownLaTeX.register()
+InkMarkdownMermaid.register()
 config.enableLaTeXRendering()
 config.appearance.mermaidRendering.isEnabled = true
 

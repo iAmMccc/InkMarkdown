@@ -145,7 +145,7 @@ SSE chunk
 - **解耦**：解析与显示在不同阶段调度；显示侧使用增量 `textStorage` 更新，但 substring、布局和测量成本随 workload 变化，不承诺 O(1)
 - **稳定边界**（`InkIncrementalMarkdownRenderer`）：已闭合前缀缓存；只重渲活跃后缀。未闭合代码围栏整段留在活跃区
 - **防过期**：`renderGeneration` / `parseVersion` 丢弃迟到的后台结果
-- **上限**：`maxParseLength = 50_000`（硬编码）
+- **上限**：默认 `maximumSourceLength = 50_000`；renderer/session initializer 可配置，并在会话创建时固化为共享 snapshot
 - **暂停**：`isDisplayPaused`；恢复时 `_flushDisplay`
 
 流式复用 `InkAttributedRenderer`，不是第二套渲染。

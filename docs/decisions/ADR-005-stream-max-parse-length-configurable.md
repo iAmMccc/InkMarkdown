@@ -1,5 +1,10 @@
 # ADR-005: 流式 maxParseLength 改为可配置（默认 50_000）
 
+> 历史命名说明：本 ADR 记录决策时使用 `maxParseLength`；当前对外符号为 `InkStreamRenderer.maximumSourceLength`。
+>
+> 实施状态：2026-08-28 已落地。`InkStreamRenderer` 与 `InkMarkdownRenderSession`
+> initializer 均接受 `maximumSourceLength`，默认 50_000。
+
 ## Status
 
 Accepted
@@ -16,9 +21,10 @@ Accepted
 ## Decision
 
 1. **默认值保持 50_000**（兼容现有行为与性能假设）。
-2. **配置化**：阈值进入公开配置面（优先 `InkConfiguration` 或流式配置字段），宿主可按需调整。
-3. **文档契约**：明确超限处理规则（停止追加解析与 finish 截断），避免出现截断误解。
-4. **实施计划**：本 ADR 确定 API 演进方向，代码改动后续单独提交。
+2. **配置化**：阈值进入 renderer/session initializer，而不是全局 `InkConfiguration`。长度是流式会话资源边界，不属于静态 Markdown 渲染语义。
+3. **不可变 snapshot**：会话创建时归一化并固化阈值；session 与 renderer 共享同一 snapshot。
+4. **canonical source**：append 入口只接受上限内的 prefix；reset、finish、终态 attributed string 与 Block Promotion 只消费同一份已接受 source，不在各阶段重复截断。
+5. **无效值**：0 或负数回退默认 50_000，不允许通过无效值取消保护。
 
 ## Alternatives Considered
 
@@ -42,5 +48,5 @@ Accepted
 
 ## Consequences
 
-- 落地时补充：配置字段注释、超限行为测试、`current-status` 及流式相关说明。
+- 已补充公开 initializer 注释、renderer/session 边界测试、`current-status` 及流式相关说明。
 - 性能基准数据集小于 50k，默认值变更需重新评估性能基准。

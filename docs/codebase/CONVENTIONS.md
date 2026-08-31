@@ -34,8 +34,8 @@
 |-------|---------|----------|
 | 文本解析 | 不抛出异常；依赖 swift-markdown 的容错解析机制 | `InkParser` 同步返回 `Document` |
 | 内容渲染 | 未知的 inline 语法回退至默认子树；未知的 HTML 文本返回空字符串 | `renderInline` / `renderInlineHTML` |
-| 流式 `append` | 字符数超过 `maxParseLength` 时直接 `return` | `InkStreamRenderer.append` |
-| 流式 `finish` | 超过限制时截断缓存区后执行最终解析 | `finish()` 分支逻辑 |
+| 流式 `append` | 只把当前 snapshot 剩余容量内的 prefix 接受到 canonical source；容量耗尽后忽略后续输入 | `InkStreamRenderer.append` / `InkMarkdownRenderSession.append` |
+| 流式 `finish` | 只消费 append 入口已经接受的 canonical source，不再次独立截断 | `finish()` 与 promotion 路径 |
 | 日志输出 | 未使用统一日志框架 | 源码中无 os.Logger 或 print 机制 |
 
 ### 5) 文档注释规范

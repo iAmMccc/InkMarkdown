@@ -45,10 +45,10 @@ swift-markdown 底层由 cmark-gfm 驱动，支持解析 GFM 扩展语法。本�
 - **图片叶子节点**：`renderImage` 当前不写入 `.strikethroughStyle`；`~~![alt](url)~~` 不承诺图片上的删除线视觉效果。
 - **颜色配置**：删除线颜色目前使用 UIKit 默认文字前景色，未接入 `InkAppearance`。后续版本补充主题配置。
 
-## 自动链接（已渲染，使用 `Link` 节点）
+## 自动链接（部分支持，使用 `Link` 节点）
 
-- CommonMark 标准：`<https://example.com>`
-- GFM 裸 URL 识别（cmark-gfm autolink 扩展）：解析产物仍为 `Link`，渲染逻辑与标准链接一致。
+- CommonMark 标准自动链接：`<https://example.com>` 已解析为 `Link`，渲染为可点击链接。
+- GFM 裸 URL：当前不支持。固定版本的 swift-markdown `CommonMarkConverter` 仅启用表格、删除线和任务列表扩展，未启用 cmark-gfm `autolink`；因此 `https://example.com` 保留为普通文本，不做 URL 正则预处理。
 
 ## 未独立处理语法
 
@@ -65,5 +65,5 @@ swift-markdown 底层由 cmark-gfm 驱动，支持解析 GFM 扩展语法。本�
 | 表格 | 已渲染 | 块路由完整支持 |
 | 任务列表 | 已渲染 | 仅展示状态，不包含交互控制 |
 | 删除线 | 已渲染 | 支持主要场景（行内自定义语法未继承，见限制说明） |
-| 自动链接 | 已渲染 | 统一路由至 `Link` 渲染路径 |
+| 自动链接 | 部分支持 | 标准 `<URL>` 路由至 `Link`；GFM 裸 URL 原样文本回退 |
 | 脚注 / 指令 | 未处理 | 提供自定义扩展点 |

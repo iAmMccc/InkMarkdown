@@ -153,7 +153,7 @@ v0.0.1 beta  →  v0.0.2 SwiftUI adapter  →  v1.0 稳定契约  →  v2 InkIR 
 
 | ID | 事项 | 退出标准 |
 | --- | --- | --- |
-| C1 | 图片 opt-in 稳定性与契约测试 | ADR-006 已落地实现；补全测试矩阵并收敛流式/异步边界（实现已落地，稳定性修复进行中） |
+| C1 | 图片 opt-in 稳定性与契约测试 | ADR-006 已落地实现；本轮审查涉及的稳定性修复与关键异步边界已完成，继续补全完整契约、最低版本、人工交互与性能证据 |
 | C2 | 可访问性适配 | 完成 Dynamic Type、VoiceOver 及链接交互验证 |
 | C3 | 大文档性能基线 | 给出适用长度、内存开销与滚动性能边界 |
 | C4 | UIKit 集成示例 | 提供 `UITextView`、列表 Cell 与聊天气泡使用示例 |
@@ -164,7 +164,6 @@ v0.0.1 beta  →  v0.0.2 SwiftUI adapter  →  v1.0 稳定契约  →  v2 InkIR 
 | --- | --- | --- |
 | D1 | TextKit 2 | 非默认方案；PoC 未达成预期则移入「不做」 |
 | D2 | 树编辑距离算法 | 对比现有边界，性能/准确度无 >10% 提升则归档 |
-| D3 | `maxParseLength` 配置项 | 可并入 v2 实施 |
 
 > iPad Split View、旋转、Dynamic Type 与 repeated attach/detach 验证属于 Phase S / v0.0.2 release blocker，不是 Phase D 的可选试探。
 
@@ -192,5 +191,6 @@ v0.0.1 beta  →  v0.0.2 SwiftUI adapter  →  v1.0 稳定契约  →  v2 InkIR 
 - **2026-07-09**：完成快照测试基建与流式渲染比例阈值设置。
 - **2026-07-13**：将 IR 移至 v2。
 - **2026-08-17**：通过 ADR-008 确认 v0.0.2 的独立 SwiftUI adapter product；native SwiftUI renderer 继续延后至 InkIR 后评估。
+- **2026-08-28**：完成 `maximumSourceLength` renderer/session initializer 配置与 immutable snapshot，ADR-005 的仓库漂移收口。
 - **2026-07-09**：确定文本引擎默认采用 TextKit 1，TextKit 2 仅作为试探。
 - **2026-07-13**：当前状态转移至 `current-status.md`；本文仅维护路线方向与验收标准。

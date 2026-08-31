@@ -6,13 +6,18 @@
 
 | 目标 | 推荐阅读 |
 | --- | --- |
+| 继续当前任务 | [当前任务摘要](qa/InkMarkdown-current-task-summary-2026-08-28.md) |
 | 确认已交付功能 | [当前状态](current-status.md) |
 | 排查工程决策原因 | [架构决策 ADR](decisions/README.md) |
 | 建立代码库事实基线（技术栈、结构、风险） | [Codebase 证据基线](codebase/README.md) |
 | 快速了解项目全貌 | [贡献者文档](contributor-guide/README.md) → [项目概述](contributor-guide/01-overview.md) → [架构设计](contributor-guide/02-architecture.md) |
 | 了解 SwiftUI v0.0.2 设计 | [SwiftUI Adapter 总体技术设计](contributor-guide/08-swiftui-adapter-architecture.md) → [ADR-008](decisions/ADR-008-swiftui-adapter-architecture.md) |
+| 深入 block identity、状态延续与 promotion | [Block Presentation Continuity](contributor-guide/11-block-presentation-continuity.md) → [ADR-009](decisions/ADR-009-block-presentation-continuity.md) |
+| 排查 SwiftUI / UIViewRepresentable 跨框架问题 | [SwiftUI / UIViewRepresentable 踩坑指南](contributor-guide/09-swiftui-uiviewrepresentable-gotchas.md) |
 | 运行 SwiftUI ExampleApp | [SwiftUI ExampleApp 指南](contributor-guide/10-swiftui-example-app.md) |
 | 修改渲染核心 | [核心原理](contributor-guide/03-principles.md) → [模块详解](contributor-guide/05-modules.md) |
+| 查看 v0.0.2 重构审查修复记录 | [2026-08-27 审查修复记录](qa/InkMarkdown-v0.0.2-refactor-review-resolution-2026-08-27.md) |
+| 查阅旧工作区审查证据 | [历史审查快照（非当前状态）](qa/InkMarkdown-v0.0.2-refactor-review.md) |
 | 对比主流 iOS Markdown 库定位 | [生态 Reference](references/ios-markdown-ecosystem.md) |
 | 排查常见问题 | [FAQ](contributor-guide/06-faq.md) |
 | ExampleApp 走查 / 已知演示限制 | [ExampleApp 走查 SSOT](qa/example-app-walkthrough-issues.md) |

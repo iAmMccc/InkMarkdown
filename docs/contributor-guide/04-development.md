@@ -65,15 +65,15 @@ xcodebuildmcp --version
 - 若找不到二进制文件：按 [XcodeBuildMCP 官网](https://www.xcodebuildmcp.com/) 说明安装与注册服务。
 - 若二进制文件存在：检查是否通过 `xcodebuildmcp mcp` 启动服务，然后重载客户端。
 
-### 最近验证记录
+### 当前验证记录
 
 | 项目 | 结果 |
 | --- | --- |
-| 日期 | 2026-08-18 |
+| 日期 | 2026-08-28 |
 | Scheme | `InkMarkdown-Package` |
-| Destination | iPhone 16 / iOS 18.5 与 iPad Pro 11-inch (M4) / iPadOS 18.5 Simulator |
-| 测试结果 | 两个 destination 均为 178 项通过，0 项失败 |
-| 运行方式 | XcodeBuildMCP 自动发现 |
+| Destination | iPhone 17 / iOS 26.5 Simulator |
+| 测试结果 | 340 项总计：339 项通过，0 项失败，1 项跳过 |
+| 运行方式 | XcodeBuildMCP 自动发现 + `test_sim` |
 
 测试文件分布：
 
@@ -210,7 +210,7 @@ let blocks = InkBlockRenderer.render(source, configuration: config)
 
 | 现象 | 排查位置 |
 | --- | --- |
-| 流式渲染卡顿 | 检查 `charactersPerFrame`、`isDisplayPaused`、`maxParseLength` |
+| 流式渲染卡顿 | 检查 `charactersPerFrame`、`isDisplayPaused`、`maximumSourceLength` |
 | 样式覆盖或异常 | 检查 `attributes(at:effectiveRange:)`，改为 context 传递模式 |
 | 表格列宽错乱 | 排查 `measureColumnContentWidths` 与 `columnMaxWidthRatio` |
 

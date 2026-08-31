@@ -3,13 +3,13 @@
 [简体中文](README.zh-CN.md)
 
 [![Swift](https://img.shields.io/badge/Swift-6.2+-orange.svg)](https://swift.org)
-[![Platform](https://img.shields.io/badge/Platform-iOS%2014+-lightgrey.svg)](https://developer.apple.com/ios/)
+[![Deployment](https://img.shields.io/badge/Deployment-iOS%2014.0-lightgrey.svg)](https://developer.apple.com/ios/)
 [![UIKit](https://img.shields.io/badge/Framework-UIKit%20First-blue.svg)](https://developer.apple.com/documentation/uikit)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 InkMarkdown is a **UIKit-first** Markdown parsing and rendering framework built on Apple's [`swift-markdown`](https://github.com/swiftlang/swift-markdown). It transforms the Markup AST into native `NSAttributedString` rich text and native block `UIView`s, while providing a frame-paced incremental renderer for AI streaming applications.
 
-> 📌 **Product scope**: the released `0.0.1` public beta supports UIKit hosts. The unreleased `0.0.2` branch includes the optional `InkMarkdownSwiftUI` adapter product, so SwiftUI hosts reuse the same rendering semantics without a second native SwiftUI renderer. Its product scope is iOS/iPadOS 14+ only; other Apple platforms are not supported. The SwiftUI ExampleApp now compiles with a 14.0 deployment target, while iPad/iOS 14 runtime validation, accessibility coverage, and performance baselines remain `0.0.2` release blockers. See the [technical design](docs/contributor-guide/08-swiftui-adapter-architecture.md) and [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md). WebView/HTML wrappers remain outside the core path.
+> 📌 **Product scope**: the released `0.0.1` public beta supports UIKit hosts. The unreleased `0.0.2` branch includes the optional `InkMarkdownSwiftUI` adapter product, so SwiftUI hosts reuse the same rendering semantics without a second native SwiftUI renderer. The manifests declare iOS/iPadOS 14.0 as the deployment boundary and exclude other Apple platforms; this is not yet a claim of delivered minimum-OS runtime support. The SwiftUI ExampleApp compiles with a 14.0 deployment target, while iOS/iPadOS 14 runtime validation, accessibility coverage, and performance baselines remain `0.0.2` release blockers. See the [technical design](docs/contributor-guide/08-swiftui-adapter-architecture.md) and [ADR-008](docs/decisions/ADR-008-swiftui-adapter-architecture.md). WebView/HTML wrappers remain outside the core path.
 
 ---
 
@@ -37,7 +37,7 @@ InkMarkdown is a **UIKit-first** Markdown parsing and rendering framework built 
 | Toolchain / Platform | Requirement |
 | --- | --- |
 | Swift Toolchain | 6.2+ (Package configured with Swift 5 language mode) |
-| Target Platform | Released `0.0.1`: iOS 14.0+; unreleased `0.0.2`: iOS / iPadOS 14.0+ (iPad validation pending) |
+| Deployment Scope | Manifest minimum: iOS / iPadOS 14.0; minimum-OS runtime validation is still pending for unreleased `0.0.2` |
 | Framework | UIKit rendering engine; optional SwiftUI adapter in unreleased `0.0.2` |
 
 ---
@@ -119,6 +119,11 @@ streamRenderer.finish()
 Configure custom appearance, inline syntax, and link handlers:
 
 ```swift
+import InkMarkdown
+import InkMarkdownLaTeX
+import InkMarkdownMermaid
+import UIKit
+
 struct CustomMentionSyntax: InkInlineSyntax {
     let pattern = #"@(\w+)"#
     func match(in text: String) -> [NSRange] { /* matching logic */ }
@@ -136,6 +141,10 @@ var config = InkConfiguration(
 )
 
 // Opt-in local LaTeX and Mermaid diagram rendering
+// Add the InkMarkdownLaTeX and InkMarkdownMermaid products, import both modules,
+// then register them once during app startup before enabling either feature.
+InkMarkdownLaTeX.register()
+InkMarkdownMermaid.register()
 config.enableLaTeXRendering()
 config.appearance.mermaidRendering.isEnabled = true
 

@@ -35,7 +35,7 @@ for b in blocks { stack.addArrangedSubview(b.makeView()) }
 | --- | --- |
 | `charactersPerFrame`（默认 2） | 每帧吐字 |
 | `isDisplayPaused` | 滑动时暂停 textStorage 写入 |
-| `maxParseLength`（50_000） | 超长停解析 |
+| `maximumSourceLength`（默认 50_000） | 超长停解析 |
 | 流式表 `referenceRows` / `columnMaxWidthRatio` | 降低列宽跳动 |
 
 ## 6. 图片只有 `[🖼 …]`？
@@ -63,7 +63,7 @@ ExampleApp **2. 自定义组件与富媒体**（`SwiftUIComponentsDemoView` / `U
 
 ## 9. 当前支持哪些平台？
 
-当前产品路线仅支持 iOS 14+ / iPadOS 14+，不支持其他平台（[ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)）。`Package.swift` 已仅声明 `.iOS(.v14)`，源码直接依赖 UIKit；这不构成 macOS、tvOS、watchOS 或 visionOS support promise。当前只有 iOS/iPadOS 18.5 Simulator 证据，最低版本验证仍是 v0.0.2 release blocker；以[当前状态](../current-status.md)为准。
+当前产品路线仅支持 iOS 14+ / iPadOS 14+，不支持其他平台（[ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)）。`Package.swift` 已仅声明 `.iOS(.v14)`，源码直接依赖 UIKit；这不构成 macOS、tvOS、watchOS 或 visionOS support promise。当前全量回归证据来自 iPhone 17 / iOS 26.5；18.5 仅是历史基线，最低版本验证仍是 v0.0.2 release blocker；以[当前状态](../current-status.md)为准。
 
 ## CI 红了但本机绿？
 
@@ -109,7 +109,14 @@ InkAttributedRenderer.render(markups: [node])
 
 ## 16. 公式与图表怎么 opt-in？
 
-LaTeX / Mermaid 默认关闭。行内 LaTeX：`config.enableLaTeXRendering()`（或 `appearance.latexRendering.isEnabled = true`）；Mermaid：`appearance.mermaidRendering.isEnabled = true`。块级 `$$`、`\[\]` 与 ` ```mermaid ` 须走 **`InkBlockRenderer`**，纯 `InkAttributedRenderer` 仅文本回退。ExampleApp SSE 演示的是 Demo 全量 **`InkBlockRenderer`** 路径，不是 `InkStreamRenderer` 增量 API。
+LaTeX / Mermaid 默认关闭，且是独立 product。完整 opt-in 顺序：
+
+1. 将 `InkMarkdownLaTeX` / `InkMarkdownMermaid` product 链接到宿主 target。
+2. `import InkMarkdownLaTeX` / `import InkMarkdownMermaid`。
+3. 在渲染前调用 `InkMarkdownLaTeX.register()` / `InkMarkdownMermaid.register()`。
+4. 再开启 `config.enableLaTeXRendering()` 或 `appearance.mermaidRendering.isEnabled = true`。
+
+只打开样式开关而没有注册 addon 时，生成图 loader 会明确报告对应 owner 未注册；不会悄然退回为另一套渲染实现。行内 LaTeX 可用 `config.enableLaTeXRendering()`（或 `appearance.latexRendering.isEnabled = true`）；Mermaid 用 `appearance.mermaidRendering.isEnabled = true`。块级 `$$`、`\[\]` 与 ` ```mermaid ` 须走 **`InkBlockRenderer`**，纯 `InkAttributedRenderer` 仅文本回退。ExampleApp SSE 演示的是 Demo 全量 **`InkBlockRenderer`** 路径，不是 `InkStreamRenderer` 增量 API。
 
 ## 17. SwiftUI 中修改配置或环境导致界面卡死 / 内存暴涨（OOM 崩溃）？
 
@@ -123,7 +130,8 @@ LaTeX / Mermaid 默认关闭。行内 LaTeX：`config.enableLaTeXRendering()`（
 **解决方案**：
 1. **Coordinator 幂等脏检查**：`InkMarkdownCoordinator` 缓存上次渲染的 `markdown` 与 `configuration` 快照，使用 `isSemanticallyEqualTo(_:)` 进行语义比对；无语义变化时直接跳过重建。
 2. **纯化布局生命周期**：严禁在 `layoutSubviews()` 中调用 `invalidateIntrinsicContentSize()`；仅在内容源或配置发生实际变更时由 Coordinator 或数据源发起失效。
-3. 详细排坑见 [09 SwiftUI UIViewRepresentable 踩坑指南 §1, §6](09-swiftui-uiviewrepresentable-gotchas.md)。
+3. **为重建型依赖提供稳定语义身份**：SwiftUI `body` 若反复构造行为等价的闭包或 loader，应通过 `setSourceFilter(_:semanticIdentity:)`、`setLinkTapHandler(_:semanticIdentity:)`、`InkImageRendering` 的语义 setter 等 API 传入稳定的 `InkSemanticIdentity`；捕获状态会改变行为时必须同步更换 identity。直接赋值仍会保守地视为新语义，避免旧回调或旧 loader 被错误复用。
+4. 详细排坑见 [09 SwiftUI UIViewRepresentable 踩坑指南 §1、§6、§22](09-swiftui-uiviewrepresentable-gotchas.md)。
 
 ## 18. SwiftUI / UIKit 混编报错 `Unable to simultaneously satisfy constraints` / Auto Layout 零尺寸冲突？
 
@@ -152,4 +160,3 @@ LaTeX / Mermaid 默认关闭。行内 LaTeX：`config.enableLaTeXRendering()`（
 | 键盘占位 | `UIKeyboardImpl`、`placeholder`、InputSystem 相关 | 系统 | Chat 输入框聚焦/切换键盘时的 Simulator 噪音，**只文档化** |
 
 SwiftUI adapter 的 Publishing / 会话 defer 见 [09 §12](09-swiftui-uiviewrepresentable-gotchas.md#12-publishing-与-session-defer)。Chat 滚动粘底与流式吐字暂停见 ExampleApp `ChatScrollPolicy`（[P4](../qa/example-app-walkthrough-issues.md#p4--ai-sse-对话)）；`shouldPauseDisplay` 仅在用户拖拽/减速期间为 true，由 `session.isDisplayPaused` 转发至 renderer。
-

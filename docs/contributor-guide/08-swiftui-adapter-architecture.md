@@ -2,7 +2,7 @@
 
 > **状态：Accepted design**  
 > **适用版本：v0.0.2 开发阶段**  
-> **相关决策：[ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)**
+> **相关决策：[ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)、[ADR-009](../decisions/ADR-009-block-presentation-continuity.md)**
 
 本文是 InkMarkdown 正式支持 SwiftUI 的总体技术设计。它定义产品范围、设计思想、依赖方向、module 划分、端到端数据流和 v0.0.2 的验收标准；具体类型、方法、状态转换和测试 fixture 由后续 module 技术文档定义。
 
@@ -55,7 +55,9 @@ SwiftUI adapter 的价值不是“另一种普通 Markdown view”。它应让 i
 
 应用拥有网络连接、LLM/SSE 协议、重试和业务状态。库不接管这些职责。
 
-**渲染会话**拥有单条流式 Markdown 的 canonical source、解析/显示阶段、终止、取消、重置及 view attachment 语义。SwiftUI adapter 绑定该会话；它不是业务 ViewModel，也不持有应用 transport。这样，流式状态机只在一个 module 内变化，避免 controller、Coordinator、renderer 和宿主各自保存真相。
+**渲染会话**拥有单条流式 Markdown 的 canonical source、解析/显示阶段、终止、取消与重置，并持有该流式呈现周期的 continuity context lifetime。SwiftUI adapter 绑定该会话；它不是业务 ViewModel，也不持有应用 transport。
+
+**Block Presentation Continuity module** 拥有当前呈现周期内的 block lineage 与 live presentation state。render session 不再与 block、UIView 各自保存一份交互状态；具体 seam 见 [module 技术设计](11-block-presentation-continuity.md)。
 
 ### 3.4 屏幕由宿主组合
 
@@ -74,6 +76,7 @@ SwiftUI application
 InkMarkdownSwiftUI product
   ├─ 静态呈现 adapter
   ├─ 流式呈现 adapter
+  ├─ block presentation continuity
   ├─ configuration / environment adapter
   └─ UIKit-host lifecycle / measurement adapter
         │  单向依赖
@@ -95,13 +98,13 @@ swift-markdown
 
 ### 4.2 `InkMarkdownSwiftUI`：正式 presentation adapter
 
-该 product 单向依赖 `InkMarkdown`，向 SwiftUI 宿主提供静态 view、流式 view、configuration injection 和交互桥接。它只在 SwiftUI/UIKit 交界处管理 view identity、尺寸、Environment 和生命周期，不另建 Markdown renderer。
+该 product 单向依赖 `InkMarkdown`，向 SwiftUI 宿主提供静态 view、流式 view、configuration injection 和交互桥接。它通过 adapter 内部 continuity module 管理 block lineage、live presentation state、view reuse、尺寸失效和 attachment 生命周期，不另建 Markdown renderer。
 
 独立 product 形成真实 seam：UIKit 调用者不会被 SwiftUI dependency 污染；未来若 InkIR 支持 native SwiftUI renderer，内部 implementation 可以演进而不让 SwiftUI 调用者重新学习核心 interface。
 
 ### 4.3 测试与示例 module
 
-SwiftUI adapter 必须有独立测试 surface 和 ExampleApp 展示入口。它们不重复验证 UIKit renderer 的全部内部细节，而是验证 adapter 通过其 interface 保持语义、生命周期、配置和可访问性契约。
+SwiftUI adapter 必须有独立验证 surface 和 ExampleApp 展示入口。UI 与布局逻辑通过 ExampleApp 关键用例手工检查；自动化只保留 identity、state、promotion 和 lifecycle 的关键链路，不重复 UIKit renderer 的内部测试，也不绑定 private maps 或具体 UIView identity。
 
 ## 5. 整体实现流
 
@@ -112,13 +115,16 @@ SwiftUI input + Environment
   → resolved configuration snapshot
   → InkBlockRenderer
   → [InkRenderableBlock]
+  → Block Presentation Continuity reconcile
+  → atomic apply plan
   → UIKit host container
   → SwiftUI layout measurement
 ```
 
 - 配置 snapshot 是一次 render 的唯一输入；不能同时把全局 mutable appearance、Environment 与 Coordinator cache 当作独立真相。
 - 内容或影响语义的配置变化必须进入相同的更新判定；不能只比较 Markdown 字符串。
-- UIKit block 按 ``InkBlockIdentity`` diff 复用子视图；``InkMarkdownContainerView`` 单次 `measureContent` 供 `sizeThatFits` / `intrinsicContentSize` / `layoutSubviews` 共用，禁止在 `layoutSubviews` 内 `invalidateIntrinsicContentSize`。
+- adapter continuity module 按严格 lineage evidence reconcile blocks；用户状态连续是契约，UIView 复用是可丢弃优化。container 只执行 apply plan 与 geometry，不再建立第二份 identity truth。
+- 测量按 lineage、slot revision、宽度与 environment signature 复用；`sizeThatFits` / `intrinsicContentSize` / `layoutSubviews` 共用同一测量结果，禁止在 `layoutSubviews` 内 `invalidateIntrinsicContentSize`。
 
 ### 5.2 流式 Markdown
 
@@ -130,12 +136,14 @@ Application transport
        └ remainder → InkStreamRenderer + bound UITextView
   → visible streaming text（vertical stack: [thoughtView?][textView]）
   → completed render
-  → InkBlockRenderer promotion（`InkThoughtBlock.isCollapsed` SSOT 拷贝进 `session.blocks`）
-  → final UIKit block container（Coordinator `updateStreaming` promoted 分支 + `updateBlocks(session:)`，不 re-parse）
+  → InkBlockRenderer promotion（semantic blocks，不携带 presentation identity）
+  → continuity reconcile（Thought lineage / live state 必须延续；UIView adopt 可选）
+  → final UIKit block container（不 re-parse）
 ```
 
 - render session 是 canonical source authority；`currentText` 为 SSOT，renderer 缓冲仅为 remainder 派生，不得各自截断或保存不一致版本。
-- PREFIX 思考标签在流式阶段即挂载 `InkThoughtBlockView`；用户折叠态写入 `InkThoughtBlock.isCollapsed`（经 `setStreamingThoughtCollapsed` / 视图 toggle）；promotion 时合并进 `session.blocks`；Chat 终态将 **同一会话实例** 挂到 `messages[].renderSession`，UI 仍用 `InkStreamMarkdownView(session:)`，**不得**切换为无 session 写回的 blocks 快照或 re-parse `content` 字符串。
+- PREFIX 思考标签在流式阶段即进入 continuity module；用户折叠态写入当前 lineage 的 live presentation state。promotion 通过明确 lineage evidence 迁移状态，不要求沿用同一个 UIView，也不再手工把 view 状态复制进 `session.blocks`。
+- Chat 终态将 **同一会话实例** 挂到 `messages[].renderSession`，UI 仍用 `InkStreamMarkdownView(session:)`，**不得**切换为无 session 写回的 blocks 快照或 re-parse `content` 字符串。
 - “输入结束”“解析完成”“显示完成”“终态 block 可交互”是不同语义状态，必须被建模与测试，不能用一个布尔值掩盖。
 - 流式阶段与终态 block 阶段使用同一 resolved configuration snapshot 的语义；主题或宽度改变的刷新策略必须在会话内可解释。
 - adapter 的 attachment / detachment 是会话生命周期的一部分，重复 mount、controller 替换、取消与 reset 不得遗留 callback、display driver 或 UIKit view；`onDisplayUpdate` 回调须链式转发，不得覆盖宿主已注册的回调。
@@ -151,7 +159,7 @@ InkConfiguration / InkAppearance
 
 - `InkConfiguration` 是完整的扩展 interface：source filter、行内语法、block handler、链接处理和 opt-in 能力都必须能被 SwiftUI 调用者配置。
 - Environment 是便利 injection seam，不是新的 Theme 真相；v0.0.2 不增加第二套样式协议。
-- 动态类型、颜色方案、可用宽度和 iPad 尺寸变化属于 render input。它们的刷新方式由 module 文档定义，但不能依赖隐式全局可变状态。
+- 动态类型、颜色方案、可用宽度和 iPad 尺寸变化属于 render input。它们不结束 block continuity；module 保留 lineage 与 live state，按需更新 UIView 并失效 measurement。具体规则见 [Block Presentation Continuity module 技术设计](11-block-presentation-continuity.md)。
 
 ## 6. MVVM 与 Clean Architecture 约束
 
@@ -192,6 +200,8 @@ InkMarkdown 是渲染库，不应把宿主应用的业务模型伪装成库内 V
 - UIKit 与 SwiftUI 宿主的链接、复制、表格和代码块交互；
 - VoiceOver 与文本选择等可访问性行为。
 
+上述 workload 是发布验证范围，不等于为每个组合新增自动化测试。Block continuity 的 UI 行为使用 ExampleApp 手工检查，数据与状态只保留 module 文档定义的关键链路自动化测试。
+
 ### 8.3 指标
 
 发布前建立并保存：首次可见延迟、chunk-to-visible 延迟、finish-to-block-ready 延迟、p50/p95/p99 帧时间、hitch、主线程/后台 CPU、峰值内存、allocation、布局测量次数和最终渲染一致性。v0.0.2 的 gate 是自身基线不回归，不是未经复现的竞品排名。
@@ -209,11 +219,12 @@ InkMarkdown 是渲染库，不应把宿主应用的业务模型伪装成库内 V
 
 本设计刻意不规定具体 type、方法或缓存算法。实现阶段至少应分别补充：
 
-1. SwiftUI static presentation adapter；
-2. render-session 与 streaming presentation adapter；
-3. configuration / Environment resolution；
-4. iOS 14–15 layout and lifecycle compatibility；
-5. SwiftUI 测试矩阵、性能基线与 ExampleApp 验收。
+1. [Block Presentation Continuity module](11-block-presentation-continuity.md)；
+2. SwiftUI static presentation adapter；
+3. render-session 与 streaming presentation adapter；
+4. configuration / Environment resolution；
+5. iOS 14–15 layout and lifecycle compatibility；
+6. SwiftUI 验证矩阵、性能基线与 ExampleApp 验收。
 
 这些文档必须遵守本文的产品范围、依赖方向和语义真相；若需改变其中任一项，应先更新 ADR，而不是以局部补丁绕开设计。
 

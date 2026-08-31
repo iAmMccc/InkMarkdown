@@ -3,7 +3,7 @@
 > **适用版本：v0.0.2 及后续版本**  
 > **相关架构：[SwiftUI Adapter 总体技术设计](08-swiftui-adapter-architecture.md) | [ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)**
 
-在 [`InkMarkdownSwiftUI`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/InkMarkdownSwiftUI.swift) 中，我们通过 [`UIViewRepresentable`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownRepresentable.swift) 将底层 UIKit 渲染容器 [`InkMarkdownContainerView`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 与富文本/块级组件桥接进 SwiftUI。
+在 [`InkMarkdownSwiftUI`](../../Sources/InkMarkdownSwiftUI/InkMarkdownSwiftUI.swift) 中，我们通过 [`UIViewRepresentable`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownRepresentable.swift) 将底层 UIKit 渲染容器 [`InkMarkdownContainerView`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 与富文本/块级组件桥接进 SwiftUI。
 
 由于 SwiftUI（声明式布局与状态 Diff）与 UIKit（命令式布局与 Frame 计算）在生命周期与尺寸协商机制上的差异，跨框架桥接极易引发高度坍塌、布局死循环、流式掉帧、手势冲突和深色模式失效等问题。本文系统总结开发与维护过程中的核心踩坑点与避坑策略。
 
@@ -16,10 +16,10 @@
 
 ### 1.2 根因分析
 SwiftUI 的布局系统依赖 UIKit 视图向外宣告自身的尺寸。在 iOS 14 / 15 中，SwiftUI 主要通过 `intrinsicContentSize` 进行尺寸协商。
-当 [`InkMarkdownContainerView`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 内部执行 `updateBlocks` 替换或增删子视图时，若未主动通知 UIKit/SwiftUI 布局系统该视图的固有尺寸已改变，SwiftUI 就不会触发重新测量和父容器重新布局，从而导致高度坍塌。
+当 [`InkMarkdownContainerView`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 内部执行 `updateBlocks` 替换或增删子视图时，若未主动通知 UIKit/SwiftUI 布局系统该视图的固有尺寸已改变，SwiftUI 就不会触发重新测量和父容器重新布局，从而导致高度坍塌。
 
 ### 1.3 解决方案
-1. **更新后主动失效尺寸**：在 [`InkMarkdownContainerView.updateBlocks(_:configuration:)`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 替换子视图末尾，显式调用 `setNeedsLayout()` 与 `invalidateIntrinsicContentSize()`。
+1. **更新后主动失效尺寸**：在 [`InkMarkdownContainerView.updateBlocks(_:configuration:)`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 替换子视图末尾，显式调用 `setNeedsLayout()` 与 `invalidateIntrinsicContentSize()`。
 2. **严禁在 `layoutSubviews()` 中循环失效尺寸**：测量与布局共用 ``InkMarkdownContainerView`` 的块高度缓存；宽度变化时在 `measureContent` 入口换 cache 键并重测一次，不在 `layoutSubviews` 调用 `invalidateIntrinsicContentSize()`。
 3. **精准尺寸计算**：在 `intrinsicContentSize` 与 `sizeThatFits(_:)` 实现中，遍历当前所有 block views，依据目标宽度通过各子视图的 `sizeThatFits` 累加高度。各 Block 自身按排版规范承担其外边距，容器不再额外盲目累加。
 
@@ -48,8 +48,8 @@ GeometryReader 尺寸微调 / 重新触发
 
 ### 2.3 解决方案
 1. **尺寸协商交由系统原生机制**：
-   - **iOS 14-15**：依靠 [`InkMarkdownContainerView`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 的 `intrinsicContentSize` 与 `sizeThatFits(_:)` 向 SwiftUI 提供测量依据。
-   - **iOS 16+**：在 [`InkMarkdownRepresentable`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownRepresentable.swift) 中实现 `sizeThatFits(_:uiView:context:)`，直接响应 SwiftUI 的 `ProposedViewSize`。
+   - **iOS 14-15**：依靠 [`InkMarkdownContainerView`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 的 `intrinsicContentSize` 与 `sizeThatFits(_:)` 向 SwiftUI 提供测量依据。
+   - **iOS 16+**：在 [`InkMarkdownRepresentable`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownRepresentable.swift) 中实现 `sizeThatFits(_:uiView:context:)`，直接响应 SwiftUI 的 `ProposedViewSize`。
 2. **保持单向数据流**：SwiftUI 仅向底层单向注入 `markdown` 与 `configuration`，尺寸完全由布局引擎在测量阶段确定，视图内部不产生回写状态。
 
 ---
@@ -64,8 +64,8 @@ SwiftUI 的响应式重绘是基于状态快照比对的。高频的状态变更
 
 ### 3.3 解决方案
 1. **帧率同步节流**：底层 `InkStreamRenderer` 内部已基于 `CADisplayLink` 实现了 60/120 fps 的逐帧吐字节流与解析/显示双缓冲机制，文本累加不会直接阻塞主线程。
-2. **避免在 append 时触发全量 Diff**：[`InkMarkdownRenderSession.append(_:)`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift) 只负责将分片压入底层流式缓冲，不直接通知 SwiftUI 进行全量视图重建。
-3. **按帧刷新尺寸**：仅在底层 `renderer.onDisplayUpdate` 回调触发时（由 CADisplayLink 同步触发），由 [`InkMarkdownCoordinator`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownCoordinator.swift) 调整当前活跃文本视图的 Frame 并调用 `container.invalidateIntrinsicContentSize()`，确保高帧率流式排版且无多余 SwiftUI Diff 开销。
+2. **避免在 append 时触发全量 Diff**：[`InkMarkdownRenderSession.append(_:)`](../../Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift) 只负责将分片压入底层流式缓冲，不直接通知 SwiftUI 进行全量视图重建。
+3. **按帧刷新尺寸**：仅在底层 `renderer.onDisplayUpdate` 回调触发时（由 CADisplayLink 同步触发），由 [`InkMarkdownCoordinator`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownCoordinator.swift) 调整当前活跃文本视图的 Frame 并调用 `container.invalidateIntrinsicContentSize()`，确保高帧率流式排版且无多余 SwiftUI Diff 开销。
 
 ---
 
@@ -82,8 +82,8 @@ Markdown 文本中的 `UITextView` 无法正常响应长按选词、放大镜和
    - 保持 `isEditable = false`：禁止调起系统软键盘；
    - 保持 `isSelectable = true`：允许用户选中文本与点击链接；
    - 保持 `isScrollEnabled = false`：避免与外层 `ScrollView` / `List` 发生双重滚动冲突。
-2. **禁止在 SwiftUI 视图层外挂手势修饰符**：不要在 SwiftUI 层直接给 [`InkMarkdownView`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Views/InkMarkdownView.swift) 或 [`InkStreamMarkdownView`](file:///Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Views/InkStreamMarkdownView.swift) 添加 `.gesture(TapGesture())` 或 `.highPriorityGesture(...)`，以免拦截原生文本选择与链接点击手势。
-3. **业务交互通过配置通道注入**：链接点击、自定义 Block 交互等业务逻辑，统一通过 `InkConfiguration.urlHandler` 与自定义 Handler 注入处理。
+2. **禁止在 SwiftUI 视图层外挂手势修饰符**：不要在 SwiftUI 层直接给 [`InkMarkdownView`](../../Sources/InkMarkdownSwiftUI/Views/InkMarkdownView.swift) 或 [`InkStreamMarkdownView`](../../Sources/InkMarkdownSwiftUI/Views/InkStreamMarkdownView.swift) 添加 `.gesture(TapGesture())` 或 `.highPriorityGesture(...)`，以免拦截原生文本选择与链接点击手势。
+3. **业务交互通过配置通道注入**：链接点击、自定义 Block 交互等业务逻辑，统一通过 `InkConfiguration.linkTapHandler` 与自定义 Handler 注入处理。
 
 ---
 
@@ -118,7 +118,8 @@ SwiftUI 会在布局测量、滚动、环境变量变化以及父视图状态求
 
 1. **配置语义比较能力**：
    - 为 `InkAppearance` 及其所有子样式结构体（`Text`、`Heading`、`Table`、`CodeBlock` 等）实现 `Equatable`。
-   - 在 `InkConfiguration` 上实现 `isSemanticallyEqualTo(_ other: InkConfiguration) -> Bool`，准确对比样式（`appearance`）、环境（`renderEnvironment`）、行内语法与块处理器数量，以及闭包的存在性。
+   - 在 `InkConfiguration` 上实现 `isSemanticallyEqualTo(_ other: InkConfiguration) -> Bool`，准确对比样式（`appearance`）、环境（`renderEnvironment`）与扩展点顺序。
+   - 有内部状态的 `InkInlineSyntax` / `InkBlockHandler` 通过 `InkConfigurationSemanticsProviding` 明确声明完整语义；未知扩展保守视为不等价，不能只比较动态类型、数量或闭包存在性。
 2. **Coordinator 幂等脏检查**：
    - `InkMarkdownCoordinator` 记录 `lastRenderedMarkdown` 与 `lastRenderedConfiguration`。
    - 当 Markdown 文本未变且配置在语义上等价（`isSemanticallyEqualTo == true`）且容器已有渲染内容时，`updateStatic` **直接 return 成为 no-op**，杜绝无意义的重复解析与对象重建。
@@ -169,8 +170,8 @@ SwiftUI 会在布局测量、滚动、环境变量变化以及父视图状态求
 
 1. 在 `append` 入口统一执行最大长度策略；被接受的文本才同时写入 session 的 `currentText` 和 `InkStreamRenderer`。
 2. `finish()`、最终 attributed-string 解析和 Block Promotion 都只能使用同一个已接受 source；禁止各阶段各自 `prefix` / 截断。
-3. 最大长度应有单一命名常量（当前为 `InkStreamRenderer.maximumSourceLength`），并用测试验证 session 与 renderer 的边界一致。
-4. 若未来要开放长度配置，配置必须成为 render-session 的 snapshot，而不是只改 renderer 的局部常量。
+3. 默认值只有一个来源：`InkStreamRenderer.maximumSourceLength`；自定义值通过 renderer/session initializer 注入。
+4. 配置在会话创建时固化为不可变 source-limit snapshot，session 与 renderer 共享该 snapshot；禁止运行中修改上限或只改 renderer 的局部值。
 
 ---
 
@@ -228,11 +229,19 @@ SwiftUI 会在布局测量、滚动、环境变量变化以及父视图状态求
 - [ ] 流式渲染是否依赖 `CADisplayLink` 节流，避免了在 `append` 时触发高频 SwiftUI Diff？
 - [ ] `UITextView` 是否设置了 `isEditable = false`、`isSelectable = true` 与 `isScrollEnabled = false`？
 - [ ] 是否避免了在 SwiftUI 视图层直接挂载强占式手势？
+- [ ] 公开 `InkRenderableBlock` 是否只依赖公开契约，没有要求消费者实现 internal / SPI witness？
+- [ ] 视图复用是否比较全部可见语义，而不是截断文本、hash 或省略状态的 fingerprint？
+- [ ] session 切换到空输入时，是否仍把空快照写入复用的 `UITextView`？
+- [ ] 流式 dirty state 是否包含完成态、折叠态等 presentation state，而不只比较正文？
+- [ ] Dynamic Type 的绘制、测量、baseline 与增量扩宽是否使用同一 trait 和缩放字体？
+- [ ] TextKit 同步测量回调是否保持纯函数，不进行 actor hop、异步回写或订阅启动？
 - [ ] 静态更新是否把 configuration / trait 变化纳入 render input，而不是只比较 Markdown？
 - [ ] 流式阶段、最终解析和 promotion 是否共享同一 canonical source 与 configuration snapshot？
 - [ ] `finish()` 在未挂载 text view 时是否仍能完成 headless promotion？
 - [ ] promotion 是否直接消费 session 生成的 blocks，并清理旧 text view / callbacks？
 - [ ] 切换 Dark / Light 模式时，富文本与块级组件颜色能否正确同步刷新？
+- [ ] 异步缓存测试是否等待 Store 的完成契约，而不是观察 loader 内部计数猜测缓存已写入？
+- [ ] 测试报告是否区分总数、通过数与跳过数，避免把 skipped 同时计入 passed？
 - [ ] 是否在 iOS 14、iOS 16+ 及 iPadOS 上均完成了布局与尺寸验证？
 
 ---
@@ -304,3 +313,129 @@ ExampleApp 走查结论见 [P4.1 — Chat Publishing（SwiftUI + UIKit）](../qa
 
 ---
 
+## 14. 公开 Block 扩展点不得要求 SPI witness
+
+### 14.1 问题现象
+
+普通消费者只写 `import InkMarkdown` 并实现公开 `InkRenderableBlock` 时，编译器提示不符合协议；ExampleApp 为了满足协议而给 internal 属性添加 `@_spi`，又触发 `internal property cannot be declared '@_spi'`。
+
+### 14.2 根因与规则
+
+公开协议一旦把 SPI identity、fingerprint 或可写 stamping 状态设为 requirement，普通消费者就无法看见或实现完整 interface。identity 属于 adapter diff 实现，不属于自定义 block 的公开职责。
+
+当前 interface 分为两层：
+
+1. `InkRenderableBlock` 只要求 `makeView()`，普通消费者无需 SPI。
+2. `InkReusableBlock` 是可选能力；只有能完整比较内容并安全更新已有视图的 block 才实现。
+3. adapter 统一根据文档 epoch、block index 与动态类型派生 identity，禁止把可写 diff 元数据塞回业务 block。
+4. 未实现复用能力的自定义 block 在文档变化时保守重建，正确性优先于对象复用。
+
+---
+
+## 15. Block 复用不得使用有损 fingerprint
+
+### 15.1 问题现象
+
+链接 URL 改变、粗体改斜体、附件改变，或第 65 个字符之后发生等长修改时，adapter 误判内容未变，继续展示旧链接、旧样式或旧文本。
+
+### 15.2 根因与规则
+
+“长度 + 前缀”不是内容语义。即使改成全量 hash，也仍有碰撞、未知属性和附件语义缺失问题。当前容器保存上一次 block，由 `InkReusableBlock.hasEquivalentContent(to:)` 做类型专属的完整语义比较：
+
+- 富文本使用 `NSAttributedString.isEqual(to:)`，覆盖全文、属性 runs、链接和附件；
+- 表格比较 headers、逐行 rows、alignments、layout mode 与完整渲染配置；
+- thought 比较正文、完成态、折叠态、样式与内部渲染配置；
+- 代码块与分隔线也必须比较影响可见输出的样式；
+- 图片比较 source 与完整 rendering（loader、Store、安全策略、回调与尺寸）；source 或 rendering 变化时因不可安全原地配置而重建 view。
+
+新增 block 时，若无法证明比较完整或更新安全，应不实现 `InkReusableBlock`，禁止返回“猜测相等”或在错误 view 类型上静默成功。
+
+---
+
+## 16. Session ownership 转移必须覆盖空快照
+
+复用 `UITextView` 时，`displayIndex == 0` 不是“无需同步”，而是“新 owner 的正确快照为空”。`bindTextView` 必须始终以当前 renderer 的 `0..<displayIndex` 快照覆盖 `textStorage`；否则 A 会话正文会残留到空 B 会话，B 的后续字符还会追加在 A 后面。
+
+测试至少覆盖 A→空 B 与 A→有内容 B。对象复用不能隐含内容所有权复用。
+
+---
+
+## 17. Dirty tracking 必须比较 presentation state
+
+thought 的正文未变不代表展示未变。单独到达 `</think>` 时，`isComplete` 会从 `false` 变为 `true`，标题、指示器和 VoiceOver 标签都需要刷新。dirty 判定必须覆盖完整 presentation state，至少包括正文、完成态和折叠态；多个槽同批变化时使用可组合集合，禁止用互斥枚举丢掉其中一个刷新。
+
+---
+
+## 18. 渲染与测量必须共享同一 Dynamic Type 值
+
+字体渲染、列宽测量、固定行高和 baseline 必须从同一个 `InkRenderEnvironment.traitCollection` 派生。不能让 cell 使用缩放字体，却让列宽继续用原始 `UIFont.systemFont`，也不能用未缩放 `lineHeight` 计算已缩放字体的 baseline。
+
+表格当前通过 `InkTableRenderHelper.font(...)` 统一字体来源；增量表格的“新行是否扩列”也使用同一 attributed 渲染路径测量。新增测量路径时应复用该 helper，而不是重新创建字体。
+
+---
+
+## 19. TextKit nonisolated 测量回调必须保持纯函数
+
+`NSTextAttachment.attachmentBounds(...)` 是 nonisolated override。不能在该回调中把 attachment `self` 发送到 MainActor、启动加载或改写 TextKit 状态；这既会产生 Swift 6 数据竞争诊断，也可能在布局栈内触发重入。
+
+当前约束：
+
+1. `attachmentBounds` 只读取不可变 rendering 与已发布图片快照，计算 bounds。
+2. Store 绑定、订阅、图片应用和布局失效均在显示层 MainActor 路径执行。
+3. 宽度建立后，由 text view 测量/绑定路径再次调用 `bindAttachments`，不依赖 layout callback 产生副作用。
+4. 注册表等跨任务共享状态必须收敛进单一加锁状态容器；静态属性只保留不可变容器引用。
+
+---
+
+## 20. 异步测试必须等待所属模块的完成契约
+
+图片 loader 返回只代表解码结束，不代表 `InkImageStore` 已在 MainActor 写入缓存、广播订阅并清理 inflight。测试若轮询 loader 的完成计数后立即断言 Store 状态，会留下取决于 actor 调度的竞态，单测可能通过、全量并发回归却偶发失败。
+
+缓存命中测试应等待 `InkImageStore.resolve(..., onLoad:)` 的完成回调，或重复查询直至返回 `.ready`；不能读取依赖组件的内部计数推断上层状态。通用规则是：断言哪个模块的状态，就等待哪个模块公开的完成边界。
+
+---
+
+## 21. 测试总数不能直接写成通过数
+
+Swift Testing、XCTest、`xcodebuild` 与 XcodeBuildMCP 对 skipped 的摘要格式不同。分组日志中的 “tests in suites” 可能包含 skipped；把各组数量直接相加并写成“全部通过”，会得到“300 项通过、另 1 项跳过”这种总数多算一次的矛盾结论。
+
+状态文档必须分别记录：总计、通过、失败、跳过，并优先采用结构化 result bundle 或 XcodeBuildMCP 汇总。本轮最终结果为共 340 项：339 项通过、0 失败、1 项跳过。
+
+---
+
+## 22. 闭包与 loader 不能只比较 nil 性
+
+Swift 闭包、类型擦除 loader 和交互回调没有通用值相等性。只比较“两边都非 nil”会把新的 `sourceFilter`、链接处理、图片 loader 或复制反馈误判为旧行为，Coordinator 便会留住过期配置。反过来，把所有含闭包配置都永久视为不等，又会破坏 SwiftUI 幂等性。
+
+当前规则：
+
+1. 配置值拷贝保留不透明成员的语义身份。
+2. 直接重新赋值保守地生成新身份，保证不会误跳过更新。
+3. SwiftUI `body` 反复构造行为完全等价的闭包或 loader 时，使用 `setSourceFilter`、`setLinkTapHandler`、`setLoader` 等带 `InkSemanticIdentity` 的 API。
+4. 只有逻辑与所有捕获状态都等价时才能复用同一身份；状态改变必须更换身份。
+5. 内置 LaTeX / Mermaid loader 通过自身的 mode、style 与 limits 做值语义比较，不依赖实例地址。
+
+这是渲染正确性契约，不是单纯性能 hint。新增不透明配置字段时，必须同时定义其语义身份与回归测试。
+
+---
+
+## 23. 尚未复现但必须预防的坑
+
+本节是风险登记，不表示仓库已出现对应缺陷。只有取得运行证据后，才能把条目改为“已踩坑”或“已验证无影响”。
+
+| 风险 | 触发条件 | 预防与验收 |
+| --- | --- | --- |
+| 最低系统行为分叉 | iOS / iPadOS 14–15 不提供新版本 `UIViewRepresentable` 尺寸入口 | 保留 intrinsic-size 兼容路径；在真实 14、15 runtime 分别验证首次宽度为 0、宽度建立、旋转和重复挂载 |
+| `sizeThatFits` 重复调用 | SwiftUI 在一次 layout pass 内多次提议相同或不同宽度 | 测量保持无副作用并命中 width-keyed cache；用计数探针验证不会重建 blocks 或发布状态 |
+| iPad Split View 连续宽度变化 | 分屏拖动、Stage Manager、窗口多次 resize | 只使旧宽度测量槽失效；验证窄宽表格、代码、图片与长链接不截断、不产生布局循环 |
+| 超大 Dynamic Type 与 Bold Text | 辅助功能字号、粗体文本、运行时类别切换 | 字体、行高、baseline、列宽和 ReservedHeight 使用同一 trait；用 AX5 及以上字号走查文本裁切与控件命中区域 |
+| RTL / 混合书写方向 | 阿拉伯语、希伯来语、数字列表与英文混排 | 不硬编码 left/right 对齐语义；验证列表 marker、引用竖线、链接和表格 reading order |
+| VoiceOver 焦点在 promotion 时丢失 | 用户正在读流式 Thought 或链接，随后切终态 blocks | 复用稳定 view identity；验证焦点不跳到页面顶部，完成态提示只播报一次 |
+| App 后台 / 前台切换 | 流式过程中挂起、display link 暂停、WKWebView 页面进程回收 | 恢复后从 canonical source 继续；不重复 chunk、不重复 promotion；LaTeX / Mermaid 只按既定策略重试 |
+| 内存警告与缓存回收 | 长会话、大图、多个公式/图表同时存在 | Store 与 WebKit 缓存可清理且不破坏当前可见内容；用 Allocations / Leaks 记录峰值与回落 |
+| 多窗口 trait 漂移 | iPad 多 scene 使用不同宽度、色彩模式或 Dynamic Type | render environment 属于各自 session / host 快照；禁止读取全局 trait 代替宿主环境 |
+| 快速 attach / detach | `List` cell 复用、导航返回、条件视图频繁切换 | dismantle 清理 callback、display link、订阅与旧 text view owner；验证无旧会话回写和 retain cycle |
+
+走查记录必须区分三类状态：`已复现`、`已验证未复现`、`环境不可用`。不能用“代码看起来兼容”替代最低版本、真机或辅助功能运行证据。
+
+---

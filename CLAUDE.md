@@ -150,6 +150,20 @@ open ExampleApp/ExampleApp.xcodeproj
 - `.build/`、`Packages/Caches/`、`xcuserdata/`、`DerivedData/` 均已在 [.gitignore](.gitignore) 中忽略
 - 不要提交 SPM 缓存目录中的三方库源码
 
+## Agent skills
+
+### Issue tracker
+
+Issues 与 specs 以本地 Markdown 文件托管于 `.scratch/<feature-slug>/`。见 [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)。
+
+### Triage labels
+
+使用 Matt 默认五角色 triage 标签。见 [docs/agents/triage-labels.md](docs/agents/triage-labels.md)。
+
+### Domain docs
+
+Single-context：根目录 [CONTEXT.md](CONTEXT.md) + [docs/decisions/](docs/decisions/) ADR。见 [docs/agents/domain.md](docs/agents/domain.md)。
+
 ## 当前状态
 
 - ✅ `0.0.1` 已作为 UIKit-first public beta 发布。

@@ -2,11 +2,13 @@
 
 ## Status
 
-Accepted
+Accepted（Amended by ADR-009）
 
 ## Date
 
 2026-08-17
+
+> 2026-08-28 amendment： [ADR-009](ADR-009-block-presentation-continuity.md) 将静态、流式与 promotion 的块呈现连续性收敛到 SwiftUI adapter 内部 module，并取代“`InkThoughtBlock` / render session 持有 live Thought 折叠态”的局部设计。本文的 product、依赖方向、平台与公开 interface 决策保持有效。
 
 ## Context
 
@@ -26,6 +28,7 @@ Accepted
 6. 完整语义对齐覆盖已有 Markdown 渲染行为、配置扩展、opt-in 图片/公式/图表和交互契约；不要求 UIKit 与 SwiftUI 公开相同的宿主类型。
 7. 当前产品路线仅承诺 iOS 14+ 和 iPadOS 14+；不支持 macOS、tvOS、watchOS 或 visionOS。任何平台扩展都必须先通过新的 ADR，而非沿用旧路线图假设。
 8. SwiftUI adapter 是 v0.0.2 的 release blocker。发布前必须有语义、生命周期、iPhone/iPad、性能基线、ExampleApp 和文档证据。
+9. block presentation identity、live interaction state、promotion lineage、view reuse 与 measurement invalidation 由 adapter 内部 continuity module 统一协调；renderer 与 render session 不再各自维护一套 presentation 真相。具体契约见 ADR-009。
 
 ## Alternatives Considered
 
@@ -60,6 +63,7 @@ Accepted
 - UIKit 与 SwiftUI 共享 parser、配置、富文本、block 和流式语义，避免双 renderer 漂移。
 - 独立 product 建立清晰 module seam，保护 UIKit 调用者并给未来 implementation 演进留下空间。
 - 复杂流式生命周期集中在 render session，改善 locality 与测试 surface。
+- block presentation continuity 集中在 adapter 内部 module；render session 保持 canonical source 与阶段语义 owner。
 - 明确 iOS/iPadOS 14 验证范围，替代 ADR-002 中的旧多平台路线预期，避免不实多平台承诺。
 
 ### Costs
@@ -85,5 +89,7 @@ Accepted
 ## Related Documents
 
 - [SwiftUI Adapter 总体技术设计](../contributor-guide/08-swiftui-adapter-architecture.md)
+- [ADR-009：块呈现连续性由 SwiftUI Adapter 持有](ADR-009-block-presentation-continuity.md)
+- [Block Presentation Continuity module 技术设计](../contributor-guide/11-block-presentation-continuity.md)
 - [ADR-002: v1.0 对外平台范围仅 iOS 14+](ADR-002-v1-platform-scope-ios-only.md)（平台范围由本 ADR supersede）
 - [SwiftUI Markdown 生态研究](../references/swiftui-markdown-ecosystem-research.md)
