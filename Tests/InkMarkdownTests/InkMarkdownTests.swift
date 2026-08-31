@@ -167,7 +167,7 @@ import UIKit
   #expect(para.paragraphSpacing == 12)
 }
 
-@Test @MainActor func listItemSpacing() async throws {
+@Test @MainActor func listItem_spacing() async throws {
   let source = """
   1. 第一条
   2. 第二条
@@ -400,6 +400,25 @@ import UIKit
 
 // MARK: - 流式 sourceFilter 语义（T4'）
 
+@Test @MainActor func blockRenderer_sourceFilterRunsOnceAcrossThoughtSuffix() {
+  var invocationCount = 0
+  var configuration = InkConfiguration.standard
+  configuration.sourceFilter = { source in
+    invocationCount += 1
+    guard invocationCount == 1 else { return "重复预处理污染" }
+    return "<think>预处理产生的思考</think>" + source
+  }
+
+  let blocks = InkBlockRenderer.render("# 尾随标题", configuration: configuration)
+
+  #expect(invocationCount == 1)
+  #expect(blocks.count == 2)
+  #expect(blocks[0] is InkThoughtBlock)
+  #expect(
+    (blocks[1] as? InkAttributedTextBlock)?.attributedText.string.contains("尾随标题") == true
+  )
+}
+
 /// sourceFilter 每次 append 必须整段全量解析（filter 依赖完整 buffer，无源级增量可言），
 /// 但显示侧只重写受影响尾部。此测试钉住"全量解析"的语义底线：
 /// 当分片边界切开 `<ref/>` 时，只有整段重解析能正确消除该标记；
@@ -602,13 +621,13 @@ import UIKit
 
   let full = NSRange(location: 0, length: result.length)
   var linkUrls: [String] = []
-  
+
   result.enumerateAttribute(.link, in: full, options: []) { value, _, _ in
     if let url = value as? URL {
       linkUrls.append(url.absoluteString)
     }
   }
-  
+
   #expect(linkUrls.contains("https://apple.com"))
   #expect(!linkUrls.contains("javascript:alert(1)"))
   #expect(linkUrls.contains("/path"))

@@ -16,7 +16,7 @@ import UIKit
 struct InkSemanticMatrixTests {
 
   @Test("H3-H6 使用标题色、加粗与对应固定行高")
-  func headingLevelsThreeThroughSixKeepHeadingSemantics() {
+  func headingLevels_threeThroughSixKeepHeadingSemantics() {
     var appearance = InkAppearance()
     appearance.supportsDynamicType = false
     appearance.text.color = .systemGreen
@@ -41,7 +41,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("嵌套强调、加粗与删除线组合保留独立样式语义")
-  func nestedInlineStylesComposeTraits() {
+  func nestedInlineStyles_composeTraits() {
     let source = "***粗斜*** ~~**粗删**~~ ~~*斜删*~~"
     let snapshot = RenderSnapshotting.snapshot(source)
 
@@ -62,7 +62,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("强调中的行内代码重置斜体并保留等宽背景")
-  func inlineCodeResetsEmphasisTraits() {
+  func inlineCode_resetsEmphasisTraits() {
     let snapshot = RenderSnapshotting.snapshot("*斜体中的 `代码`*")
     let code = run(containing: "代码", in: snapshot)
 
@@ -72,8 +72,54 @@ struct InkSemanticMatrixTests {
     #expect(code?.attrs.hasInlineCodeBackground == true)
   }
 
+  @Test("Thought 富文本回落保留行内代码背景并隔离闭标签后正文")
+  func thoughtFallback_preservesInlineCodeBackgroundAndSuffixBoundary() {
+    var appearance = InkAppearance()
+    appearance.supportsDynamicType = false
+    appearance.thought.backgroundColor = .systemYellow
+    appearance.inlineCode.backgroundColor = .systemPink
+    let configuration = InkConfiguration(appearance: appearance)
+    let source = "<think>\n思考中的 `代码`\n</think>正式回答"
+
+    let snapshot = RenderSnapshotting.snapshot(
+      source,
+      configuration: configuration,
+      appearance: appearance
+    )
+    let codeRun = run(containing: "代码", in: snapshot)
+    #expect(codeRun?.attrs.isMonospace == true)
+    #expect(codeRun?.attrs.hasInlineCodeBackground == true)
+
+    let result = InkAttributedRenderer.render(source, configuration: configuration)
+    guard let bodyRange = result.string.range(of: "思考中的"),
+          let codeRange = result.string.range(of: "代码"),
+          let suffixRange = result.string.range(of: "正式回答") else {
+      Issue.record("Thought fallback 未保留预期正文或 suffix")
+      return
+    }
+
+    let bodyAttributes = result.attributes(
+      at: NSRange(bodyRange, in: result.string).location,
+      effectiveRange: nil
+    )
+    let codeAttributes = result.attributes(
+      at: NSRange(codeRange, in: result.string).location,
+      effectiveRange: nil
+    )
+    let suffixAttributes = result.attributes(
+      at: NSRange(suffixRange, in: result.string).location,
+      effectiveRange: nil
+    )
+
+    #expect(bodyAttributes[.backgroundColor] as? UIColor == appearance.thought.backgroundColor)
+    #expect(codeAttributes[.backgroundColor] as? UIColor == appearance.inlineCode.backgroundColor)
+    #expect(codeAttributes[.inkInlineCodeBackground] as? InkInlineCodeBackgroundInfo != nil)
+    #expect(suffixAttributes[.backgroundColor] as? UIColor != appearance.thought.backgroundColor)
+    #expect(suffixAttributes[.inkInlineCodeBackground] == nil)
+  }
+
   @Test("SoftBreak 转换为单个空格")
-  func softBreakBecomesSingleSpace() {
+  func softBreak_becomesSingleSpace() {
     let snapshot = RenderSnapshotting.snapshot("第一行\n第二行")
 
     #expect(snapshot.plainText == "第一行 第二行")
@@ -81,14 +127,14 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("反斜杠硬换行转换为真实换行符")
-  func backslashHardBreakBecomesNewline() {
+  func backslashHardBreak_becomesNewline() {
     let snapshot = RenderSnapshotting.snapshot("第一行\\\n第二行")
 
     #expect(snapshot.plainText == "第一行\n第二行")
   }
 
   @Test("转义标点保持字面文本且不触发 Markdown 样式")
-  func escapedPunctuationRemainsLiteral() {
+  func escapedPunctuation_remainsLiteral() {
     let source = "\\*literal\\* and \\[not a link](https://example.com) and \\# not heading"
     let snapshot = RenderSnapshotting.snapshot(source)
 
@@ -101,7 +147,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("链接内的加粗与行内代码继承链接属性")
-  func nestedLinkChildrenKeepLinkSemantics() {
+  func nestedLinkChildren_keepLinkSemantics() {
     let source = "[**加粗链接**](https://example.com) 与 [`代码链接`](https://example.com/code)"
     let snapshot = RenderSnapshotting.snapshot(source)
 
@@ -118,7 +164,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("标准自动链接产出 Link 属性")
-  func standardAutolinkUsesLinkAttribute() {
+  func standardAutolink_usesLinkAttribute() {
     let source = "<https://example.com>"
     let result = InkAttributedRenderer.render(source)
     var destinations: [String] = []
@@ -137,7 +183,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("GFM 裸 URL 当前保守回退为普通文本")
-  func gfmBareURLFallsBackToPlainText() {
+  func gfmBareURL_fallsBackToPlainText() {
     // The pinned swift-markdown converter attaches table/strikethrough/tasklist
     // extensions only; without cmark-gfm autolink, a bare URL remains text.
     let result = InkAttributedRenderer.render("https://example.org/path")
@@ -147,14 +193,14 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("有序列表保留 Markdown 起始序号")
-  func orderedListHonorsStartIndex() {
+  func orderedList_honorsStartIndex() {
     let snapshot = RenderSnapshotting.snapshot("3. 第三项\n4. 第四项")
 
     #expect(snapshot.plainText == "3. 第三项\n4. 第四项")
   }
 
   @Test("多级列表的悬挂缩进递进增加")
-  func nestedListsIncreaseHangingIndent() {
+  func nestedLists_increaseHangingIndent() {
     // common-syntax.md promises recursive list indentation; each nested list must
     // add its own marker width instead of reusing the outer width.
     let source = "- 外层\n  - 内层\n    - 深层"
@@ -171,14 +217,14 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("任务列表显示 checked 与 unchecked 标记")
-  func taskListUsesCheckboxMarkers() {
+  func taskList_usesCheckboxMarkers() {
     let snapshot = RenderSnapshotting.snapshot("- [ ] 待办\n- [x] 已完成\n- [X] 大写完成")
 
     #expect(snapshot.plainText == "☐ 待办\n☑ 已完成\n☑ 大写完成")
   }
 
   @Test("嵌套引用保持竖线标记并递进缩进")
-  func nestedBlockquotesIncreaseIndent() {
+  func nestedBlockquotes_increaseIndent() {
     let source = "> 外层引用\n>\n> > 内层引用"
     let result = InkAttributedRenderer.render(source)
     let fullRange = NSRange(location: 0, length: result.length)
@@ -193,7 +239,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("GFM 表格解析保留列对齐、单元格 Markdown 与块路由")
-  func gfmTablePreservesAlignmentAndRoutesAsBlock() {
+  func gfmTable_preservesAlignmentAndRoutesAsBlock() {
     let source = """
     | 名称 | 值 | 备注 |
     | :--- | :---: | ---: |
@@ -218,7 +264,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("内置代码块、表格与分割线按顺序路由，正文保留富文本块")
-  func builtInBlockHandlersRouteStableSequence() {
+  func builtInBlockHandlers_routeStableSequence() {
     let source = """
     前置正文
 
@@ -251,7 +297,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("块 handler 返回 nil 时保守回落到富文本")
-  func nilBlockHandlerFallsBackToAttributedText() {
+  func nilBlockHandler_fallsBackToAttributedText() {
     let configuration = InkConfiguration(blockHandlers: [NilBlockHandler()])
     let blocks = InkBlockRenderer.render(
       "```swift\nlet value = 1\n```",
@@ -264,7 +310,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("inline syntax 返回 nil 时回落到标准文本")
-  func nilInlineSyntaxFallsBackToStandardText() {
+  func nilInlineSyntax_fallsBackToStandardText() {
     var configuration = InkConfiguration.standard
     configuration.inlineSyntaxes = [NilInlineSyntax()]
     let snapshot = RenderSnapshotting.snapshot(
@@ -279,7 +325,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("已知限制：自定义 inline syntax 命中时不继承删除线")
-  func knownLimitationCustomInlineSyntaxDoesNotInheritStrikethrough() {
+  func knownLimitationCustomInlineSyntax_doesNotInheritStrikethrough() {
     var configuration = InkConfiguration.standard
     configuration.inlineSyntaxes = [MentionInlineSyntax()]
     let result = InkAttributedRenderer.render("~~@张三~~", configuration: configuration)
@@ -290,7 +336,7 @@ struct InkSemanticMatrixTests {
   }
 
   @Test("InlineHTML br 转换为换行，自闭合未知标签保守丢弃")
-  func inlineHTMLUsesStableFallbackRules() {
+  func inlineHTML_usesStableFallbackRules() {
     let result = InkAttributedRenderer.render("前<br>后 <widget data-id=\"1\"/>尾")
 
     #expect(result.string == "前\n后 尾")

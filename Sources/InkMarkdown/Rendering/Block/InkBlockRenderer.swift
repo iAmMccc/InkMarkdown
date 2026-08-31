@@ -15,8 +15,17 @@ public enum InkBlockRenderer {
     _ source: String,
     configuration: InkConfiguration = .standard
   ) -> [InkRenderableBlock] {
-    let filtered = configuration.sourcePreparedForParsing(source)
-    let document = InkParser.parse(filtered)
+    let preparedSource = configuration.sourcePreparedForParsing(source)
+    return renderPreparedSource(preparedSource, configuration: configuration)
+  }
+
+  /// 在同一次顶层渲染中续接片段，避免非幂等 ``InkConfiguration/sourceFilter`` 被重复应用。
+  @preconcurrency @MainActor
+  static func renderPreparedSource(
+    _ source: String,
+    configuration: InkConfiguration
+  ) -> [InkRenderableBlock] {
+    let document = InkParser.parse(source)
     var blocks: [InkRenderableBlock] = []
     var pendingMarkup: [Markup] = []
 

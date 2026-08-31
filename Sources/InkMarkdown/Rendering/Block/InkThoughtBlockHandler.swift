@@ -72,7 +72,10 @@ public struct InkThoughtBlockHandler: InkBlockHandler, InkConfigurationSemantics
 
         // 尾随正文保全（Suffix Preservation）：将闭标签后的正文续接渲染为标准 Block 序列
         if let suffix = parsed.suffixContent, !suffix.isEmpty {
-          let suffixBlocks = InkBlockRenderer.render(suffix, configuration: configuration)
+          let suffixBlocks = InkBlockRenderer.renderPreparedSource(
+            suffix,
+            configuration: configuration
+          )
           resultBlocks.append(contentsOf: suffixBlocks)
         }
 

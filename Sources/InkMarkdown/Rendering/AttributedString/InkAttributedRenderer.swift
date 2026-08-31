@@ -518,7 +518,7 @@ private struct InkRenderer {
     let separatorColor = tableConfig.separatorColor
     let separatorFont = context.font
 
-    // 1. 渲染表头
+    // 富文本 fallback 用粗体保留表头层级，并用文本分隔符维持可读列边界。
     let head = table.head
     let headCells = Array(head.cells)
     if !headCells.isEmpty {
@@ -537,7 +537,6 @@ private struct InkRenderer {
       result.append(NSAttributedString(string: "\n"))
     }
 
-    // 2. 渲染数据行
     let rows = Array(table.body.rows)
     for (rowIndex, row) in rows.enumerated() {
       let rowCells = Array(row.cells)
@@ -673,7 +672,7 @@ private struct InkRenderer {
         return renderInlineChildren(of: link, context: linkContext)
       }
     }
-    
+
     // 不安全的协议或无法解析的 URL，作为纯文本渲染，不附加 .link 属性，不改变颜色。
     return renderInlineChildren(of: link, context: context)
   }
@@ -793,13 +792,7 @@ private struct InkRenderer {
         spacingAfter: scaledValue(thoughtConfig.spacingAfter, textStyle: .body)
       )
 
-      if result.length > 0 {
-        result.addAttribute(
-          .backgroundColor,
-          value: thoughtConfig.backgroundColor,
-          range: NSRange(location: 0, length: result.length)
-        )
-      }
+      applyBackgroundColorIfAbsent(thoughtConfig.backgroundColor, to: result)
     }
 
     // 尾随正文保全（Suffix Preservation）：将闭合标签后的正文以当前上下文续接渲染
@@ -814,6 +807,25 @@ private struct InkRenderer {
     }
 
     return result
+  }
+
+  private func applyBackgroundColorIfAbsent(
+    _ color: UIColor,
+    to attributedString: NSMutableAttributedString
+  ) {
+    guard attributedString.length > 0 else { return }
+
+    // Thought 提供容器底色；inline code、代码块及自定义语法已决定的子级背景必须保留。
+    var rangesWithoutBackground: [NSRange] = []
+    let fullRange = NSRange(location: 0, length: attributedString.length)
+    attributedString.enumerateAttribute(.backgroundColor, in: fullRange) { value, range, _ in
+      if value == nil {
+        rangesWithoutBackground.append(range)
+      }
+    }
+    for range in rangesWithoutBackground {
+      attributedString.addAttribute(.backgroundColor, value: color, range: range)
+    }
   }
 
   private func renderInlineHTML(_ inlineHTML: InlineHTML) -> NSAttributedString {
