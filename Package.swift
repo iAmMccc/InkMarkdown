@@ -71,6 +71,11 @@ let package = Package(
             dependencies: ["InkMarkdownSwiftUI"],
             path: "Tests/InkMarkdownSwiftUITests"
         ),
+        .testTarget(
+            name: "InkMarkdownCoreContractTests",
+            dependencies: ["InkMarkdown"],
+            path: "Tests/InkMarkdownCoreContractTests"
+        ),
         .target(
             name: "ExampleAppChatPolicy",
             path: "ExampleApp/ExampleApp/Presentation/Chat",
