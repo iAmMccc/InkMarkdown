@@ -1069,11 +1069,20 @@ private func makeImageTextStorage(
     contentMode: .fit
   )
 
-  _ = store.resolve(source: source, display: display, loader: loader)
-  let deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000
-  while loader.currentCompletedCount < 1, DispatchTime.now().uptimeNanoseconds < deadline {
-    try? await Task.sleep(nanoseconds: 10_000_000)
+  let didCacheImage = await withCheckedContinuation { continuation in
+    let result = store.resolve(
+      source: source,
+      display: display,
+      loader: loader,
+      onLoad: { image in
+        continuation.resume(returning: image != nil)
+      }
+    )
+    if case .ready = result {
+      continuation.resume(returning: true)
+    }
   }
+  #expect(didCacheImage)
 
   let block = InkImageBlockView(source: source, store: store, rendering: rendering)
   #expect(block.intrinsicContentSize.height == 0)
@@ -1110,4 +1119,3 @@ private func makeImageTextStorage(
   #expect(bounds.height < 160)
   #expect(bounds.height >= 20)
 }
-

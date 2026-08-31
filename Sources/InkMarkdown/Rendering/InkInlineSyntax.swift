@@ -48,7 +48,7 @@ public struct InkInlineContext: Sendable {
 /// （正文 / 表格单元格 / 表头等）风格一致；若自身信息不足以完成渲染，应内部降级为普通文本。
 ///
 /// > 与块级扩展点 `InkBlockHandler` 互补：一个管行内文字流，一个管整块替换为 UIView。
-public protocol InkInlineSyntax: Sendable {
+public protocol InkInlineSyntax {
 
   /// 扫描一段纯文本，将命中的自定义语法渲染为属性字符串。
   ///

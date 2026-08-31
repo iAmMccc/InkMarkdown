@@ -14,6 +14,21 @@ import Markdown
     case fixed([CGFloat])
   }
 
+  /// 渲染与测量共用同一 trait 快照下的字体，避免 Dynamic Type 视觉值与布局值漂移。
+  static func font(
+    isHeader: Bool,
+    config: InkAppearance.Table,
+    configuration: InkConfiguration
+  ) -> UIFont {
+    let size = isHeader ? config.headerFontSize : config.bodyFontSize
+    let weight: UIFont.Weight = isHeader ? .bold : .regular
+    return configuration.appearance.scaledFont(
+      .systemFont(ofSize: size, weight: weight),
+      textStyle: .body,
+      compatibleWith: configuration.renderEnvironment.traitCollection
+    )
+  }
+
   static func makeRow(
     texts: [String],
     isHeader: Bool,
@@ -89,13 +104,11 @@ import Markdown
   ) -> UIView {
     let cellView = UIView()
 
-    let baseFont: UIFont
+    let baseFont = font(isHeader: isHeader, config: config, configuration: configuration)
     let textColor: UIColor
     if isHeader {
-      baseFont = configuration.appearance.scaledFont(.systemFont(ofSize: config.headerFontSize, weight: .bold), textStyle: .body)
       textColor = config.headerColor
     } else {
-      baseFont = configuration.appearance.scaledFont(.systemFont(ofSize: config.bodyFontSize, weight: .regular), textStyle: .body)
       textColor = config.bodyColor
     }
 
@@ -110,14 +123,18 @@ import Markdown
       textAlignment = .left
     }
 
-    let scaledLineHeight = configuration.appearance.scaledValue(config.lineHeight, textStyle: .body)
+    let scaledLineHeight = configuration.appearance.scaledValue(
+      config.lineHeight,
+      textStyle: .body,
+      compatibleWith: configuration.renderEnvironment.traitCollection
+    )
     let paragraphStyle = NSMutableParagraphStyle()
     paragraphStyle.minimumLineHeight = scaledLineHeight
     paragraphStyle.maximumLineHeight = scaledLineHeight
     paragraphStyle.alignment = textAlignment
     paragraphStyle.lineBreakMode = .byCharWrapping
 
-    let baselineOffset = (config.lineHeight - baseFont.lineHeight) / 2
+    let baselineOffset = (scaledLineHeight - baseFont.lineHeight) / 2
 
     // 解析内联 Markdown（加粗/斜体/行内代码/链接 + 自定义 Directive），与正文共用 configuration
     let inlineAttr = InkAttributedRenderer.renderInline(text, configuration: configuration, baseFont: baseFont, textColor: textColor)
@@ -214,8 +231,8 @@ import Markdown
     let colCount = headers.count
     guard colCount > 0 else { return [] }
 
-    let headerFont = UIFont.systemFont(ofSize: config.headerFontSize, weight: .bold)
-    let bodyFont = UIFont.systemFont(ofSize: config.bodyFontSize)
+    let headerFont = font(isHeader: true, config: config, configuration: configuration)
+    let bodyFont = font(isHeader: false, config: config, configuration: configuration)
     let maxColumnWidth = containerWidth * config.columnMaxWidthRatio
     var widths: [CGFloat] = Array(repeating: 0, count: colCount)
 

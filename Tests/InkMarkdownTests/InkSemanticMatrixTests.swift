@@ -1,0 +1,343 @@
+import Foundation
+import Testing
+import UIKit
+@testable import InkMarkdown
+
+// MARK: - CommonMark / GFM semantic matrix
+
+/// Contracts not covered by the focused renderer tests.
+///
+/// These tests intentionally assert stable semantic properties (text, traits, links,
+/// paragraph geometry, and routed block types) instead of serialized UIKit attributes
+/// or pixel output. A limitation test is kept explicit where the public syntax contract
+/// currently documents conservative behavior.
+@Suite("CommonMark/GFM 渲染语义矩阵")
+@MainActor
+struct InkSemanticMatrixTests {
+
+  @Test("H3-H6 使用标题色、加粗与对应固定行高")
+  func headingLevelsThreeThroughSixKeepHeadingSemantics() {
+    var appearance = InkAppearance()
+    appearance.supportsDynamicType = false
+    appearance.text.color = .systemGreen
+    appearance.heading.color = .systemPurple
+    let configuration = InkConfiguration(appearance: appearance)
+
+    for level in 3...6 {
+      let title = "标题\(level)"
+      let source = "\(String(repeating: "#", count: level)) \(title)"
+      let snapshot = RenderSnapshotting.snapshot(
+        source,
+        configuration: configuration,
+        appearance: appearance
+      )
+      let run = run(containing: title, in: snapshot)
+
+      #expect(run?.attrs.isBold == true)
+      #expect(run?.attrs.colorKey == .heading)
+      #expect(run?.attrs.fontSize == appearance.heading.fontSize)
+      #expect(run?.attrs.lineHeight == appearance.heading.lineHeight(forLevel: level))
+    }
+  }
+
+  @Test("嵌套强调、加粗与删除线组合保留独立样式语义")
+  func nestedInlineStylesComposeTraits() {
+    let source = "***粗斜*** ~~**粗删**~~ ~~*斜删*~~"
+    let snapshot = RenderSnapshotting.snapshot(source)
+
+    let boldItalic = run(containing: "粗斜", in: snapshot)
+    #expect(boldItalic?.attrs.isBold == true)
+    #expect(boldItalic?.attrs.isItalic == true)
+    #expect(boldItalic?.attrs.hasStrikethrough == false)
+
+    let boldStrike = run(containing: "粗删", in: snapshot)
+    #expect(boldStrike?.attrs.isBold == true)
+    #expect(boldStrike?.attrs.isItalic == false)
+    #expect(boldStrike?.attrs.hasStrikethrough == true)
+
+    let italicStrike = run(containing: "斜删", in: snapshot)
+    #expect(italicStrike?.attrs.isBold == false)
+    #expect(italicStrike?.attrs.isItalic == true)
+    #expect(italicStrike?.attrs.hasStrikethrough == true)
+  }
+
+  @Test("强调中的行内代码重置斜体并保留等宽背景")
+  func inlineCodeResetsEmphasisTraits() {
+    let snapshot = RenderSnapshotting.snapshot("*斜体中的 `代码`*")
+    let code = run(containing: "代码", in: snapshot)
+
+    #expect(code?.attrs.isMonospace == true)
+    #expect(code?.attrs.isItalic == false)
+    #expect(code?.attrs.isBold == false)
+    #expect(code?.attrs.hasInlineCodeBackground == true)
+  }
+
+  @Test("SoftBreak 转换为单个空格")
+  func softBreakBecomesSingleSpace() {
+    let snapshot = RenderSnapshotting.snapshot("第一行\n第二行")
+
+    #expect(snapshot.plainText == "第一行 第二行")
+    #expect(!snapshot.plainText.contains("\n"))
+  }
+
+  @Test("反斜杠硬换行转换为真实换行符")
+  func backslashHardBreakBecomesNewline() {
+    let snapshot = RenderSnapshotting.snapshot("第一行\\\n第二行")
+
+    #expect(snapshot.plainText == "第一行\n第二行")
+  }
+
+  @Test("转义标点保持字面文本且不触发 Markdown 样式")
+  func escapedPunctuationRemainsLiteral() {
+    let source = "\\*literal\\* and \\[not a link](https://example.com) and \\# not heading"
+    let snapshot = RenderSnapshotting.snapshot(source)
+
+    #expect(snapshot.plainText == "*literal* and [not a link](https://example.com) and # not heading")
+    RenderContractAssertions.noRun(
+      snapshot,
+      where: { $0.isBold || $0.isItalic || $0.hasLink },
+      description: "转义标点不产生强调或链接"
+    )
+  }
+
+  @Test("链接内的加粗与行内代码继承链接属性")
+  func nestedLinkChildrenKeepLinkSemantics() {
+    let source = "[**加粗链接**](https://example.com) 与 [`代码链接`](https://example.com/code)"
+    let snapshot = RenderSnapshotting.snapshot(source)
+
+    let boldLink = run(containing: "加粗链接", in: snapshot)
+    #expect(boldLink?.attrs.isBold == true)
+    #expect(boldLink?.attrs.hasLink == true)
+    #expect(boldLink?.attrs.colorKey == .link)
+
+    let codeLink = run(containing: "代码链接", in: snapshot)
+    #expect(codeLink?.attrs.isMonospace == true)
+    #expect(codeLink?.attrs.hasInlineCodeBackground == true)
+    #expect(codeLink?.attrs.hasLink == true)
+    #expect(codeLink?.attrs.colorKey == .link)
+  }
+
+  @Test("标准自动链接产出 Link 属性")
+  func standardAutolinkUsesLinkAttribute() {
+    let source = "<https://example.com>"
+    let result = InkAttributedRenderer.render(source)
+    var destinations: [String] = []
+
+    result.enumerateAttribute(
+      .link,
+      in: NSRange(location: 0, length: result.length),
+      options: []
+    ) { value, _, _ in
+      if let url = value as? URL {
+        destinations.append(url.absoluteString)
+      }
+    }
+
+    #expect(destinations == ["https://example.com"])
+  }
+
+  @Test("GFM 裸 URL 当前保守回退为普通文本")
+  func gfmBareURLFallsBackToPlainText() {
+    // The pinned swift-markdown converter attaches table/strikethrough/tasklist
+    // extensions only; without cmark-gfm autolink, a bare URL remains text.
+    let result = InkAttributedRenderer.render("https://example.org/path")
+
+    #expect(result.string == "https://example.org/path")
+    #expect(result.attribute(.link, at: 0, effectiveRange: nil) == nil)
+  }
+
+  @Test("有序列表保留 Markdown 起始序号")
+  func orderedListHonorsStartIndex() {
+    let snapshot = RenderSnapshotting.snapshot("3. 第三项\n4. 第四项")
+
+    #expect(snapshot.plainText == "3. 第三项\n4. 第四项")
+  }
+
+  @Test("多级列表的悬挂缩进递进增加")
+  func nestedListsIncreaseHangingIndent() {
+    // common-syntax.md promises recursive list indentation; each nested list must
+    // add its own marker width instead of reusing the outer width.
+    let source = "- 外层\n  - 内层\n    - 深层"
+    let result = InkAttributedRenderer.render(source)
+
+    let outer = paragraphStyle(containing: "外层", in: result)
+    let inner = paragraphStyle(containing: "内层", in: result)
+    let deep = paragraphStyle(containing: "深层", in: result)
+
+    #expect(outer?.firstLineHeadIndent == 0)
+    #expect(outer?.headIndent ?? 0 > 0)
+    #expect(inner?.headIndent ?? 0 > (outer?.headIndent ?? 0))
+    #expect(deep?.headIndent ?? 0 > (inner?.headIndent ?? 0))
+  }
+
+  @Test("任务列表显示 checked 与 unchecked 标记")
+  func taskListUsesCheckboxMarkers() {
+    let snapshot = RenderSnapshotting.snapshot("- [ ] 待办\n- [x] 已完成\n- [X] 大写完成")
+
+    #expect(snapshot.plainText == "☐ 待办\n☑ 已完成\n☑ 大写完成")
+  }
+
+  @Test("嵌套引用保持竖线标记并递进缩进")
+  func nestedBlockquotesIncreaseIndent() {
+    let source = "> 外层引用\n>\n> > 内层引用"
+    let result = InkAttributedRenderer.render(source)
+    let fullRange = NSRange(location: 0, length: result.length)
+
+    let outer = paragraphStyle(containing: "外层引用", in: result)
+    let inner = paragraphStyle(containing: "内层引用", in: result)
+    let hasBar = result.attribute(.inkBlockquoteBar, at: 0, effectiveRange: nil) != nil
+
+    #expect(hasBar)
+    #expect(inner?.headIndent ?? 0 > (outer?.headIndent ?? 0))
+    #expect(result.attribute(.inkBlockquoteBar, at: fullRange.location, effectiveRange: nil) != nil)
+  }
+
+  @Test("GFM 表格解析保留列对齐、单元格 Markdown 与块路由")
+  func gfmTablePreservesAlignmentAndRoutesAsBlock() {
+    let source = """
+    | 名称 | 值 | 备注 |
+    | :--- | :---: | ---: |
+    | **A** | `1` | [详情](https://example.com) |
+    """
+    let blocks = InkBlockRenderer.render(source)
+    let table = blocks.first as? InkTableBlock
+
+    #expect(blocks.count == 1)
+    #expect(table != nil)
+    #expect(table?.headers == ["名称", "值", "备注"])
+    #expect(table?.rows.count == 1)
+    #expect(table?.rows.first?.contains("**A**") == true)
+    #expect(table?.rows.first?.contains("`1`") == true)
+    #expect(table?.rows.first?.contains("[详情](https://example.com)") == true)
+    #expect(table?.alignments == [.left, .center, .right])
+
+    let snapshot = RenderSnapshotting.snapshot(source)
+    #expect(run(containing: "名称", in: snapshot)?.attrs.isBold == true)
+    #expect(run(containing: "1", in: snapshot)?.attrs.isMonospace == true)
+    #expect(run(containing: "详情", in: snapshot)?.attrs.hasLink == true)
+  }
+
+  @Test("内置代码块、表格与分割线按顺序路由，正文保留富文本块")
+  func builtInBlockHandlersRouteStableSequence() {
+    let source = """
+    前置正文
+
+    ```swift
+    let value = 1
+    ```
+
+    | A | B |
+    | --- | --- |
+    | 1 | 2 |
+
+    ---
+
+    后置正文
+    """
+    let blocks = InkBlockRenderer.render(source)
+
+    #expect(blocks.count == 5)
+    #expect(blocks[0] is InkAttributedTextBlock)
+    #expect(blocks[1] is InkCodeBlock)
+    #expect(blocks[2] is InkTableBlock)
+    #expect(blocks[3] is InkThematicBreakBlock)
+    #expect(blocks[4] is InkAttributedTextBlock)
+
+    let code = blocks[1] as? InkCodeBlock
+    #expect(code?.language == "swift")
+    #expect(code?.code.contains("let value = 1") == true)
+    #expect((blocks[0] as? InkAttributedTextBlock)?.attributedText.string.contains("前置正文") == true)
+    #expect((blocks[4] as? InkAttributedTextBlock)?.attributedText.string.contains("后置正文") == true)
+  }
+
+  @Test("块 handler 返回 nil 时保守回落到富文本")
+  func nilBlockHandlerFallsBackToAttributedText() {
+    let configuration = InkConfiguration(blockHandlers: [NilBlockHandler()])
+    let blocks = InkBlockRenderer.render(
+      "```swift\nlet value = 1\n```",
+      configuration: configuration
+    )
+
+    #expect(blocks.count == 1)
+    #expect(blocks[0] is InkAttributedTextBlock)
+    #expect((blocks[0] as? InkAttributedTextBlock)?.attributedText.string.contains("let value = 1") == true)
+  }
+
+  @Test("inline syntax 返回 nil 时回落到标准文本")
+  func nilInlineSyntaxFallsBackToStandardText() {
+    var configuration = InkConfiguration.standard
+    configuration.inlineSyntaxes = [NilInlineSyntax()]
+    let snapshot = RenderSnapshotting.snapshot(
+      "普通文本",
+      configuration: configuration,
+      appearance: configuration.appearance
+    )
+
+    #expect(snapshot.plainText == "普通文本")
+    #expect(snapshot.runs.count == 1)
+    #expect(snapshot.runs[0].attrs.isBold == false)
+  }
+
+  @Test("已知限制：自定义 inline syntax 命中时不继承删除线")
+  func knownLimitationCustomInlineSyntaxDoesNotInheritStrikethrough() {
+    var configuration = InkConfiguration.standard
+    configuration.inlineSyntaxes = [MentionInlineSyntax()]
+    let result = InkAttributedRenderer.render("~~@张三~~", configuration: configuration)
+
+    #expect(result.string == "@张三")
+    let attributes = result.attributes(at: 0, effectiveRange: nil)
+    #expect(attributes[.strikethroughStyle] == nil)
+  }
+
+  @Test("InlineHTML br 转换为换行，自闭合未知标签保守丢弃")
+  func inlineHTMLUsesStableFallbackRules() {
+    let result = InkAttributedRenderer.render("前<br>后 <widget data-id=\"1\"/>尾")
+
+    #expect(result.string == "前\n后 尾")
+  }
+
+  private func run(containing text: String, in snapshot: RenderSnapshot) -> RenderSnapshot.Run? {
+    guard let range = snapshot.plainText.range(of: text) else { return nil }
+    let nsRange = NSRange(range, in: snapshot.plainText)
+    let upperBound = nsRange.location + nsRange.length - 1
+    return snapshot.runs.first {
+      $0.range.lowerBound <= nsRange.location && $0.range.upperBound >= upperBound
+    }
+  }
+
+  private func paragraphStyle(containing text: String, in result: NSAttributedString) -> NSParagraphStyle? {
+    guard let range = result.string.range(of: text) else { return nil }
+    let location = result.string.distance(from: result.string.startIndex, to: range.lowerBound)
+    return result.attribute(.paragraphStyle, at: location, effectiveRange: nil) as? NSParagraphStyle
+  }
+}
+
+private struct NilInlineSyntax: InkInlineSyntax {
+  func render(text: String, context: InkInlineContext) -> NSAttributedString? {
+    nil
+  }
+}
+
+private struct MentionInlineSyntax: InkInlineSyntax {
+  func render(text: String, context: InkInlineContext) -> NSAttributedString? {
+    guard text == "@张三" else { return nil }
+    return NSAttributedString(
+      string: text,
+      attributes: [
+        .font: context.baseFont,
+        .foregroundColor: context.textColor,
+      ]
+    )
+  }
+}
+
+private struct NilBlockHandler: InkBlockHandler {
+  func canHandle(_ markup: Markup) -> Bool {
+    markup is Markdown.CodeBlock
+  }
+
+  @MainActor
+  func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
+    nil
+  }
+}

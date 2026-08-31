@@ -6,15 +6,16 @@ import UIKit
 /// **显示层**（textStorage 安装 / ``bindAttachments`` / 主线程 ``attachmentBounds``）
 /// 绑定 `layoutManager` 后惰性 ``materialize(display:loader:)``；加载完成回调只更新
 /// 已有实例的 `image` / `bounds` 并触发布局失效。
+@MainActor
 public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
 
   /// 图片加载完成时发送；宿主可监听并刷新 `UITextView` 布局。
   public static let imageDidLoadNotification = Notification.Name("InkImageAttachmentDidLoad")
 
   /// 规范化后的图片来源。
-  public let source: ImageSource
+  nonisolated public let source: ImageSource
 
-  private let rendering: InkImageRendering
+  nonisolated private let rendering: InkImageRendering
   private var boundStore: InkImageStore?
   /// 宿主布局管理器；显示层绑定时写入，用于加载完成后 invalidate。
   weak var layoutManager: NSLayoutManager?
@@ -24,10 +25,11 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
   /// 在 `applyImage` 中当图片实际高度与占位高度差值超过 50pt 时设为 `true`，
   /// 回调完成后重置为 `false`。
   public internal(set) var shouldAnimateNextHeightChange: Bool = false
-  private var subscription: InkImageStore.ImageLoadSubscription?
+  nonisolated(unsafe) private var subscription: InkImageStore.ImageLoadSubscription?
   private var didMaterialize = false
-  private var pendingLayoutMaterialize = false
   private var lastLineFragmentWidth: CGFloat = 0
+  /// `attachmentBounds` 是 TextKit 的 nonisolated 纯测量回调，只读取主线程发布的图片快照。
+  nonisolated(unsafe) private var renderedImage: UIImage?
 
   /// - Parameters:
   ///   - source: 图片来源。
@@ -54,22 +56,15 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
     fatalError("init(coder:) has not been implemented")
   }
 
-  public override func attachmentBounds(
+  nonisolated public override func attachmentBounds(
     for textContainer: NSTextContainer?,
     proposedLineFragment lineFrag: CGRect,
     glyphPosition position: CGPoint,
     characterIndex charIndex: Int
   ) -> CGRect {
-    if Thread.isMainThread {
-      lastLineFragmentWidth = lineFrag.width
-      MainActor.assumeIsolated { [unowned self] in
-        self.scheduleMaterializeFromLayoutIfNeeded(lineFragmentWidth: lineFrag.width)
-      }
-    }
-
     let sizing = rendering.sizing
     let maxW = min(sizing.maxInlineImageWidth ?? lineFrag.width, lineFrag.width)
-    if let img = image {
+    if let img = renderedImage {
       return CGRect(
         origin: .zero,
         size: fitted(
@@ -172,19 +167,6 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
     }
   }
 
-  /// `attachmentBounds` 处于 TextKit 布局回调中；缓存命中时同步 materialize 会立刻
-  /// 改写 textStorage / invalidateLayout，构成布局重入。这里推迟到下一个 runloop 执行。
-  @MainActor
-  private func scheduleMaterializeFromLayoutIfNeeded(lineFragmentWidth: CGFloat) {
-    guard !didMaterialize, boundStore != nil, !pendingLayoutMaterialize else { return }
-    pendingLayoutMaterialize = true
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
-      self.pendingLayoutMaterialize = false
-      self.ensureMaterializedIfNeeded(lineFragmentWidth: lineFragmentWidth)
-    }
-  }
-
   @MainActor
   private func ensureMaterializedIfNeeded(lineFragmentWidth: CGFloat) {
     guard !didMaterialize, let store = boundStore else { return }
@@ -222,6 +204,7 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
 
     bounds = CGRect(origin: .zero, size: fittedSize)
     image = loadedImage
+    renderedImage = loadedImage
 
     NotificationCenter.default.post(
       name: InkImageAttachment.imageDidLoadNotification,

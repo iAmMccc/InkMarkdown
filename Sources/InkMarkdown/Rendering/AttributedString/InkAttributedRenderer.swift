@@ -151,10 +151,22 @@ private struct InkRenderer {
 
   private var appearance: InkAppearance { configuration.appearance }
 
+  private var scalingTraits: UITraitCollection {
+    configuration.renderEnvironment.traitCollection
+  }
+
+  private func scaledFont(_ font: UIFont, textStyle: UIFont.TextStyle = .body) -> UIFont {
+    appearance.scaledFont(font, textStyle: textStyle, compatibleWith: scalingTraits)
+  }
+
+  private func scaledValue(_ value: CGFloat, textStyle: UIFont.TextStyle = .body) -> CGFloat {
+    appearance.scaledValue(value, textStyle: textStyle, compatibleWith: scalingTraits)
+  }
+
   /// 正文基准上下文：正文字号系统字体 + 正文色。块级递归的起点。
   var bodyContext: InkTextContext {
     InkTextContext(
-      font: appearance.scaledFont(UIFont.systemFont(ofSize: appearance.text.fontSize), textStyle: .body),
+      font: scaledFont(UIFont.systemFont(ofSize: appearance.text.fontSize), textStyle: .body),
       foregroundColor: appearance.text.color,
       appearance: appearance,
       renderEnvironment: configuration.renderEnvironment
@@ -260,13 +272,13 @@ private struct InkRenderer {
       }
     }()
     let size = appearance.heading.fontSize(forLevel: level)
-    let lh = appearance.scaledValue(appearance.heading.lineHeight(forLevel: level), textStyle: textStyle)
-    let spacing = appearance.scaledValue(appearance.heading.spacingAfter(forLevel: level), textStyle: textStyle)
+    let lh = scaledValue(appearance.heading.lineHeight(forLevel: level), textStyle: textStyle)
+    let spacing = scaledValue(appearance.heading.spacingAfter(forLevel: level), textStyle: textStyle)
 
     // 标题派生：bold + 标题字号 + 标题色。行内子节点在此基础上再派生
     // （inlineCode 会 monospaced() 重置回等宽、link 会 coloring() 改色），互不覆盖。
     let headingContext = InkTextContext(
-      font: appearance.scaledFont(UIFont.systemFont(ofSize: size, weight: .bold), textStyle: textStyle),
+      font: scaledFont(UIFont.systemFont(ofSize: size, weight: .bold), textStyle: textStyle),
       foregroundColor: appearance.heading.color,
       appearance: appearance,
       renderEnvironment: configuration.renderEnvironment
@@ -282,8 +294,8 @@ private struct InkRenderer {
     let mutable = NSMutableAttributedString(attributedString: renderInlineChildren(of: paragraph, context: context))
     applyFixedLineHeight(
       to: mutable,
-      lineHeight: appearance.scaledValue(appearance.text.lineHeight, textStyle: .body),
-      spacingAfter: appearance.scaledValue(appearance.text.paragraphSpacing, textStyle: .body)
+      lineHeight: scaledValue(appearance.text.lineHeight, textStyle: .body),
+      spacingAfter: scaledValue(appearance.text.paragraphSpacing, textStyle: .body)
     )
     return mutable
   }
@@ -296,19 +308,19 @@ private struct InkRenderer {
 
     // 引用派生：引用字号 + 引用色。行内 link 仍会 coloring() 覆盖回链接色（两者共存），
     // inlineCode 仍 monospaced()——因为是 context 下传而非事后回写，样式不再互踩。
-    let quoteFont = appearance.scaledFont(UIFont.systemFont(ofSize: appearance.blockquote.fontSize), textStyle: .body)
+    let quoteFont = scaledFont(UIFont.systemFont(ofSize: appearance.blockquote.fontSize), textStyle: .body)
     let quoteContext = context.withFont(quoteFont).coloring(appearance.blockquote.color)
-    let indent = appearance.scaledValue(appearance.blockquote.barWidth + appearance.blockquote.leftPadding, textStyle: .body)
+    let indent = scaledValue(appearance.blockquote.barWidth + appearance.blockquote.leftPadding, textStyle: .body)
 
     for (index, child) in children.enumerated() {
       let isLast = index == children.count - 1
-      let spacingAfter: CGFloat = appearance.scaledValue(isLast ? appearance.blockquote.spacingAfter : appearance.blockquote.innerSpacing, textStyle: .body)
+      let spacingAfter: CGFloat = scaledValue(isLast ? appearance.blockquote.spacingAfter : appearance.blockquote.innerSpacing, textStyle: .body)
 
       let part: NSMutableAttributedString
       if let paragraph = child as? Paragraph {
         // 段落：施加引用块行高 + 缩进（引用块的标准排版）。
         part = NSMutableAttributedString(attributedString: renderInlineChildren(of: paragraph, context: quoteContext))
-        applyFixedLineHeight(to: part, lineHeight: appearance.scaledValue(appearance.blockquote.lineHeight, textStyle: .body), spacingAfter: spacingAfter) { para in
+        applyFixedLineHeight(to: part, lineHeight: scaledValue(appearance.blockquote.lineHeight, textStyle: .body), spacingAfter: spacingAfter) { para in
           para.firstLineHeadIndent = indent
           para.headIndent = indent
         }
@@ -346,29 +358,30 @@ private struct InkRenderer {
 
   private func renderList(items: [ListItem], ordered: Bool, start: Int, context: InkTextContext) -> NSAttributedString {
     let result = NSMutableAttributedString()
-    let bodyFont = appearance.scaledFont(UIFont.systemFont(ofSize: appearance.text.fontSize), textStyle: .body)
+    let bodyFont = scaledFont(UIFont.systemFont(ofSize: appearance.text.fontSize), textStyle: .body)
 
-    // 序号/圆点用正文字重（不加粗）。
-    let maxMarkerWidth: CGFloat
-    if ordered {
-      let maxNumber = start + items.count - 1
-      let sampleMarker = "\(maxNumber). " as NSString
-      maxMarkerWidth = ceil(sampleMarker.size(withAttributes: [.font: bodyFont]).width)
-    } else {
-      let bullet = "\u{2022} " as NSString
-      maxMarkerWidth = ceil(bullet.size(withAttributes: [.font: bodyFont]).width)
+    // 序号/圆点用正文字重（不加粗）。marker 宽度按当前列表实际内容计算，
+    // 这样多位序号、任务列表 checkbox 与普通圆点都能自然对齐。
+    let markers = items.enumerated().map { index, item in
+      if ordered {
+        return "\(start + index). "
+      }
+      if let checkbox = item.checkbox {
+        return checkbox == .checked ? "\u{2611} " : "\u{2610} "
+      }
+      return "\u{2022} "
     }
+    let markerWidth = markers
+      .map { marker in
+        ceil((marker as NSString).size(withAttributes: [.font: bodyFont]).width)
+      }
+      .max() ?? 0
+    let listIndent = context.listIndent
+    let nestedListContext = context.withListIndent(listIndent + markerWidth)
 
     for (index, item) in items.enumerated() {
-      let marker: String
       let markerFont: UIFont = bodyFont
-      if ordered {
-        marker = "\(start + index). "
-      } else if let checkbox = item.checkbox {
-        marker = checkbox == .checked ? "\u{2611} " : "\u{2610} "
-      } else {
-        marker = "\u{2022} "
-      }
+      let marker = markers[index]
 
       let markerAttr = NSAttributedString(
         string: marker,
@@ -386,11 +399,11 @@ private struct InkRenderer {
         if let paragraph = child as? Paragraph, firstParagraphInline == nil {
           firstParagraphInline = renderInlineChildren(of: paragraph, context: context)
         } else if child is OrderedList || child is UnorderedList {
-          nestedBlocks.append((i, renderBlock(child, context: context)))
+          nestedBlocks.append((i, renderBlock(child, context: nestedListContext)))
         } else if let paragraph = child as? Paragraph {
           nestedBlocks.append((i, renderInlineChildren(of: paragraph, context: context)))
         } else {
-          nestedBlocks.append((i, renderBlock(child, context: context)))
+          nestedBlocks.append((i, renderBlock(child, context: nestedListContext)))
         }
       }
 
@@ -401,11 +414,11 @@ private struct InkRenderer {
       }
 
       let hasNested = !nestedBlocks.isEmpty
-      let itemSpacing: CGFloat = appearance.scaledValue(hasNested ? 0 : ((index < items.count - 1) ? appearance.list.itemSpacing : appearance.list.spacingAfter), textStyle: .body)
+      let itemSpacing: CGFloat = scaledValue(hasNested ? 0 : ((index < items.count - 1) ? appearance.list.itemSpacing : appearance.list.spacingAfter), textStyle: .body)
 
-      applyFixedLineHeight(to: line, lineHeight: appearance.scaledValue(appearance.text.lineHeight, textStyle: .body), spacingAfter: itemSpacing) { para in
-        para.firstLineHeadIndent = 0
-        para.headIndent = maxMarkerWidth
+      applyFixedLineHeight(to: line, lineHeight: scaledValue(appearance.text.lineHeight, textStyle: .body), spacingAfter: itemSpacing) { para in
+        para.firstLineHeadIndent = listIndent
+        para.headIndent = listIndent + markerWidth
       }
 
       result.append(line)
@@ -415,7 +428,7 @@ private struct InkRenderer {
           result.append(NSAttributedString(string: "\n"))
           let nested = NSMutableAttributedString(attributedString: block.content)
           if blockIdx == nestedBlocks.count - 1 {
-            let nestedSpacing: CGFloat = appearance.scaledValue((index < items.count - 1) ? appearance.list.itemSpacing : appearance.list.spacingAfter, textStyle: .body)
+            let nestedSpacing: CGFloat = scaledValue((index < items.count - 1) ? appearance.list.itemSpacing : appearance.list.spacingAfter, textStyle: .body)
             let fullRange = NSRange(location: 0, length: nested.length)
             nested.enumerateAttribute(.paragraphStyle, in: fullRange, options: [.reverse]) { value, range, stop in
               if let para = (value as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle {
@@ -439,7 +452,7 @@ private struct InkRenderer {
   // MARK: - ThematicBreak（保持现状：富文本通道的占位实现；view 版走 InkThematicBreakBlock）
 
   private func renderThematicBreak() -> NSAttributedString {
-    let thickness = appearance.scaledValue(appearance.thematicBreak.lineThickness, textStyle: .body)
+    let thickness = scaledValue(appearance.thematicBreak.lineThickness, textStyle: .body)
     let para = NSMutableParagraphStyle()
     para.baseWritingDirection = .natural
     para.minimumLineHeight = thickness
@@ -473,9 +486,9 @@ private struct InkRenderer {
       .map { " \($0) " }
       .joined(separator: "\n")
 
-    let font = appearance.scaledFont(UIFont.monospacedSystemFont(ofSize: codeAppearance.fontSize, weight: .regular), textStyle: .body)
-    let lh = appearance.scaledValue(codeAppearance.lineHeight, textStyle: .body)
-    let spacing = appearance.scaledValue(codeAppearance.spacingToText, textStyle: .body)
+    let font = scaledFont(UIFont.monospacedSystemFont(ofSize: codeAppearance.fontSize, weight: .regular), textStyle: .body)
+    let lh = scaledValue(codeAppearance.lineHeight, textStyle: .body)
+    let spacing = scaledValue(codeAppearance.spacingToText, textStyle: .body)
 
     let para = lockedParagraphStyle(
       lineHeight: lh,
@@ -693,7 +706,7 @@ private struct InkRenderer {
       return NSAttributedString(
         string: "[\u{1F5BC} \(display)]",
         attributes: [
-          .font: appearance.scaledFont(UIFont.systemFont(ofSize: context.font.pointSize), textStyle: .body),
+          .font: scaledFont(UIFont.systemFont(ofSize: context.font.pointSize), textStyle: .body),
           .foregroundColor: appearance.text.secondaryColor,
         ]
       )
@@ -753,7 +766,7 @@ private struct InkRenderer {
     let result = NSMutableAttributedString()
 
     if !scanResult.thoughtBody.isEmpty || !scanResult.isComplete {
-      let headerFont = appearance.scaledFont(UIFont.systemFont(ofSize: thoughtConfig.headerFontSize, weight: .medium), textStyle: .body)
+      let headerFont = scaledFont(UIFont.systemFont(ofSize: thoughtConfig.headerFontSize, weight: .medium), textStyle: .body)
       let titleText = scanResult.isComplete ? thoughtConfig.completedTitle : thoughtConfig.title
       let headerText = scanResult.thoughtBody.isEmpty ? "💭 \(titleText)..." : "💭 \(titleText)\n"
       let headerAttr = NSAttributedString(
@@ -766,7 +779,7 @@ private struct InkRenderer {
       result.append(headerAttr)
 
       if !scanResult.thoughtBody.isEmpty {
-        let bodyFont = appearance.scaledFont(UIFont.systemFont(ofSize: thoughtConfig.fontSize), textStyle: .body)
+        let bodyFont = scaledFont(UIFont.systemFont(ofSize: thoughtConfig.fontSize), textStyle: .body)
         let thoughtContext = context.withFont(bodyFont).coloring(thoughtConfig.textColor)
         let innerDoc = InkParser.parse(scanResult.thoughtBody)
         for child in innerDoc.children {
@@ -776,8 +789,8 @@ private struct InkRenderer {
 
       applyFixedLineHeight(
         to: result,
-        lineHeight: appearance.scaledValue(thoughtConfig.lineHeight, textStyle: .body),
-        spacingAfter: appearance.scaledValue(thoughtConfig.spacingAfter, textStyle: .body)
+        lineHeight: scaledValue(thoughtConfig.lineHeight, textStyle: .body),
+        spacingAfter: scaledValue(thoughtConfig.spacingAfter, textStyle: .body)
       )
 
       if result.length > 0 {
@@ -880,7 +893,7 @@ private struct InkRenderer {
       }
       if skipForImageAttachment { return }
 
-      let font = (value as? UIFont) ?? appearance.scaledFont(UIFont.systemFont(ofSize: appearance.text.fontSize), textStyle: .body)
+      let font = (value as? UIFont) ?? scaledFont(UIFont.systemFont(ofSize: appearance.text.fontSize), textStyle: .body)
       let offset = baselineOffset(for: font, in: lineHeight)
       mutable.addAttribute(.baselineOffset, value: offset, range: range)
     }
@@ -902,31 +915,42 @@ private struct InkRenderer {
 extension InkConfiguration {
   /// 主线程同步渲染时，若尚未注入 trait 快照则自动捕获当前环境。
   func withResolvedRenderEnvironmentIfNeeded() -> InkConfiguration {
-    guard renderEnvironment.userInterfaceStyle == .unspecified else { return self }
     guard Thread.isMainThread else { return self }
-    var copy = self
-    copy.renderEnvironment = MainActor.assumeIsolated {
-      InkRenderEnvironment(
-        userInterfaceStyle: UITraitCollection.current.userInterfaceStyle
-      )
+    var env = renderEnvironment
+    var changed = false
+    if env.userInterfaceStyle == .unspecified {
+      env.userInterfaceStyle = MainActor.assumeIsolated { UITraitCollection.current.userInterfaceStyle }
+      changed = true
     }
+    if env.contentSizeCategory == .unspecified {
+      env.contentSizeCategory = MainActor.assumeIsolated { UITraitCollection.current.preferredContentSizeCategory }
+      changed = true
+    }
+    guard changed else { return self }
+    var copy = self
+    copy.renderEnvironment = env
     return copy
   }
 
   /// 流式渲染在主线程调用，显式捕获 trait 快照供后台 parse 使用。
   ///
-  /// 仅当用户未注入 ``InkConfiguration/renderEnvironment``（`userInterfaceStyle == .unspecified`）时
-  /// 才捕获当前 trait；已注入的环境必须原样保留，与 ``withResolvedRenderEnvironmentIfNeeded()``
-  /// 保持同一套"未设置才补全"语义（见 ``InkConfiguration/renderEnvironment`` 文档）。
+  /// 仅当 ``InkConfiguration/renderEnvironment`` 中对应字段为 `.unspecified` 时才补全；
+  /// 已注入的 `userInterfaceStyle` / `contentSizeCategory` 必须原样保留。
   func capturingRenderEnvironmentForBackgroundParse() -> InkConfiguration {
-    guard renderEnvironment.userInterfaceStyle == .unspecified else { return self }
     guard Thread.isMainThread else { return self }
-    var copy = self
-    copy.renderEnvironment = MainActor.assumeIsolated {
-      InkRenderEnvironment(
-        userInterfaceStyle: UITraitCollection.current.userInterfaceStyle
-      )
+    var env = renderEnvironment
+    var changed = false
+    if env.userInterfaceStyle == .unspecified {
+      env.userInterfaceStyle = MainActor.assumeIsolated { UITraitCollection.current.userInterfaceStyle }
+      changed = true
     }
+    if env.contentSizeCategory == .unspecified {
+      env.contentSizeCategory = MainActor.assumeIsolated { UITraitCollection.current.preferredContentSizeCategory }
+      changed = true
+    }
+    guard changed else { return self }
+    var copy = self
+    copy.renderEnvironment = env
     return copy
   }
 }

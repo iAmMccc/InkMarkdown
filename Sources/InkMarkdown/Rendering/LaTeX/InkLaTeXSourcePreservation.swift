@@ -139,10 +139,24 @@ enum InkLaTeXSourcePreservation {
 extension InkConfiguration {
   /// 应用 ``sourceFilter``，并在 LaTeX 开启时保护 bracket 定界符后再交给解析器。
   func sourcePreparedForParsing(_ source: String) -> String {
-    var text = sourceFilter?(source) ?? source
+    var text = applySourceFilter(to: source)
     if appearance.latexRendering.isEnabled {
       text = InkLaTeXSourcePreservation.preserveBracketDelimiters(in: text)
     }
     return text
+  }
+
+  private func applySourceFilter(to source: String) -> String {
+    guard let sourceFilter else { return source }
+
+    // 0.0.1 的公开 API 接受普通闭包；从 MainActor 上下文创建的闭包会隐式
+    // 保留主执行器检查。流式渲染仍在后台完成解析，但过滤器统一回到主队列调用，
+    // 避免把兼容闭包错误地当成可在任意队列执行的 @Sendable 工作。
+    if Thread.isMainThread {
+      return sourceFilter(source)
+    }
+    return DispatchQueue.main.sync {
+      sourceFilter(source)
+    }
   }
 }

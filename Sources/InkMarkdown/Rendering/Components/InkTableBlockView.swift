@@ -12,7 +12,9 @@ final class InkTableBlockView: UIView {
   private var config: InkAppearance.Table
   private var configuration: InkConfiguration
 
+  private var contentRoot: UIView?
   private var contentStack: UIStackView?
+  private var copyGestureRecognizer: UILongPressGestureRecognizer?
 
   init(headers: [String], rows: [[String]], alignments: [Table.ColumnAlignment?], layoutMode: InkTableLayoutMode, config: InkAppearance.Table, configuration: InkConfiguration) {
     self.headers = headers
@@ -44,8 +46,13 @@ final class InkTableBlockView: UIView {
     self.layoutMode = layoutMode
     self.config = config
     self.configuration = configuration
-    contentStack?.removeFromSuperview()
+    contentRoot?.removeFromSuperview()
+    contentRoot = nil
     contentStack = nil
+    if let copyGestureRecognizer {
+      removeGestureRecognizer(copyGestureRecognizer)
+      self.copyGestureRecognizer = nil
+    }
     setup()
     invalidateIntrinsicContentSize()
   }
@@ -100,6 +107,7 @@ final class InkTableBlockView: UIView {
 
     let container = InkTableRenderHelper.makeContainer(config: config)
     addSubview(container)
+    contentRoot = container
     container.translatesAutoresizingMaskIntoConstraints = false
     let bottomConstraint = container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset)
     bottomConstraint.priority = UILayoutPriority(999)
@@ -140,6 +148,7 @@ final class InkTableBlockView: UIView {
     scrollView.alwaysBounceVertical = false
     scrollView.translatesAutoresizingMaskIntoConstraints = false
     addSubview(scrollView)
+    contentRoot = scrollView
     let bottomConstraint = scrollView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset)
     bottomConstraint.priority = UILayoutPriority(999)
     NSLayoutConstraint.activate([
@@ -201,6 +210,7 @@ final class InkTableBlockView: UIView {
     if config.enableLongPressCopy {
       let gesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
       addGestureRecognizer(gesture)
+      copyGestureRecognizer = gesture
     }
   }
 

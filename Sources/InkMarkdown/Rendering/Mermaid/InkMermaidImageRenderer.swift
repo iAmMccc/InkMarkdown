@@ -20,13 +20,14 @@ public final class InkMermaidImageRenderer: NSObject {
   private var pageReady = false
   private var currentRequest: InkMermaidRenderRequestState?
 
+  /// 创建渲染器并捕获当前已注册的 Mermaid bridge bundle。
+  ///
+  /// 宿主必须先链接 `InkMarkdownMermaid` product 并调用 `InkMarkdownMermaid.register()`。
+  /// bundle 在初始化时确定；对已创建的实例延迟注册无法补入 bridge 资源。
   public init(limits: InkMermaidRenderLimits = .init()) {
     self.limits = limits
-    var bundle = Bundle.main
-    if let cls = NSClassFromString("InkMarkdownMermaid.InkMarkdownMermaid") {
-      bundle = Bundle(for: cls)
-    }
-    self.bridgeURL = bundle.url(forResource: "InkMermaidBridge", withExtension: "html") ?? Bundle.main.url(forResource: "InkMermaidBridge", withExtension: "html")
+    let bundle = InkGeneratedAddonRuntime.resourceBundle(owner: "mermaid")
+    self.bridgeURL = bundle?.url(forResource: "InkMermaidBridge", withExtension: "html")
     super.init()
   }
 

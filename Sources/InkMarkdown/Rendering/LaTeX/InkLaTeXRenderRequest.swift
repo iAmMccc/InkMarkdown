@@ -76,7 +76,7 @@ public struct InkLaTeXColor: Hashable, Sendable {
   }
 
   @MainActor
-  var uiColor: UIColor {
+  public var uiColor: UIColor {
     UIColor(
       red: CGFloat(red) / 255,
       green: CGFloat(green) / 255,

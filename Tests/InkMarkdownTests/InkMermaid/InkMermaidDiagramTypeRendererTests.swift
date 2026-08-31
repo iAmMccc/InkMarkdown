@@ -8,6 +8,9 @@ import UIKit
 /// 夹具独立于 ExampleApp `DemoMermaidSamples`：以已知合法字面量作为期望来源，避免 Demo 文案自证。
 @Suite(.serialized)
 struct InkMermaidDiagramTypeRendererTests {
+  init() {
+    _ = InkMarkdownMermaid.register()
+  }
 
   struct Fixture: CustomTestStringConvertible, Sendable {
     let name: String
@@ -18,11 +21,6 @@ struct InkMermaidDiagramTypeRendererTests {
   @Test(arguments: InkMermaidDiagramTypeFixtures.all)
   @MainActor
   func rendersDiagramTypeToPNG(_ fixture: Fixture) async throws {
-    do {
-      _ = try await InkMermaidDiagramTypeTestRenderer.shared().render(InkMermaidRenderRequest(source: "", display: .init(maxPixelWidth: 100, scale: 1, theme: .light)))
-    } catch InkMermaidRenderError.bundledResourceMissing {
-      return
-    } catch {}
     // 复用同一 renderer，避免每个 case 冷启动 3.4MB mermaid.min.js。
     let renderer = InkMermaidDiagramTypeTestRenderer.shared()
     let request = InkMermaidRenderRequest(

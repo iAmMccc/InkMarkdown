@@ -3,6 +3,8 @@ import Markdown
 
 /// Mermaid 的公共开关与主题。默认关闭，因而不会接管既有 `mermaid` 代码围栏。
 public struct InkMermaidRendering: Equatable, Sendable {
+  /// 是否启用 Mermaid 渲染。开启前必须链接 `InkMarkdownMermaid` product 并调用
+  /// `InkMarkdownMermaid.register()`；未注册的生成图请求会报告对应 owner 不可用。
   public var isEnabled: Bool = false
   public var theme: InkMermaidTheme = .light
   public var limits: InkMermaidRenderLimits = .init()
@@ -10,12 +12,31 @@ public struct InkMermaidRendering: Equatable, Sendable {
   public init() {}
 }
 
-/// Mermaid → 现有图片 Store 的 adapter。它不保留任何位图缓存。
-public final class InkMermaidGeneratedImageLoader: InkGeneratedImageLoading, @unchecked Sendable {
+/// 已注册的 Mermaid addon → 现有图片 Store 的 adapter。它不保留任何位图缓存。
+/// 在构造 loader 或 renderer 前调用 `InkMarkdownMermaid.register()`；注册会提供固定版本的
+/// bridge 资源 bundle。
+public final class InkMermaidGeneratedImageLoader: InkGeneratedImageLoading, InkConfigurationSemanticsProviding, @unchecked Sendable {
   private let limits: InkMermaidRenderLimits
 
   public init(limits: InkMermaidRenderLimits = .init()) {
     self.limits = limits
+  }
+
+  public var semanticIdentity: InkSemanticIdentity? {
+    InkSemanticIdentity([
+      InkMermaidImageRenderer.rendererVersion,
+      InkMermaidImageRenderer.mermaidVersion,
+      String(limits.maximumSourceCharacters),
+      String(Double(limits.minimumPixelWidth)),
+      String(Double(limits.maximumPixelWidth)),
+      String(Double(limits.maximumPixelHeight)),
+      String(limits.timeout),
+    ].joined(separator: "|"))
+  }
+
+  public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
+    guard let other = other as? InkMermaidGeneratedImageLoader else { return false }
+    return limits == other.limits
   }
 
   public func loadGeneratedImage(
@@ -23,29 +44,37 @@ public final class InkMermaidGeneratedImageLoader: InkGeneratedImageLoading, @un
     display: DisplayContext
   ) async throws -> UIImage {
     guard request.owner == "mermaid" else { throw ImageLoadError.decodeFailed }
+    guard let provider = InkGeneratedAddonRuntime.makeLoader(owner: "mermaid") as? InkMermaidRenderingProviding else {
+      throw ImageLoadError.generatedLoaderUnavailable(owner: "mermaid")
+    }
     let theme = InkMermaidTheme(rawValue: request.styleIdentity) ?? .light
-    let renderer = await MainActor.run { InkMermaidImageRenderer(limits: limits) }
-    let result = try await renderer.render(InkMermaidRenderRequest(
+    let result = try await provider.renderMermaid(InkMermaidRenderRequest(
       source: request.source,
       display: InkMermaidDisplayContext(
         maxPixelWidth: display.maxPixelWidth,
         scale: display.scale,
         theme: theme
       )
-    ))
+    ), limits: limits)
     return result.image
   }
 }
 
 /// 将精确标记为 `mermaid` 的围栏代码转为图片块。
-public struct InkMermaidBlockHandler: InkBlockHandler {
+/// 宿主须在首次渲染前调用 `InkMarkdownMermaid.register()`。
+public struct InkMermaidBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
   public init() {}
+
+  public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
+    other is InkMermaidBlockHandler
+  }
 
   public func canHandle(_ markup: Markup) -> Bool {
     guard let code = markup as? Markdown.CodeBlock else { return false }
     return InkMermaidFence.isMermaid(language: code.language)
   }
 
+  @MainActor
   public func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
     guard let code = markup as? Markdown.CodeBlock else { return nil }
     let mermaid = configuration.appearance.mermaidRendering

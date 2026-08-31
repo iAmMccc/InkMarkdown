@@ -6,46 +6,17 @@ import UIKit
 /// 使用 `loadToken` 丢弃过期的异步回调，避免复用或快速重配时错图。
 ///
 /// 须在主线程使用：内部依赖 ``InkImageStore``（``@MainActor``）。
-public struct InkImageBlock: InkRenderableBlock {
-  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
+///
+/// - Note: v0.0.1 起即为 ``UIView`` 子类；``makeView()`` 返回 `self` 供 adapter 挂载。
+public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
+  /// 图片源（URL、Bundle、generated 等）。
   public let source: ImageSource
-  private let rendering: InkImageRendering
-
-  public init(source: ImageSource, rendering: InkImageRendering) {
-    self.source = source
-    self.rendering = rendering
-  }
-
-  @MainActor
-  public func makeView() -> UIView {
-    InkImageBlockView(source: source, store: .shared, rendering: rendering)
-  }
-
-  @MainActor
-  public func updateExistingView(_ view: UIView) {
-    guard view is InkImageBlockView else { return }
-    view.setNeedsLayout()
-  }
-
-  @MainActor
-  @_spi(InkMarkdown)
-  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
-    InkFingerprint.combine(
-      documentEpoch,
-      UInt64(bitPattern: Int64(blockIndex)),
-      InkFingerprint.hash(source.rawURL.absoluteString)
-    )
-  }
-}
-
-public final class InkImageBlockView: UIView {
-  public let source: ImageSource
-  /// 保留高变化时通知宿主 adapter；由 SwiftUI/UIKit adapter 绑定，非公开渲染契约。
+  /// 保留高度变化时通知宿主 adapter；由 SwiftUI/UIKit adapter 绑定，非公开渲染契约。
   public var onReservedHeightChanged: (() -> Void)?
 
-  private var lastReservedHeight: CGFloat = -1
   private let store: InkImageStore
   private let rendering: InkImageRendering
+  private var lastReservedHeight: CGFloat = -1
   private var loadToken: UUID = UUID()
   nonisolated(unsafe) private var subscription: InkImageStore.ImageLoadSubscription?
   private var isConfigured = false
@@ -54,28 +25,40 @@ public final class InkImageBlockView: UIView {
   private var cachedFailureContentHeight: CGFloat = 0
   private var isShowingLoadingPlaceholder = false
 
-  private let imageView: UIImageView = {
-    let iv = UIImageView()
-    iv.contentMode = .scaleAspectFit
-    iv.clipsToBounds = true
-    return iv
-  }()
+  private let imageView: UIImageView
+  private let placeholderView: UIView
 
-  private let placeholderView: UIView = {
-    let v = UIView()
-    v.backgroundColor = UIColor.systemGray5
-    v.layer.cornerRadius = 8
-    return v
-  }()
+  /// 创建块级图片视图（块 handler 与默认 ``makeView()`` 路径）。
+  ///
+  /// - Parameters:
+  ///   - source: 图片源。
+  ///   - rendering: 图片渲染配置；须已按需开启 ``InkImageRendering/isEnabled``。
+  /// - Note: Block 路由在 UIKit 主线程调用；须在主线程构造。
+  @MainActor
+  public init(source: ImageSource, rendering: InkImageRendering) {
+    self.source = source
+    self.rendering = rendering
+    self.store = InkImageStore.shared
+    self.imageView = UIImageView()
+    self.placeholderView = UIView()
+    super.init(frame: .zero)
+    setupViews()
+  }
 
-  public init(
-    source: ImageSource,
-    store: InkImageStore,
-    rendering: InkImageRendering
-  ) {
+  /// 0.0.1 兼容初始化器：显式注入 ``InkImageStore``。
+  ///
+  /// - Parameters:
+  ///   - source: 图片源。
+  ///   - store: 图片加载与缓存 Store。
+  ///   - rendering: 图片渲染配置。
+  @available(*, deprecated, renamed: "init(source:rendering:)", message: "请改用 init(source:rendering:)；store 默认为 InkImageStore.shared。")
+  @MainActor
+  public init(source: ImageSource, store: InkImageStore, rendering: InkImageRendering) {
     self.source = source
     self.store = store
     self.rendering = rendering
+    self.imageView = UIImageView()
+    self.placeholderView = UIView()
     super.init(frame: .zero)
     setupViews()
   }
@@ -84,7 +67,30 @@ public final class InkImageBlockView: UIView {
     fatalError("init(coder:) has not been implemented")
   }
 
+  @MainActor
+  public func makeView() -> UIView {
+    setNeedsLayout()
+    return self
+  }
+
+  @MainActor
+  public func updateExistingView(_ view: UIView) -> Bool {
+    false
+  }
+
+  @MainActor
+  public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? InkImageBlock else { return false }
+    return source == previous.source
+      && rendering == previous.rendering
+      && store === previous.store
+  }
+
   private func setupViews() {
+    imageView.contentMode = .scaleAspectFit
+    imageView.clipsToBounds = true
+    placeholderView.backgroundColor = UIColor.systemGray5
+    placeholderView.layer.cornerRadius = 8
     addSubview(placeholderView)
     addSubview(imageView)
     imageView.isHidden = true
@@ -133,12 +139,12 @@ public final class InkImageBlockView: UIView {
   public override func layoutSubviews() {
     super.layoutSubviews()
     guard bounds.width > 0 else { return }
-    
+
     imageView.frame = bounds
     if let failure = failureContentView {
       failure.frame = bounds
     }
-    
+
     // D3：SSE 复用宿主时容器宽度会变；错宽下栅格化的位图被拉伸会糊化，允许按新宽度重配。
     if isConfigured, abs(bounds.width - configuredMaxWidth) > 1 {
       isConfigured = false
@@ -279,7 +285,8 @@ public final class InkImageBlockView: UIView {
       let view = InkCodeBlockViewFactory.makeView(
         code: code,
         language: language,
-        config: rendering.failureCodeBlockStyle
+        config: rendering.failureCodeBlockStyle,
+        appearance: InkAppearance.shared
       )
       installFailureContentView(view, maxWidth: maxWidth)
     }
@@ -377,8 +384,6 @@ public final class InkImageBlockView: UIView {
     return CGSize(width: UIView.noIntrinsicMetric, height: 0)
   }
 
-
-
   /// 取消订阅并重置为占位态，供列表复用。
   @MainActor
   public func prepareForReuse() {
@@ -397,3 +402,7 @@ public final class InkImageBlockView: UIView {
     subscription?.cancel()
   }
 }
+
+/// 0.0.1 类型名兼容别名；请改用 ``InkImageBlock``。
+@available(*, deprecated, renamed: "InkImageBlock", message: "请改用 InkImageBlock。")
+public typealias InkImageBlockView = InkImageBlock

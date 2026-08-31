@@ -27,7 +27,9 @@ final class InkTableCellTextView: UITextView, UITextViewDelegate {
     isEditable = false
     isSelectable = true
     isScrollEnabled = false
-    adjustsFontForContentSizeCategory = true
+    // 字体已按 InkRenderEnvironment 的显式 trait 快照缩放；若再开启 UIKit 自动缩放，
+    // UITextView 会用自身当前 trait 重写 attributed runs，丢失注入的 Dynamic Type 档位。
+    adjustsFontForContentSizeCategory = false
     backgroundColor = .clear
     textContainerInset = .zero
     dataDetectorTypes = []

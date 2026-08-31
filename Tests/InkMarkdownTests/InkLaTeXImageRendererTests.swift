@@ -1,8 +1,14 @@
+import InkMarkdownLaTeX
 import UIKit
 import XCTest
 @testable import InkMarkdown
 
 final class InkLaTeXImageRendererTests: XCTestCase {
+
+  override func setUp() {
+    super.setUp()
+    _ = InkMarkdownLaTeX.register()
+  }
 
   func testStableIDChangesWithContentDisplayAndStyle() {
     let resolvedBlack = InkLaTeXColor(red: 0, green: 0, blue: 0)
@@ -29,7 +35,6 @@ final class InkLaTeXImageRendererTests: XCTestCase {
   }
 
   func testRendererRejectsOversizedAndUnbalancedInputBeforeUIWork() async {
-    if InkLaTeXImageRenderer.rendererVersion == "iosMath-not-imported" { return }
     let renderer = InkLaTeXImageRenderer()
     let tooLong = makeRequest(latex: String(repeating: "x", count: InkLaTeXImageRenderer.maximumContentLength + 1))
     let unbalanced = makeRequest(latex: "\\frac{1}{2")
@@ -51,7 +56,6 @@ final class InkLaTeXImageRendererTests: XCTestCase {
   }
 
   func testRendererRejectsScaleAboveLaTeXLimitBeforeUIWork() async {
-    if InkLaTeXImageRenderer.rendererVersion == "iosMath-not-imported" { return }
     let request = makeRequest(latex: "x", scale: 5)
 
     await assertError(.invalidDisplayContext) {
@@ -60,7 +64,6 @@ final class InkLaTeXImageRendererTests: XCTestCase {
   }
 
   func testRendererAcceptsUIKitDisplayScales() async throws {
-    if InkLaTeXImageRenderer.rendererVersion == "iosMath-not-imported" { return }
     let renderer = InkLaTeXImageRenderer()
 
     for scale in [CGFloat(1), 2, 3] {
@@ -70,7 +73,7 @@ final class InkLaTeXImageRendererTests: XCTestCase {
   }
 
   func testRendererProducesImageForBasicExpression() async throws {
-    if InkLaTeXImageRenderer.rendererVersion == "iosMath-not-imported" { return }
+    XCTAssertEqual(InkLaTeXImageRenderer.rendererVersion, "iosMath-2.3.1-r1")
     let result = try await InkLaTeXImageRenderer().render(makeRequest(latex: "x^2 + y^2"))
 
     XCTAssertGreaterThan(result.image.size.width, 0)

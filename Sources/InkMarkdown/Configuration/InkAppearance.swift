@@ -1,5 +1,10 @@
 import UIKit
 
+/// 0.0.1 的复制反馈闭包允许捕获普通 UIKit/service 引用。
+private struct InkCopyFeedbackStorage: @unchecked Sendable {
+  var handler: ((UIView) -> Void)?
+}
+
 /// InkMarkdown 统一样式配置，按 Markdown 语法元素分类。
 ///
 /// 支持两种用法：
@@ -21,8 +26,34 @@ import UIKit
 /// ```
 public struct InkAppearance: Sendable {
 
+  private final class SharedStorage: @unchecked Sendable {
+    let lock = NSLock()
+    var value: InkAppearance?
+  }
+
+  private static let sharedStorage = SharedStorage()
+
   /// 全局默认样式（可变单例）。App 启动时配置一次，后续渲染自动读取。
-  @MainActor public static var shared = InkAppearance()
+  ///
+  /// 使用惰性锁存储保留 0.0.1 的非隔离调用方式，同时避免测试发现或模块加载线程
+  /// 提前构造 UIKit 颜色值。宿主仍应在 App 启动主线程完成全局配置。
+  public static var shared: InkAppearance {
+    get {
+      sharedStorage.lock.lock()
+      defer { sharedStorage.lock.unlock() }
+      if let value = sharedStorage.value {
+        return value
+      }
+      let value = InkAppearance()
+      sharedStorage.value = value
+      return value
+    }
+    set {
+      sharedStorage.lock.lock()
+      sharedStorage.value = newValue
+      sharedStorage.lock.unlock()
+    }
+  }
 
   // MARK: - 子配置
 
@@ -261,11 +292,30 @@ public extension InkAppearance {
     public var columnMaxWidthRatio: CGFloat = 0.5
     /// 是否支持长按复制。
     public var enableLongPressCopy: Bool = false
+    private var copyFeedbackStorage = InkCopyFeedbackStorage()
+    private var copyFeedbackSemanticIdentity: InkSemanticIdentity?
+
     /// 复制成功后的 UI 反馈回调。传入触发复制的 view，由调用方决定如何展示 toast。
-    /// 为 nil 时使用内置默认 toast。
-    public var onCopyFeedback: (@MainActor @Sendable (UIView) -> Void)?
+    /// 为 nil 时使用内置默认 toast。直接赋值会保守地生成新语义身份；
+    /// SwiftUI 反复构造等价回调时使用 ``setCopyFeedback(_:semanticIdentity:)``。
+    public var onCopyFeedback: ((UIView) -> Void)? {
+      get { copyFeedbackStorage.handler }
+      set {
+        copyFeedbackStorage.handler = newValue
+        copyFeedbackSemanticIdentity = newValue == nil ? nil : .unique()
+      }
+    }
 
     public init() {}
+
+    /// 设置复制反馈回调，并显式声明其交互语义身份。
+    public mutating func setCopyFeedback(
+      _ feedback: ((UIView) -> Void)?,
+      semanticIdentity: InkSemanticIdentity
+    ) {
+      copyFeedbackStorage.handler = feedback
+      copyFeedbackSemanticIdentity = feedback == nil ? nil : semanticIdentity
+    }
   }
 }
 
@@ -363,7 +413,12 @@ extension InkAppearance.Table: Equatable {
     lhs.separatorThickness == rhs.separatorThickness &&
     lhs.columnMaxWidthRatio == rhs.columnMaxWidthRatio &&
     lhs.enableLongPressCopy == rhs.enableLongPressCopy &&
-    (lhs.onCopyFeedback == nil) == (rhs.onCopyFeedback == nil)
+    InkSemanticComparator.opaqueValuesAreEquivalent(
+      lhsIsPresent: lhs.onCopyFeedback != nil,
+      rhsIsPresent: rhs.onCopyFeedback != nil,
+      lhsIdentity: lhs.copyFeedbackSemanticIdentity,
+      rhsIdentity: rhs.copyFeedbackSemanticIdentity
+    )
   }
 }
 
@@ -375,16 +430,22 @@ extension InkAppearance: Equatable {}
 
 public extension InkAppearance {
   /// 根据给定的文本样式和原始字体，返回经过 Dynamic Type 缩放的字体（若开启了支持）。
-  func scaledFont(_ font: UIFont, textStyle: UIFont.TextStyle = .body) -> UIFont {
+  func scaledFont(
+    _ font: UIFont,
+    textStyle: UIFont.TextStyle = .body,
+    compatibleWith traitCollection: UITraitCollection? = nil
+  ) -> UIFont {
     guard supportsDynamicType else { return font }
-    return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: font)
+    return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: font, compatibleWith: traitCollection)
   }
 
   /// 根据给定的文本样式和原始标量，返回经过 Dynamic Type 缩放的标量值（若开启了支持）。
-  func scaledValue(_ value: CGFloat, textStyle: UIFont.TextStyle = .body) -> CGFloat {
+  func scaledValue(
+    _ value: CGFloat,
+    textStyle: UIFont.TextStyle = .body,
+    compatibleWith traitCollection: UITraitCollection? = nil
+  ) -> CGFloat {
     guard supportsDynamicType else { return value }
-    return UIFontMetrics(forTextStyle: textStyle).scaledValue(for: value)
+    return UIFontMetrics(forTextStyle: textStyle).scaledValue(for: value, compatibleWith: traitCollection)
   }
 }
-
-

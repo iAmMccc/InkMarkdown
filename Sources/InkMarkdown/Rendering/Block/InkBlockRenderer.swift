@@ -10,14 +10,10 @@ import Markdown
 /// 业务方可覆盖或追加自定义 handler，实现 Open-Closed 扩展。
 public enum InkBlockRenderer {
 
-  @MainActor
-  public static func render(_ source: String) -> [InkRenderableBlock] {
-    render(source, configuration: .standard)
-  }
-
+  @preconcurrency @MainActor
   public static func render(
     _ source: String,
-    configuration: InkConfiguration
+    configuration: InkConfiguration = .standard
   ) -> [InkRenderableBlock] {
     let filtered = configuration.sourcePreparedForParsing(source)
     let document = InkParser.parse(filtered)
@@ -32,7 +28,8 @@ public enum InkBlockRenderer {
         blocks.append(InkAttributedTextBlock(
           attributedText: attributed,
           insets: configuration.appearance.text.blockInsets,
-          linkTapHandler: configuration.linkTapHandler
+          linkTapHandler: configuration.linkTapHandler,
+          linkTapSemanticIdentity: configuration.linkTapSemanticIdentityForBlockReuse
         ))
       }
     }
@@ -52,9 +49,12 @@ public enum InkBlockRenderer {
     let children = Array(document.children)
     var index = 0
     while index < children.count {
-      if let consumed = handlers.lazy.compactMap({
-        $0.consumeBlocks(from: children, startingAt: index, configuration: configuration)
-      }).first {
+      if let consumed = consumeMatchingBlocks(
+        handlers: handlers,
+        from: children,
+        startingAt: index,
+        configuration: configuration
+      ) {
         flushPendingAsAttributed()
         blocks.append(contentsOf: consumed.blocks)
         index += consumed.consumedCount
@@ -64,6 +64,20 @@ public enum InkBlockRenderer {
       }
     }
     flushPendingAsAttributed()
-    return InkBlockIdentityStamper.stamp(blocks, documentEpoch: InkDocumentEpoch.hash(filtered))
+    return blocks
   }
+
+  /// 仅 UIView block 的构造受 MainActor 约束；解析与 identity 不在此 helper 建立第二套状态。
+  @MainActor
+  private static func consumeMatchingBlocks(
+    handlers: [InkBlockHandler],
+    from children: [Markup],
+    startingAt index: Int,
+    configuration: InkConfiguration
+  ) -> (blocks: [InkRenderableBlock], consumedCount: Int)? {
+    handlers.lazy.compactMap {
+      $0.consumeBlocks(from: children, startingAt: index, configuration: configuration)
+    }.first
+  }
+
 }

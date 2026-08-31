@@ -10,7 +10,7 @@ public final class InkImageStore {
   // MARK: - 配置
 
   /// 图片 Store 的运行时配置。
-  public struct Configuration: Sendable {
+  public struct Configuration: Sendable, Equatable {
     /// 内存缓存总字节上限。
     public var totalCostLimit: Int = 60 * 1024 * 1024
     /// 内存缓存条目数上限。

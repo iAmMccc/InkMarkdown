@@ -6,14 +6,19 @@ import Markdown
 /// 仅当段落可提升（见 ``isPromotableImageParagraph(_:)``）且
 /// ``InkImageRendering/isEnabled`` / ``InkImageRendering/promotesToBlock`` 均为真时产出块。
 /// 应在 ``InkBlockRenderer`` 路由链中优先于其他 handler 注册（集成阶段处理）。
-public struct InkImageBlockHandler: InkBlockHandler {
+public struct InkImageBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
 
   public init() {}
+
+  public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
+    other is InkImageBlockHandler
+  }
 
   public func canHandle(_ markup: Markup) -> Bool {
     isPromotableImageParagraph(markup)
   }
 
+  @MainActor
   public func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
     guard let paragraph = markup as? Paragraph else { return nil }
     let imageNode = paragraph.children.compactMap { $0 as? Markdown.Image }.first

@@ -4,7 +4,7 @@ import UIKit
 ///
 /// 宿主可注入自定义实现（CDN 签名、鉴权 Header、本地数据库等）。
 /// 为 `nil` 时 ``InkImageStore`` 回退到内置 `DefaultURLSessionImageLoader`。
-public protocol InkImageLoading: Sendable {
+public protocol InkImageLoading: Sendable, InkSemanticIdentityProviding {
   /// 异步加载并解码图片。
   ///
   /// - Parameters:

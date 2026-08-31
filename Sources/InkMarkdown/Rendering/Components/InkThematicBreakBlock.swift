@@ -1,8 +1,7 @@
 import UIKit
 
 /// 分割线 Block：顶部一条细线 + 下方留白。
-public struct InkThematicBreakBlock: InkRenderableBlock {
-  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
+public struct InkThematicBreakBlock: InkRenderableBlock, InkReusableBlock {
   public let config: InkAppearance.ThematicBreak
 
   @MainActor
@@ -19,15 +18,16 @@ public struct InkThematicBreakBlock: InkRenderableBlock {
   }
 
   @MainActor
-  public func updateExistingView(_ view: UIView) {
-    guard let breakView = view as? InkThematicBreakView else { return }
+  public func updateExistingView(_ view: UIView) -> Bool {
+    guard let breakView = view as? InkThematicBreakView else { return false }
     breakView.apply(config: config)
+    return true
   }
 
   @MainActor
-  @_spi(InkMarkdown)
-  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
-    InkFingerprint.combine(documentEpoch, UInt64(bitPattern: Int64(blockIndex)), 1)
+  public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? InkThematicBreakBlock else { return false }
+    return config == previous.config
   }
 }
 
@@ -76,4 +76,3 @@ final class InkThematicBreakView: UIView {
     lineView.frame = CGRect(x: 0, y: 0, width: width, height: config.lineThickness)
   }
 }
-

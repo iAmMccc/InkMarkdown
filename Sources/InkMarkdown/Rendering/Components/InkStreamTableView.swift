@@ -184,14 +184,26 @@ public final class InkStreamTableView: UIView {
 
   /// 仅用新追加行的单元格与当前缓存列宽比较，O(cols) 而非 O(N×cols)
   private func widthsNeedExpand(for cells: [String]) -> Bool {
-    let bodyFont = UIFont.systemFont(ofSize: config.bodyFontSize)
+    let bodyFont = InkTableRenderHelper.font(
+      isHeader: false,
+      config: config,
+      configuration: configuration
+    )
     let maxColumnWidth = UIScreen.main.bounds.width * config.columnMaxWidthRatio
     for (colIndex, text) in cells.enumerated() {
       guard colIndex < cachedFixedWidths.count else { return true }
-      let cellWidth = min(
-        ceil((text as NSString).size(withAttributes: [.font: bodyFont]).width) + config.horizontalPadding * 2,
-        maxColumnWidth
+      let attributed = InkAttributedRenderer.renderInline(
+        text,
+        configuration: configuration,
+        baseFont: bodyFont,
+        textColor: config.bodyColor
       )
+      let measuredWidth = attributed.boundingRect(
+        with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude),
+        options: .usesLineFragmentOrigin,
+        context: nil
+      ).width
+      let cellWidth = min(ceil(measuredWidth) + config.horizontalPadding * 2, maxColumnWidth)
       if cellWidth > cachedFixedWidths[colIndex] + 0.5 {
         return true
       }

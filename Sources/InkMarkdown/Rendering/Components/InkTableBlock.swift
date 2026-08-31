@@ -2,7 +2,7 @@ import UIKit
 import Markdown
 
 /// 表格布局策略
-public enum InkTableLayoutMode: Sendable {
+public enum InkTableLayoutMode: Sendable, Equatable {
   /// 固定宽度，内容换行（适合列少、内容长的场景）
   case wrap
   /// 横向可滑动，单行不换行（适合列多、需要完整展示的场景）
@@ -11,8 +11,7 @@ public enum InkTableLayoutMode: Sendable {
 
 
 /// 表格 Block：解析 Markdown Table 后渲染为原生 UIView 表格。
-public struct InkTableBlock: InkRenderableBlock {
-  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
+public struct InkTableBlock: InkRenderableBlock, InkReusableBlock {
   public let headers: [String]
   public let rows: [[String]]
   public let alignments: [Table.ColumnAlignment?]
@@ -51,8 +50,8 @@ public struct InkTableBlock: InkRenderableBlock {
   }
 
   @MainActor
-  public func updateExistingView(_ view: UIView) {
-    guard let tableView = view as? InkTableBlockView else { return }
+  public func updateExistingView(_ view: UIView) -> Bool {
+    guard let tableView = view as? InkTableBlockView else { return false }
     tableView.apply(
       headers: headers,
       rows: rows,
@@ -61,17 +60,18 @@ public struct InkTableBlock: InkRenderableBlock {
       config: config,
       configuration: configuration
     )
+    return true
   }
 
   @MainActor
-  @_spi(InkMarkdown)
-  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
-    InkFingerprint.combine(
-      documentEpoch,
-      UInt64(bitPattern: Int64(blockIndex)),
-      InkFingerprint.hash(headers.joined(separator: "\u{1f}")),
-      InkFingerprint.hash(rows.flatMap { $0 }.joined(separator: "\u{1f}"))
-    )
+  public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? InkTableBlock else { return false }
+    return headers == previous.headers
+      && rows == previous.rows
+      && alignments == previous.alignments
+      && layoutMode == previous.layoutMode
+      && config == previous.config
+      && configuration.isSemanticallyEqualTo(previous.configuration)
   }
 }
 

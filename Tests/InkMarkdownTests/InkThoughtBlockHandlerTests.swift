@@ -5,7 +5,7 @@
 
 import Testing
 import UIKit
-@testable import InkMarkdown
+@_spi(InkMarkdown) @testable import InkMarkdown
 
 @Suite("InkThoughtBlockHandler 思考过程块解析与渲染行为矩阵测试")
 struct InkThoughtBlockHandlerTests {
@@ -283,6 +283,204 @@ struct InkThoughtBlockHandlerTests {
     let split = InkThoughtScanner.splitStreamingSource(source)
     #expect(split.thought?.isComplete == true)
     #expect(split.remainder.contains("正式回答"))
+  }
+
+  @Test("splitStreamingSource：行内代码中的闭标签不提前结束 Thought")
+  func splitStreamingSourceIgnoresClosingTagInsideInlineCode() {
+    let cases: [
+      (
+        source: String,
+        thoughtContains: String,
+        thoughtExcludes: String?,
+        remainderContains: String?,
+        remainderExcludes: String?,
+        expectedComplete: Bool?,
+        expectedThoughtBody: String?,
+        expectedRemainder: String?
+      )
+    ] = [
+      (
+        source: """
+        <think>
+        说明 `<think>...</think>` 标签。
+        仍然属于思考过程。
+        </think>
+        正式回答
+        """,
+        thoughtContains: "仍然属于思考过程。",
+        thoughtExcludes: nil,
+        remainderContains: "正式回答",
+        remainderExcludes: "仍然属于思考过程。",
+        expectedComplete: nil,
+        expectedThoughtBody: nil,
+        expectedRemainder: nil
+      ),
+      (
+        source: "<think>unfinished `\n</think>\nanswer `code`",
+        thoughtContains: "unfinished `",
+        thoughtExcludes: nil,
+        remainderContains: nil,
+        remainderExcludes: nil,
+        expectedComplete: false,
+        expectedThoughtBody: nil,
+        expectedRemainder: ""
+      ),
+      (
+        source: "<think>跨行 `code\n</think>\nstill code`\n继续思考\n</think>\nsuffix",
+        thoughtContains: "still code`\n继续思考",
+        thoughtExcludes: nil,
+        remainderContains: "suffix",
+        remainderExcludes: "继续思考",
+        expectedComplete: true,
+        expectedThoughtBody: "跨行 `code\n</think>\nstill code`\n继续思考",
+        expectedRemainder: "\nsuffix"
+      ),
+      (
+        source: "<think>\n`orphan\n``</think>``\n</think>\nsuffix",
+        thoughtContains: "``</think>``",
+        thoughtExcludes: nil,
+        remainderContains: nil,
+        remainderExcludes: "</think>",
+        expectedComplete: false,
+        expectedThoughtBody: nil,
+        expectedRemainder: ""
+      ),
+      (
+        source: "<think>\n\\`literal </think> tail`\n</think>\nsuffix",
+        thoughtContains: "\\`literal",
+        thoughtExcludes: "tail`",
+        remainderContains: "tail`",
+        remainderExcludes: nil,
+        expectedComplete: nil,
+        expectedThoughtBody: nil,
+        expectedRemainder: nil
+      ),
+      (
+        source: "<think>unfinished `\n</think>\nanswer `code`\n</think>",
+        thoughtContains: "answer `code`",
+        thoughtExcludes: nil,
+        remainderContains: nil,
+        remainderExcludes: nil,
+        expectedComplete: false,
+        expectedThoughtBody: nil,
+        expectedRemainder: ""
+      ),
+      (
+        source: "<think>`a ``b` </think> ``x </think>suffix",
+        thoughtContains: "`a ``b`",
+        thoughtExcludes: nil,
+        remainderContains: "``x </think>suffix",
+        remainderExcludes: nil,
+        expectedComplete: true,
+        expectedThoughtBody: "`a ``b`",
+        expectedRemainder: " ``x </think>suffix"
+      ),
+      (
+        source: "<think>`</think>`",
+        thoughtContains: "`</think>`",
+        thoughtExcludes: nil,
+        remainderContains: nil,
+        remainderExcludes: nil,
+        expectedComplete: false,
+        expectedThoughtBody: "`</think>`",
+        expectedRemainder: ""
+      ),
+      (
+        source: "<think>`</think>`</think>answer",
+        thoughtContains: "`</think>`",
+        thoughtExcludes: nil,
+        remainderContains: "answer",
+        remainderExcludes: nil,
+        expectedComplete: true,
+        expectedThoughtBody: "`</think>`",
+        expectedRemainder: "answer"
+      ),
+      (
+        source: "<think>`code \\`</think>answer",
+        thoughtContains: "`code \\`",
+        thoughtExcludes: nil,
+        remainderContains: "answer",
+        remainderExcludes: nil,
+        expectedComplete: true,
+        expectedThoughtBody: "`code \\`",
+        expectedRemainder: "answer"
+      )
+    ]
+
+    for testCase in cases {
+      let split = InkThoughtScanner.splitStreamingSource(testCase.source)
+
+      #expect(split.thought?.isComplete == (testCase.expectedComplete ?? true))
+      #expect(split.thought?.thoughtBody.contains(testCase.thoughtContains) == true)
+
+      if let remainderContains = testCase.remainderContains {
+        #expect(split.remainder.contains(remainderContains))
+      }
+
+      if let expectedThoughtBody = testCase.expectedThoughtBody {
+        #expect(split.thought?.thoughtBody == expectedThoughtBody)
+      }
+      if let expectedRemainder = testCase.expectedRemainder {
+        #expect(split.remainder == expectedRemainder)
+      }
+
+      if let thoughtExcludes = testCase.thoughtExcludes {
+        #expect(split.thought?.thoughtBody.contains(thoughtExcludes) == false)
+      }
+      if let remainderExcludes = testCase.remainderExcludes {
+        #expect(!split.remainder.contains(remainderExcludes))
+      }
+
+      var incrementalScanner = InkThoughtScanner.StreamingScanner()
+      var incrementalThoughtBody = ""
+      var incrementalRemainder = ""
+      var lastUpdate = incrementalScanner.append("")
+      for character in testCase.source {
+        lastUpdate = incrementalScanner.append(String(character))
+        incrementalThoughtBody += lastUpdate.thoughtBodyDelta
+        incrementalRemainder += lastUpdate.remainderDelta
+      }
+
+      #expect(
+        incrementalScanner.debugInputUnitInspectionCount == testCase.source.utf16.count,
+        "增量 scanner 不得重复检查历史 source"
+      )
+      #expect(incrementalThoughtBody == split.thought?.thoughtBody)
+      #expect(incrementalRemainder == split.remainder)
+      switch (lastUpdate.phase, split.thought) {
+      case (.thought(let incrementalComplete), .some(let expectedThought)):
+        #expect(incrementalComplete == expectedThought.isComplete)
+      case (.passthrough, .none):
+        break
+      default:
+        Issue.record("增量 scanner phase 与完整 streaming split 不一致")
+      }
+    }
+
+    // Streaming must stay conservative while an opener could still be closed by a future chunk;
+    // the completed/static scanner may resolve the same orphan backtick as literal text.
+    let completedSource = "<think>unfinished `\n</think>\nanswer `code`\n</think>"
+    let completed = InkThoughtScanner.scan(from: completedSource)
+    #expect(completed?.isComplete == true)
+    #expect(completed?.thoughtBody == "unfinished `\n</think>\nanswer `code`")
+
+    let linearBodyLength = 49_970
+    let linearBody = String(repeating: "x", count: linearBodyLength)
+    let linearSource = "<think>" + linearBody + "</think>z"
+    var linearScanner = InkThoughtScanner.StreamingScanner()
+    var emittedThoughtUnits = 0
+    var emittedRemainder = ""
+    var finalPhase = InkThoughtScanner.StreamingScanner.Phase.prefixUndecided
+    for scalar in linearSource.unicodeScalars {
+      let update = linearScanner.append(String(scalar))
+      emittedThoughtUnits += update.thoughtBodyDelta.utf16.count
+      emittedRemainder += update.remainderDelta
+      finalPhase = update.phase
+    }
+    #expect(linearScanner.debugInputUnitInspectionCount == linearSource.utf16.count)
+    #expect(emittedThoughtUnits == linearBodyLength)
+    #expect(emittedRemainder == "z")
+    #expect(finalPhase == .thought(isComplete: true))
   }
 
   @Test("splitStreamingSource：非 PREFIX 文本 thought 为 nil，remainder 为全文")

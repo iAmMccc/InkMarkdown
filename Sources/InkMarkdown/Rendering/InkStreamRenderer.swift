@@ -1,6 +1,45 @@
 import UIKit
 import Markdown
 
+/// 流式 Markdown 输入上限的不可变快照。
+///
+/// 该快照由会话在创建时生成，再由会话与底层 renderer 共同持有，保证
+/// canonical source 的接收、解析和终态提升使用同一个上限。传入 `0` 或负数
+/// 时视为无效，自动回退到默认值 `50_000`；不会因此取消长度保护。
+@_spi(InkMarkdown)
+public struct InkStreamSourceLimit: Sendable {
+  /// 默认最大源文本长度，保持 0.0.1 的行为。
+  public static let defaultMaximum = 50_000
+
+  /// 归一化后的最大源文本长度。
+  public let maximum: Int
+
+  /// 创建上限快照；非正数回退到 ``defaultMaximum``。
+  public init(maximum requestedMaximum: Int) {
+    self.maximum = requestedMaximum > 0 ? requestedMaximum : Self.defaultMaximum
+  }
+
+  /// 返回在当前 canonical source 后仍可接受的分片；超出部分不返回。
+  public func acceptedChunk(_ chunk: String, after source: String) -> String {
+    let remaining = maximum - source.count
+    guard remaining > 0, !chunk.isEmpty else { return "" }
+    guard chunk.count > remaining else { return chunk }
+    return String(chunk.prefix(remaining))
+  }
+
+  /// 将任意源文本收敛为不超过上限的 canonical source。
+  public func canonicalSource(_ source: String) -> String {
+    guard source.count > maximum else { return source }
+    return String(source.prefix(maximum))
+  }
+
+  /// 判断分片是否已经由该快照完整接受；canonical append seam 不在此处截断。
+  public func canAppend(_ chunk: String, after source: String) -> Bool {
+    guard source.count <= maximum else { return false }
+    return chunk.count <= maximum - source.count
+  }
+}
+
 /// 流式渲染器：把一段会**持续增长**的 Markdown 文本，增量渲染为 `NSAttributedString`，
 /// 并支持直接绑定 `UITextView` 进行差量更新。
 ///
@@ -44,8 +83,14 @@ public final class InkStreamRenderer: @unchecked Sendable {
   /// 节流路径会跳过重写与回调——此时宿主收到的上一份内容仍然有效。
   public var onUpdate: ((NSAttributedString) -> Void)?
 
-  /// 单个会话可解析的最大 Markdown 字符数；超出部分不会进入该 renderer 的 canonical source。
-  public static let maximumSourceLength = 50_000
+  /// 单个会话默认可解析的最大 Markdown 字符数；保留此静态常量以兼容既有调用方。
+  public static let maximumSourceLength = InkStreamSourceLimit.defaultMaximum
+
+  /// 当前 renderer 创建时固定的最大 Markdown 源文本长度。
+  ///
+  /// 该值是不可变快照。传入 initializer 的 `0` 或负数会回退为
+  /// ``InkStreamRenderer/maximumSourceLength``。
+  public let maximumSourceLength: Int
 
   /// 每帧显示的字符数。60fps 下：1=60字/秒，2=120字/秒，3=180字/秒。
   public var charactersPerFrame: Int = 2
@@ -127,11 +172,37 @@ public final class InkStreamRenderer: @unchecked Sendable {
   /// "本次 append 真正影响的范围"，而不是每次都从 0 全量重写。
   private var lastFilteredContent: NSAttributedString?
 
+  /// 创建时注入的不可变上限快照；session 与 renderer 共享同一实例。
+  private let sourceLimit: InkStreamSourceLimit
+
   // MARK: - Init
 
+  /// 创建一个流式 Markdown renderer。
+  /// - Parameters:
+  ///   - configuration: 此 renderer 使用的 Markdown 渲染配置快照。
+  ///   - maximumSourceLength: 此 renderer 可接受的最大 Markdown 字符数。必须为正数；
+  ///     `0` 或负数视为无效并回退到默认 `50_000`。
   @MainActor
-  public init(configuration: InkConfiguration = .standard) {
+  public init(
+    configuration: InkConfiguration = .standard,
+    maximumSourceLength: Int = InkStreamRenderer.maximumSourceLength
+  ) {
     self.configuration = configuration
+    let sourceLimit = InkStreamSourceLimit(maximum: maximumSourceLength)
+    self.sourceLimit = sourceLimit
+    self.maximumSourceLength = sourceLimit.maximum
+  }
+
+  /// 以既有不可变上限快照创建 renderer。
+  ///
+  /// 该 initializer 供 `InkMarkdownRenderSession` 复用同一个 source-limit
+  /// snapshot；普通调用方应使用带 `maximumSourceLength` 的公开 initializer。
+  @_spi(InkMarkdown)
+  @MainActor
+  public init(configuration: InkConfiguration = .standard, sourceLimit: InkStreamSourceLimit) {
+    self.configuration = configuration
+    self.sourceLimit = sourceLimit
+    self.maximumSourceLength = sourceLimit.maximum
   }
 
   /// 替换渲染配置，并以给定完整源文本重新开始解析和显示。
@@ -153,22 +224,20 @@ public final class InkStreamRenderer: @unchecked Sendable {
   // MARK: - Public API
 
   /// 绑定 UITextView，后续 append/finish 会自动驱动其 textStorage 更新。
-  /// 如果已有已显示内容（displayIndex > 0），会同步到新 textView。
+  /// 总是用当前 renderer 的显示快照覆盖 textView；空快照也必须清空旧会话内容。
   @MainActor
   public func bindTextView(_ tv: UITextView) {
     self.textView = tv
 
-    // 重新绑定时同步已显示的内容到新 textView
-    if displayIndex > 0 {
-      preloadLock.lock()
-      let content = preloadContent
-      preloadLock.unlock()
-      let showLength = min(displayIndex, content.length)
-      if showLength > 0 {
-        let displayed = content.attributedSubstring(from: NSRange(location: 0, length: showLength))
-        tv.textStorage.setAttributedString(displayed)
-        bindImageAttachmentsIfNeeded()
-      }
+    // textView 可能由另一个 session 复用。绑定即转移内容所有权，不能把新内容追加到旧 storage。
+    preloadLock.lock()
+    let content = preloadContent
+    preloadLock.unlock()
+    let showLength = min(displayIndex, content.length)
+    let displayed = content.attributedSubstring(from: NSRange(location: 0, length: showLength))
+    tv.textStorage.setAttributedString(displayed)
+    if showLength > 0 {
+      bindImageAttachmentsIfNeeded()
     }
 
     if !buffer.isEmpty || isFinished {
@@ -193,7 +262,8 @@ public final class InkStreamRenderer: @unchecked Sendable {
   }
 
   /// 追加一段新到达的 Markdown 文本分片。
-  /// 内部将在后台队列异步解析，不阻塞主线程。超过 ``maximumSourceLength`` 的尾部不会进入会话。
+  /// 内部将在后台队列异步解析，不阻塞主线程。超过创建时上限的尾部不会进入
+  /// renderer 的 canonical source。
   @MainActor
   public func append(_ chunk: String) {
     // finish() 已把 buffer 固化为终态：此后到达的分片一律安全忽略。
@@ -202,10 +272,24 @@ public final class InkStreamRenderer: @unchecked Sendable {
     // 覆盖 finalize 结果或提前触发 onFinishDisplay。
     guard !isFinished else { return }
 
-    let remainingCapacity = Self.maximumSourceLength - buffer.count
-    guard remainingCapacity > 0 else { return }
+    let acceptedChunk = sourceLimit.acceptedChunk(chunk, after: buffer)
+    guard !acceptedChunk.isEmpty else { return }
+    appendAcceptedChunk(acceptedChunk)
+  }
 
-    let acceptedChunk = String(chunk.prefix(remainingCapacity))
+  /// 接收已由同一 source-limit snapshot 接受的 canonical remainder 分片。
+  ///
+  /// 该 SPI seam 供 SwiftUI session 使用：session 先以完整 canonical source
+  /// 接受输入，再把 remainder 交给 renderer，避免两个模块各自截断同一输入。
+  @_spi(InkMarkdown)
+  @MainActor
+  public func appendCanonical(_ chunk: String) {
+    guard !isFinished, !chunk.isEmpty, sourceLimit.canAppend(chunk, after: buffer) else { return }
+    appendAcceptedChunk(chunk)
+  }
+
+  @MainActor
+  private func appendAcceptedChunk(_ acceptedChunk: String) {
     buffer += acceptedChunk
     if textView != nil || onUpdate != nil {
       startDisplayLink()
@@ -248,7 +332,8 @@ public final class InkStreamRenderer: @unchecked Sendable {
   @MainActor
   public func reset(to source: String = "") {
     stopDisplayLink()
-    buffer = source
+    let canonicalSource = sourceLimit.canonicalSource(source)
+    buffer = canonicalSource
     displayIndex = 0
     isFinished = false
     lastAppliedParseVersion = 0
@@ -263,7 +348,7 @@ public final class InkStreamRenderer: @unchecked Sendable {
     preloadLock.unlock()
 
     let config = configuration.capturingRenderEnvironmentForBackgroundParse()
-    if source.isEmpty {
+    if canonicalSource.isEmpty {
       parseQueue.async { [weak self] in
         self?.incrementalRenderer.reset()
         // diff 基线一并清空：只在 parseQueue 上触碰 lastFilteredContent，避免跨线程竞争。
@@ -281,11 +366,11 @@ public final class InkStreamRenderer: @unchecked Sendable {
         guard let self = self else { return }
         let result: InkIncrementalMarkdownRenderer.Result
         if config.sourceFilter == nil {
-          result = self.incrementalRenderer.replaceSource(source, configuration: config)
+          result = self.incrementalRenderer.replaceSource(canonicalSource, configuration: config)
         } else {
           self.incrementalRenderer.reset()
           result = InkIncrementalMarkdownRenderer.Result(
-            content: InkAttributedRenderer.render(source, configuration: config),
+            content: InkAttributedRenderer.render(canonicalSource, configuration: config),
             refreshLocation: 0
           )
         }
@@ -355,6 +440,11 @@ public final class InkStreamRenderer: @unchecked Sendable {
     preloadLock.unlock()
     return content
   }
+
+  /// 当前已接受的 canonical Markdown 源文本；仅供 adapter 与契约测试核对输入一致性。
+  @_spi(InkMarkdown)
+  @MainActor
+  public var canonicalSource: String { buffer }
 
   private func currentRenderGeneration() -> UInt64 {
     preloadLock.lock()

@@ -118,4 +118,86 @@ struct AccessibilityAndDynamicTypeTests {
     let size = view.sizeThatFits(CGSize(width: 320, height: CGFloat.greatestFiniteMagnitude))
     #expect(size.height > 60)
   }
+
+  @Test("表格列宽测量、流式 cell 字体与行高使用同一 Dynamic Type trait")
+  func tableWidthMeasurementUsesScaledFont() {
+    var normal = InkConfiguration.standard
+    normal.renderEnvironment = InkRenderEnvironment(contentSizeCategory: .large)
+    var accessibility = normal
+    accessibility.renderEnvironment = InkRenderEnvironment(
+      contentSizeCategory: .accessibilityExtraExtraExtraLarge
+    )
+
+    let headers = ["Column"]
+    let rows = [["Dynamic Type table measurement"]]
+    let normalWidths = InkTableRenderHelper.measureColumnContentWidths(
+      headers: headers,
+      rows: rows,
+      config: normal.appearance.table,
+      configuration: normal,
+      containerWidth: 2_000
+    )
+    let accessibilityWidths = InkTableRenderHelper.measureColumnContentWidths(
+      headers: headers,
+      rows: rows,
+      config: accessibility.appearance.table,
+      configuration: accessibility,
+      containerWidth: 2_000
+    )
+
+    #expect(normalWidths.count == 1)
+    #expect(accessibilityWidths.count == 1)
+    #expect(accessibilityWidths[0] > normalWidths[0])
+
+    // 保持内容宽度低于最窄支持设备的 columnMaxWidthRatio 上限，
+    // 否则普通与辅助功能字号都会被 clamp 成同一宽度，测试只会验证设备尺寸。
+    let streamHeaders = ["Column", "Value"]
+    let streamRows = [["Content", "1"]]
+    let normalStream = InkStreamTableView(layoutMode: .scroll, configuration: normal)
+    normalStream.setHeaders(streamHeaders, referenceRows: streamRows)
+    normalStream.appendRow(streamRows[0])
+    let accessibilityStream = InkStreamTableView(layoutMode: .scroll, configuration: accessibility)
+    accessibilityStream.setHeaders(streamHeaders, referenceRows: streamRows)
+    accessibilityStream.appendRow(streamRows[0])
+
+    let normalCell = descendants(of: UITextView.self, in: normalStream)[0]
+    let accessibilityCell = descendants(of: UITextView.self, in: accessibilityStream)[0]
+    let normalHelperFont = InkTableRenderHelper.font(
+      isHeader: true,
+      config: normal.appearance.table,
+      configuration: normal
+    )
+    let accessibilityHelperFont = InkTableRenderHelper.font(
+      isHeader: true,
+      config: accessibility.appearance.table,
+      configuration: accessibility
+    )
+    let normalFont = normalCell.attributedText.attribute(.font, at: 0, effectiveRange: nil) as? UIFont
+    let accessibilityFont = accessibilityCell.attributedText.attribute(.font, at: 0, effectiveRange: nil) as? UIFont
+    let normalParagraph = normalCell.attributedText.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle
+    let accessibilityParagraph = accessibilityCell.attributedText.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle
+    let normalWidth = widthConstraintConstants(in: normalStream).max() ?? 0
+    let accessibilityWidth = widthConstraintConstants(in: accessibilityStream).max() ?? 0
+
+    #expect(accessibilityHelperFont.pointSize > normalHelperFont.pointSize)
+    #expect(accessibilityFont?.pointSize == accessibilityHelperFont.pointSize)
+    #expect(normalFont?.pointSize == normalHelperFont.pointSize)
+    #expect((accessibilityParagraph?.minimumLineHeight ?? 0) > (normalParagraph?.minimumLineHeight ?? 0))
+    #expect(accessibilityWidth > normalWidth)
+  }
+
+  private func descendants<T: UIView>(of type: T.Type, in root: UIView) -> [T] {
+    root.subviews.flatMap { view -> [T] in
+      let current = (view as? T).map { [$0] } ?? []
+      return current + descendants(of: type, in: view)
+    }
+  }
+
+  private func widthConstraintConstants(in root: UIView) -> [CGFloat] {
+    let own = root.constraints.compactMap { constraint -> CGFloat? in
+      guard constraint.firstAttribute == .width, constraint.constant > 1 else { return nil }
+      return constraint.constant
+    }
+    return own + root.subviews.flatMap(widthConstraintConstants(in:))
+  }
 }

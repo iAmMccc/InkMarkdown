@@ -12,6 +12,10 @@ struct InkTextContext {
   /// 是否有删除线
   var isStrikethrough: Bool = false
 
+  /// 当前列表内容起点的累计缩进。根列表为 0；嵌套列表在父级内容起点上
+  /// 叠加父级 marker 宽度，使列表排版不依赖固定层级常量。
+  var listIndent: CGFloat = 0
+
   /// 当前基准字体：字号 / 字重 / traits / family 全部编码在内。
   var font: UIFont
   /// 当前前景色。
@@ -100,6 +104,13 @@ struct InkTextContext {
   func withFont(_ newFont: UIFont) -> InkTextContext {
     var copy = self
     copy.font = newFont
+    return copy
+  }
+
+  /// 派生嵌套列表的内容起点，保留其它行内渲染状态。
+  func withListIndent(_ indent: CGFloat) -> InkTextContext {
+    var copy = self
+    copy.listIndent = indent
     return copy
   }
 

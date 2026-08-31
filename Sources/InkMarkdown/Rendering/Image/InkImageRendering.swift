@@ -1,5 +1,11 @@
 import UIKit
 
+/// 0.0.1 的图片回调没有 `@Sendable` / actor 约束；兼容存储不改变其调用线程契约。
+private struct InkImageCallbackStorage: @unchecked Sendable {
+  var imageTap: ((ImageSource, UIImage?) -> Void)?
+  var loadFinished: ((ImageSource, UIImage?) -> Void)?
+}
+
 // MARK: - ImageSizing
 
 /// 块级与行内图片的尺寸约束。
@@ -75,18 +81,38 @@ enum InkImageFailureFallback: Hashable {
 /// 图片渲染的完整公开配置。
 ///
 /// 聚合开关、加载器、缓存、安全策略、尺寸与交互行为。
-/// 因含闭包与协议类型，本结构体不 conform `Sendable`。
+/// 闭包与自定义 loader 通过 ``InkSemanticIdentity`` 补足可比较的值语义。
 public struct InkImageRendering: Sendable {
 
   /// 是否启用图片渲染。默认 `false`，保持 v1 占位行为。
   public var isEnabled: Bool = false
 
+  private var storedLoader: (any InkImageLoading)?
+  private var loaderSemanticIdentity: InkSemanticIdentity?
+
   /// 自定义图片加载器。`nil` 时 Store 使用内置 `DefaultURLSessionImageLoader`。
-  public var loader: (any InkImageLoading)?
+  /// 直接赋值会保守地生成新语义身份；反复构造等价 loader 时使用
+  /// ``setLoader(_:semanticIdentity:)``。
+  public var loader: (any InkImageLoading)? {
+    get { storedLoader }
+    set {
+      storedLoader = newValue
+      loaderSemanticIdentity = newValue == nil ? nil : .unique()
+    }
+  }
+
+  private var storedGeneratedLoader: (any InkImageLoading)?
+  private var generatedLoaderSemanticIdentity: InkSemanticIdentity?
 
   /// 本地生成型图片的 loader。仅当 ``ImageSource/generatedRequest`` 非空时使用。
   /// 其结果仍进入同一个 ``InkImageStore``，不会创建独立缓存。
-  public var generatedLoader: (any InkImageLoading)?
+  public var generatedLoader: (any InkImageLoading)? {
+    get { storedGeneratedLoader }
+    set {
+      storedGeneratedLoader = newValue
+      generatedLoaderSemanticIdentity = newValue == nil ? nil : .unique()
+    }
+  }
 
   /// 内存缓存配置。
   public var storeConfiguration: InkImageStore.Configuration = .init()
@@ -109,12 +135,29 @@ public struct InkImageRendering: Sendable {
   /// 点击图片时的默认行为。块级 ``InkImageBlock`` 会自动分发；默认 `.none`。
   public var tapAction: ImageTapAction = .none
 
+  private var callbackStorage = InkImageCallbackStorage()
+  private var imageTapSemanticIdentity: InkSemanticIdentity?
+
   /// 图片点击回调（仅在 ``tapAction`` 为 `.callback` 或 `.openURL` 时触发）。
-  public var onImageTap: (@MainActor @Sendable (ImageSource, UIImage?) -> Void)?
+  public var onImageTap: ((ImageSource, UIImage?) -> Void)? {
+    get { callbackStorage.imageTap }
+    set {
+      callbackStorage.imageTap = newValue
+      imageTapSemanticIdentity = newValue == nil ? nil : .unique()
+    }
+  }
+
+  private var loadFinishedSemanticIdentity: InkSemanticIdentity?
 
   /// 加载完成回调（成功返回图片，失败返回 nil）。
   /// 在块级图片等展示层收到 Store 结果并应用后触发。
-  public var onLoadFinished: (@MainActor @Sendable (ImageSource, UIImage?) -> Void)?
+  public var onLoadFinished: ((ImageSource, UIImage?) -> Void)? {
+    get { callbackStorage.loadFinished }
+    set {
+      callbackStorage.loadFinished = newValue
+      loadFinishedSemanticIdentity = newValue == nil ? nil : .unique()
+    }
+  }
 
   /// 动图播放策略。
   public var animatedImagePolicy: AnimatedImagePolicy = .staticFirstFrame
@@ -129,6 +172,42 @@ public struct InkImageRendering: Sendable {
   var failureCodeBlockStyle: InkAppearance.CodeBlock = .init()
 
   public init() {}
+
+  /// 设置自定义 loader，并显式声明其加载语义身份。
+  public mutating func setLoader(
+    _ loader: (any InkImageLoading)?,
+    semanticIdentity: InkSemanticIdentity
+  ) {
+    storedLoader = loader
+    loaderSemanticIdentity = loader == nil ? nil : semanticIdentity
+  }
+
+  /// 设置生成图 loader，并显式声明其加载语义身份。
+  public mutating func setGeneratedLoader(
+    _ loader: (any InkImageLoading)?,
+    semanticIdentity: InkSemanticIdentity
+  ) {
+    storedGeneratedLoader = loader
+    generatedLoaderSemanticIdentity = loader == nil ? nil : semanticIdentity
+  }
+
+  /// 设置图片点击回调，并显式声明其交互语义身份。
+  public mutating func setImageTapHandler(
+    _ handler: ((ImageSource, UIImage?) -> Void)?,
+    semanticIdentity: InkSemanticIdentity
+  ) {
+    callbackStorage.imageTap = handler
+    imageTapSemanticIdentity = handler == nil ? nil : semanticIdentity
+  }
+
+  /// 设置加载完成回调，并显式声明其交互语义身份。
+  public mutating func setLoadFinishedHandler(
+    _ handler: ((ImageSource, UIImage?) -> Void)?,
+    semanticIdentity: InkSemanticIdentity
+  ) {
+    callbackStorage.loadFinished = handler
+    loadFinishedSemanticIdentity = handler == nil ? nil : semanticIdentity
+  }
 }
 
 // MARK: - Equatable
@@ -138,14 +217,40 @@ extension ImageSizing: Equatable {}
 extension InkImageRendering: Equatable {
   public static func == (lhs: InkImageRendering, rhs: InkImageRendering) -> Bool {
     lhs.isEnabled == rhs.isEnabled &&
+    InkSemanticComparator.imageLoadersAreEquivalent(
+      lhs.storedLoader,
+      rhs.storedLoader,
+      lhsFallbackIdentity: lhs.loaderSemanticIdentity,
+      rhsFallbackIdentity: rhs.loaderSemanticIdentity
+    ) &&
+    InkSemanticComparator.imageLoadersAreEquivalent(
+      lhs.storedGeneratedLoader,
+      rhs.storedGeneratedLoader,
+      lhsFallbackIdentity: lhs.generatedLoaderSemanticIdentity,
+      rhsFallbackIdentity: rhs.generatedLoaderSemanticIdentity
+    ) &&
+    lhs.storeConfiguration == rhs.storeConfiguration &&
+    lhs.securityPolicy == rhs.securityPolicy &&
     lhs.promotesToBlock == rhs.promotesToBlock &&
     lhs.placeholderHeight == rhs.placeholderHeight &&
     lhs.tapAction == rhs.tapAction &&
+    InkSemanticComparator.opaqueValuesAreEquivalent(
+      lhsIsPresent: lhs.onImageTap != nil,
+      rhsIsPresent: rhs.onImageTap != nil,
+      lhsIdentity: lhs.imageTapSemanticIdentity,
+      rhsIdentity: rhs.imageTapSemanticIdentity
+    ) &&
+    InkSemanticComparator.opaqueValuesAreEquivalent(
+      lhsIsPresent: lhs.onLoadFinished != nil,
+      rhsIsPresent: rhs.onLoadFinished != nil,
+      lhsIdentity: lhs.loadFinishedSemanticIdentity,
+      rhsIdentity: rhs.loadFinishedSemanticIdentity
+    ) &&
     lhs.sizing == rhs.sizing &&
     lhs.animatedImagePolicy == rhs.animatedImagePolicy &&
     lhs.baseURL == rhs.baseURL &&
     lhs.failureFallback == rhs.failureFallback &&
     lhs.failureCodeBlockStyle == rhs.failureCodeBlockStyle
   }
-}
 
+}

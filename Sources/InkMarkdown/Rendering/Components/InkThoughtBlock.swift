@@ -6,8 +6,7 @@
 import UIKit
 
 /// 思考过程（`<think>...</think>` / `<thought>...</thought>`）Block：展示为可折叠/展开的深度思考卡片。
-public struct InkThoughtBlock: InkRenderableBlock {
-  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
+public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
   /// 思考过程的 Markdown 源码。
   public let thought: String
   /// 思考过程是否已结束（影响标题文案与指示器）。
@@ -16,7 +15,7 @@ public struct InkThoughtBlock: InkRenderableBlock {
   public var config: InkAppearance.Thought
   /// 整体渲染配置（用于递归渲染思考块内部的行内语法/代码/链接等）。
   public var renderConfiguration: InkConfiguration
-  /// 用户折叠态（SSOT）；仅当 `config.isCollapsible == true` 时生效。
+  /// 初始或调用方提供的状态；同一呈现周期内的 live state 由 SwiftUI continuity module 持有。
   public var isCollapsed: Bool
 
   @MainActor
@@ -53,8 +52,8 @@ public struct InkThoughtBlock: InkRenderableBlock {
   }
 
   @MainActor
-  public func updateExistingView(_ view: UIView) {
-    guard let thoughtView = view as? InkThoughtBlockView else { return }
+  public func updateExistingView(_ view: UIView) -> Bool {
+    guard let thoughtView = view as? InkThoughtBlockView else { return false }
     thoughtView.apply(
       thought: thought,
       isComplete: isComplete,
@@ -62,18 +61,17 @@ public struct InkThoughtBlock: InkRenderableBlock {
       config: config,
       renderConfiguration: renderConfiguration
     )
+    return true
   }
 
   @MainActor
-  @_spi(InkMarkdown)
-  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
-    InkFingerprint.combine(
-      documentEpoch,
-      UInt64(bitPattern: Int64(blockIndex)),
-      InkFingerprint.hash(thought),
-      isComplete ? 1 : 0,
-      isCollapsed ? 1 : 0
-    )
+  public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? InkThoughtBlock else { return false }
+    return thought == previous.thought
+      && isComplete == previous.isComplete
+      && isCollapsed == previous.isCollapsed
+      && config == previous.config
+      && renderConfiguration.isSemanticallyEqualTo(previous.renderConfiguration)
   }
 }
 
@@ -133,7 +131,8 @@ public final class InkThoughtBlockView: UIView {
     let attributedBlock = InkAttributedTextBlock(
       attributedText: attributedThought,
       insets: .zero,
-      linkTapHandler: renderConfiguration.linkTapHandler
+      linkTapHandler: renderConfiguration.linkTapHandler,
+      linkTapSemanticIdentity: renderConfiguration.linkTapSemanticIdentityForBlockReuse
     )
     self.bodyTextView = attributedBlock.makeView()
 
@@ -179,7 +178,11 @@ public final class InkThoughtBlockView: UIView {
     headerContainer.addSubview(iconImageView)
 
     // 标题
-    titleLabel.font = renderConfiguration.appearance.scaledFont(.systemFont(ofSize: config.headerFontSize, weight: .medium), textStyle: .body)
+    titleLabel.font = renderConfiguration.appearance.scaledFont(
+      .systemFont(ofSize: config.headerFontSize, weight: .medium),
+      textStyle: .body,
+      compatibleWith: renderConfiguration.renderEnvironment.traitCollection
+    )
     titleLabel.textColor = config.headerColor
     titleLabel.text = isComplete ? config.completedTitle : config.title
     headerContainer.addSubview(titleLabel)
@@ -246,7 +249,11 @@ public final class InkThoughtBlockView: UIView {
       container.backgroundColor = config.backgroundColor
       container.layer.cornerRadius = config.cornerRadius
       iconImageView.tintColor = config.headerColor
-      titleLabel.font = (renderConfiguration ?? self.renderConfiguration).appearance.scaledFont(.systemFont(ofSize: config.headerFontSize, weight: .medium), textStyle: .body)
+      titleLabel.font = (renderConfiguration ?? self.renderConfiguration).appearance.scaledFont(
+        .systemFont(ofSize: config.headerFontSize, weight: .medium),
+        textStyle: .body,
+        compatibleWith: (renderConfiguration ?? self.renderConfiguration).renderEnvironment.traitCollection
+      )
       titleLabel.textColor = config.headerColor
       chevronImageView.tintColor = config.headerColor
     }

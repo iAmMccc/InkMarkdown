@@ -3,7 +3,9 @@ import Markdown
 
 /// LaTeX 图片渲染的公开配置。默认关闭，保持既有 Markdown 文本行为。
 public struct InkLaTeXRendering: Equatable, Sendable {
-  /// 是否启用 LaTeX 渲染总开关。开启后默认识别 `\\(...\\)`、`$$...$$` 与 `\\[...\\]`。
+  /// 是否启用 LaTeX 渲染总开关。开启前必须链接 `InkMarkdownLaTeX` product 并调用
+  /// `InkMarkdownLaTeX.register()`；未注册时生成图请求会报告 `generatedLoaderUnavailable`。
+  /// 开启后默认识别 `\\(...\\)`、`$$...$$` 与 `\\[...\\]`。
   public var isEnabled: Bool = false
   /// 是否识别 `$...$` 行内分隔符。默认 `false`；即使总开关开启，也需显式 opt-in 才会渲染美元符公式。
   public var allowsInlineDollarDelimiter: Bool = false
@@ -36,8 +38,10 @@ public struct InkLaTeXRendering: Equatable, Sendable {
   }
 }
 
-/// 将 LaTeX renderer 适配进统一图片 Store 的 loader；自身不缓存图片。
-public struct InkLaTeXGeneratedImageLoader: InkGeneratedImageLoading {
+/// 将已注册的 `InkMarkdownLaTeX` renderer 适配进统一图片 Store 的 loader；自身不缓存图片。
+/// 未在渲染前调用 `InkMarkdownLaTeX.register()` 时，loader 会抛出
+/// `ImageLoadError.generatedLoaderUnavailable(owner: "latex")`。
+public struct InkLaTeXGeneratedImageLoader: InkGeneratedImageLoading, InkConfigurationSemanticsProviding {
   public let mode: InkLaTeXRenderMode
   public let style: InkLaTeXStyle
 
@@ -46,12 +50,35 @@ public struct InkLaTeXGeneratedImageLoader: InkGeneratedImageLoading {
     self.style = style
   }
 
+  public var semanticIdentity: InkSemanticIdentity? {
+    let colorIdentity = style.color.map {
+      "\($0.red),\($0.green),\($0.blue),\($0.alpha)"
+    } ?? "context"
+    return InkSemanticIdentity([
+      InkLaTeXImageRenderer.rendererVersion,
+      mode.rawValue,
+      String(Double(style.fontSize)),
+      colorIdentity,
+      String(Double(style.horizontalPadding)),
+      String(Double(style.verticalPadding)),
+      String(Double(style.maxPixelHeight)),
+    ].joined(separator: "|"))
+  }
+
+  public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
+    guard let other = other as? InkLaTeXGeneratedImageLoader else { return false }
+    return mode == other.mode && style == other.style
+  }
+
   public func loadGeneratedImage(
     request: InkGeneratedImageRequest,
     display: DisplayContext
   ) async throws -> UIImage {
     guard request.owner == "latex" else { throw ImageLoadError.decodeFailed }
-    return try await InkLaTeXImageRenderer().render(InkLaTeXRenderRequest(
+    guard let provider = InkGeneratedAddonRuntime.makeLoader(owner: "latex") as? InkLaTeXRenderingProviding else {
+      throw ImageLoadError.generatedLoaderUnavailable(owner: "latex")
+    }
+    return try await provider.renderLaTeX(InkLaTeXRenderRequest(
       latex: request.source,
       mode: mode,
       display: display,
@@ -63,11 +90,16 @@ public struct InkLaTeXGeneratedImageLoader: InkGeneratedImageLoading {
 /// `$...$` 与 `\\(...\\)` 的 attributed-string 接入。
 ///
 /// Attachment 仅持有生成来源；实际图像仍在显示层绑定时经 `InkImageStore` 加载。
-public struct InkLaTeXInlineSyntax: InkInlineSyntax {
+public struct InkLaTeXInlineSyntax: InkInlineSyntax, InkConfigurationSemanticsProviding {
   public let rendering: InkLaTeXRendering
 
   public init(rendering: InkLaTeXRendering) {
     self.rendering = rendering
+  }
+
+  public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
+    guard let other = other as? InkLaTeXInlineSyntax else { return false }
+    return rendering == other.rendering
   }
 
   public func render(text: String, context: InkInlineContext) -> NSAttributedString? {
@@ -120,8 +152,12 @@ public struct InkLaTeXInlineSyntax: InkInlineSyntax {
 }
 
 /// 独占一段的 `$$...$$` 或 `\\[...\\]` 转为图片块；不完整或混合文本保持富文本降级。
-public struct InkLaTeXBlockHandler: InkBlockHandler {
+public struct InkLaTeXBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
   public init() {}
+
+  public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
+    other is InkLaTeXBlockHandler
+  }
 
   private enum BlockDelimiter {
     case dollar
@@ -138,6 +174,7 @@ public struct InkLaTeXBlockHandler: InkBlockHandler {
     return false
   }
 
+  @MainActor
   public func consume(
     from children: [Markup],
     startingAt index: Int,
@@ -178,6 +215,7 @@ public struct InkLaTeXBlockHandler: InkBlockHandler {
     return nil
   }
 
+  @MainActor
   public func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
     guard let paragraph = markup as? Paragraph else { return nil }
     let latexRendering = configuration.appearance.latexRendering
@@ -212,6 +250,7 @@ public struct InkLaTeXBlockHandler: InkBlockHandler {
     }
   }
 
+  @MainActor
   private func makeLaTeXImageBlock(
     latex: String,
     configuration: InkConfiguration

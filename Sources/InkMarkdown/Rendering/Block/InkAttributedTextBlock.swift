@@ -1,32 +1,51 @@
 import UIKit
 
 /// 兜底块：把非自定义 UIView 的部分塞回 NSAttributedString，用 UITextView 渲染。
-public struct InkAttributedTextBlock: InkRenderableBlock, @unchecked Sendable {
-  @_spi(InkMarkdown) public var blockIdentity: InkBlockIdentity?
-  public let attributedText: NSAttributedString
+public struct InkAttributedTextBlock: InkRenderableBlock, InkReusableBlock, @unchecked Sendable {
+  nonisolated(unsafe) public let attributedText: NSAttributedString
   /// 文本容器内边距。
-  public let insets: UIEdgeInsets
+  nonisolated public let insets: UIEdgeInsets
   /// 链接点击回调。命中 `.link` 属性时交还业务方处理；返回 `true` 拦截默认行为。
   /// 与表格单元格 `InkTableCellTextView` 共用同一套 `linkTapHandler` 语义，
   /// 使富文本兜底块里的链接（含业务自定义 scheme，如 `$标签$`）也能被拦截。
-  public let linkTapHandler: (@MainActor @Sendable (URL, UIView) -> Bool)?
+  nonisolated(unsafe) public let linkTapHandler: ((URL, UIView) -> Bool)?
+  nonisolated private let linkTapSemanticIdentity: InkSemanticIdentity?
 
-  @MainActor
-  public init(
+  nonisolated public init(
     attributedText: NSAttributedString,
-    linkTapHandler: (@MainActor @Sendable (URL, UIView) -> Bool)? = nil
+    linkTapHandler: ((URL, UIView) -> Bool)? = nil
   ) {
-    self.init(attributedText: attributedText, insets: InkAppearance.shared.text.blockInsets, linkTapHandler: linkTapHandler)
+    self.init(
+      attributedText: attributedText,
+      insets: InkAppearance.shared.text.blockInsets,
+      linkTapHandler: linkTapHandler,
+      linkTapSemanticIdentity: linkTapHandler == nil ? nil : .unique()
+    )
   }
 
-  public init(
+  nonisolated public init(
     attributedText: NSAttributedString,
     insets: UIEdgeInsets,
-    linkTapHandler: (@MainActor @Sendable (URL, UIView) -> Bool)? = nil
+    linkTapHandler: ((URL, UIView) -> Bool)? = nil
+  ) {
+    self.init(
+      attributedText: attributedText,
+      insets: insets,
+      linkTapHandler: linkTapHandler,
+      linkTapSemanticIdentity: linkTapHandler == nil ? nil : .unique()
+    )
+  }
+
+  nonisolated init(
+    attributedText: NSAttributedString,
+    insets: UIEdgeInsets,
+    linkTapHandler: ((URL, UIView) -> Bool)?,
+    linkTapSemanticIdentity: InkSemanticIdentity?
   ) {
     self.attributedText = attributedText
     self.insets = insets
     self.linkTapHandler = linkTapHandler
+    self.linkTapSemanticIdentity = linkTapSemanticIdentity
   }
 
   @MainActor public func makeView() -> UIView {
@@ -55,8 +74,8 @@ public struct InkAttributedTextBlock: InkRenderableBlock, @unchecked Sendable {
   }
 
   @MainActor
-  public func updateExistingView(_ view: UIView) {
-    guard let textView = view as? InkAttributedBlockTextView else { return }
+  public func updateExistingView(_ view: UIView) -> Bool {
+    guard let textView = view as? InkAttributedBlockTextView else { return false }
     textView.linkTapHandler = linkTapHandler
     textView.textStorage.setAttributedString(attributedText)
     if let layoutManager = textView.textContainer.layoutManager {
@@ -64,17 +83,15 @@ public struct InkAttributedTextBlock: InkRenderableBlock, @unchecked Sendable {
     }
     textView.textContainerInset = insets
     textView.invalidateIntrinsicContentSize()
+    return true
   }
 
   @MainActor
-  @_spi(InkMarkdown)
-  public func contentFingerprint(documentEpoch: UInt64, blockIndex: Int) -> UInt64 {
-    InkFingerprint.combine(
-      documentEpoch,
-      UInt64(bitPattern: Int64(blockIndex)),
-      UInt64(attributedText.length),
-      InkFingerprint.hash(attributedText.string.prefix(64).description)
-    )
+  public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? InkAttributedTextBlock else { return false }
+    return attributedText.isEqual(to: previous.attributedText)
+      && insets == previous.insets
+      && linkTapSemanticIdentity == previous.linkTapSemanticIdentity
   }
 }
 
@@ -95,6 +112,7 @@ final class InkAttributedBlockTextView: UITextView, UITextViewDelegate {
     }
     let contentWidth = max(0, targetWidth - textContainerInset.left - textContainerInset.right)
     textContainer.size = CGSize(width: contentWidth, height: .greatestFiniteMagnitude)
+    InkImageAttachment.bindAttachments(in: textStorage, layoutManager: layoutManager)
     _ = layoutManager.glyphRange(for: textContainer)
     let rect = layoutManager.usedRect(for: textContainer)
     let calculatedHeight = ceil(rect.height + textContainerInset.top + textContainerInset.bottom)

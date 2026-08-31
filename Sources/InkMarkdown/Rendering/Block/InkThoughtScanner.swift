@@ -55,6 +55,165 @@ public enum InkThoughtScanner {
     try! NSRegularExpression(pattern: #"^\s*</\s*(think|thought)\s*>\s*$"#, options: [.caseInsensitive])
   }()
 
+  private struct BacktickRun {
+    let location: Int
+    let length: Int
+    let lineNumber: Int
+    let isEscapedOutsideCodeSpan: Bool
+  }
+
+  private struct BacktickAnalysis {
+    let pairs: [(opening: Int, closing: Int)]
+    let unmatchedOpeners: [Int]
+  }
+
+  /// 返回文本中未转义的 backtick runs。
+  ///
+  /// 反斜杠奇偶性决定 run 是否被转义。扫描只消费 UTF-16 code unit，因而返回位置
+  /// 可直接与 NSRegularExpression 的 NSRange 对齐。
+  private static func backtickRuns(in text: String, startingAt startLocation: Int) -> [BacktickRun] {
+    let utf16 = Array(text.utf16)
+    var runs: [BacktickRun] = []
+    var location = startLocation
+    var lineNumber = 0
+    var precedingBackslashCount = 0
+
+    while location < utf16.count {
+      let codeUnit = utf16[location]
+      if codeUnit == 0x0A || codeUnit == 0x0D {
+        lineNumber += 1
+        precedingBackslashCount = 0
+        location += 1
+        continue
+      }
+
+      guard codeUnit == 0x60 else {
+        if codeUnit == 0x5C {
+          precedingBackslashCount += 1
+        } else {
+          precedingBackslashCount = 0
+        }
+        location += 1
+        continue
+      }
+
+      let runStart = location
+      while location < utf16.count, utf16[location] == 0x60 {
+        location += 1
+      }
+      let runLength = location - runStart
+
+      runs.append(
+        BacktickRun(
+          location: runStart,
+          length: runLength,
+          lineNumber: lineNumber,
+          isEscapedOutsideCodeSpan: precedingBackslashCount % 2 != 0
+        )
+      )
+      precedingBackslashCount = 0
+    }
+
+    return runs
+  }
+
+  /// 线性生成非重叠、相同长度的 backtick spans。
+  ///
+  /// 先预计算每个 run 的 next same-length run，再以 closer + 1 继续扫描；因此
+  /// span 内其它长度的 run 被忽略，交叉 span 不会产生。没有 closer 的 run 作为字面量
+  /// 继续前进，不阻塞后续长度的 span。
+  private static func pairedBacktickRunIndices(in runs: [BacktickRun]) -> BacktickAnalysis {
+    var nextSameLength = Array<Int?>(repeating: nil, count: runs.count)
+    var nextRunByLength: [Int: Int] = [:]
+
+    for index in runs.indices.reversed() {
+      nextSameLength[index] = nextRunByLength[runs[index].length]
+      nextRunByLength[runs[index].length] = index
+    }
+
+    var pairs: [(opening: Int, closing: Int)] = []
+    var unmatchedOpeners: [Int] = []
+    var index = 0
+
+    while index < runs.count {
+      // CommonMark 的反斜杠转义只阻止 code span 在普通 Markdown 中开启；一旦已经
+      // 进入 code span，内容按字面处理，前置反斜杠不阻止等长 backtick run 闭合。
+      if runs[index].isEscapedOutsideCodeSpan {
+        index += 1
+        continue
+      }
+      if let closingIndex = nextSameLength[index] {
+        pairs.append((opening: index, closing: closingIndex))
+        index = closingIndex + 1
+      } else {
+        unmatchedOpeners.append(index)
+        index += 1
+      }
+    }
+
+    return BacktickAnalysis(pairs: pairs, unmatchedOpeners: unmatchedOpeners)
+  }
+
+  /// 按标签名称查找第一个真正的 closing tag。
+  ///
+  /// Thought closing tag 是流式协议 delimiter。已经闭合的 Markdown code span（包括
+  /// 跨行 span）可以遮蔽候选；流式扫描还必须把未配对 run 视为不稳定前缀，避免未来
+  /// 分片补齐 code span 后撤回已经发布的正文 remainder。
+  private static func firstClosingThoughtTag(
+    in text: String,
+    closeMatches: [NSTextCheckingResult],
+    matching openTagName: String,
+    startingAt startLocation: Int,
+    requiresPrefixStability: Bool
+  ) -> NSTextCheckingResult? {
+    let nsString = text as NSString
+    let candidates = closeMatches.filter { match in
+      nsString.substring(with: match.range(at: 1)).caseInsensitiveCompare(openTagName) == .orderedSame
+    }
+    guard !candidates.isEmpty else { return nil }
+
+    let runs = backtickRuns(in: text, startingAt: startLocation)
+    guard !runs.isEmpty else { return candidates.first }
+
+    let analysis = pairedBacktickRunIndices(in: runs)
+    var spanIndex = 0
+
+    for candidate in candidates {
+      let candidateLocation = candidate.range.location
+
+      while spanIndex < analysis.pairs.count {
+        let pair = analysis.pairs[spanIndex]
+        let spanEnd = runs[pair.closing].location + runs[pair.closing].length
+        if spanEnd <= candidateLocation {
+          spanIndex += 1
+        } else {
+          break
+        }
+      }
+
+      if spanIndex < analysis.pairs.count {
+        let pair = analysis.pairs[spanIndex]
+        let spanStart = runs[pair.opening].location + runs[pair.opening].length
+        let spanEnd = runs[pair.closing].location + runs[pair.closing].length
+        if spanStart <= candidateLocation, candidateLocation < spanEnd {
+          continue
+        }
+      }
+
+      if requiresPrefixStability,
+         let unmatchedOpener = analysis.unmatchedOpeners.first,
+         runs[unmatchedOpener].location < candidateLocation {
+        // 未来分片可能跨行闭合这个 opener，并把当前标签重新解释成 code span 内容。
+        // 终态扫描不要求前缀稳定，仍会把最终未配对的 backtick 当作普通字面量。
+        return nil
+      }
+
+      return candidate
+    }
+
+    return nil
+  }
+
   // MARK: - Public Scanning APIs
 
   /// 判断文本（忽略首尾空白）是否为闭合思考标签（如 `</think>` 或 `</thought>`）。
@@ -90,6 +249,13 @@ public enum InkThoughtScanner {
   /// - Parameter text: 包含思考标签的原始 Markdown / HTML 字符串。
   /// - Returns: 若以合法思考标签开头，返回解析出的思考正文、后续后缀及闭合状态；否则返回 nil。
   public static func scan(from text: String) -> Result? {
+    scan(from: text, requiresPrefixStability: false)
+  }
+
+  private static func scan(
+    from text: String,
+    requiresPrefixStability: Bool
+  ) -> Result? {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
 
     let nsString = text as NSString
@@ -106,9 +272,13 @@ public enum InkThoughtScanner {
 
     // 2. 查找对应的闭标签
     let closeMatches = closeTagRegex.matches(in: text, options: [], range: remainingRange)
-    if let closeMatch = closeMatches.first(where: {
-      nsString.substring(with: $0.range(at: 1)).caseInsensitiveCompare(openTagName) == .orderedSame
-    }) {
+    if let closeMatch = firstClosingThoughtTag(
+      in: text,
+      closeMatches: closeMatches,
+      matching: openTagName,
+      startingAt: afterOpenLocation,
+      requiresPrefixStability: requiresPrefixStability
+    ) {
       // 提取开闭标签之间的思考正文
       let bodyRange = NSRange(
         location: afterOpenLocation,
@@ -167,7 +337,7 @@ public enum InkThoughtScanner {
     guard startsWithThoughtTag(source) else {
       return StreamingSplit(thought: nil, remainder: source)
     }
-    guard let scanned = scan(from: source) else {
+    guard let scanned = scan(from: source, requiresPrefixStability: true) else {
       return StreamingSplit(thought: nil, remainder: source)
     }
     if scanned.isComplete {

@@ -5,6 +5,10 @@ import UIKit
 
 @Suite(.serialized)
 struct InkMermaidRendererTests {
+  init() {
+    _ = InkMarkdownMermaid.register()
+  }
+
   @Test func onlyExactMermaidFenceLanguageIsAccepted() {
     #expect(InkMermaidFence.isMermaid(language: "mermaid"))
     #expect(!InkMermaidFence.isMermaid(language: "Mermaid"))
@@ -83,11 +87,9 @@ struct InkMermaidRendererTests {
   }
 
   @Test @MainActor func rendersValidFlowchartToPNG() async throws {
-    if InkMarkdownMermaid.bundle.url(forResource: "InkMermaidBridge", withExtension: "html") == nil { return }
-
     // 生产 limits.timeout 提供有界终止；WebKit 冷启动通常 <5s，失败路径 ≤ timeout。
     let limits = InkMermaidRenderLimits(timeout: 15)
-    let renderer = InkMermaidImageRenderer(limits: limits, bundle: InkMarkdownMermaid.bundle)
+    let renderer = InkMermaidImageRenderer(limits: limits)
     let request = InkMermaidRenderRequest(
       source: "flowchart TD\n    Start-->End",
       display: .init(maxPixelWidth: 400, scale: 1, theme: .light)
@@ -103,10 +105,8 @@ struct InkMermaidRendererTests {
 
   /// 宽 journey 在窄 maxPixelWidth 下仍应把右侧 section 装进快照（回归：仅 resize viewport 会裁切）。
   @Test @MainActor func wideJourneySnapshotKeepsRightEdgeContent() async throws {
-    if InkMarkdownMermaid.bundle.url(forResource: "InkMermaidBridge", withExtension: "html") == nil { return }
-
     let limits = InkMermaidRenderLimits(timeout: 30)
-    let renderer = InkMermaidImageRenderer(limits: limits, bundle: InkMarkdownMermaid.bundle)
+    let renderer = InkMermaidImageRenderer(limits: limits)
     let request = InkMermaidRenderRequest(
       source: """
       journey
