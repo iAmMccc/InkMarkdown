@@ -1,6 +1,6 @@
 # 九、SwiftUI UIViewRepresentable 踩坑指南
 
-> **适用版本：v0.0.2 及后续版本**  
+> **适用版本：v0.0.2 及后续版本**
 > **相关架构：[SwiftUI Adapter 总体技术设计](08-swiftui-adapter-architecture.md) | [ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)**
 
 在 [`InkMarkdownSwiftUI`](../../Sources/InkMarkdownSwiftUI/InkMarkdownSwiftUI.swift) 中，我们通过 [`UIViewRepresentable`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownRepresentable.swift) 将底层 UIKit 渲染容器 [`InkMarkdownContainerView`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 与富文本/块级组件桥接进 SwiftUI。

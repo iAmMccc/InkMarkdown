@@ -289,7 +289,7 @@ final class RenderedListViewController: UIViewController, PagerListController {
 
     let layoutMode: InkTableLayoutMode = scrollable ? .scroll : .wrap
     let tableConfig = InkConfiguration(
-        blockHandlers: [DemoTableBlockHandler(layoutMode: layoutMode, enableCopy: enableCopy)]
+      blockHandlers: [DemoTableBlockHandler(layoutMode: layoutMode, enableCopy: enableCopy)]
     )
     let blocks = InkBlockRenderer.render(source, configuration: tableConfig)
     for block in blocks {
@@ -310,10 +310,10 @@ struct H1ActionCardBlockHandler: InkBlockHandler {
     let title = heading.plainText
     let accessory: H1ActionCardBlock.Accessory? = (title == "值类型与引用类型")
       ? .init(
-          text: "查看示例",
-          alertTitle: "值类型与引用类型",
-          alertMessage: "这是 Block 路由演示——H1 被替换为可点击的自定义卡片。业务方可通过 InkBlockHandler 把任意块渲染成原生 UIView 并承载交互。"
-        )
+        text: "查看示例",
+        alertTitle: "值类型与引用类型",
+        alertMessage: "这是 Block 路由演示——H1 被替换为可点击的自定义卡片。业务方可通过 InkBlockHandler 把任意块渲染成原生 UIView 并承载交互。"
+      )
       : nil
     return H1ActionCardBlock(title: title, accessory: accessory)
   }

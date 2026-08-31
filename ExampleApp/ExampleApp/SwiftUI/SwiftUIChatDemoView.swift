@@ -292,10 +292,10 @@ struct SwiftUIChatDemoView: View {
     }
     .navigationBarTitle("AI SSE 对话", displayMode: .inline)
     .navigationBarItems(trailing: Button {
-      viewModel.showingConfigSheet = true
-    } label: {
-      Image(systemName: "gearshape")
-    })
+        viewModel.showingConfigSheet = true
+      } label: {
+        Image(systemName: "gearshape")
+      })
     .sheet(isPresented: $viewModel.showingConfigSheet) {
       LLMConfigView()
     }

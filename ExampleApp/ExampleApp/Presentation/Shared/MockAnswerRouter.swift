@@ -8,69 +8,69 @@ import Foundation
 /// Mock SSE 预设回答路由（纯函数；更具体规则优先于泛化规则）。
 enum MockAnswerRouter {
 
-    /// 路由目标样本标识。
-    enum Sample: String, CaseIterable {
-        case thinking
-        case closures
-        case structClassComparison
-        case images
-        case diagrams
-        case collectionsComparison
-        case code
-        case steps
-        case intro
+  /// 路由目标样本标识。
+  enum Sample: String, CaseIterable {
+    case thinking
+    case closures
+    case structClassComparison
+    case images
+    case diagrams
+    case collectionsComparison
+    case code
+    case steps
+    case intro
+  }
+
+  /// 有序匹配表：index 越小优先级越高。
+  private static let matchTable: [(sample: Sample, keywords: [String])] = [
+    (.thinking, ["思考", "think", "推理", "r1", "深度思考", "reasoning"]),
+    (.closures, ["闭包", "closure"]),
+    (.structClassComparison, [
+      "结构体与类", "结构体与 class", "struct与class", "struct 与 class",
+      "值类型", "引用类型", "struct vs class", "struct/class"
+    ]),
+    (.images, ["图片", "image", "图文"]),
+    (.diagrams, ["公式", "latex", "mermaid", "图表", "流程图"]),
+    (.collectionsComparison, ["集合", "性能对照", "复杂表格", "array", "dictionary", "set"]),
+    (.code, ["swift", "代码", "示例"]),
+    (.steps, ["列表", "步骤", "怎么", "如何"]),
+  ]
+
+  /// 根据用户问题挑选预设 Markdown 回答。
+  static func route(question: String) -> String {
+    let sample = matchSample(for: question)
+    return content(for: sample)
+  }
+
+  /// 返回命中的样本类型（便于测试与调试）。
+  static func matchSample(for question: String) -> Sample {
+    let q = question.lowercased()
+    for entry in matchTable {
+      if entry.keywords.contains(where: { q.contains($0.lowercased()) }) {
+        return entry.sample
+      }
     }
+    return .intro
+  }
 
-    /// 有序匹配表：index 越小优先级越高。
-    private static let matchTable: [(sample: Sample, keywords: [String])] = [
-        (.thinking, ["思考", "think", "推理", "r1", "深度思考", "reasoning"]),
-        (.closures, ["闭包", "closure"]),
-        (.structClassComparison, [
-            "结构体与类", "结构体与 class", "struct与class", "struct 与 class",
-            "值类型", "引用类型", "struct vs class", "struct/class"
-        ]),
-        (.images, ["图片", "image", "图文"]),
-        (.diagrams, ["公式", "latex", "mermaid", "图表", "流程图"]),
-        (.collectionsComparison, ["集合", "性能对照", "复杂表格", "array", "dictionary", "set"]),
-        (.code, ["swift", "代码", "示例"]),
-        (.steps, ["列表", "步骤", "怎么", "如何"]),
-    ]
-
-    /// 根据用户问题挑选预设 Markdown 回答。
-    static func route(question: String) -> String {
-        let sample = matchSample(for: question)
-        return content(for: sample)
+  /// 返回指定样本的 Markdown 正文。
+  static func content(for sample: Sample) -> String {
+    switch sample {
+    case .thinking: return sampleThinking
+    case .closures: return sampleClosures
+    case .structClassComparison: return sampleStructClassComparison
+    case .images: return sampleImages
+    case .diagrams: return sampleDiagrams
+    case .collectionsComparison: return sampleComparison
+    case .code: return sampleCode
+    case .steps: return sampleSteps
+    case .intro: return sampleIntro
     }
+  }
 
-    /// 返回命中的样本类型（便于测试与调试）。
-    static func matchSample(for question: String) -> Sample {
-        let q = question.lowercased()
-        for entry in matchTable {
-            if entry.keywords.contains(where: { q.contains($0.lowercased()) }) {
-                return entry.sample
-            }
-        }
-        return .intro
-    }
+  // MARK: - 预设 Markdown 样本
 
-    /// 返回指定样本的 Markdown 正文。
-    static func content(for sample: Sample) -> String {
-        switch sample {
-        case .thinking: return sampleThinking
-        case .closures: return sampleClosures
-        case .structClassComparison: return sampleStructClassComparison
-        case .images: return sampleImages
-        case .diagrams: return sampleDiagrams
-        case .collectionsComparison: return sampleComparison
-        case .code: return sampleCode
-        case .steps: return sampleSteps
-        case .intro: return sampleIntro
-        }
-    }
-
-    // MARK: - 预设 Markdown 样本
-
-    static let sampleThinking = """
+  static let sampleThinking = """
     <think>
     用户希望体验大模型的深度思考（Reasoning / Thought Process）过程。
     我需要展示：
@@ -90,7 +90,7 @@ enum MockAnswerRouter {
     4. **双端对称**：UIKit 与 SwiftUI 共享完全相同的视觉规范与排版表现。
     """
 
-    static let sampleClosures = """
+  static let sampleClosures = """
     <think>
     用户正在询问 Swift 闭包相关知识。
     需要系统化梳理：
@@ -139,7 +139,7 @@ enum MockAnswerRouter {
     *以上为闭包专题流式渲染 demo。*
     """
 
-    static let sampleStructClassComparison = """
+  static let sampleStructClassComparison = """
     <think>
     用户正在询问 Swift 结构体（struct）与类（class）的区别与选型建议。
     思考要点：
@@ -196,7 +196,7 @@ enum MockAnswerRouter {
     *以上为结构体与类对比流式渲染 demo。*
     """
 
-    static let sampleImages = """
+  static let sampleImages = """
     **流式图文混排演示**
 
     下面通过 SSE 流式返回 Markdown，包含文本段落与块级图片。块级图片支持**点击放大**预览。
@@ -228,7 +228,7 @@ enum MockAnswerRouter {
     *以上为流式图片渲染 demo，块级图可点放大。*
     """
 
-    static let sampleDiagrams = """
+  static let sampleDiagrams = """
     **流式公式与图表演示**
 
     下面通过 SSE 流式返回 Markdown，包含 LaTeX 行内/块级公式与 Mermaid 图表。
@@ -283,7 +283,7 @@ enum MockAnswerRouter {
     *以上为公式与图表流式渲染 demo。*
     """
 
-    static let sampleIntro = """
+  static let sampleIntro = """
     **InkMarkdown** 是一个基于 Apple [swift-markdown](https://github.com/apple/swift-markdown) 的 UIKit 渲染库。
 
     它把 Markdown 解析后的 Markup 树渲染成 `NSAttributedString`，可以直接喂给 `UITextView` 或 `UILabel`。
@@ -291,7 +291,7 @@ enum MockAnswerRouter {
     > 这段文字就是流式返回的，正在逐字吐出，渲染走的是 `InkAttributedRenderer.render(_:)`。
     """
 
-    static let sampleSteps = """
+  static let sampleSteps = """
     接入 InkMarkdown 只需三步：
 
     1. 拿到 Markdown 字符串（本地文件或服务端 `content` 字段）
@@ -305,7 +305,7 @@ enum MockAnswerRouter {
     - **样式**：通过自定义 `InkAppearance` 定制
     """
 
-    static let sampleCode = """
+  static let sampleCode = """
     下面是一段最小可用的接入代码：
 
     ```swift
@@ -319,7 +319,7 @@ enum MockAnswerRouter {
     渲染结果支持 *斜体*、`行内代码`、链接等行内元素，块级支持标题、列表、引用与代码块。
     """
 
-    static let sampleComparison = """
+  static let sampleComparison = """
     ### 一、Swift 集合类型概览
 
     | 核心属性 | 说明 |
@@ -377,22 +377,22 @@ enum MockAnswerRouter {
 }
 
 #if DEBUG
-extension MockAnswerRouter {
+  extension MockAnswerRouter {
     /// 路由表冒烟验证（Example 无独立 test target 时的内联自检）。
     static func debugValidateRoutes() -> [(question: String, expected: Sample)] {
-        [
-            ("介绍 Swift 闭包", .closures),
-            ("closure capture list", .closures),
-            ("结构体与类的对比，包含代码块与表格", .structClassComparison),
-            ("请用 Markdown 写一份 Swift 结构体与类的对比", .structClassComparison),
-            ("展示公式与图表", .diagrams),
-            ("展示图文混排", .images),
-            ("复杂表格", .collectionsComparison),
-            ("Swift 集合性能", .collectionsComparison),
-            ("代码示例", .code),
-            ("接入步骤", .steps),
-            ("你好", .intro),
-        ]
+      [
+        ("介绍 Swift 闭包", .closures),
+        ("closure capture list", .closures),
+        ("结构体与类的对比，包含代码块与表格", .structClassComparison),
+        ("请用 Markdown 写一份 Swift 结构体与类的对比", .structClassComparison),
+        ("展示公式与图表", .diagrams),
+        ("展示图文混排", .images),
+        ("复杂表格", .collectionsComparison),
+        ("Swift 集合性能", .collectionsComparison),
+        ("代码示例", .code),
+        ("接入步骤", .steps),
+        ("你好", .intro),
+      ]
     }
-}
+  }
 #endif

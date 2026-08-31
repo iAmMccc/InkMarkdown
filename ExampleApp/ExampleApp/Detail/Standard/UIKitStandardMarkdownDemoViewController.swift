@@ -11,7 +11,7 @@ import InkMarkdown
 /// UIKit 基础标准 Markdown 渲染演示控制器（与 SwiftUI Static Demo 1:1 对齐）。
 final class UIKitStandardMarkdownDemoViewController: UIViewController {
 
-    private let markdown = """
+  private let markdown = """
     # UIKit 中的 InkMarkdown
 
     `InkMarkdown` 是一个 UIKit-first 的 Markdown 渲染库，将 Markup 树解析渲染为 `NSAttributedString` 与块级 `UIView`。
@@ -44,32 +44,32 @@ final class UIKitStandardMarkdownDemoViewController: UIViewController {
     | `InkStreamRenderer` | 流式增量渲染 |
     """
 
-    private let blockStackView = DemoBlockStackView()
+  private let blockStackView = DemoBlockStackView()
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        title = "UIKit 基础静态渲染"
-        view.backgroundColor = .systemBackground
-        setupUI()
-        renderContent()
-    }
+  override func viewDidLoad() {
+    super.viewDidLoad()
+    title = "UIKit 基础静态渲染"
+    view.backgroundColor = .systemBackground
+    setupUI()
+    renderContent()
+  }
 
-    private func setupUI() {
-        blockStackView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(blockStackView)
+  private func setupUI() {
+    blockStackView.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(blockStackView)
 
-        NSLayoutConstraint.activate([
-            blockStackView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            blockStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            blockStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            blockStackView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-        ])
-    }
+    NSLayoutConstraint.activate([
+      blockStackView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      blockStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      blockStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      blockStackView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+    ])
+  }
 
-    private func renderContent() {
-        let config = DemoInkConfigurationBuilder.makeStaticConfiguration(
-            userInterfaceStyle: traitCollection.userInterfaceStyle
-        )
-        blockStackView.render(markdown: markdown, configuration: config)
-    }
+  private func renderContent() {
+    let config = DemoInkConfigurationBuilder.makeStaticConfiguration(
+      userInterfaceStyle: traitCollection.userInterfaceStyle
+    )
+    blockStackView.render(markdown: markdown, configuration: config)
+  }
 }
