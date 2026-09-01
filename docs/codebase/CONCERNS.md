@@ -95,4 +95,4 @@
 | iOS/iPadOS 14+ 范围 | ADR-008 已排除其他平台；manifest 已收敛，iOS/iPadOS 14 验证仍是 v0.0.2 blocker |
 | 依赖可重复构建 | 直接依赖 revision pin（ADR-001）；本地 Caches 可选 |
 | v0.0.2 前完善 + 发布证据 | 核心 UIKit implementation + **CI / 0.0.1 public beta 已有**；adapter 基础契约测试已通过，示例、可访问性与性能证据未落地 |
-| 完整语义测试矩阵 | 2026-08-28 iPhone 17 / iOS 26.5 全量共 340 项：339 项通过、0 失败、1 项跳过；首批 19 项 CommonMark/GFM 契约已落地，SwiftUI adapter 仍缺完整人工交互与最低版本矩阵 |
+| 完整语义测试矩阵 | 2026-09-01 iPhone 16 Pro / iOS 18.5 全量共 299 项：298 项通过、0 失败、1 项跳过；测试已按关键数据/状态/语义链路收口，SwiftUI adapter 仍缺完整人工交互与最低版本矩阵 |

@@ -277,11 +277,16 @@ InkMarkdown/
 │       ├── Block/           # InkBlockRenderer 与 InkBlockHandler 路由
 │       ├── Components/      # 原生 UIKit 视图组件 (表格, 代码块, 分割线)
 │       ├── Image/           # 图片 Store、下载器与 Attachment 处理器
-│       ├── LaTeX/           # LaTeX 公式图片生成器与 Handler
-│       ├── Mermaid/         # Mermaid 图表生成器与 Handler
+│       ├── LaTeX/           # 与 addon 解耦的 LaTeX 契约与 facade
+│       ├── Mermaid/         # 与 addon 解耦的 Mermaid 契约与 facade
 │       └── InkStreamRenderer.swift # CADisplayLink 双缓冲流式渲染器
 ├── Sources/InkMarkdownSwiftUI/ # 尚未发布的 v0.0.2 SwiftUI adapter target
-├── Tests/InkMarkdownTests/   # 单元测试、快照测试与流式性能测试
+├── Sources/InkMarkdownLaTeX/ # 可选 iosMath 实现与注册入口
+├── Sources/InkMarkdownMermaid/ # 可选 WebKit renderer、资源与注册入口
+├── Tests/InkMarkdownTests/   # Core 单元、快照、流式与性能测试
+├── Tests/InkMarkdownLaTeXTests/ # LaTeX addon 关键路径测试
+├── Tests/InkMarkdownMermaidTests/ # Mermaid addon 关键路径测试
+├── Tests/InkMarkdownSwiftUITests/ # SwiftUI adapter 契约测试
 ├── ExampleApp/               # UIKit + SwiftUI 示例程序 (包含流式与组件演示)
 └── docs/                     # 架构决策 (ADR)、语义规范与开发指南
 ```

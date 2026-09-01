@@ -277,11 +277,16 @@ InkMarkdown/
 │       ├── Block/           # InkBlockRenderer & InkBlockHandler routing
 │       ├── Components/      # Native UIKit views (Table, CodeBlock, Separator)
 │       ├── Image/           # Image store, downloader & attachment handlers
-│       ├── LaTeX/           # LaTeX formula image generation & handlers
-│       ├── Mermaid/         # Mermaid diagram generator & handlers
+│       ├── LaTeX/           # addon-neutral LaTeX contracts & facades
+│       ├── Mermaid/         # addon-neutral Mermaid contracts & facades
 │       └── InkStreamRenderer.swift # CADisplayLink dual-buffered streaming
 ├── Sources/InkMarkdownSwiftUI/ # Unreleased v0.0.2 SwiftUI adapter target
-├── Tests/InkMarkdownTests/   # Unit, snapshot, streaming & performance tests
+├── Sources/InkMarkdownLaTeX/ # Opt-in iosMath implementation & registration
+├── Sources/InkMarkdownMermaid/ # Opt-in WebKit renderer, resources & registration
+├── Tests/InkMarkdownTests/   # Core unit, snapshot, streaming & performance tests
+├── Tests/InkMarkdownLaTeXTests/ # LaTeX addon key-path tests
+├── Tests/InkMarkdownMermaidTests/ # Mermaid addon key-path tests
+├── Tests/InkMarkdownSwiftUITests/ # SwiftUI adapter contracts
 ├── ExampleApp/               # UIKit + SwiftUI demo app with streaming & components
 └── docs/                     # Architectural decisions (ADR), specs & guides
 ```

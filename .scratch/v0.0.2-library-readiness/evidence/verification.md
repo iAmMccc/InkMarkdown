@@ -13,7 +13,7 @@ Pre-review local HEAD: `19b06c39f4b4fdf373aff6dbe144199e387b3b51`. The release-c
 | ExampleApp Debug run | XcodeBuildMCP, iPhone 16 Pro / iOS 18.5 | build, install, and launch passed; 8.6s |
 | ExampleApp Release build | XcodeBuildMCP, iPhone 16 Pro / iOS 18.5 | passed; 31.0s |
 | Isolated consumer builds | XcodeBuildMCP, iPhone 16 Pro / iOS 18.5 | Core 9.2s; SwiftUI 4.0s; LaTeX 3.1s; Mermaid 2.3s; all passed |
-| Review-remediation Mermaid lane | XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro / iOS 18.5, Debug | 9 passed, 0 failed, 0 skipped; 28.1s |
+| Review-remediation Mermaid lane | XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro / iOS 18.5, Debug | wide journey/right-edge regression retained; 9 passed, 0 failed, 0 skipped; 11.2s |
 | Package manifests | `swift package dump-package` | root exposes four products; consumer fixture contains four single-product targets |
 | GitHub configuration | Ruby YAML parser | all workflow, action, issue-form, and Dependabot YAML parsed |
 | Patch integrity | `git diff --check a9fc7cb..HEAD` | passed |
@@ -32,6 +32,12 @@ Two fresh-context `gpt-5.6-sol` / `max` reviewers inspected `a9fc7cb..19b06c3` i
 - Spec found three P2 items: same-SHA remote delivery was still pending, four-product consumer isolation lacked compile evidence, and public test commands selected the wrong scheme.
 
 Remediation added four isolated consumer builds, corrected all repository test commands to `InkMarkdown-Package`, made package-lane build limits explicit, and removed the stale comment. Same-SHA CI remains a delivery step below. Confidential conduct/security intake remains an explicit maintainer decision; repository text must not claim that route exists.
+
+A second fresh-context Standards/Spec pair reviewed `a9fc7cb..049db14`. It found no production-source defect, but identified current-doc drift plus an overstatement caused by removing the wide-Mermaid regression. Final remediation:
+
+- keeps one real WebKit PNG key path and changes it to a wide journey with right-edge pixel semantics, without restoring the 26-type matrix or adding UI tests;
+- corrects the XcodeBuildMCP test scheme, test inventory/counts, four-product module map, and current-task source of truth;
+- leaves push/PR/same-SHA CI and external platform/governance decisions as explicit gates.
 
 ## Remote delivery
 

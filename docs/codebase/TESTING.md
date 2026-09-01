@@ -7,7 +7,7 @@
 | Item | Value | Evidence |
 |------|-------|----------|
 | Framework | **Swift Testing + XCTest** | `import Testing` / `@Test` / `@Suite`；现有 XCTest 测试 |
-| Location | `Tests/InkMarkdownTests/`、`Tests/InkMarkdownSwiftUITests/` | `Package.swift` testTarget |
+| Location | `Tests/` 下的 Core、addon contract、LaTeX、Mermaid、SwiftUI adapter 与 ExampleApp policy targets | `Package.swift` testTarget |
 | Host requirement | **iOS Simulator**（UIKit / SwiftUI adapter） | `docs/current-status.md`、`AGENTS.md` |
 | P0 release gate | SwiftUI adapter P0 闸门：`Tests/InkMarkdownSwiftUITests/InkMarkdownP0GateTests.swift`（静态/流式测量、thought identity、promotion、trait 重测）；iOS 14 ICS 用例标记 `.disabled`（**实测未交付**） | `@Suite("SwiftUI Adapter P0 闸门")` |
 | Static declarations | Core `@Test` + XCTest；SwiftUI adapter 契约与 P0 闸门；参数化 `@Test(arguments:)` 会展开为额外 execution case | 测试源码 |
@@ -19,7 +19,7 @@
 |------|--------|
 | `InkMarkdownTests.swift` | 固定行高、段落间距、appearance 默认值、混排、流式边界、标题/列表上下文样式 |
 | `StreamingPerformanceTests.swift` | 增量与全量输出一致性；增量耗时 ≤ 全量 30% 闸门 |
-| `InkMermaid/InkMermaidDiagramTypeRendererTests.swift` | Mermaid 各 diagram type 离线 PNG 渲染；共享 `InkMermaidImageRenderer`（30s timeout）；首 case `flowchart` 在 iPhone 17 Pro 上偶发 `.timedOut`（见已知测试限制） |
+| `../InkMarkdownMermaidTests/InkMermaidRendererTests.swift` | Mermaid fence、cache、limits、bridge 与唯一真实 WebKit PNG 关键链路；宽 journey 在 400px 约束下检查右侧内容未裁切（60s hosted-Simulator 冷启动宽限） |
 | `Snapshots/RenderSnapshot.swift` | 快照模型 + `RenderContractAssertions` 助手 |
 | `Snapshots/SnapshotScaffoldTests.swift` | 快照基建冒烟 |
 | `../InkMarkdownSwiftUITests/InkMarkdownAdapterWorkloadTests.swift` | Adapter 单环境工作负载回归闸门（静态长文测量、百片流式、promotion 时长；非 FPS/hitch 签收） |

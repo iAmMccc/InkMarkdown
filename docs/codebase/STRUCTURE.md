@@ -8,7 +8,10 @@
 |------|---------|----------|
 | `Sources/InkMarkdown/` | UIKit-first 核心源码库（SPM target） | `Package.swift` `path: "Sources/InkMarkdown"` |
 | `Sources/InkMarkdownSwiftUI/` | 未发布 v0.0.2 的 SwiftUI presentation adapter（SPM target） | `Package.swift` `path: "Sources/InkMarkdownSwiftUI"` |
+| `Sources/InkMarkdownLaTeX/` | 未发布 v0.0.2 的 opt-in iosMath addon（SPM target） | `Package.swift` `path: "Sources/InkMarkdownLaTeX"` |
+| `Sources/InkMarkdownMermaid/` | 未发布 v0.0.2 的 opt-in WebKit Mermaid addon（SPM target） | `Package.swift` `path: "Sources/InkMarkdownMermaid"` |
 | `Tests/InkMarkdownTests/` | UIKit core 测试集（SPM test target） | `Package.swift` `path: "Tests/InkMarkdownTests"` |
+| `Tests/InkMarkdownLaTeXTests/` / `Tests/InkMarkdownMermaidTests/` | addon 关键路径测试（SPM test targets） | `Package.swift` addon testTarget |
 | `Tests/InkMarkdownSwiftUITests/` | SwiftUI adapter 契约测试（SPM test target） | `Package.swift` `path: "Tests/InkMarkdownSwiftUITests"` |
 | `ExampleApp/` | UIKit + SwiftUI adapter 示例应用工程 | `ExampleApp/ExampleApp.xcodeproj` |
 | `Packages/` | 本地依赖拉取脚本与缓存目录 `Caches/` | `Packages/scripts/fetch-packages.sh` |
@@ -50,7 +53,7 @@ Sources/InkMarkdown/
 
 | 模块 | 目录布局 | 说明 |
 |------|--------|-------|
-| Tests | `InkMarkdownTests.swift`、`StreamingPerformanceTests.swift`、`Snapshots/`、`InkMarkdownSwiftUITests/`、`InkMarkdownCoreContractTests/` | 使用 Swift Testing 与 XCTest；2026-08-28 的 iPhone 17 / iOS 26.5 全量共 340 项：339 项通过、0 失败、1 项跳过 |
+| Tests | Core、core/addon contract、LaTeX、Mermaid、SwiftUI adapter 与 ExampleApp policy test targets | 使用 Swift Testing 与 XCTest；2026-09-01 的 iPhone 16 Pro / iOS 18.5 全量共 299 项：298 项通过、0 失败、1 项跳过 |
 | ExampleApp | `AppDelegate` / `SceneDelegate`、列表与详情页（块渲染、SSE、Pager 等） | 独立 Xcode 工程，提供宿主集成示例 |
 
 ### 4) 公开入口
@@ -61,7 +64,7 @@ Sources/InkMarkdown/
 | `InkBlockRenderer.render` | 将 Markdown 渲染为 `[InkRenderableBlock]` | `Rendering/Block/InkBlockRenderer.swift` |
 | `InkStreamRenderer` | 流式增量渲染与 `UITextView` 绑定 | `Rendering/InkStreamRenderer.swift` |
 | `InkParser.parse` | 字符串解析为 `Document` | `Parser/InkParser.swift` |
-| `Package.swift` | SPM Products `InkMarkdown`、`InkMarkdownSwiftUI` 定义 | 根目录 Manifest |
+| `Package.swift` | SPM Products `InkMarkdown`、`InkMarkdownSwiftUI`、`InkMarkdownLaTeX`、`InkMarkdownMermaid` 定义 | 根目录 Manifest |
 | `ExampleApp` | 渲染逻辑演示 | `ExampleApp/ExampleApp/` |
 
 ### 5) 命名规范

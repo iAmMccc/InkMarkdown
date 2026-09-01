@@ -1,6 +1,6 @@
 # InkMarkdown 当前任务摘要
 
-> 摘要日期：2026-08-31。本文是本任务的唯一当前摘要。后续执行先读取本文，再核对 `docs/current-status.md`、源码和最新测试证据。旧聊天打印、原始审查快照、已完成参考和失败的代理状态不作为当前事实。
+> 摘要日期：2026-09-01。本文是本任务的唯一当前摘要。后续执行先读取本文，再核对 `docs/current-status.md`、源码和最新测试证据。旧聊天打印、原始审查快照、已完成参考和失败的代理状态不作为当前事实。
 
 ## 当前目标
 
@@ -42,21 +42,20 @@
 - 测试策略已收口：删除 UI、重复边界与入口排列测试；只保留 sourceFilter、Thought scanner、富文本背景、render session/continuity、addon 注册与真实 Mermaid PNG 等数据、状态、调用次数与渲染语义关键链路。2026-09-01，XcodeBuildMCP 在 iPhone 16 Pro / iOS 18.5 完成 299 项全量回归：298 通过、0 失败、1 跳过（本机无 iOS 14 runtime）。
 - 2026-09-01 以同一生产源码重复执行 ExampleApp：iPad 覆盖 Thought 卡片范围、inline code 背景、suffix 边界、可折叠能力 true→false→true、流式追加、宽度切换、卸载重挂、promotion 与特大字号刷新；iPhone 覆盖窄宽静态/配置布局、表格、LaTeX、Mermaid 与流式状态刷新。网络图片仅停留在占位符，未宣称外网加载通过。
 - 四 product 消费者冒烟已从 ExampleApp 的联合链接中拆出：Core、SwiftUI、LaTeX、Mermaid 各由只选择单一 product 的外部 fixture 独立构建；package 测试 job 的 `-only-testing` 仅表示执行分流，不再描述为构建图隔离。
-- `git diff --check` 已通过。当前分支为 `feat/swiftUI`；review remediation 与测试收口已按功能提交至 `a9fc7cb`，readiness 基线与 CI/消费者分流已提交为 `7993112`、`7de8adb`、`307d83d`。最终文档、兼容性验收、独立审查、push 与远端 CI 仍在进行。
+- `git diff --check` 已通过。当前分支为 `feat/swiftUI`；readiness 基线、CI/消费者、API 收敛、ExampleApp 状态同步、治理文档与首轮复审证据已按功能提交至 `7993112`…`049db14`，本摘要所在提交收口最终复审修正。文档、兼容性验收与独立审查已完成；仅 push、PR 与同一 SHA 的远端 CI 仍待交付。
 
 ## 未解决问题
 
-- iOS/iPadOS 14–15 runtime、旋转、Split View、无初始宽度协商尚未验证。
-- ExampleApp 的 Mermaid 已在 iPhone SwiftUI 组件页可见；LaTeX Demo 输入根因已修正并重建，但块公式修正后的可见复核、图片 ReservedHeight、表格横向交互、链接、系统级 Dynamic Type 与 VoiceOver 仍缺完整走查。本轮只完成 Thought 与 promotion 环境刷新的关键手工链路。
+- iOS/iPadOS 14–15 runtime、旋转、Split View 与无初始宽度协商尚未验证；不得把较新 Simulator 结果替代最低版本证据。
+- ExampleApp 已完成 Thought、流式状态、表格/LaTeX/Mermaid 可见性、Dynamic Type 关键链路；网络图片真实加载、完整表格/链接交互与系统级 VoiceOver 仍缺完整走查。
 - 真机 FPS、hitch、内存峰值、WebKit 冷启动和长会话性能基线尚未建立。
 - 首批 CommonMark/GFM 语义矩阵已落地；引用链接、列表续段/混合嵌套、复杂表格单元格、跨富文本/Block/流式通道完整矩阵仍未完成。自定义 inline syntax 的删除线继承仍是已知契约限制。
 - 当前证据不足以宣布 v0.0.2 已发布或已完成最低版本支持。
 
 ## 下一步计划
 
-1. 以本摘要为入口，先核对当前源码、`current-status.md` 和最新 XcodeBuildMCP 结果；跳过旧聊天、历史快照和已完成的重复打印。
+1. 推送 `feat/swiftUI`，创建到 `main` 的 PR，并等待全部必要 job 在同一 PR head SHA 上通过；不得合并、打 tag 或发布 Release。
 2. 获取可用的 iOS/iPadOS 14–15 runtime 或设备，完成最低版本、旋转、Split View 与宽度协商验证。
-3. 按 ExampleApp 走查报告复核块公式修正，完成图片、表格横向交互、链接、系统级 Dynamic Type 和可访问性人工验收，并记录复现证据；保留本轮已完成的 Thought/promotion 关键链路证据。
+3. 完成网络图片、表格/链接交互与系统级 VoiceOver 人工验收；保持 UI 验收在 ExampleApp，不扩张 UI 单测。
 4. 建立真机性能基线，覆盖滚动、流式长文、图片/生成图加载、WebKit 冷启动、内存峰值和长会话。
-5. 扩充 CommonMark/GFM 语义矩阵至引用链接、混合嵌套、复杂表格与跨渲染通道；保持 GFM 裸 URL 的当前回退边界，除非上游解析层正式提供 autolink 扩展。
-6. 每个后续阶段完成后，只更新本摘要、`current-status.md` 与对应证据文档；达到所有 blocker 退出标准后再讨论发布与提交拆分。
+5. 由 maintainer 决定私密安全/行为报告渠道；渠道未真实可用前不创建 `SECURITY.md`，不宣称 confidential intake 已运营。

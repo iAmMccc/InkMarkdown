@@ -8,7 +8,7 @@
 | --- | --- |
 | macOS + Xcode | 提供 Swift 6.2 工具链；以 `swift --version` 输出为准 |
 | Swift | 6.2+ |
-| 目标平台 | 已发布 `0.0.1`：iOS 14+；v0.0.2 目标：iOS / iPadOS 14+（iPad 验证待完成） |
+| 目标平台 | 已发布 `0.0.1`：iOS 14+；v0.0.2 目标：iOS / iPadOS 14+（最低版本运行验证待完成） |
 | iOS 模拟器 | 安装至少一个可用模拟器 |
 | 网络/缓存 | 首次解析远程依赖需联网；离线缓存脚本见后文 |
 
@@ -47,7 +47,7 @@ xcodebuild -scheme InkMarkdown-Package -destination 'platform=iOS Simulator,name
 步骤如下：
 
 1. 查看当前 session 配置。
-2. 查找并选择 `InkMarkdown` scheme 与可用的 iOS 模拟器。
+2. 测试选择 `InkMarkdown-Package` scheme 与可用的 iOS 模拟器；`InkMarkdown` scheme 仅用于 build。
 3. 运行模拟器测试。
 4. 检查测试数量与结果。
 
@@ -69,10 +69,10 @@ xcodebuildmcp --version
 
 | 项目 | 结果 |
 | --- | --- |
-| 日期 | 2026-08-28 |
+| 日期 | 2026-09-01 |
 | Scheme | `InkMarkdown-Package` |
-| Destination | iPhone 17 / iOS 26.5 Simulator |
-| 测试结果 | 340 项总计：339 项通过，0 项失败，1 项跳过 |
+| Destination | iPhone 16 Pro / iOS 18.5 Simulator |
+| 测试结果 | 299 项总计：298 项通过，0 项失败，1 项跳过；跳过项为本机无 iOS 14 runtime 的最低版本用例 |
 | 运行方式 | XcodeBuildMCP 自动发现 + `test_sim` |
 
 测试文件分布：

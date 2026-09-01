@@ -9,9 +9,9 @@
 | 主要语言 | Swift（包内语言模式 **v5**） | `Package.swift`：`swiftSettings: [.swiftLanguageMode(.v5)]` |
 | 工具链版本 | Swift tools **6.2+** | `Package.swift` 首行 `// swift-tools-version: 6.2` |
 | 包管理器 | Swift Package Manager (SPM) | `Package.swift`、`Package.resolved` |
-| 模块与构建系统 | SPM library targets `InkMarkdown` 与 `InkMarkdownSwiftUI` + Xcode ExampleApp | `Package.swift`；`ExampleApp/ExampleApp.xcodeproj`；ADR-008 |
+| 模块与构建系统 | 四个 SPM library targets：`InkMarkdown`、`InkMarkdownSwiftUI`、`InkMarkdownLaTeX`、`InkMarkdownMermaid` + Xcode ExampleApp | `Package.swift`；`ExampleApp/ExampleApp.xcodeproj`；ADR-008 |
 | Manifest 声明 | `.iOS(.v14)`；不声明 macOS、tvOS、watchOS 或 visionOS | `Package.swift`；`docs/current-status.md` |
-| 产品定位 | 已发布 `0.0.1` 为 UIKit-first Markdown rendering engine；未发布的 v0.0.2 提供独立 SwiftUI adapter | `AGENTS.md`、`README.md`、`docs/current-status.md`、ADR-008 |
+| 产品定位 | 已发布 `0.0.1` 为 UIKit-first engine；未发布的 v0.0.2 增加独立 SwiftUI adapter，并把 LaTeX / Mermaid 实现拆为 opt-in addon products | `AGENTS.md`、`README.md`、`docs/current-status.md`、ADR-008 |
 
 ### 2) 依赖项
 
@@ -67,7 +67,7 @@ rm -rf .build
 - **配置来源**：`Package.swift`、`Package.resolved`、`Packages/packages.json`、`ExampleApp` 工程配置
 - **环境变量**：无需应用级 `.env`；可继承 Git 代理环境变量（`http_proxy` / `https_proxy`）
 - **部署与运行约束**：
-  - 已发布 UIKit engine 在 iOS Simulator 上验证；v0.0.2 的交付目标是 iOS/iPadOS 14+，iPad 验证尚未完成
+  - 已发布 UIKit engine 在 iOS Simulator 上验证；v0.0.2 已有 iPhone/iPad Simulator 证据，但 iOS/iPadOS 14 最低版本运行验证尚未完成
   - 外部库声明的最低平台以 `Package.swift` 与 `docs/current-status.md` 的实际证据为准
   - 直接依赖项已锁定 revision；传递依赖项 `swift-cmark` 遵循 `Package.resolved` 锁定的 revision
 
@@ -83,7 +83,7 @@ rm -rf .build
 
 | 主题 | 规划目标 | 仓库现状 |
 |-------|-------------------|--------------------|
-| 产品平台范围 | iOS 14+、iPadOS 14+；不支持其他平台（ADR-008） | 已发布 `0.0.1` source 依赖 UIKit；manifest 与 iPad 验证需在 v0.0.2 前收敛 |
+| 产品平台范围 | iOS 14+、iPadOS 14+；不支持其他平台（ADR-008） | manifest 已收敛且已有 iPhone/iPad 新版 Simulator 证据；iOS/iPadOS 14 最低版本运行验证仍待完成 |
 | 本地 SPM 缓存 | 支持 `path: Packages/Caches/...` | 默认 Manifest 锁定远程 Revision；缓存脚本可选 |
 | SmartCodable | 早期依赖列表项 | 未引用 |
 

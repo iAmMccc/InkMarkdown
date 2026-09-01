@@ -61,7 +61,7 @@ v2 起才增加：Markup → **InkIR** →（可选 Transformer）→ UIKit / fu
 ## 技术栈
 
 - Swift 6.2+，语言模式 `.v5`
-- **v0.0.2 交付目标：iOS 14+、iPadOS 14+**；iPad 验证与 `Package.swift` 平台声明收敛均为 release blocker
+- **v0.0.2 交付目标：iOS 14+、iPadOS 14+**；manifest 已收敛且已有 iPhone/iPad 新版 Simulator 证据，最低版本运行验证仍是 release blocker
 - 当前 manifest：远程 `swiftlang/swift-markdown` **revision pin**（ADR-001）；可选本地缓存见[当前状态](../current-status.md)
 - 测试：Swift Testing；快照基建在 `Tests/.../Snapshots`
 - 库内富文本自定义绘制：**TextKit 1**（`InkMarkdownLayoutManager`）

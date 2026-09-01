@@ -11,7 +11,11 @@ InkMarkdown/
 ├── Package.swift              # SPM 包定义（swift-tools-version: 6.2）
 ├── Sources/InkMarkdown/       # UIKit Parser / Configuration / Rendering engine
 ├── Sources/InkMarkdownSwiftUI/ # v0.0.2 独立 SwiftUI adapter target
+├── Sources/InkMarkdownLaTeX/ # 可选 iosMath addon target
+├── Sources/InkMarkdownMermaid/ # 可选 WebKit Mermaid addon target
 ├── Tests/InkMarkdownTests/    # UIKit 语义、快照骨架与流式性能测试
+├── Tests/InkMarkdownLaTeXTests/ # LaTeX addon 关键路径测试
+├── Tests/InkMarkdownMermaidTests/ # Mermaid addon 关键路径测试
 ├── Tests/InkMarkdownSwiftUITests/ # SwiftUI adapter 契约测试
 ├── ExampleApp/                # UIKit + SwiftUI adapter 示例 App
 │   ├── ExampleApp.xcodeproj

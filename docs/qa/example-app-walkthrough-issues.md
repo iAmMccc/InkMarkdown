@@ -153,7 +153,7 @@
 
 #### 是否仍为已知限制
 
-**是（系统噪声）** — Mermaid 渲染依赖 WebKit，Simulator 下相关日志可忽略。缓存未命中时的短暂骨架属加载态，非 defect。库测试 `InkMermaidDiagramTypeRendererTests` 的 `flowchart` 首 case 30s timeout 属测试/WebKit 冷启动问题，与 Demo 控制台噪声分开，不可当作「系统噪音可忽略」或 `flowchart` 产品语法缺陷。
+**是（系统噪声）** — Mermaid 渲染依赖 WebKit，Simulator 下相关日志可忽略。缓存未命中时的短暂骨架属加载态，非 defect。当前唯一真实 PNG 关键测试 `rendersWideJourneyWithoutRightEdgeClipping` 为 hosted-Simulator 冷启动保留 60s timeout；超时应按测试/WebKit 启动问题单独诊断，不能直接归类为 Demo 控制台噪声或 Mermaid 语法缺陷。
 
 ---
 

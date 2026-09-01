@@ -183,7 +183,7 @@ v0.0.1 beta  →  v0.0.2 SwiftUI adapter  →  v1.0 稳定契约  →  v2 InkIR 
 | IR 重构引发渲染回归 | 先完成 A2 快照全集覆盖，再进行 B3 |
 | 中端与 Handler 职责重叠 | 遵循 B6 扩展决策指南 |
 | TextKit 2 无法兼容自定义绘制 | 执行 D1 试探，保留 TextKit 1 为主线 |
-| 平台支持与声明不符 | 在完成 Phase S 的 iPhone/iPad 验证前，不将 iOS/iPadOS 14+ 作为已完成交付宣传；不承诺其他平台 |
+| 平台支持与声明不符 | 在完成 Phase S 的 iOS/iPadOS 14 最低版本验证前，不将 iOS/iPadOS 14+ 作为已完成交付宣传；不承诺其他平台 |
 
 ## 5. 变更历史
 
