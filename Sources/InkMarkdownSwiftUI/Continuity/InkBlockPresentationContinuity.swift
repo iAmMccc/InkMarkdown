@@ -3,9 +3,9 @@
 //  InkMarkdownSwiftUI
 //
 
-@_spi(InkMarkdown) import InkMarkdown
 import os.log
 import UIKit
+@_spi(InkMarkdown) import InkMarkdown
 
 #if DEBUG
 private let inkBlockPresentationContinuityLog = OSLog(
