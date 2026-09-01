@@ -284,9 +284,12 @@ InkMarkdown/
 ├── Sources/InkMarkdownLaTeX/ # 可选 iosMath 实现与注册入口
 ├── Sources/InkMarkdownMermaid/ # 可选 WebKit renderer、资源与注册入口
 ├── Tests/InkMarkdownTests/   # Core 单元、快照、流式与性能测试
+├── Tests/InkMarkdownCoreContractTests/ # Core-only product 边界测试
+├── Tests/InkMarkdownAddonContractTests/ # Addon 注册边界测试
 ├── Tests/InkMarkdownLaTeXTests/ # LaTeX addon 关键路径测试
 ├── Tests/InkMarkdownMermaidTests/ # Mermaid addon 关键路径测试
 ├── Tests/InkMarkdownSwiftUITests/ # SwiftUI adapter 契约测试
+├── Tests/ExampleAppPolicyTests/ # ExampleApp 业务策略测试
 ├── ExampleApp/               # UIKit + SwiftUI 示例程序 (包含流式与组件演示)
 └── docs/                     # 架构决策 (ADR)、语义规范与开发指南
 ```

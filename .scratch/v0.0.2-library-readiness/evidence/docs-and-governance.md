@@ -2,7 +2,7 @@
 
 Inspection baseline: `feat/swiftUI` at commit `7993112` (`79931128536e2f15188c3134b4ce3964b0870cad`). CI and test-target work was integrated separately as `7de8adb` and `307d83d`; public-interface and ExampleApp fixes were integrated separately as `f388957` and `679000a`.
 
-This evidence is committed with the documentation/governance change set. The final pushed candidate SHA and remote CI result belong in `verification.md` after integration.
+This evidence is committed with the documentation/governance change set. The immutable PR head SHA and GitHub check metadata are the remote evidence; do not create a post-CI evidence commit merely to copy them into repository files.
 
 ## Private vulnerability reporting channel check
 

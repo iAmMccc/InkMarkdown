@@ -284,9 +284,12 @@ InkMarkdown/
 ├── Sources/InkMarkdownLaTeX/ # Opt-in iosMath implementation & registration
 ├── Sources/InkMarkdownMermaid/ # Opt-in WebKit renderer, resources & registration
 ├── Tests/InkMarkdownTests/   # Core unit, snapshot, streaming & performance tests
+├── Tests/InkMarkdownCoreContractTests/ # Core-only product boundary tests
+├── Tests/InkMarkdownAddonContractTests/ # Addon registration boundary tests
 ├── Tests/InkMarkdownLaTeXTests/ # LaTeX addon key-path tests
 ├── Tests/InkMarkdownMermaidTests/ # Mermaid addon key-path tests
 ├── Tests/InkMarkdownSwiftUITests/ # SwiftUI adapter contracts
+├── Tests/ExampleAppPolicyTests/ # ExampleApp business-policy tests
 ├── ExampleApp/               # UIKit + SwiftUI demo app with streaming & components
 └── docs/                     # Architectural decisions (ADR), specs & guides
 ```

@@ -13,12 +13,26 @@ Pre-review local HEAD: `19b06c39f4b4fdf373aff6dbe144199e387b3b51`. The release-c
 | ExampleApp Debug run | XcodeBuildMCP, iPhone 16 Pro / iOS 18.5 | build, install, and launch passed; 8.6s |
 | ExampleApp Release build | XcodeBuildMCP, iPhone 16 Pro / iOS 18.5 | passed; 31.0s |
 | Isolated consumer builds | XcodeBuildMCP, iPhone 16 Pro / iOS 18.5 | Core 9.2s; SwiftUI 4.0s; LaTeX 3.1s; Mermaid 2.3s; all passed |
-| Review-remediation Mermaid lane | XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro / iOS 18.5, Debug | wide journey/right-edge regression retained; 9 passed, 0 failed, 0 skipped; 11.2s |
+| Review-remediation Mermaid lane | XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro / iOS 18.5, Debug | wide journey/right-edge regression retained; exact committed-tree record below |
 | Package manifests | `swift package dump-package` | root exposes four products; consumer fixture contains four single-product targets |
 | GitHub configuration | Ruby YAML parser | all workflow, action, issue-form, and Dependabot YAML parsed |
 | Patch integrity | `git diff --check a9fc7cb..HEAD` | passed |
 
 The skipped package test is the existing iOS 14-only ICS case; no iOS 14 runtime is installed on this machine.
+
+### Exact wide-journey remediation rerun
+
+- Timestamp: `2026-09-01T13:36:55+08:00` (`2026-09-01T05:36:55Z` artifact timestamp).
+- Clean committed HEAD: `cde27bcb243699b5ecf0e205ce9b638f3465b685`.
+- Tested source tree: `65d41c7f2e434e39af12a7b81766e36085dd8a4d` (`HEAD:Sources`).
+- Tested test tree: `c77904294fa10a44c17ae186a5f4a3ac95d28b46` (`HEAD:Tests`).
+- Tool / scheme / destination: XcodeBuildMCP `test_sim`, `InkMarkdown-Package`, iPhone 16 Pro / iOS 18.5 Simulator, Debug.
+- Command: `test_sim(extraArgs: ["-only-testing:InkMarkdownMermaidTests"], progress: true)`.
+- Result: 9 passed, 0 failed, 0 skipped; 6.6s. This includes `rendersWideJourneyWithoutRightEdgeClipping()`.
+- Build log: `~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/logs/test_sim_2026-09-01T05-36-55-829Z_pid53535_e3f779a5.log`.
+- Result bundle: `~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/result-bundles/test_sim_2026-09-01T05-36-55-829Z_pid53535_7cc74844.xcresult`.
+
+The evidence-only remediation commit after `cde27bc` does not change `Sources/` or `Tests/`; the scoped tree hashes above remain the tested code identity. The earlier 299-test package run used the same `Sources/` tree; the only later test-tree change is the focused Mermaid case rerun here. Final GitHub CI must still validate the complete PR head SHA.
 
 ## Manual verification
 
@@ -38,6 +52,8 @@ A second fresh-context Standards/Spec pair reviewed `a9fc7cb..049db14`. It found
 - keeps one real WebKit PNG key path and changes it to a wide journey with right-edge pixel semantics, without restoring the 26-type matrix or adding UI tests;
 - corrects the XcodeBuildMCP test scheme, test inventory/counts, four-product module map, and current-task source of truth;
 - leaves push/PR/same-SHA CI and external platform/governance decisions as explicit gates.
+
+A third fresh-context verification pair inspected `049db14..cde27bc`. Standards reported zero P1/P2. Spec found five evidence/inventory inconsistencies: the focused test lacked committed-tree identity, two files gave circular post-CI SHA instructions, three test targets were omitted from public trees, source counts still described an old dirty workspace, and `CONCERNS.md` denied completed ExampleApp evidence. The evidence-only remediation containing this paragraph fixes those items and leaves the tested `Sources/` / `Tests/` tree hashes above unchanged.
 
 ## Remote delivery
 

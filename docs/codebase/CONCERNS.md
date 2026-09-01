@@ -94,5 +94,5 @@
 | UIKit-first engine + SwiftUI adapter 产品路线 | 已发布 `0.0.1` 为 UIKit-first；当前 source 已有独立 `InkMarkdownSwiftUI` adapter，v0.0.2 尚未发布 |
 | iOS/iPadOS 14+ 范围 | ADR-008 已排除其他平台；manifest 已收敛，iOS/iPadOS 14 验证仍是 v0.0.2 blocker |
 | 依赖可重复构建 | 直接依赖 revision pin（ADR-001）；本地 Caches 可选 |
-| v0.0.2 前完善 + 发布证据 | 核心 UIKit implementation + **CI / 0.0.1 public beta 已有**；adapter 基础契约测试已通过，示例、可访问性与性能证据未落地 |
+| v0.0.2 前完善 + 发布证据 | 核心 UIKit implementation、CI、SwiftUI adapter 基础契约与 iPhone/iPad ExampleApp 关键链路证据已落地；最低系统、完整可访问性、网络图片与真机性能证据仍未完成 |
 | 完整语义测试矩阵 | 2026-09-01 iPhone 16 Pro / iOS 18.5 全量共 299 项：298 项通过、0 失败、1 项跳过；测试已按关键数据/状态/语义链路收口，SwiftUI adapter 仍缺完整人工交互与最低版本矩阵 |

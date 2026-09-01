@@ -2,7 +2,7 @@
 
 Date: 2026-09-01
 
-Candidate: `feat/swiftUI` working tree based on `307d83d`, including the public-interface narrowing and ExampleApp observation fix recorded in the local readiness task. The final pushed SHA belongs in `verification.md` after integration.
+Candidate: `feat/swiftUI` readiness change set, including the public-interface narrowing and ExampleApp observation fix recorded in the local task. The immutable PR head SHA and GitHub check metadata are the remote evidence; do not create a post-CI evidence commit merely to copy them into this file.
 
 ## Available runtime matrix
 

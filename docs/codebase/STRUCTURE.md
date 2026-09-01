@@ -11,8 +11,11 @@
 | `Sources/InkMarkdownLaTeX/` | 未发布 v0.0.2 的 opt-in iosMath addon（SPM target） | `Package.swift` `path: "Sources/InkMarkdownLaTeX"` |
 | `Sources/InkMarkdownMermaid/` | 未发布 v0.0.2 的 opt-in WebKit Mermaid addon（SPM target） | `Package.swift` `path: "Sources/InkMarkdownMermaid"` |
 | `Tests/InkMarkdownTests/` | UIKit core 测试集（SPM test target） | `Package.swift` `path: "Tests/InkMarkdownTests"` |
+| `Tests/InkMarkdownCoreContractTests/` | Core-only product 边界测试（SPM test target） | `Package.swift` core contract testTarget |
+| `Tests/InkMarkdownAddonContractTests/` | Addon 注册边界测试（SPM test target） | `Package.swift` addon contract testTarget |
 | `Tests/InkMarkdownLaTeXTests/` / `Tests/InkMarkdownMermaidTests/` | addon 关键路径测试（SPM test targets） | `Package.swift` addon testTarget |
 | `Tests/InkMarkdownSwiftUITests/` | SwiftUI adapter 契约测试（SPM test target） | `Package.swift` `path: "Tests/InkMarkdownSwiftUITests"` |
+| `Tests/ExampleAppPolicyTests/` | ExampleApp 关键业务策略测试（SPM test target） | `Package.swift` ExampleApp policy testTarget |
 | `ExampleApp/` | UIKit + SwiftUI adapter 示例应用工程 | `ExampleApp/ExampleApp.xcodeproj` |
 | `Packages/` | 本地依赖拉取脚本与缓存目录 `Caches/` | `Packages/scripts/fetch-packages.sh` |
 | `docs/` | 项目文档与工程事实基线 | `docs/README.md` |
@@ -80,4 +83,4 @@ Sources/InkMarkdown/
 - `Sources/InkMarkdown/**`
 - `Tests/InkMarkdownTests/**`
 - `docs/codebase/.codebase-scan.txt`
-- 当前已跟踪 `Sources` 下的 66 个 Swift 源文件；工作区另有 2 个待跟踪 Swift 文件
+- 当前候选已跟踪 `Sources` 下的 74 个 Swift 源文件；`git status --porcelain=v2` 为空

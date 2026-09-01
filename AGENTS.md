@@ -19,9 +19,12 @@ InkMarkdown/
 ├── Sources/InkMarkdownLaTeX/ # 可选 iosMath addon target
 ├── Sources/InkMarkdownMermaid/ # 可选 WebKit Mermaid addon target
 ├── Tests/InkMarkdownTests/    # UIKit 语义、快照骨架与流式性能测试
+├── Tests/InkMarkdownCoreContractTests/ # Core-only product 边界测试
+├── Tests/InkMarkdownAddonContractTests/ # Addon 注册边界测试
 ├── Tests/InkMarkdownLaTeXTests/ # LaTeX addon 关键路径测试
 ├── Tests/InkMarkdownMermaidTests/ # Mermaid addon 关键路径测试
 ├── Tests/InkMarkdownSwiftUITests/ # SwiftUI adapter 契约测试
+├── Tests/ExampleAppPolicyTests/ # ExampleApp 业务策略测试
 ├── ExampleApp/                # UIKit + SwiftUI adapter 示例 App
 │   ├── ExampleApp.xcodeproj
 │   └── ExampleApp/            # AppDelegate / SceneDelegate / ViewController
