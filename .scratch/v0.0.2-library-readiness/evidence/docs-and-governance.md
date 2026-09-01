@@ -24,7 +24,7 @@ Until then, public issues and issue forms must not receive credentials, private 
 ## Assets changed in this pass
 
 - README documentation now separates released `0.0.1` core usage from unreleased `0.0.2` products and uses the current `InkInlineSyntax.render(text:context:)` contract.
-- `CHANGELOG.md` now states the recorded 299-test result and keeps incomplete accessibility and minimum-runtime validation explicit.
+- `CHANGELOG.md` now states the current Package result—298 logical tests, 297 passed, 1 skipped—and the separate app-hosted Mermaid 1/1 result, while keeping incomplete accessibility and minimum-runtime validation explicit.
 - `CONTRIBUTING.md`, `SUPPORT.md`, `CODE_OF_CONDUCT.md`, issue forms, the pull request template, and Dependabot configuration now describe the project's contribution and validation boundaries.
 
 ## Validation

@@ -61,13 +61,7 @@ final class UIKitComponentsDemoViewController: UIViewController {
         F --> G
     ```
 
-    ## 5. Mermaid 宽图裁切验收
-
-    最右侧 `Act` 区域与 `Export report` 必须完整可见，不得被 400pt 内容区域裁切。
-
-    ```mermaid
-    \(DemoMermaidSamples.wideJourney.source)
-    ```
+    \(DemoMermaidSamples.wideJourneyAcceptanceMarkdown)
     """
 
   private let scrollView = UIScrollView()

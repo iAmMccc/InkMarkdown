@@ -54,6 +54,8 @@ A second fresh-context Standards/Spec pair reviewed `a9fc7cb..049db14`. It found
 
 A third fresh-context verification pair inspected `049db14..cde27bc`. Standards reported zero P1/P2. Spec found five evidence/inventory inconsistencies: the focused test lacked committed-tree identity, two files gave circular post-CI SHA instructions, three test targets were omitted from public trees, source counts still described an old dirty workspace, and `CONCERNS.md` denied completed ExampleApp evidence. The evidence-only remediation containing this paragraph fixes those items and leaves the tested `Sources/` / `Tests/` tree hashes above unchanged.
 
+A fourth fresh-context `gpt-5.6-sol` / `max` pair inspected `23d8677...61954f8`. Standards found no P1/P2, one P3 runtime-status drift, and two judgement-call duplication/scattered-count smells. Spec found one P2 stale 299-test reference. This follow-up aligns the stale count and runtime row and centralizes the UIKit/SwiftUI wide-journey acceptance Markdown; exact counts remain repeated only where current-state or release evidence requires them. Both reviewers returned `PASS` in the narrow post-remediation check.
+
 ## Remote delivery
 
 Remote delivery is intentionally deferred. No push or PR mutation is authorized in this run, and local verification is not remote CI evidence. When the maintainer later authorizes delivery, the PR head SHA and its required GitHub Actions jobs must be checked on that exact SHA.

@@ -64,7 +64,7 @@ swift-markdown Markup
 | UI 范围 | UIKit rendering engine + v0.0.2 SwiftUI adapter | 已发布 `0.0.1` 为 UIKit；`InkMarkdownSwiftUI` 已按 ADR-008 / ADR-009 完成当前代码实现、关键契约测试与 continuity Example 手工矩阵 | 补齐完整语义、可访问性与真机性能测试矩阵并作为发布门槛 |
 | 平台矩阵 | iOS 14+、iPadOS 14+；不支持其他平台 | `Package.swift` 已仅声明 `.iOS(.v14)`，源码直接依赖 UIKit；当前最新全量回归目的地为 iPhone 17 Pro / iOS 26.5，既有 ExampleApp 人工证据覆盖 iPhone 16 Pro / iOS 18.5 与 iPad / iOS 26.5，iOS/iPadOS 14 runtime 尚未验证 | v0.0.2 前完成 iOS/iPadOS 14 实机或 Simulator 验证；不为 macOS/tvOS/watchOS/visionOS 建立支持路径 |
 | 依赖策略 | **ADR-001**：固定外部 revision | 已固定 `swift-markdown` revision；传递依赖 `swift-cmark` 遵循上游 manifest 的 `gfm` 分支与 resolved revision | 依赖升级时更新 revision 并验证测试 |
-| 平台实施 | **ADR-008**：v0.0.2 仅承诺 iOS/iPadOS 14+ | manifest 与 ExampleApp deployment target 已收敛为 14.0；当前运行证据为 iOS Simulator 18.5 | 补齐最低版本验证后才以 iOS/iPadOS 14+ 对外承诺 |
+| 平台实施 | **ADR-008**：v0.0.2 仅承诺 iOS/iPadOS 14+ | manifest 与 ExampleApp deployment target 已收敛为 14.0；当前运行证据覆盖 iPhone / iPad 的 iOS Simulator 18.5 与 26.5，尚无 iOS/iPadOS 14 runtime 证据 | 补齐最低版本验证后才以 iOS/iPadOS 14+ 对外承诺 |
 | 图片 / 删除线 | **ADR-004**（默认占位）+ **ADR-006**（opt-in 真图）；删除线样式已实现 | opt-in 图片栈与本轮稳定性修复已落地；删除线已实现 `.strikethroughStyle` | 补齐完整语义、最低版本、人工交互与性能证据 |
 | 流式长度 | **ADR-005**：最大长度支持配置（默认 50_000） | renderer/session initializer 已开放配置，并共享不可变 source-limit snapshot；边界测试已落地 | 已收口；后续变更默认值须重跑性能基线 |
 | CI 构建 | 建立 iOS Simulator 自动测试 | 统一使用 Xcode 26.6 + iPhone 17 Pro/OS 26.5；Core、SwiftUI、addon contract/LaTeX、确定性 Mermaid addon 已拆分测试执行，真实 Mermaid PNG 由 ExampleApp app-hosted job 承载；四 product 另有独立消费者构建，ExampleApp 覆盖 Debug/Release | 工作流改动仅完成本地验证；按维护者要求，push、PR 更新与最终候选 SHA 的远端 CI 延后执行 |
