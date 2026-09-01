@@ -22,10 +22,10 @@ public enum InkBlockRenderer {
   /// 在同一次顶层渲染中续接片段，避免非幂等 ``InkConfiguration/sourceFilter`` 被重复应用。
   @preconcurrency @MainActor
   static func renderPreparedSource(
-    _ source: String,
+    _ source: InkPreparedMarkdownSource,
     configuration: InkConfiguration
   ) -> [InkRenderableBlock] {
-    let document = InkParser.parse(source)
+    let document = InkParser.parse(source.value)
     var blocks: [InkRenderableBlock] = []
     var pendingMarkup: [Markup] = []
 

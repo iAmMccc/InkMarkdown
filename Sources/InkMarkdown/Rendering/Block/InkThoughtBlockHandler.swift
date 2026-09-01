@@ -26,7 +26,7 @@ public struct InkThoughtBlockHandler: InkBlockHandler, InkConfigurationSemantics
   public func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
     let rawText = textContent(of: markup)
     guard let parsed = InkThoughtScanner.scan(from: rawText) else { return nil }
-    return InkThoughtPresentationPolicy.makeBlock(from: parsed, configuration: configuration)
+    return InkThoughtPresentationPolicy.makePreparedBlock(from: parsed, configuration: configuration)
   }
 
   /// 单 Block 消费（向后兼容实现）。
@@ -64,7 +64,7 @@ public struct InkThoughtBlockHandler: InkBlockHandler, InkConfigurationSemantics
 
       // 使用统一的 InkThoughtScanner 扫描已收集的文本序列
       if let parsed = InkThoughtScanner.scan(from: collectedTexts), parsed.isComplete {
-        let thoughtBlock = InkThoughtPresentationPolicy.makeBlock(
+        let thoughtBlock = InkThoughtPresentationPolicy.makePreparedBlock(
           from: parsed,
           configuration: configuration
         )
@@ -73,7 +73,7 @@ public struct InkThoughtBlockHandler: InkBlockHandler, InkConfigurationSemantics
         // 尾随正文保全（Suffix Preservation）：将闭标签后的正文续接渲染为标准 Block 序列
         if let suffix = parsed.suffixContent, !suffix.isEmpty {
           let suffixBlocks = InkBlockRenderer.renderPreparedSource(
-            suffix,
+            InkPreparedMarkdownSource(preparedValue: suffix),
             configuration: configuration
           )
           resultBlocks.append(contentsOf: suffixBlocks)
@@ -87,7 +87,7 @@ public struct InkThoughtBlockHandler: InkBlockHandler, InkConfigurationSemantics
 
     // 未找到闭合标签（流式未完结中途态），消费当前剩余所有内容
     if let parsed = InkThoughtScanner.scan(from: collectedTexts) {
-      let thoughtBlock = InkThoughtPresentationPolicy.makeBlock(
+      let thoughtBlock = InkThoughtPresentationPolicy.makePreparedBlock(
         from: parsed,
         configuration: configuration
       )
@@ -96,8 +96,6 @@ public struct InkThoughtBlockHandler: InkBlockHandler, InkConfigurationSemantics
 
     return nil
   }
-
-  // MARK: - Private Helpers
 
   private func textContent(of markup: Markup) -> String {
     if let html = markup as? Markdown.HTMLBlock {

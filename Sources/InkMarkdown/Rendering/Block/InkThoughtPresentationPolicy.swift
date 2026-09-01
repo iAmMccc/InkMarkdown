@@ -24,4 +24,19 @@ public enum InkThoughtPresentationPolicy {
     )
   }
 
+  /// 由已经过顶层预处理的 scan 结果构造内部路由 Block。
+  static func makePreparedBlock(
+    from parsed: InkThoughtScanner.Result,
+    configuration: InkConfiguration,
+    isCollapsed: Bool? = nil
+  ) -> InkThoughtBlock {
+    InkThoughtBlock(
+      preparedThought: InkPreparedMarkdownSource(preparedValue: parsed.thoughtBody),
+      isComplete: parsed.isComplete,
+      config: configuration.appearance.thought,
+      renderConfiguration: configuration,
+      isCollapsed: isCollapsed
+    )
+  }
+
 }

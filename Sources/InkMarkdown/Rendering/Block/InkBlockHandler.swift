@@ -29,8 +29,11 @@ public protocol InkBlockHandler {
 
   /// 将 Markup 节点渲染为独立 Block。返回 nil 表示回落到富文本通道。
   ///
-  /// - Parameter configuration: 完整渲染配置。Block 内部若需二次渲染行内内容
-  ///   （如表格单元格），应透传此配置以复用 `inlineSyntaxes` / `linkTapHandler`。
+  /// 传入的 Markup 已跨过 String → AST 的解析边界；Block 内部若需递归渲染其派生内容，
+  /// 不得再次执行 `sourceFilter`。调用方应在构造 Markup 前完成源码预处理。
+  ///
+  /// - Parameter configuration: 完整渲染配置。Block 内部仍应透传此配置以复用
+  ///   `inlineSyntaxes` / `linkTapHandler` 等解析后语义。
   @preconcurrency @MainActor
   func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock?
 

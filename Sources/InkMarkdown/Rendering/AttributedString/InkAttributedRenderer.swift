@@ -31,8 +31,17 @@ public struct InkAttributedRenderer {
     configuration: InkConfiguration
   ) -> NSAttributedString {
     let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
-    let filtered = effectiveConfiguration.sourcePreparedForParsing(source)
-    let document = InkParser.parse(filtered)
+    let preparedSource = effectiveConfiguration.sourcePreparedForParsing(source)
+    return render(preparedSource: preparedSource, configuration: effectiveConfiguration)
+  }
+
+  /// 渲染已完成顶层预处理的内部源码，不再次执行 `sourceFilter`。
+  static func render(
+    preparedSource: InkPreparedMarkdownSource,
+    configuration: InkConfiguration
+  ) -> NSAttributedString {
+    let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
+    let document = InkParser.parse(preparedSource.value)
     let renderer = InkRenderer(configuration: effectiveConfiguration)
     return renderer.renderDocument(document)
   }
@@ -115,7 +124,7 @@ public struct InkAttributedRenderer {
   ) -> NSAttributedString {
     let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
     let prepared = effectiveConfiguration.sourcePreparedForParsing(text)
-    let document = InkParser.parse(prepared)
+    let document = InkParser.parse(prepared.value)
     guard let paragraph = document.children.first(where: { $0 is Paragraph }) as? Paragraph else {
       return NSAttributedString(string: text, attributes: [
         .font: baseFont,

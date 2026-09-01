@@ -400,7 +400,7 @@ import UIKit
 
 // MARK: - 流式 sourceFilter 语义（T4'）
 
-@Test @MainActor func blockRenderer_sourceFilterRunsOnceAcrossThoughtSuffix() {
+@Test @MainActor func blockRenderer_sourceFilterRunsOnceAcrossThoughtSuffix() throws {
   var invocationCount = 0
   var configuration = InkConfiguration.standard
   configuration.sourceFilter = { source in
@@ -410,10 +410,14 @@ import UIKit
   }
 
   let blocks = InkBlockRenderer.render("# 尾随标题", configuration: configuration)
+  let thoughtBlock = try #require(blocks.first as? InkThoughtBlock)
+  let thoughtView = try #require(thoughtBlock.makeView() as? InkThoughtBlockView)
 
   #expect(invocationCount == 1)
   #expect(blocks.count == 2)
-  #expect(blocks[0] is InkThoughtBlock)
+  #expect(thoughtView.thought == "预处理产生的思考")
+  #expect(thoughtBlock.updateExistingView(thoughtView))
+  #expect(invocationCount == 1)
   #expect(
     (blocks[1] as? InkAttributedTextBlock)?.attributedText.string.contains("尾随标题") == true
   )

@@ -138,12 +138,12 @@ enum InkLaTeXSourcePreservation {
 
 extension InkConfiguration {
   /// 应用 ``sourceFilter``，并在 LaTeX 开启时保护 bracket 定界符后再交给解析器。
-  func sourcePreparedForParsing(_ source: String) -> String {
+  func sourcePreparedForParsing(_ source: String) -> InkPreparedMarkdownSource {
     var text = applySourceFilter(to: source)
     if appearance.latexRendering.isEnabled {
       text = InkLaTeXSourcePreservation.preserveBracketDelimiters(in: text)
     }
-    return text
+    return InkPreparedMarkdownSource(preparedValue: text)
   }
 
   private func applySourceFilter(to source: String) -> String {

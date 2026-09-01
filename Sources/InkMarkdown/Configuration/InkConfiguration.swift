@@ -62,6 +62,9 @@ public struct InkConfiguration: Sendable {
 
   /// 源文本预处理：在交给 Markdown 解析器之前对原始文本做变换。
   ///
+  /// 每次顶层 renderer 调用只执行一次。Block handler 接收的 Markup、Thought 正文与
+  /// 尾随 suffix 均已跨过解析边界，不会对派生片段再次调用该闭包；因此允许使用非幂等转换。
+  ///
   /// 直接赋值会保守地生成新语义身份。若 SwiftUI `body` 每次都重建行为等价的闭包，
   /// 请使用 ``setSourceFilter(_:semanticIdentity:)`` 声明稳定身份。
   public var sourceFilter: ((String) -> String)? {

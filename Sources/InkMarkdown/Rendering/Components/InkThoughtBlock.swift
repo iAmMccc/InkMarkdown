@@ -5,10 +5,42 @@
 
 import UIKit
 
+/// Thought 正文在 String → Markup 边界上的预处理阶段。
+fileprivate enum InkThoughtSource: Equatable {
+  case raw(String)
+  case prepared(InkPreparedMarkdownSource)
+
+  var value: String {
+    switch self {
+    case .raw(let value):
+      return value
+    case .prepared(let source):
+      return source.value
+    }
+  }
+
+  func render(configuration: InkConfiguration) -> NSAttributedString {
+    switch self {
+    case .raw(let value):
+      return InkAttributedRenderer.render(
+        value.trimmingCharacters(in: .whitespacesAndNewlines),
+        configuration: configuration
+      )
+    case .prepared(let source):
+      return InkAttributedRenderer.render(
+        preparedSource: source.trimmingCharacters(in: .whitespacesAndNewlines),
+        configuration: configuration
+      )
+    }
+  }
+}
+
 /// 思考过程（`<think>...</think>` / `<thought>...</thought>`）Block：展示为可折叠/展开的深度思考卡片。
 public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
+  private let source: InkThoughtSource
+
   /// 思考过程的 Markdown 源码。
-  public let thought: String
+  public var thought: String { source.value }
   /// 思考过程是否已结束（影响标题文案与指示器）。
   public let isComplete: Bool
   /// 样式配置。
@@ -41,7 +73,39 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
     renderConfiguration: InkConfiguration,
     isCollapsed: Bool? = nil
   ) {
-    self.thought = thought
+    self.init(
+      source: .raw(thought),
+      isComplete: isComplete,
+      config: config,
+      renderConfiguration: renderConfiguration,
+      isCollapsed: isCollapsed
+    )
+  }
+
+  init(
+    preparedThought: InkPreparedMarkdownSource,
+    isComplete: Bool,
+    config: InkAppearance.Thought,
+    renderConfiguration: InkConfiguration,
+    isCollapsed: Bool?
+  ) {
+    self.init(
+      source: .prepared(preparedThought),
+      isComplete: isComplete,
+      config: config,
+      renderConfiguration: renderConfiguration,
+      isCollapsed: isCollapsed
+    )
+  }
+
+  private init(
+    source: InkThoughtSource,
+    isComplete: Bool,
+    config: InkAppearance.Thought,
+    renderConfiguration: InkConfiguration,
+    isCollapsed: Bool?
+  ) {
+    self.source = source
     self.isComplete = isComplete
     self.config = config
     self.renderConfiguration = renderConfiguration
@@ -50,12 +114,13 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
 
   /// 创建承载当前思考内容和交互状态的 UIKit 视图。
   @MainActor public func makeView() -> UIView {
-    InkThoughtBlockView(
-      thought: thought,
+    return InkThoughtBlockView(
+      source: source,
       isComplete: isComplete,
       config: config,
       renderConfiguration: renderConfiguration,
-      isCollapsed: isCollapsed
+      isCollapsed: isCollapsed,
+      onToggleCollapse: nil
     )
   }
 
@@ -66,7 +131,7 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
   public func updateExistingView(_ view: UIView) -> Bool {
     guard let thoughtView = view as? InkThoughtBlockView else { return false }
     thoughtView.apply(
-      thought: thought,
+      source: source,
       isComplete: isComplete,
       isCollapsed: isCollapsed,
       config: config,
@@ -79,7 +144,7 @@ public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
   @MainActor
   public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
     guard let previous = previous as? InkThoughtBlock else { return false }
-    return thought == previous.thought
+    return source == previous.source
       && isComplete == previous.isComplete
       && isCollapsed == previous.isCollapsed
       && config == previous.config
@@ -124,7 +189,7 @@ public final class InkThoughtBlockView: UIView {
   /// 创建可复用 Thought 卡片视图。
   ///
   /// 不可折叠配置会忽略传入的折叠态并保持正文可见。
-  public init(
+  public convenience init(
     thought: String,
     isComplete: Bool = true,
     config: InkAppearance.Thought = InkAppearance.shared.thought,
@@ -132,7 +197,25 @@ public final class InkThoughtBlockView: UIView {
     isCollapsed: Bool? = nil,
     onToggleCollapse: ((Bool) -> Void)? = nil
   ) {
-    self.thought = thought
+    self.init(
+      source: .raw(thought),
+      isComplete: isComplete,
+      config: config,
+      renderConfiguration: renderConfiguration,
+      isCollapsed: isCollapsed,
+      onToggleCollapse: onToggleCollapse
+    )
+  }
+
+  fileprivate init(
+    source: InkThoughtSource,
+    isComplete: Bool,
+    config: InkAppearance.Thought,
+    renderConfiguration: InkConfiguration,
+    isCollapsed: Bool?,
+    onToggleCollapse: ((Bool) -> Void)?
+  ) {
+    self.thought = source.value
     self.isComplete = isComplete
     self.config = config
     self.renderConfiguration = renderConfiguration
@@ -141,16 +224,10 @@ public final class InkThoughtBlockView: UIView {
     self.isCollapsed = config.isCollapsible ? resolvedCollapsed : false
     self.onToggleCollapse = onToggleCollapse
 
-    // 针对思考块定制内部渲染配置并复用统一 TextKit 宿主体系
-    var innerConfig = renderConfiguration
-    innerConfig.appearance.text.fontSize = config.fontSize
-    innerConfig.appearance.text.lineHeight = config.lineHeight
-    innerConfig.appearance.text.color = config.textColor
-    innerConfig.appearance.text.paragraphSpacing = 6
-
-    let attributedThought = InkAttributedRenderer.render(
-      thought.trimmingCharacters(in: .whitespacesAndNewlines),
-      configuration: innerConfig
+    let attributedThought = Self.renderThought(
+      source: source,
+      config: config,
+      renderConfiguration: renderConfiguration
     )
     let attributedBlock = InkAttributedTextBlock(
       attributedText: attributedThought,
@@ -211,7 +288,6 @@ public final class InkThoughtBlockView: UIView {
 
     // 正文区域
     bodyContainer.backgroundColor = .clear
-    bodyContainer.isHidden = isCollapsed
     container.addSubview(bodyContainer)
 
     bodyContainer.addSubview(bodyTextView)
@@ -226,13 +302,19 @@ public final class InkThoughtBlockView: UIView {
       chevronImageView.tintColor = config.headerColor
       let configSym = UIImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
       chevronImageView.image = UIImage(systemName: "chevron.right", withConfiguration: configSym)
-      chevronImageView.transform = isCollapsed ? .identity : CGAffineTransform(rotationAngle: .pi / 2)
       if chevronImageView.superview == nil {
         headerContainer.addSubview(chevronImageView)
       }
     } else {
       chevronImageView.removeFromSuperview()
     }
+    syncCollapsedVisualState()
+  }
+
+  private func syncCollapsedVisualState() {
+    chevronImageView.transform = isCollapsed ? .identity : CGAffineTransform(rotationAngle: .pi / 2)
+    bodyContainer.isHidden = isCollapsed
+    bodyContainer.alpha = isCollapsed ? 0 : 1
   }
 
   private func updateAccessibility() {
@@ -254,9 +336,7 @@ public final class InkThoughtBlockView: UIView {
     onToggleCollapse?(isCollapsed)
 
     UIView.animate(withDuration: 0.25, delay: 0, options: [.curveEaseInOut]) {
-      self.chevronImageView.transform = self.isCollapsed ? .identity : CGAffineTransform(rotationAngle: .pi / 2)
-      self.bodyContainer.isHidden = self.isCollapsed
-      self.bodyContainer.alpha = self.isCollapsed ? 0 : 1
+      self.syncCollapsedVisualState()
     } completion: { _ in
       self.notifyReservedHeightIfNeeded()
       UIAccessibility.post(
@@ -277,7 +357,23 @@ public final class InkThoughtBlockView: UIView {
     config: InkAppearance.Thought? = nil,
     renderConfiguration: InkConfiguration? = nil
   ) {
-    self.thought = thought
+    apply(
+      source: .raw(thought),
+      isComplete: isComplete,
+      isCollapsed: isCollapsed,
+      config: config,
+      renderConfiguration: renderConfiguration
+    )
+  }
+
+  fileprivate func apply(
+    source: InkThoughtSource,
+    isComplete: Bool,
+    isCollapsed: Bool?,
+    config: InkAppearance.Thought?,
+    renderConfiguration: InkConfiguration?
+  ) {
+    self.thought = source.value
     self.isComplete = isComplete
     if let config {
       self.config = config
@@ -296,31 +392,21 @@ public final class InkThoughtBlockView: UIView {
       self.renderConfiguration = renderConfiguration
     }
 
-    syncCollapsibility()
     if let isCollapsed, self.config.isCollapsible {
       self.isCollapsed = isCollapsed
     } else if !self.config.isCollapsible {
       self.isCollapsed = false
     }
-    bodyContainer.isHidden = self.isCollapsed
-    bodyContainer.alpha = self.isCollapsed ? 0 : 1
-    if self.config.isCollapsible {
-      chevronImageView.transform = self.isCollapsed ? .identity : CGAffineTransform(rotationAngle: .pi / 2)
-    }
+    syncCollapsibility()
 
     titleLabel.text = isComplete ? self.config.completedTitle : self.config.title
     headerContainer.accessibilityLabel = isComplete ? self.config.completedTitle : self.config.title
     updateAccessibility()
 
-    var innerConfig = self.renderConfiguration
-    innerConfig.appearance.text.fontSize = self.config.fontSize
-    innerConfig.appearance.text.lineHeight = self.config.lineHeight
-    innerConfig.appearance.text.color = self.config.textColor
-    innerConfig.appearance.text.paragraphSpacing = 6
-
-    let attributedThought = InkAttributedRenderer.render(
-      thought.trimmingCharacters(in: .whitespacesAndNewlines),
-      configuration: innerConfig
+    let attributedThought = Self.renderThought(
+      source: source,
+      config: self.config,
+      renderConfiguration: self.renderConfiguration
     )
 
     if let textView = bodyTextView as? UITextView {
@@ -333,6 +419,20 @@ public final class InkThoughtBlockView: UIView {
     invalidateIntrinsicContentSize()
     setNeedsLayout()
     notifyReservedHeightIfNeeded()
+  }
+
+  private static func renderThought(
+    source: InkThoughtSource,
+    config: InkAppearance.Thought,
+    renderConfiguration: InkConfiguration
+  ) -> NSAttributedString {
+    var innerConfig = renderConfiguration
+    innerConfig.appearance.text.fontSize = config.fontSize
+    innerConfig.appearance.text.lineHeight = config.lineHeight
+    innerConfig.appearance.text.color = config.textColor
+    innerConfig.appearance.text.paragraphSpacing = 6
+
+    return source.render(configuration: innerConfig)
   }
 
   private func notifyReservedHeightIfNeeded() {
