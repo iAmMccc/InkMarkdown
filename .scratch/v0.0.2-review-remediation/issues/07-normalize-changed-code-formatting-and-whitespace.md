@@ -8,6 +8,10 @@ Status: ready-for-agent
 
 ## Context
 
+- Spec: [v0.0.2 Review Remediation](../spec.md)
+- Standards: [代码格式与风格](../../../docs/codebase/CONVENTIONS.md#3-代码格式与风格)
+- Scope: [Package.swift](../../../Package.swift)、[ExampleApp](../../../ExampleApp/ExampleApp/AppDelegate.swift)
+
 Blocked by: 05, 06.
 
 ## Acceptance

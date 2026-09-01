@@ -8,6 +8,10 @@ Status: ready-for-agent
 
 ## Context
 
+- Spec: [v0.0.2 Review Remediation](../spec.md)
+- Architecture: [Block Presentation Continuity](../../block-presentation-continuity/spec.md)
+- Source: [InkBlockRenderer](../../../Sources/InkMarkdown/Rendering/Block/InkBlockRenderer.swift)、[InkThoughtBlock](../../../Sources/InkMarkdown/Rendering/Components/InkThoughtBlock.swift)
+
 Blocked by: None.
 
 ## Acceptance
@@ -22,3 +26,6 @@ Blocked by: None.
 ## Comments
 
 - 2026-08-31：实现完成。非幂等 filter 关键路径证明顶层调用一次，Thought 与 suffix 标题均保留；合并聚焦测试 60/60、全量 335 通过/0 失败/1 跳过。
+- 2026-08-31：follow-up review 发现 Thought `makeView()` / reuse 仍会二次过滤。现以 internal `InkPreparedMarkdownSource` 区分 raw/prepared source，测试覆盖 Block 构造、view 创建与复用后调用次数仍为 1；全量 335 通过/0 失败/1 跳过。
+- 2026-08-31：最终审计把 String → Markup 固化为 preparation 边界：顶层 renderer 执行一次 filter，所有 `InkBlockHandler` 入口统一把已解析 Markup 视为 prepared，Thought 与 suffix 不再重放 filter。`InkThoughtSource` 收敛 raw/prepared 行为；整包 337 项中 336 通过、0 失败、1 跳过。
+- 2026-08-31：测试收口后删除 handler 各入口的排列测试，只保留包含非幂等 filter、Thought、view 创建/复用与 suffix 的顶层关键链路；定向测试与 301 项整包回归通过。

@@ -8,6 +8,10 @@ Status: ready-for-agent
 
 ## Context
 
+- Spec: [v0.0.2 Review Remediation](../spec.md)
+- Rendering rule: [Context 下传](../../../docs/contributor-guide/03-principles.md#32-context-下传禁止事后回写)
+- Source: [InkAttributedRenderer](../../../Sources/InkMarkdown/Rendering/AttributedString/InkAttributedRenderer.swift)、[InkThoughtBlock](../../../Sources/InkMarkdown/Rendering/Components/InkThoughtBlock.swift)
+
 Blocked by: None.
 
 ## Acceptance

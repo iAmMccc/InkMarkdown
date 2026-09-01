@@ -8,6 +8,10 @@ Status: ready-for-agent
 
 ## Context
 
+- Spec: [v0.0.2 Review Remediation](../spec.md)
+- Standards: [测试命名规范](../../../docs/codebase/CONVENTIONS.md#1-命名规范)
+- Source: [InkMarkdownTests](../../../Tests/InkMarkdownTests/InkMarkdownTests.swift)、[InkMarkdownSwiftUITests](../../../Tests/InkMarkdownSwiftUITests/InkMarkdownViewTests.swift)
+
 Blocked by: 01, 02, 03, 04.
 
 ## Acceptance

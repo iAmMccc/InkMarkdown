@@ -38,10 +38,10 @@
 - 已新增 19 项 CommonMark/GFM 语义矩阵测试，并在共享 `InkTextContext` seam 修复多级列表累计缩进；标准 `<URL>` 与当前不支持的 GFM 裸 URL 回退边界已与固定版 `swift-markdown` 保持一致。
 - `maximumSourceLength` 已通过 renderer/session initializer 开放配置：默认 50,000，创建时固化不可变 snapshot，append、reset、finish 与 promotion 共用同一 canonical source。
 - 已建立代码级性能门槛与可复现基线文档；聚焦语义、长度与性能测试 37/37 通过。
-- 本轮 review remediation 已收口：顶层 source filter 只执行一次；promotion 后环境变化经 session-to-host display seam 刷新；复用 Thought 会完整协调折叠能力；Thought 富文本 fallback 只补缺失背景；公开 API 文档、DEBUG-only Unified Logging、测试命名与 Swift 2-space 格式规范已对齐。
-- XcodeBuildMCP 全量验证：iPhone 16 Pro / iOS 18.5，共 336 项，335 通过、0 失败、1 跳过（本机无 iOS 14 runtime）。聚焦关键链路另有 60/60 通过；ExampleApp 同目的地构建、安装并启动成功，deployment target 为 iOS 14.0。
-- ExampleApp 手工验收已覆盖 Thought 卡片范围、inline code 背景、suffix 边界、可折叠能力 false↔true、流式折叠/追加/宽度/卸载重挂、promotion 后特大字号即时刷新与折叠态保留。
-- `git diff --check` 已通过。当前分支为 `feat/swiftUI`；实现、测试与格式已按功能拆为 `6727f84`、`c1c607c`、`c2fa371`、`8002432`、`9984baf`，本文与本地票据归入最终证据 commit。全部本轮改动提交后工作树 clean；本任务未执行远端 push。
+- 本轮 review remediation 已收口：internal `InkPreparedMarkdownSource` 保证一次顶层 source filter 覆盖 Block 构造、Thought view 创建/复用与 suffix；promotion 后环境变化经 session-to-host display seam 刷新；复用 Thought 会完整协调折叠能力；Thought 富文本 fallback 只补缺失背景；公开 API 文档、DEBUG-only Unified Logging、import、测试命名与 Swift 2-space 格式规范已对齐。
+- 测试策略已收口：删除 36 个 UI、重复边界与入口排列测试；只保留 sourceFilter、Thought scanner、富文本背景、render session/continuity 等数据、状态、调用次数与渲染语义关键链路。XcodeBuildMCP 在 iPhone 16 Pro / iOS 18.5 完成聚焦 20/20、sourceFilter 定向测试和 301 项全量回归：300 通过、0 失败、1 跳过（本机无 iOS 14 runtime）。
+- 同一生产源码的 ExampleApp 实走覆盖：Thought 卡片范围、inline code 背景与 suffix 边界；可折叠能力 true→false→true；流式折叠、继续追加、promotion 后特大字号即时刷新、折叠态保留及恢复标准字号。本次只删除测试并更新文档，未修改产品源码，因此未重复 UI 走查；宽度与卸载重挂继续沿用此前同日手工证据。
+- `git diff --check` 已通过。当前分支为 `feat/swiftUI`；原 remediation 已按功能提交为 `6727f84`、`c1c607c`、`c2fa371`、`8002432`、`9984baf`、`003b36d`。follow-up code-review 修复当前仍在工作树中，尚未 commit 或 push。
 
 ## 未解决问题
 

@@ -25,7 +25,7 @@
 - **位置**：[InkMarkdownRenderSession.swift:181](/Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:181)、[InkMarkdownCoordinator.swift:150](/Users/shizihan/DailyUse/Github/InkMarkdown/Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownCoordinator.swift:150)。
 - **触发**：视图已挂载后首次 append `<think>…`，或一个 chunk 同时包含 thought 增量/闭合标签和 answer remainder。
 - **错误行为**：首次 thought 分支只 `renderer.reset`，不通知 thought；有 remainder 时只通知 `.streamText`。thought 会缺失或保持旧正文/旧高度。
-- **证据**：display target 是互斥 enum，Coordinator 每次只刷新一个槽；现有测试在挂载前 append 混合 chunk：[InkStreamMarkdownViewTests.swift:99](/Users/shizihan/DailyUse/Github/InkMarkdown/Tests/InkMarkdownSwiftUITests/InkStreamMarkdownViewTests.swift:99)。
+- **历史证据**：display target 是互斥 enum，Coordinator 每次只刷新一个槽；当时的 mounted-view 测试曾覆盖挂载前 append 混合 chunk。该 UI 单测套件后续按项目测试策略删除，当前 UI 行为由 ExampleApp 手工验收，数据与状态由 continuity/session 关键链路测试覆盖。
 - **最小修正**：使用可组合 dirty-slot 集合，同次 append 同时提交 thought/text 更新，并补先挂载后首次 thought、混合 chunk 测试。
 
 ### P1 — `cancel()` 后已显示的 thought 不会从 SwiftUI 界面移除

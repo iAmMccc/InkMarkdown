@@ -8,6 +8,10 @@ Status: ready-for-agent
 
 ## Context
 
+- Spec: [v0.0.2 Review Remediation](../spec.md)
+- Standards: [编码规范](../../../docs/codebase/CONVENTIONS.md)
+- Source: [InkBlockPresentationContinuity](../../../Sources/InkMarkdownSwiftUI/Continuity/InkBlockPresentationContinuity.swift)、[InkSemanticIdentity](../../../Sources/InkMarkdown/Configuration/InkSemanticIdentity.swift)
+
 Blocked by: 03, 04.
 
 ## Acceptance
@@ -23,3 +27,4 @@ Blocked by: 03, 04.
 ## Comments
 
 - 2026-08-31：实现完成。目标 public declaration 文档 lint 无缺失；continuity fallback 仅在 DEBUG 使用 Unified Logging，Release 静默；生产源码无新增可执行 `print`。
+- 2026-08-31：follow-up review 已把 `InkBlockPresentationContinuity.swift` 调整为系统框架优先、项目模块随后导入。
