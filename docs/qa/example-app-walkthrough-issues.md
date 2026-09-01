@@ -153,7 +153,7 @@
 
 #### 是否仍为已知限制
 
-**是（系统噪声）** — Mermaid 渲染依赖 WebKit，Simulator 下相关日志可忽略。缓存未命中时的短暂骨架属加载态，非 defect。当前唯一真实 PNG 关键测试 `rendersWideJourneyWithoutRightEdgeClipping` 为 hosted-Simulator 冷启动保留 60s timeout；超时应按测试/WebKit 启动问题单独诊断，不能直接归类为 Demo 控制台噪声或 Mermaid 语法缺陷。
+**是（系统噪声）** — Mermaid 渲染依赖 WebKit，Simulator 下相关日志可忽略。缓存未命中时的短暂骨架属加载态，非 defect。当前唯一真实 PNG 关键测试 `rendersWideJourneyWithoutRightEdgeClipping` 为 fresh hosted-Simulator 每次尝试保留 120s timeout，并沿用 production 的一次有界冷启动重试；超时应按测试/WebKit 启动问题单独诊断，不能直接归类为 Demo 控制台噪声或 Mermaid 语法缺陷。
 
 ---
 

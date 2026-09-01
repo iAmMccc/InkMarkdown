@@ -21,7 +21,7 @@ Environment: XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro, iOS 18.5, Debu
 - Test targets now isolate Core, addon registration contracts, LaTeX, Mermaid/WebKit, and SwiftUI at execution/process level. No production lock, sleep, or retry loop was added to hide test interference.
 - CI package jobs use the test-enabled `InkMarkdown-Package` aggregate scheme; `-only-testing` separates test execution but does not isolate the aggregate build graph.
 - A dedicated external-consumer fixture builds Core, SwiftUI, LaTeX, and Mermaid product schemes separately, proving product-level compile/link isolation.
-- The single retained real Mermaid PNG integration renders a wide journey, asserts right-side ink after 400px fitting, and allows a 60-second hosted-Simulator cold-start window; production defaults remain unchanged.
+- The single retained real Mermaid PNG integration renders a wide journey, asserts right-side ink after 400px fitting, and allows 120 seconds per hosted-Simulator cold-start attempt. The renderer still performs at most the production-defined single retry; production defaults remain unchanged.
 
 ## Focused local results
 
@@ -35,7 +35,7 @@ Environment: XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro, iOS 18.5, Debu
 | ExampleApp Release build | passed; 45.2s |
 | CI-equivalent Mermaid lane (`InkMarkdown-Package`) | 9 passed, 0 failed, 0 skipped; 47.0s |
 | Isolated consumer builds | Core 9.2s; SwiftUI 4.0s; LaTeX 3.1s; Mermaid 2.3s; all passed |
-| Final wide-journey Mermaid remediation | 9 passed, 0 failed, 0 skipped; 11.2s |
+| Post-CI wide-journey timeout calibration | 9 passed, 0 failed, 0 skipped; 30.8s at clean `d43b27e` |
 
 The skipped SwiftUI test is the existing iOS 14-only ICS case; this machine has iOS 18.5 and 26.5 runtimes only.
 
@@ -62,5 +62,6 @@ This is local XcodeBuildMCP evidence. It does not replace the required GitHub Ac
 
 ## Pending final evidence
 
+- PR run [33474934456](https://github.com/iAmMccc/InkMarkdown/actions/runs/33474934456) at `4c6ff6f` passed 9 of 10 CI jobs; only Mermaid integration failed because both 60-second cold-start attempts ended in `.timedOut`. The measured fresh-runner startup exceeded that per-attempt budget, so the focused test budget was calibrated to 120 seconds before the next candidate push.
 - Re-run proportionate final validation if later source changes affect these lanes.
 - Push the final candidate SHA and require all GitHub jobs to pass on that exact SHA.

@@ -22,17 +22,17 @@ The skipped package test is the existing iOS 14-only ICS case; no iOS 14 runtime
 
 ### Exact wide-journey remediation rerun
 
-- Timestamp: `2026-09-01T13:36:55+08:00` (`2026-09-01T05:36:55Z` artifact timestamp).
-- Clean committed HEAD: `cde27bcb243699b5ecf0e205ce9b638f3465b685`.
+- Timestamp: `2026-09-01T14:03:15+08:00` (`2026-09-01T06:03:15Z` artifact timestamp).
+- Clean committed HEAD: `d43b27e91a5f6d68e417ece7b3a2eb19b97033d4`.
 - Tested source tree: `65d41c7f2e434e39af12a7b81766e36085dd8a4d` (`HEAD:Sources`).
-- Tested test tree: `c77904294fa10a44c17ae186a5f4a3ac95d28b46` (`HEAD:Tests`).
+- Tested test tree: `3d0207d4bc6c8724b07f98ceb23d692caa673f08` (`HEAD:Tests`).
 - Tool / scheme / destination: XcodeBuildMCP `test_sim`, `InkMarkdown-Package`, iPhone 16 Pro / iOS 18.5 Simulator, Debug.
 - Command: `test_sim(extraArgs: ["-only-testing:InkMarkdownMermaidTests"], progress: true)`.
-- Result: 9 passed, 0 failed, 0 skipped; 6.6s. This includes `rendersWideJourneyWithoutRightEdgeClipping()`.
-- Build log: `~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/logs/test_sim_2026-09-01T05-36-55-829Z_pid53535_e3f779a5.log`.
-- Result bundle: `~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/result-bundles/test_sim_2026-09-01T05-36-55-829Z_pid53535_7cc74844.xcresult`.
+- Result: 9 passed, 0 failed, 0 skipped; 30.8s. This includes `rendersWideJourneyWithoutRightEdgeClipping()` with a 120-second per-attempt hosted-runner budget.
+- Build log: `~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/logs/test_sim_2026-09-01T06-03-15-409Z_pid53535_8b5d7c6a.log`.
+- Result bundle: `~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/result-bundles/test_sim_2026-09-01T06-03-15-409Z_pid53535_e2c652bd.xcresult`.
 
-The evidence-only remediation commit after `cde27bc` does not change `Sources/` or `Tests/`; the scoped tree hashes above remain the tested code identity. The earlier 299-test package run used the same `Sources/` tree; the only later test-tree change is the focused Mermaid case rerun here. Final GitHub CI must still validate the complete PR head SHA.
+The evidence-only remediation commit after `d43b27e` does not change `Sources/` or `Tests/`; the scoped tree hashes above remain the tested code identity. The earlier 299-test package run used the same `Sources/` tree; the only later test-tree change is the focused Mermaid timeout calibration rerun here. Final GitHub CI must still validate the complete PR head SHA.
 
 ## Manual verification
 

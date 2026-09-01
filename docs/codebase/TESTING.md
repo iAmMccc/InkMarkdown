@@ -19,7 +19,7 @@
 |------|--------|
 | `InkMarkdownTests.swift` | 固定行高、段落间距、appearance 默认值、混排、流式边界、标题/列表上下文样式 |
 | `StreamingPerformanceTests.swift` | 增量与全量输出一致性；增量耗时 ≤ 全量 30% 闸门 |
-| `../InkMarkdownMermaidTests/InkMermaidRendererTests.swift` | Mermaid fence、cache、limits、bridge 与唯一真实 WebKit PNG 关键链路；宽 journey 在 400px 约束下检查右侧内容未裁切（60s hosted-Simulator 冷启动宽限） |
+| `../InkMarkdownMermaidTests/InkMermaidRendererTests.swift` | Mermaid fence、cache、limits、bridge 与唯一真实 WebKit PNG 关键链路；宽 journey 在 400px 约束下检查右侧内容未裁切（每次尝试 120s hosted-Simulator 冷启动预算，production 仍只重试一次） |
 | `Snapshots/RenderSnapshot.swift` | 快照模型 + `RenderContractAssertions` 助手 |
 | `Snapshots/SnapshotScaffoldTests.swift` | 快照基建冒烟 |
 | `../InkMarkdownSwiftUITests/InkMarkdownAdapterWorkloadTests.swift` | Adapter 单环境工作负载回归闸门（静态长文测量、百片流式、promotion 时长；非 FPS/hitch 签收） |
