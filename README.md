@@ -25,6 +25,7 @@ InkMarkdown is a **UIKit-first** Markdown parsing and rendering framework built 
   - Prefix `<think>` / `<thought>` streams become collapsible native `InkThoughtBlock` views; matching closing tags preserve the exact following Markdown suffix.
 - **Extensible Architecture**:
   - Host-definable inline syntax (`InkInlineSyntax`), block routing (`InkBlockHandler`), source filtering, and link tap interception.
+  - Source filtering runs once before parsing for each top-level render; nested Thought content and its following suffix reuse the prepared source without invoking the filter again.
 - **Opt-in Local Diagram & Math Support**:
   - Native rendering for LaTeX formulas (`$...$`, `$$...$$`) and Mermaid diagrams via local offline image generation and bounded image storage.
 - **SwiftUI Adapter (unreleased `0.0.2`)**:

@@ -25,6 +25,7 @@ InkMarkdown 是基于 Apple [`swift-markdown`](https://github.com/swiftlang/swif
   - 以前缀 `<think>` / `<thought>` 输出的流式内容会成为可折叠原生 `InkThoughtBlock`；仅同名闭标签会结束思考过程，闭标签后的 Markdown 后缀保持原样。
 - **高可扩展架构**：
   - 支持宿主自定义行内语法扩展（`InkInlineSyntax`）、块路由拦截（`InkBlockHandler`）、源文本预清洗与链接点击拦截。
+  - 每次顶层渲染只在解析前执行一次源文本预清洗；Thought 正文及其尾随 Markdown 复用已预处理源码，不会再次调用 filter。
 - **Opt-in 本地公式与图表支持**：
   - 支持 LaTeX 数学公式（`$...$`, `$$...$$`）与 Mermaid 图表离线渲染，生成图片由内存受控的统一图片 Store 管理。
 - **SwiftUI Adapter（尚未发布的 `0.0.2`）**：

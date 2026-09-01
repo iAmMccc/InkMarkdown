@@ -195,7 +195,7 @@ let blocks = InkBlockRenderer.render(source, configuration: config)
 
 ### sourceFilter 与 linkTapHandler
 
-- `sourceFilter`：在解析前处理源文本字符串
+- `sourceFilter`：每次顶层 renderer 调用在解析前执行一次；Thought 正文与 suffix 等派生片段复用 prepared source，不重复执行，因此非幂等 filter 也必须得到稳定结果
 - `linkTapHandler`：拦截并响应 `.link` 点击事件
 
 ## 开发校验清单
