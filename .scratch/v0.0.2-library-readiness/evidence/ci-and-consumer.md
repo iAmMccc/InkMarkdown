@@ -18,8 +18,9 @@ Environment: XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro, iOS 18.5, Debu
 - Swift Testing `.serialized` only serializes cases within one suite. Separate suites still entered the process concurrently.
 - `InkMermaidRenderScheduler` serialized real renders, but did not isolate process-global test registry mutation.
 - The 26-diagram matrix and wide-image pixel assertion duplicated the retained real PNG integration seam and ExampleApp manual coverage. They were removed under the repository's key-path-only test policy.
-- Test targets now isolate Core, addon registration contracts, LaTeX, Mermaid/WebKit, and SwiftUI. No production lock, sleep, or retry loop was added to hide test interference.
-- CI package jobs use the test-enabled `InkMarkdown-Package` aggregate scheme; `-only-testing` filters retain lane isolation.
+- Test targets now isolate Core, addon registration contracts, LaTeX, Mermaid/WebKit, and SwiftUI at execution/process level. No production lock, sleep, or retry loop was added to hide test interference.
+- CI package jobs use the test-enabled `InkMarkdown-Package` aggregate scheme; `-only-testing` separates test execution but does not isolate the aggregate build graph.
+- A dedicated external-consumer fixture builds Core, SwiftUI, LaTeX, and Mermaid product schemes separately, proving product-level compile/link isolation.
 - The single retained real Mermaid PNG integration allows a 60-second hosted-Simulator cold-start window; production defaults remain unchanged.
 
 ## Focused local results
@@ -33,6 +34,7 @@ Environment: XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro, iOS 18.5, Debu
 | ExampleApp Debug build | passed; 10.5s |
 | ExampleApp Release build | passed; 45.2s |
 | CI-equivalent Mermaid lane (`InkMarkdown-Package`) | 9 passed, 0 failed, 0 skipped; 47.0s |
+| Isolated consumer builds | Core 9.2s; SwiftUI 4.0s; LaTeX 3.1s; Mermaid 2.3s; all passed |
 
 The skipped SwiftUI test is the existing iOS 14-only ICS case; this machine has iOS 18.5 and 26.5 runtimes only.
 
@@ -53,8 +55,9 @@ This is local XcodeBuildMCP evidence. It does not replace the required GitHub Ac
 - `InkMarkdownTests` depends only on `InkMarkdown`.
 - Addon contract, LaTeX, and Mermaid tests use independent test targets and therefore independent process-global registration state.
 - `InkMarkdownSwiftUITests` depends on the SwiftUI adapter product.
-- ExampleApp consumes all four local products through an Xcode local Swift package reference and builds in Debug and Release.
-- GitHub Actions now exposes independent Core, SwiftUI, addon-contract, Mermaid, ExampleApp Debug, and ExampleApp Release signals while sharing one pinned-toolchain setup action.
+- ExampleApp consumes all four local products together through an Xcode local Swift package reference and builds in Debug and Release.
+- `.github/fixtures/consumer-smoke` provides four independent external targets; each imports exactly one product and builds through its own product scheme.
+- GitHub Actions exposes separate Core, SwiftUI, addon-contract, and Mermaid test-execution signals, four product-isolated consumer builds, and ExampleApp Debug/Release builds while sharing one pinned-toolchain setup action.
 
 ## Pending final evidence
 

@@ -95,6 +95,8 @@ jobs:
           TEST_FILTERS: ${{ matrix.filters }}
         run: |
           set -euo pipefail
+          # This isolates test execution, not the aggregate package build graph.
+          # Product-isolated compilation is verified by the consumer-builds job below.
           read -r -a test_filter_args <<< "${TEST_FILTERS}"
           set -o pipefail
           xcodebuild test \
@@ -115,6 +117,69 @@ jobs:
             xcodebuild-test.log
             TestResults.xcresult
             package-manifest.json
+          if-no-files-found: ignore
+
+  consumer-builds:
+    name: Consumer / ${{ matrix.name }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Core only
+            slug: core
+            scheme: InkMarkdownCoreConsumer
+          - name: SwiftUI adapter
+            slug: swiftui
+            scheme: InkMarkdownSwiftUIConsumer
+          - name: LaTeX addon
+            slug: latex
+            scheme: InkMarkdownLaTeXConsumer
+          - name: Mermaid addon
+            slug: mermaid
+            scheme: InkMarkdownMermaidConsumer
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pinned iOS toolchain
+        id: ios
+        uses: ./.github/actions/setup-ios
+        with:
+          xcode-app: ${{ env.XCODE_APP }}
+          xcode-version: ${{ env.XCODE_VERSION }}
+          xcode-build: ${{ env.XCODE_BUILD }}
+          simulator-name: ${{ env.IOS_SIM_NAME }}
+          simulator-os: ${{ env.IOS_SIM_OS }}
+
+      - name: Verify consumer fixture manifest
+        run: swift package --package-path .github/fixtures/consumer-smoke dump-package > consumer-manifest.json
+
+      - name: Build isolated ${{ matrix.name }} consumer
+        working-directory: .github/fixtures/consumer-smoke
+        env:
+          DESTINATION: ${{ steps.ios.outputs.destination }}
+          CONSUMER_SCHEME: ${{ matrix.scheme }}
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          xcodebuild build \
+            -scheme "${CONSUMER_SCHEME}" \
+            -destination "${DESTINATION}" \
+            -clonedSourcePackagesDirPath "${RUNNER_TEMP}/consumer-source-packages" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee "${GITHUB_WORKSPACE}/xcodebuild-consumer.log"
+
+      - name: Upload consumer build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consumer-${{ matrix.slug }}-failure
+          path: |
+            xcodebuild-consumer.log
+            consumer-manifest.json
           if-no-files-found: ignore
 
   example-app:

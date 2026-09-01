@@ -41,6 +41,7 @@
 - 本轮 review remediation 已收口：internal `InkPreparedMarkdownSource` 保证一次顶层 source filter 覆盖 Block 构造、Thought view 创建/复用与 suffix；promotion 后环境变化经 session-to-host display seam 刷新；复用 Thought 会完整协调折叠能力；Thought 富文本 fallback 只补缺失背景；公开 API 文档、DEBUG-only Unified Logging、import、测试命名与 Swift 2-space 格式规范已对齐。
 - 测试策略已收口：删除 UI、重复边界与入口排列测试；只保留 sourceFilter、Thought scanner、富文本背景、render session/continuity、addon 注册与真实 Mermaid PNG 等数据、状态、调用次数与渲染语义关键链路。2026-09-01，XcodeBuildMCP 在 iPhone 16 Pro / iOS 18.5 完成 299 项全量回归：298 通过、0 失败、1 跳过（本机无 iOS 14 runtime）。
 - 2026-09-01 以同一生产源码重复执行 ExampleApp：iPad 覆盖 Thought 卡片范围、inline code 背景、suffix 边界、可折叠能力 true→false→true、流式追加、宽度切换、卸载重挂、promotion 与特大字号刷新；iPhone 覆盖窄宽静态/配置布局、表格、LaTeX、Mermaid 与流式状态刷新。网络图片仅停留在占位符，未宣称外网加载通过。
+- 四 product 消费者冒烟已从 ExampleApp 的联合链接中拆出：Core、SwiftUI、LaTeX、Mermaid 各由只选择单一 product 的外部 fixture 独立构建；package 测试 job 的 `-only-testing` 仅表示执行分流，不再描述为构建图隔离。
 - `git diff --check` 已通过。当前分支为 `feat/swiftUI`；review remediation 与测试收口已按功能提交至 `a9fc7cb`，readiness 基线与 CI/消费者分流已提交为 `7993112`、`7de8adb`、`307d83d`。最终文档、兼容性验收、独立审查、push 与远端 CI 仍在进行。
 
 ## 未解决问题

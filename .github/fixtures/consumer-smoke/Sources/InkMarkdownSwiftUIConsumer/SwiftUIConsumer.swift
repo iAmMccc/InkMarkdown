@@ -1,0 +1,3 @@
+import InkMarkdownSwiftUI
+
+public typealias SwiftUIConsumerSession = InkMarkdownRenderSession
