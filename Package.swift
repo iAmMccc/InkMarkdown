@@ -63,8 +63,23 @@ let package = Package(
     ),
     .testTarget(
       name: "InkMarkdownTests",
-      dependencies: ["InkMarkdown", "InkMarkdownLaTeX", "InkMarkdownMermaid"],
+      dependencies: ["InkMarkdown"],
       path: "Tests/InkMarkdownTests"
+    ),
+    .testTarget(
+      name: "InkMarkdownAddonContractTests",
+      dependencies: ["InkMarkdown", "InkMarkdownLaTeX", "InkMarkdownMermaid"],
+      path: "Tests/InkMarkdownAddonContractTests"
+    ),
+    .testTarget(
+      name: "InkMarkdownLaTeXTests",
+      dependencies: ["InkMarkdown", "InkMarkdownLaTeX"],
+      path: "Tests/InkMarkdownLaTeXTests"
+    ),
+    .testTarget(
+      name: "InkMarkdownMermaidTests",
+      dependencies: ["InkMarkdown", "InkMarkdownMermaid"],
+      path: "Tests/InkMarkdownMermaidTests"
     ),
     .testTarget(
       name: "InkMarkdownSwiftUITests",
