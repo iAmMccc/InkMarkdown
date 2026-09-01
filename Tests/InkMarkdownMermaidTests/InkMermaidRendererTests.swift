@@ -87,9 +87,9 @@ struct InkMermaidRendererTests {
   }
 
   @Test @MainActor func rendersWideJourneyWithoutRightEdgeClipping() async throws {
-    // Hosted Simulator 首次启动 WebContent 可能超过 30 秒；本集成 seam 允许一次冷启动宽限，
-    // 生产默认值与调用方配置不受测试环境影响。
-    let limits = InkMermaidRenderLimits(timeout: 60)
+    // Fresh hosted runner 的 WebContent 首次启动实测可超过 60 秒；单次预算设为 120 秒，
+    // renderer 仍只保留 production 的一次有界冷启动重试，默认值与调用方配置不受影响。
+    let limits = InkMermaidRenderLimits(timeout: 120)
     let renderer = InkMermaidImageRenderer(limits: limits)
     let request = InkMermaidRenderRequest(
       source: """
