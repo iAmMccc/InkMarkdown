@@ -48,7 +48,7 @@ xcodebuild -scheme InkMarkdown \
   build
 
 # 测试
-xcodebuild -scheme InkMarkdown \
+xcodebuild -scheme InkMarkdown-Package \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
   test
 

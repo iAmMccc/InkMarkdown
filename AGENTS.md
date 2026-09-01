@@ -227,7 +227,7 @@ xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 
 ### 测试
 
 ```bash
-xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' test
+xcodebuild -scheme InkMarkdown-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' test
 ```
 
 ### 清理构建产物

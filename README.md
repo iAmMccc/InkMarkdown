@@ -298,7 +298,7 @@ Use [XcodeBuildMCP](https://www.xcodebuildmcp.com/) or `xcodebuild` with an iOS 
 
 ```bash
 xcodebuild test \
-  -scheme InkMarkdown \
+  -scheme InkMarkdown-Package \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
 ```
 

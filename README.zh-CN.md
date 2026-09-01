@@ -298,7 +298,7 @@ InkMarkdown 源码直接引用 `UIKit`，因此在 macOS 主机环境直接执�
 
 ```bash
 xcodebuild test \
-  -scheme InkMarkdown \
+  -scheme InkMarkdown-Package \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
 ```
 

@@ -22,8 +22,8 @@ This standard applies to project issues, pull requests, reviews, documentation, 
 
 ## Reporting concerns
 
-For conduct concerns, use a private reporting channel provided by the repository host or project maintainers when one is available. Do not publish sensitive details in a public issue. If no private route is available, use a non-sensitive issue only to ask where a conduct concern can be reported.
+The project does not currently publish a confidential conduct-reporting route. This document defines behavior expectations but does not claim that confidential incident intake is operational. Do not publish incident details, private information, or retaliation-sensitive context in a public issue. A non-sensitive public issue may only ask the maintainer to establish a private route.
 
 ## Enforcement
 
-Project maintainers may remove content, close discussions, or restrict participation when behavior violates this standard. Actions should be proportionate to the behavior and its impact on the project community.
+Project maintainers may moderate conduct visible in public project spaces. Confidential reports cannot be accepted safely until the maintainer establishes and documents a working private route. Any moderation action should be proportionate to the behavior and its impact on the project community.

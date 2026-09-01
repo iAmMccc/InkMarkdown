@@ -33,7 +33,7 @@ xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 
 测试命令：
 
 ```bash
-xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' test
+xcodebuild -scheme InkMarkdown-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' test
 ```
 
 如果本机没有 `iPhone 17 Pro` 模拟器，将 `name=` 替换为 `xcrun simctl list devices available` 中列出的任意设备名称。

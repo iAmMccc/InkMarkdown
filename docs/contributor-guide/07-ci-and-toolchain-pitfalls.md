@@ -109,7 +109,7 @@ CI 不会使用：
 
    ```bash
    sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer  # 切换到对应路径
-   xcodebuild test -scheme InkMarkdown \
+   xcodebuild test -scheme InkMarkdown-Package \
      -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
    ```
 
@@ -135,7 +135,7 @@ CI 不会使用：
 | 被测代码 | `ExampleAppChatPolicy` **target**（仅 `ChatScrollPolicy.swift`） |
 | 公开 product | **无** — `ExampleAppChatPolicy` 不是 SPM library product，避免双根编译 / 发布泄漏 |
 | ExampleApp 编译 | `ChatScrollPolicy.swift` 直接编入 ExampleApp app target |
-| 运行方式 | `xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,...' test`，或 Xcode 选择 `InkMarkdown-Package` scheme 跑全量测试 |
+| 运行方式 | `xcodebuild -scheme InkMarkdown-Package -destination 'platform=iOS Simulator,...' test`，或 Xcode 选择 `InkMarkdown-Package` scheme 跑全量测试 |
 
 本地只开 ExampleApp Xcode 工程**不会**自动运行 `ChatScrollPolicyTests`；需在 Package scheme 下执行。
 
