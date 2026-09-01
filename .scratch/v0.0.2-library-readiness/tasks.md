@@ -8,18 +8,18 @@
 
 ## Parallel tracks
 
-- [ ] A：CI、四 product 消费者接入、ExampleApp build。
-- [ ] B：README/CHANGELOG/CONTRIBUTING、开源协作资产。
-- [ ] C：`0.0.1` 公开 interface 对比、深度审计、错误契约。
-- [ ] D：Simulator/runtime 盘点、ExampleApp 人工矩阵、性能证据。
+- [x] A：CI、四 product 消费者接入、ExampleApp build。
+- [x] B：README/CHANGELOG/CONTRIBUTING、开源协作资产。
+- [x] C：`0.0.1` 公开 interface 对比、深度审计、错误契约。
+- [x] D：可用 Simulator/runtime 盘点与 ExampleApp 人工矩阵；最低系统、真机性能及完整可访问性保留真实 blocker。
 
 ## Integration
 
-- [ ] 集成各轨改动并更新权威状态文档。
-- [ ] 完成本地构建、关键测试、全量测试与消费者冒烟。
-- [ ] 完成 ExampleApp 手工验收。
-- [ ] 完成独立 Standards 与 Spec 审查。
-- [ ] 修复确认问题并重跑受影响验证。
+- [x] 集成各轨改动并更新权威状态文档。
+- [x] 完成本地构建、关键测试、全量测试与消费者冒烟。
+- [x] 完成 ExampleApp 手工验收。
+- [x] 完成独立 Standards 与 Spec 审查。
+- [x] 修复确认问题并重跑受影响验证；私密披露渠道属于需 maintainer 授权的外部决策，文档不虚构已可用。
 - [ ] 按功能提交、推送、创建或更新 PR、等待 CI。
 
 ## External decisions
