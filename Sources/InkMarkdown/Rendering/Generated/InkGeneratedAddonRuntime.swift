@@ -6,7 +6,7 @@ import Foundation
 /// ``register(owner:rendererVersion:makeLoader:)`` 与 ``registerResourceBundle(_:owner:)``；
 /// 核心在未注册时必须走 ``ImageLoadError/generatedLoaderUnavailable``，
 /// 不得用编译期 stub 伪装可用 renderer。
-public enum InkGeneratedAddonRuntime: Sendable {
+package enum InkGeneratedAddonRuntime: Sendable {
   /// 按 owner 创建已注册的生成型图片 loader。
   public typealias LoaderFactory = @Sendable () -> any InkGeneratedImageLoading
 
@@ -86,13 +86,13 @@ public enum InkGeneratedAddonRuntime: Sendable {
 }
 
 /// LaTeX addon 向核心暴露的真实渲染能力。
-public protocol InkLaTeXRenderingProviding: InkGeneratedImageLoading {
+package protocol InkLaTeXRenderingProviding: InkGeneratedImageLoading {
   /// 使用 iosMath 等后端渲染单次 LaTeX 请求。
   func renderLaTeX(_ request: InkLaTeXRenderRequest) async throws -> InkLaTeXRenderResult
 }
 
 /// Mermaid addon 向核心暴露的真实渲染能力。
-public protocol InkMermaidRenderingProviding: InkGeneratedImageLoading {
+package protocol InkMermaidRenderingProviding: InkGeneratedImageLoading {
   /// 使用 addon 注册的 bridge 资源渲染单次 Mermaid 请求。
   func renderMermaid(
     _ request: InkMermaidRenderRequest,

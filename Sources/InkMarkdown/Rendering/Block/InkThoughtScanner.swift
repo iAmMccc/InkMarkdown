@@ -9,7 +9,7 @@ import Foundation
 ///
 /// 作为核心库思考标签语法的唯一 Owner，提供精确的开闭标签匹配、
 /// 尾随正文保全（Suffix Preservation）与流式中途态识别。
-public enum InkThoughtScanner {
+package enum InkThoughtScanner {
 
   /// 扫描提取结果结构体。
   public struct Result: Equatable {
