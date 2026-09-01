@@ -21,6 +21,8 @@ final class StreamingDemoViewModel: ObservableObject {
   @Published var showingConfigSheet = false
   @Published private(set) var nextChunkIndex = 0
 
+  private var sessionStateCancellable: AnyCancellable?
+
   /// 默认 prompt 与 Mock 路由样本标题对齐。
   static let defaultPrompt = "请用 Markdown 写一份 Swift 结构体与类的对比，包含代码块与表格"
 
@@ -42,6 +44,12 @@ final class StreamingDemoViewModel: ObservableObject {
         userInterfaceStyle: userInterfaceStyle
       )
     )
+    // SwiftUI 只观察此 ViewModel；转发嵌套会话的状态变化，避免状态文案与按钮等待无关重绘才刷新。
+    sessionStateCancellable = session.$state
+      .dropFirst()
+      .sink { [weak self] _ in
+        self?.objectWillChange.send()
+      }
   }
 
   var canAppendMock: Bool {
