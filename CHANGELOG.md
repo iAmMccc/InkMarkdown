@@ -8,6 +8,8 @@
 
 ## [Unreleased]
 
+> 本节记录当前 `feat/swiftUI` 分支的未发布工作，不表示 `0.0.2` 已发布。
+
 ### Added
 - **SwiftUI 声明式适配器 (`InkMarkdownSwiftUI`)**：
   - 提供独立的 `InkMarkdownSwiftUI` target，使 SwiftUI 宿主复用 UIKit 核心渲染引擎语义；
@@ -21,11 +23,15 @@
   - 支持流式 PREFIX 思考卡片早期挂载与 Promotion 全生命周期的折叠状态保持（SSOT）。
 - **Chat 列表滚动与吐字控制 (`ChatScrollPolicy`)**：
   - 统一管理 120pt 粘底判定（stickToBottom）与用户拖拽/减速期间的吐字暂停（shouldPauseDisplay）。
-- **无障碍 (VoiceOver) 与 Dynamic Type 增强**：
-  - 为思考过程卡片、代码块、分割线等组件补充完整的无障碍标签、状态值与提示；
-  - 适配超大字号 Dynamic Type 下的行高自适应与防截断排版。
-- **性能与稳定性测试矩阵**：
-  - 增加长文档 Block 渲染性能闸门与大屏幕宽视口适配测试，单测用例增至 252 项。
+- **无障碍语义与 Dynamic Type 路径**：
+  - 为已实现组件补充可访问性状态表达与字号变化相关处理；
+  - 完整 VoiceOver、系统级 Dynamic Type、全部组件语义与 iOS/iPadOS 14 runtime 验证仍未完成，不能据此宣称“完整无障碍”或最低系统支持。
+- **自动化验证与手工验收边界**：
+  - 按 2026-09-01 验证记录，`InkMarkdown-Package` 在 iPhone 16 Pro / iOS 18.5 共 299 项：298 项通过、0 项失败、1 项跳过（本机无 iOS 14 runtime）；
+  - 自动化测试聚焦数据、状态、调用次数与关键渲染语义，UI 行为通过同一生产源码的 ExampleApp 手工验收；该记录不表示 `0.0.2` 已达到发布条件。
+
+### Changed
+- 将未发布的 SwiftUI adapter、LaTeX 与 Mermaid 能力拆为独立 products；已发布 `0.0.1` 仍只有 `InkMarkdown` product，消费者不应在 `0.0.1` 中导入 `0.0.2` 专用模块。
 
 ### Fixed
 - 修复 `InkThoughtScanner.stripThoughtTags` 正则由于 `^` 锚点导致非行首开标签未被剥离的 Bug；

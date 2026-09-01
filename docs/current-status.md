@@ -2,7 +2,7 @@
 
 > 当前任务执行入口：[InkMarkdown 当前任务摘要](qa/InkMarkdown-current-task-summary-2026-08-28.md)。本页只记录项目交付事实与发布 blocker。
 
-> 基线日期：2026-08-31。记录仓库可验证现状；计划与已交付能力严格区分。
+> 基线日期：2026-09-01。记录仓库可验证现状；计划与已交付能力严格区分。
 
 `0.0.1` 已作为 UIKit-first public beta 发布。核心 UIKit 渲染管线、块级组件、流式渲染及基础测试已具备；`0.0.2` 的目标是交付正式 `InkMarkdownSwiftUI` adapter product。此前被拒绝的 SwiftUI spike 已移出仓库；当前 adapter 已按 ADR-008 / ADR-009 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 与内部 Block Presentation Continuity module）。ExampleApp 已补充 SwiftUI adapter 的静态、配置和流式验收入口，并以 iOS 14.0 部署目标完成编译；iOS/iPadOS 14 实际运行、完整语义/可访问性与真机性能基线仍未完成，不能视为已发布支持。
 
@@ -21,7 +21,7 @@ swift-markdown Markup
 - **工具链**：Swift tools 6.2，包内使用 Swift 5 语言模式。
 - **依赖管理**：`swift-markdown` 锁定 revision `07ebc9c071b22a5d021031b798c3a84b76281213`（ADR-001，详见 `Package.swift` / `Package.resolved`）。
 - **CI 环境**：`.github/workflows/ci.yml` 指定 `macos-26` + **Xcode 26.6**（Build `17F113`）+ **iPhone 17 Pro / iOS 26.5**（详见 [CI 排坑](contributor-guide/07-ci-and-toolchain-pitfalls.md)）。
-- **验证结果**：2026-08-31 在 iPhone 16 Pro / iOS 18.5 完成 `InkMarkdown-Package` 全量回归，共 301 项：300 项通过、0 失败、1 项跳过（iOS 14 ICS；本机无对应 runtime）。自动化只保留数据、状态、调用次数与渲染语义关键链路；UI 行为通过同一生产源码的 ExampleApp 手工验收：Thought 卡片完整包裹正文、行内代码保留独立背景、闭标签后正文位于卡片外；可折叠能力切换同步交互、chevron、可见正文与可访问性语义；流式内容 promotion 后切换 Dynamic Type 立即刷新已挂载内容和高度，并保留折叠态。以上结果不能视为最低版本运行支持。
+- **验证结果**：2026-09-01 在 iPhone 16 Pro / iOS 18.5 完成 `InkMarkdown-Package` 全量回归，共 299 项：298 项通过、0 失败、1 项跳过（iOS 14 ICS；本机无对应 runtime）。自动化只保留数据、状态、调用次数与渲染语义关键链路；UI 行为通过同一生产源码的 ExampleApp 手工验收：Thought 卡片完整包裹正文、行内代码保留独立背景、闭标签后正文位于卡片外；可折叠能力切换同步交互、chevron、可见正文与可访问性语义；流式内容 promotion 后切换 Dynamic Type 立即刷新已挂载内容和高度，并保留折叠态。以上结果不能视为最低版本运行支持。
 
 ## 已落地能力
 
@@ -54,7 +54,7 @@ swift-markdown Markup
 | 背景绘制 | 行内代码背景与引用竖线依赖 TextKit 1 布局管理器 / block view |
 | 超长流式输入 | `InkStreamRenderer` 与 `InkMarkdownRenderSession` initializer 可配置 `maximumSourceLength`；默认 50,000，创建时固化 snapshot，流式与终态共用 canonical source |
 | Mermaid 离线 PNG 测试 | Simulator 首次启动 WebProcess 可能被系统挂起；renderer 仅对 `.timedOut`、页面加载失败和页面进程终止丢弃页面并重试一次 |
-| 测试覆盖率 | 2026-08-31 iPhone 16 Pro / iOS 18.5：`InkMarkdown-Package` 全量共 301 项，300 项通过、0 失败、1 项跳过（iOS 14 ICS）；Block continuity 只保留数据/状态关键路径自动化，Thought 背景、复用折叠与 promotion 后环境刷新由 ExampleApp 手工验收；**iOS/iPadOS 14 实测未交付**，完整产品语义/可访问性与真机性能基线仍为 blocker |
+| 测试覆盖率 | 2026-09-01 iPhone 16 Pro / iOS 18.5：`InkMarkdown-Package` 全量共 299 项，298 项通过、0 失败、1 项跳过（iOS 14 ICS）；Block continuity 只保留数据/状态关键路径自动化，Thought 背景、复用折叠与 promotion 后环境刷新由 ExampleApp 手工验收；**iOS/iPadOS 14 实测未交付**，完整产品语义/可访问性与真机性能基线仍为 blocker |
 | 发布工程 | 已有 `0.0.1` public beta 与 CHANGELOG；`0.0.2` 的 adapter 代码、基础契约测试和 SwiftUI ExampleApp 入口已具备，iOS/iPadOS 14 验证、可访问性、完整语义矩阵与性能基线仍是 release blocker |
 
 ## 决策与仓库现状差异
@@ -67,7 +67,7 @@ swift-markdown Markup
 | 平台实施 | **ADR-008**：v0.0.2 仅承诺 iOS/iPadOS 14+ | manifest 与 ExampleApp deployment target 已收敛为 14.0；当前运行证据为 iOS Simulator 18.5 | 补齐最低版本验证后才以 iOS/iPadOS 14+ 对外承诺 |
 | 图片 / 删除线 | **ADR-004**（默认占位）+ **ADR-006**（opt-in 真图）；删除线样式已实现 | opt-in 图片栈与本轮稳定性修复已落地；删除线已实现 `.strikethroughStyle` | 补齐完整语义、最低版本、人工交互与性能证据 |
 | 流式长度 | **ADR-005**：最大长度支持配置（默认 50_000） | renderer/session initializer 已开放配置，并共享不可变 source-limit snapshot；边界测试已落地 | 已收口；后续变更默认值须重跑性能基线 |
-| CI 构建 | 建立 iOS Simulator 自动测试 | 统一使用 Xcode 26.6 + iPhone 17 Pro/OS 26.5 | 镜像升级时更新配置与排坑文档 |
+| CI 构建 | 建立 iOS Simulator 自动测试 | 统一使用 Xcode 26.6 + iPhone 17 Pro/OS 26.5；Core、SwiftUI、addon contract/LaTeX、Mermaid 与 ExampleApp Debug/Release 已拆为独立 job | 最终候选 SHA 必须通过全部必要 job；镜像升级时同步配置与排坑文档 |
 | SmartCodable | 早期文档提及依赖 | 实际未引用 | 从依赖说明中移除 |
 | 项目阶段 | `0.0.1` public beta 后的能力完善 | 已具备 UIKit core、ExampleApp 与 iPhone/iPad Simulator 测试；SwiftUI adapter 已实现并通过基础契约测试 | v0.0.2 完成最低版本、完整语义、可访问性、性能与 SwiftUI ExampleApp 验证后再发布 |
 

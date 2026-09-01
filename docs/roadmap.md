@@ -109,10 +109,10 @@ v0.0.1 beta  →  v0.0.2 SwiftUI adapter  →  v1.0 稳定契约  →  v2 InkIR 
 | ID | 事项 | 退出标准 |
 | --- | --- | --- |
 | S1 | 独立 SwiftUI product | `InkMarkdownSwiftUI → InkMarkdown` 单向依赖；UIKit core 不 import SwiftUI |
-| S2 | 完整语义对齐 | 静态、流式、配置、扩展和 opt-in 行为均有 SwiftUI adapter 测试 |
+| S2 | 完整语义对齐 | 静态、流式、配置、扩展和 opt-in 的数据、状态与关键渲染语义有必要自动化覆盖；视觉与交互通过 ExampleApp 手工验收 |
 | S3 | 流式生命周期 | render session 的结束、取消、重置、重新绑定与终态 block promotion 可测 |
 | S4 | iOS/iPadOS 兼容 | iOS 14、当前 iOS、iPhone 与 iPad 容器场景均有验证证据 |
-| S5 | 交付证据 | ExampleApp、可访问性、性能基线、README、状态和 ADR 一致 |
+| S5 | 交付证据 | ExampleApp 手工矩阵、必要自动化测试、可访问性、性能基线、README、状态和 ADR 一致 |
 
 完整设计见 [SwiftUI Adapter 总体技术设计](contributor-guide/08-swiftui-adapter-architecture.md)。
 
@@ -127,7 +127,7 @@ v0.0.1 beta  →  v0.0.2 SwiftUI adapter  →  v1.0 稳定契约  →  v2 InkIR 
 | A5 | 发布 준비 | 补充 CHANGELOG，明确 API 与限制（图片/删除线/iOS/TK1） |
 | A6 | ExampleApp 补全 | 提供富文本、块、流式及自定义 handler 示例 |
 
-**v1 阶段不包含：** 公开 InkIR、Transformer、TextKit 2、TED、多平台正式支持、native SwiftUI renderer、第二套 Theme 协议。SwiftUI adapter 是 Phase S / v0.0.2 的 release blocker，尚未交付。
+**v1 阶段不包含：** 公开 InkIR、Transformer、TextKit 2、TED、多平台正式支持、native SwiftUI renderer、第二套 Theme 协议。SwiftUI adapter 源码已实现；Phase S / v0.0.2 的剩余 release blocker 是最低系统、完整语义/可访问性、ExampleApp 与性能验收证据。
 
 ### Phase B → v2.0.0（架构跃迁）
 

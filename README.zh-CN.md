@@ -45,7 +45,7 @@ InkMarkdown 是基于 Apple [`swift-markdown`](https://github.com/swiftlang/swif
 
 ## 安装说明
 
-在 Swift Package 项目的 `Package.swift` 中添加依赖：
+接入已发布的 `0.0.1` 时，在 Swift Package 项目的 `Package.swift` 中添加依赖：
 
 ```swift
 dependencies: [
@@ -54,6 +54,20 @@ dependencies: [
 ```
 
 或在 Xcode 中选择 **File > Add Package Dependencies...** 引入仓库地址。
+
+### 版本与产品边界
+
+`0.0.1` 是已发布的 UIKit public beta。该版本的 package 只暴露 `InkMarkdown` product。本 README 中的 UIKit 核心示例只使用该 product，适用于 `0.0.1` 接入。
+
+`0.0.2` 尚未发布。当前分支新增以下独立 product：
+
+- `InkMarkdownSwiftUI`：托管 UIKit rendering engine 的 SwiftUI adapter。
+- `InkMarkdownLaTeX`：可选 LaTeX renderer 与生成图片 loader。
+- `InkMarkdownMermaid`：可选 Mermaid renderer、资源与生成图片 loader。
+
+API 边界也按版本区分：已发布的 `0.0.1` 提供 UIKit 核心符号，包括 `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer`、`InkConfiguration` 和 `InkInlineSyntax`；尚未发布的 `0.0.2` 新增 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration(...)` 以及独立 `InkMarkdownLaTeX.register()` / `InkMarkdownMermaid.register()` API。
+
+暂时不要使用 `.package(..., from: "0.0.2")`。验证未发布分支时，应明确选择 branch 或 revision，并只加入该验证所需的 product。下方 SwiftUI 与独立 addon 章节仅适用于 `0.0.2`；依赖已发布 `0.0.1` 的 App 不要复制其中的 import。
 
 ---
 
@@ -81,7 +95,7 @@ label.attributedText = attributedString
 
 将 Markdown 渲染为 UIKit 原生块级组件数组：
 
-```swift
+````swift
 let markdown = """
 | 表头 1 | 表头 2 |
 | ------ | ------ |
@@ -97,7 +111,7 @@ for block in blocks {
     let view = block.makeView()
     stackView.addArrangedSubview(view)
 }
-```
+````
 
 ### 3. AI 流式增量渲染
 
@@ -115,44 +129,80 @@ streamRenderer.append("正在思考并生成解答内容...")
 streamRenderer.finish()
 ```
 
-### 4. 自定义配置与语法扩展
+### 4. 自定义配置与语法扩展（`0.0.1` 及以后）
 
 配置自定义外观、行内语法拦截与链接回调：
+
+```swift
+import Foundation
+import InkMarkdown
+import UIKit
+
+struct CustomMentionSyntax: InkInlineSyntax {
+    private let mentionPattern = try! NSRegularExpression(pattern: #"@\w+"#)
+
+    func render(text: String, context: InkInlineContext) -> NSAttributedString? {
+        let fullRange = NSRange(location: 0, length: text.utf16.count)
+        let matches = mentionPattern.matches(in: text, range: fullRange)
+        guard !matches.isEmpty else { return nil }
+
+        let result = NSMutableAttributedString(
+            string: text,
+            attributes: [
+                .font: context.baseFont,
+                .foregroundColor: context.textColor,
+            ]
+        )
+        for match in matches {
+            result.addAttribute(
+                .foregroundColor,
+                value: UIColor.systemBlue,
+                range: match.range
+            )
+        }
+        return result
+    }
+}
+
+var configuration = InkConfiguration(inlineSyntaxes: [CustomMentionSyntax()])
+configuration.linkTapHandler = { url, _ in
+    print("点击链接: \(url)")
+    return true // 返回 true 表示 App 已拦截处理
+}
+
+let attributed = InkAttributedRenderer.render(
+    "Hello @InkMarkdown",
+    configuration: configuration
+)
+```
+
+`InkInlineSyntax` 接收一段纯文本及其 `InkInlineContext`。扩展未命中时返回 `nil`；使用上下文中的字体和颜色，才能跟随所在段落或表格单元格的样式。
+
+### 4.1 可选 LaTeX 与 Mermaid（仅限尚未发布的 `0.0.2`）
+
+当前未发布分支将这些 addon 从核心 product 中拆出。加入并导入独立 product，在首次渲染前完成注册，再开启对应配置：
 
 ```swift
 import InkMarkdown
 import InkMarkdownLaTeX
 import InkMarkdownMermaid
-import UIKit
 
-struct CustomMentionSyntax: InkInlineSyntax {
-    let pattern = #"@(\w+)"#
-    func match(in text: String) -> [NSRange] { /* 正则匹配逻辑 */ }
-    func apply(to attributedString: NSMutableAttributedString, range: NSRange, context: InkTextContext) {
-        attributedString.addAttribute(.foregroundColor, value: UIColor.systemBlue, range: range)
-    }
-}
+_ = InkMarkdownLaTeX.register()
+_ = InkMarkdownMermaid.register()
 
-var config = InkConfiguration(
-    inlineSyntaxes: [CustomMentionSyntax()],
-    linkTapHandler: { url, hostView in
-        print("点击链接: \(url)")
-        return true // 返回 true 表示 App 已拦截处理
-    }
+var configuration = InkConfiguration.standard
+configuration.enableLaTeXRendering()
+configuration.appearance.mermaidRendering.isEnabled = true
+
+let attributed = InkAttributedRenderer.render(
+    "Inline formula: $x^2$",
+    configuration: configuration
 )
-
-// 开启 Opt-in 本地 LaTeX 与 Mermaid 渲染支持
-// 先添加 InkMarkdownLaTeX、InkMarkdownMermaid product 并导入模块，
-// 再在 App 启动阶段各注册一次；完成注册后才能开启对应渲染开关。
-InkMarkdownLaTeX.register()
-InkMarkdownMermaid.register()
-config.enableLaTeXRendering()
-config.appearance.mermaidRendering.isEnabled = true
-
-let attributed = InkAttributedRenderer.render(markdown, configuration: config)
 ```
 
 ### 5. SwiftUI Adapter（尚未发布的 `0.0.2`）
+
+本节仅适用于尚未发布的 `InkMarkdownSwiftUI` product。依赖已发布 `0.0.1` 的 App 无法导入此模块。
 
 接入 SwiftUI 宿主时，请在 Xcode 中同时添加 `InkMarkdownSwiftUI` product。adapter 继续复用 UIKit rendering engine；滚动和网络 transport 仍由宿主负责：
 
@@ -162,7 +212,7 @@ import InkMarkdown
 import InkMarkdownSwiftUI
 
 struct MarkdownScreen: View {
-    // 勿 @ObservedObject 整份 session；仅 isPromoted 会驱动 SwiftUI 换树。
+    // 由本地持有 session；promotion 状态驱动 adapter 换树。
     @StateObject private var session = InkMarkdownRenderSession()
 
     var body: some View {
@@ -210,6 +260,8 @@ InkMarkdownView(markdown)
 | 思考过程 (`<think>` / `<thought>`) | 已支持 | `InkBlockRenderer` 输出可折叠 `InkThoughtBlock`；支持流式前缀 |
 
 > ℹ️ **说明**：关于完整渲染行为细节与边界边缘情况，请参阅[当前项目状态](docs/current-status.md)与[渲染语义规范](docs/spec/README.md)。
+
+> 版本说明：已发布的 `0.0.1` 将 LaTeX 与 Mermaid 能力包含在单一 `InkMarkdown` product 中；尚未发布的 `0.0.2` 才需要使用上方独立 product 与注册流程。
 
 ---
 
@@ -267,12 +319,14 @@ open ExampleApp/ExampleApp.xcodeproj
 - 📐 [渲染语义规范](docs/spec/README.md)
 - 🛣️ [路线图 Roadmap](docs/roadmap.md)
 - 📝 [架构决策记录 (ADR)](docs/decisions/README.md)
+- 🆘 [支持说明](SUPPORT.md)
+- 🤝 [行为准则](CODE_OF_CONDUCT.md)
 
 ---
 
 ## 贡献指南
 
-欢迎参与 InkMarkdown 贡献！提交 Pull Request 或 Issue 前请阅读 [开源贡献指南](CONTRIBUTING.md) 和 [开发者指南](docs/contributor-guide/README.md)。
+欢迎参与 InkMarkdown 贡献！提交 Pull Request 或 Issue 前请阅读[开源贡献指南](CONTRIBUTING.md)、[支持说明](SUPPORT.md)、[行为准则](CODE_OF_CONDUCT.md)和[开发者指南](docs/contributor-guide/README.md)。
 
 ---
 

@@ -34,6 +34,13 @@ xcodebuild test \
 
 详细本地开发与排坑说明见 [docs/contributor-guide/04-development.md](docs/contributor-guide/04-development.md)。
 
+### 测试与验收政策
+
+- UI 与视觉行为通过 ExampleApp 手工验收；提交中请记录实际走查入口、设备/系统与结果。
+- 自动化测试只为数据、业务状态、关键渲染语义和消费者契约保留必要覆盖。
+- 不要求每个视觉修改新增单测。若修改不需要新增自动化测试，请在 Pull Request 中说明理由，并保留适用的 ExampleApp 手工证据。
+- 测试或手工验收无法运行时，记录具体环境阻塞；不要把未执行的验证写成通过。
+
 ---
 
 ## 贡献流程
@@ -43,13 +50,13 @@ xcodebuild test \
 在提交 Issue 前：
 - 检索既有 Issue、[FAQ](docs/contributor-guide/06-faq.md) 与 [ExampleApp 走查 SSOT](docs/qa/example-app-walkthrough-issues.md)，确认是否为已有已知问题或系统控制台噪声；
 - 明确描述重现步骤、使用的 Markdown 输入、期望输出与实际行为；
-- 如涉及崩溃或渲染错乱，请附带样例工程或单元测试用例。
+- 如涉及崩溃或渲染错乱，请附带最小复现、相关日志或 ExampleApp 入口；不要在公开 Issue 中放入凭据、个人数据或安全漏洞细节。
 
 ### 2. 提交 Pull Request (PR)
 
 - **分支管理**：基于 `main` 分支拉取功能分支开发（如 `feature/xxx` 或 `fix/yyy`）；
 - **代码规范**：代码结构清晰，公共 API 须附带完整的中文 Markdown 文档注释，说明参数、逻辑与返回值；
-- **测试覆盖**：新增功能或修复 Bug 必须包含对应的单元测试（位于 `Tests/InkMarkdownTests/`）；
+- **验证说明**：按上方测试与验收政策提供必要的自动化测试或 ExampleApp 手工验收证据；视觉修改不因形式要求而新增单测；
 - **文档同步**：如果修改涉及公开 API、配置项或 Markdown 语法支持情况，必须同时更新 `README.md` 与 `README.zh-CN.md`。
 
 ---
@@ -63,3 +70,5 @@ xcodebuild test \
 - 💡 [渲染原理](docs/contributor-guide/03-principles.md)
 - 📐 [渲染语义规范](docs/spec/README.md)
 - 📝 [架构决策记录 (ADR)](docs/decisions/README.md)
+- 🆘 [支持说明](SUPPORT.md)
+- 🤝 [行为准则](CODE_OF_CONDUCT.md)
