@@ -60,7 +60,7 @@ jobs:
             filters: >-
               -only-testing:InkMarkdownAddonContractTests
               -only-testing:InkMarkdownLaTeXTests
-          - name: Mermaid integration
+          - name: Mermaid addon
             slug: mermaid
             timeout: 45
             filters: -only-testing:InkMarkdownMermaidTests
@@ -234,4 +234,66 @@ jobs:
         with:
           name: example-${{ matrix.configuration }}-failure
           path: xcodebuild-example.log
+          if-no-files-found: ignore
+
+  mermaid-hosted-integration:
+    name: ExampleApp / Mermaid integration
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pinned iOS toolchain
+        id: ios
+        uses: ./.github/actions/setup-ios
+        with:
+          xcode-app: ${{ env.XCODE_APP }}
+          xcode-version: ${{ env.XCODE_VERSION }}
+          xcode-build: ${{ env.XCODE_BUILD }}
+          simulator-name: ${{ env.IOS_SIM_NAME }}
+          simulator-os: ${{ env.IOS_SIM_OS }}
+
+      - name: Resolve ExampleApp dependencies
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies \
+            -project ExampleApp/ExampleApp.xcodeproj \
+            -scheme ExampleApp \
+            -clonedSourcePackagesDirPath SourcePackages
+
+      - name: Boot app-hosted Simulator
+        env:
+          SIMULATOR_UDID: ${{ steps.ios.outputs.simulator_udid }}
+        run: |
+          set -euo pipefail
+          xcrun simctl boot "${SIMULATOR_UDID}" || true
+          xcrun simctl bootstatus "${SIMULATOR_UDID}" -b
+
+      - name: Test app-hosted Mermaid integration
+        env:
+          DESTINATION: ${{ steps.ios.outputs.destination }}
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          xcodebuild test \
+            -project ExampleApp/ExampleApp.xcodeproj \
+            -scheme ExampleApp \
+            -configuration Debug \
+            -destination "${DESTINATION}" \
+            -clonedSourcePackagesDirPath SourcePackages \
+            -resultBundlePath ExampleAppMermaidTests.xcresult \
+            -only-testing:ExampleAppMermaidIntegrationTests \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee xcodebuild-mermaid-hosted.log
+
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-mermaid-integration-failure
+          path: |
+            xcodebuild-mermaid-hosted.log
+            ExampleAppMermaidTests.xcresult
           if-no-files-found: ignore

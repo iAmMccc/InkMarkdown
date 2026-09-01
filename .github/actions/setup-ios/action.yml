@@ -22,6 +22,9 @@ outputs:
   destination:
     description: Verified xcodebuild destination.
     value: ${{ steps.destination.outputs.value }}
+  simulator_udid:
+    description: UDID of the verified Simulator.
+    value: ${{ steps.destination.outputs.udid }}
 
 runs:
   using: composite
@@ -70,7 +73,7 @@ runs:
         set -euo pipefail
         destination="platform=iOS Simulator,name=${SIMULATOR_NAME},OS=${SIMULATOR_OS}"
         xcrun simctl list devices available -j > "${RUNNER_TEMP}/available-simulators.json"
-        python3 - "${RUNNER_TEMP}/available-simulators.json" <<'PY'
+        simulator_udid=$(python3 - "${RUNNER_TEMP}/available-simulators.json" <<'PY'
         import json
         import os
         import sys
@@ -96,6 +99,9 @@ runs:
           raise SystemExit(
             f"::error::Pinned Simulator unavailable: name={name!r}, OS={expected_os!r}"
           )
-        print(f"Verified Simulator: {name} / iOS {expected_os} / {matches[0]}")
+        print(matches[0])
         PY
+        )
+        echo "Verified Simulator: ${SIMULATOR_NAME} / iOS ${SIMULATOR_OS} / ${simulator_udid}"
         echo "value=${destination}" >> "${GITHUB_OUTPUT}"
+        echo "udid=${simulator_udid}" >> "${GITHUB_OUTPUT}"

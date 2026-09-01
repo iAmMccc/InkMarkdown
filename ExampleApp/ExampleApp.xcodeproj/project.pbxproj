@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A7D10000000000000000000D /* InkMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = B80102C1FE644144E059F7B0 /* InkMarkdown */; };
+		A7D100000000000000000007 /* InkMarkdownMermaid in Frameworks */ = {isa = PBXBuildFile; productRef = E5F60718293A4B5C6D7E8F90 /* InkMarkdownMermaid */; };
 		138FC356DC189F0649256A42 /* SmartCodable in Frameworks */ = {isa = PBXBuildFile; productRef = 50432D2B957FD0F6D01F4059 /* SmartCodable */; };
 		430EA368AB68A3F6535F8B71 /* JXSegmentedView in Frameworks */ = {isa = PBXBuildFile; productRef = C21F260C507C6395CB305FE7 /* JXSegmentedView */; };
 		55213DD35161629611C75A5E /* JXPagingView in Frameworks */ = {isa = PBXBuildFile; productRef = AF528F36372CBC6E5E68064C /* JXPagingView */; };
@@ -17,7 +19,18 @@
 		CCFBF002C0DC775CA9478E16 /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2D146DF8365BC373D85A7B22 /* SnapKit */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A7D100000000000000000009 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9958A8862FBC445600BAE387 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9958A88D2FBC445600BAE387;
+			remoteInfo = ExampleApp;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		A7D100000000000000000001 /* ExampleAppMermaidIntegrationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExampleAppMermaidIntegrationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9958A88E2FBC445600BAE387 /* ExampleApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ExampleApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -32,6 +45,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A7D100000000000000000002 /* ExampleAppMermaidIntegrationTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ExampleAppMermaidIntegrationTests;
+			sourceTree = "<group>";
+		};
 		9958A8902FBC445600BAE387 /* ExampleApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -43,6 +61,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A7D100000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A7D10000000000000000000D /* InkMarkdown in Frameworks */,
+				A7D100000000000000000007 /* InkMarkdownMermaid in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9958A88B2FBC445600BAE387 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -65,6 +92,7 @@
 			isa = PBXGroup;
 			children = (
 				9958A8902FBC445600BAE387 /* ExampleApp */,
+				A7D100000000000000000002 /* ExampleAppMermaidIntegrationTests */,
 				9958A88F2FBC445600BAE387 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -73,6 +101,7 @@
 			isa = PBXGroup;
 			children = (
 				9958A88E2FBC445600BAE387 /* ExampleApp.app */,
+				A7D100000000000000000001 /* ExampleAppMermaidIntegrationTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -80,6 +109,31 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A7D100000000000000000003 /* ExampleAppMermaidIntegrationTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A7D10000000000000000000C /* Build configuration list for PBXNativeTarget "ExampleAppMermaidIntegrationTests" */;
+			buildPhases = (
+				A7D100000000000000000004 /* Sources */,
+				A7D100000000000000000005 /* Frameworks */,
+				A7D100000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A7D100000000000000000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A7D100000000000000000002 /* ExampleAppMermaidIntegrationTests */,
+			);
+			name = ExampleAppMermaidIntegrationTests;
+			packageProductDependencies = (
+				B80102C1FE644144E059F7B0 /* InkMarkdown */,
+				E5F60718293A4B5C6D7E8F90 /* InkMarkdownMermaid */,
+			);
+			productName = ExampleAppMermaidIntegrationTests;
+			productReference = A7D100000000000000000001 /* ExampleAppMermaidIntegrationTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		9958A88D2FBC445600BAE387 /* ExampleApp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9958A8A12FBC445800BAE387 /* Build configuration list for PBXNativeTarget "ExampleApp" */;
@@ -120,6 +174,10 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					A7D100000000000000000003 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 9958A88D2FBC445600BAE387;
+					};
 					9958A88D2FBC445600BAE387 = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
@@ -147,11 +205,19 @@
 			projectRoot = "";
 			targets = (
 				9958A88D2FBC445600BAE387 /* ExampleApp */,
+				A7D100000000000000000003 /* ExampleAppMermaidIntegrationTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A7D100000000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9958A88C2FBC445600BAE387 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -162,6 +228,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A7D100000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9958A88A2FBC445600BAE387 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -171,7 +244,63 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A7D100000000000000000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9958A88D2FBC445600BAE387 /* ExampleApp */;
+			targetProxy = A7D100000000000000000009 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		A7D10000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4N9BH2C28C;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = Mccc.ExampleAppMermaidIntegrationTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ExampleApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ExampleApp";
+				TEST_TARGET_NAME = ExampleApp;
+			};
+			name = Debug;
+		};
+		A7D10000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4N9BH2C28C;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = Mccc.ExampleAppMermaidIntegrationTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ExampleApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ExampleApp";
+				TEST_TARGET_NAME = ExampleApp;
+			};
+			name = Release;
+		};
 		9958A8A22FBC445800BAE387 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -362,6 +491,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A7D10000000000000000000C /* Build configuration list for PBXNativeTarget "ExampleAppMermaidIntegrationTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A7D10000000000000000000A /* Debug */,
+				A7D10000000000000000000B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		9958A8892FBC445600BAE387 /* Build configuration list for PBXProject "ExampleApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
