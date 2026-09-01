@@ -2,7 +2,7 @@
 
 Date: 2026-09-01
 
-Candidate: `feat/swiftUI` readiness change set, including the public-interface narrowing and ExampleApp observation fix recorded in the local task. The immutable PR head SHA and GitHub check metadata are the remote evidence; do not create a post-CI evidence commit merely to copy them into this file.
+Candidate: `feat/swiftUI` readiness change set, including the public-interface narrowing, ExampleApp observation fix, and Mermaid app-hosted regression seam recorded in the local task. Push、PR 更新与远端 CI 按维护者要求延期；后续恢复远端交付时，以 immutable PR head SHA 与 GitHub check metadata 为准。
 
 ## Available runtime matrix
 
@@ -10,6 +10,7 @@ Candidate: `feat/swiftUI` readiness change set, including the public-interface n
 | --- | --- | --- | --- |
 | iPad Pro 11-inch (M5) | iOS 26.5 | XcodeBuildMCP build/install/launch passed in 12.0s | passed for the key static, component, configuration, and streaming paths |
 | iPhone 16 Pro | iOS 18.5 | XcodeBuildMCP build/install/launch passed in 8.6s | passed for narrow-layout and key state paths |
+| iPhone 17 Pro | iOS 26.5 | native `xcodebuild` fallback Debug build、install、launch passed | SwiftUI wide-Mermaid right edge passed visually; UIKit and SwiftUI acceptance entries were reachable |
 
 This machine only exposes iOS 18.5 and iOS 26.5 runtimes. iOS/iPadOS 14 execution remains an environment blocker; the deployment target was not raised.
 
@@ -45,6 +46,13 @@ The first walkthrough exposed an ExampleApp-only observation bug: `finish()` com
 - The component page contained the table at phone width; inline/block LaTeX and the Mermaid flowchart rendered after scrolling. The network image again remained a placeholder.
 - The streaming page changed from `idle` to `streaming` immediately after one mock fragment and to `finished` immediately after completion; controls enabled and disabled with the state.
 
+### Mermaid app-hosted follow-up
+
+- On iPhone 17 Pro / iOS 26.5, both UIKit and SwiftUI component pages exposed the new “Mermaid 宽图裁切验收” section and its `Act` / `Export report` criterion.
+- The SwiftUI page was brought to the rendered wide journey. The rightmost `Act` section and `Export report` item were both fully visible in the 400pt content region.
+- Computer Use could not separately scroll the UIKit page because its Simulator window-position lookup failed. This is not reported as a UIKit visual pass; UIKit still shares the same sample and production renderer, while the app-hosted pixel test independently verifies the right-side ink chain.
+- `ExampleAppMermaidIntegrationTests` ran under the real ExampleApp lifecycle: 1 passed, 0 failed, 0 skipped. The test renders Mermaid to PNG, checks 400px sizing/cache identity, and samples the right side for non-background pixels.
+
 ## Runtime-log observations
 
 - iOS 26.5 emitted the already-recorded Simulator/WebKit duplicate `UIAccessibilityLoaderWebShared` warning. No ExampleApp crash accompanied it.
@@ -57,5 +65,6 @@ The first walkthrough exposed an ExampleApp-only observation bug: `finish()` com
 - full VoiceOver/manual accessibility traversal;
 - external network-image success;
 - real model/SSE credentials and remote endpoint behavior.
+- a separate bottom-of-page UIKit visual sign-off for the new wide-Mermaid fixture; its entry was reachable, and the shared renderer was covered by the app-hosted pixel test.
 
 No UI automation suite or non-key-path UI unit test was added. The interactions above are manual ExampleApp acceptance evidence.

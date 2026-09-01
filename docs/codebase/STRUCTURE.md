@@ -16,6 +16,7 @@
 | `Tests/InkMarkdownLaTeXTests/` / `Tests/InkMarkdownMermaidTests/` | addon 关键路径测试（SPM test targets） | `Package.swift` addon testTarget |
 | `Tests/InkMarkdownSwiftUITests/` | SwiftUI adapter 契约测试（SPM test target） | `Package.swift` `path: "Tests/InkMarkdownSwiftUITests"` |
 | `Tests/ExampleAppPolicyTests/` | ExampleApp 关键业务策略测试（SPM test target） | `Package.swift` ExampleApp policy testTarget |
+| `ExampleApp/ExampleAppMermaidIntegrationTests/` | 真实 App 生命周期下的 Mermaid WebKit → PNG 关键链路 | `ExampleApp.xcodeproj` app-hosted unit-test target |
 | `ExampleApp/` | UIKit + SwiftUI adapter 示例应用工程 | `ExampleApp/ExampleApp.xcodeproj` |
 | `Packages/` | 本地依赖拉取脚本与缓存目录 `Caches/` | `Packages/scripts/fetch-packages.sh` |
 | `docs/` | 项目文档与工程事实基线 | `docs/README.md` |
@@ -56,7 +57,7 @@ Sources/InkMarkdown/
 
 | 模块 | 目录布局 | 说明 |
 |------|--------|-------|
-| Tests | Core、core/addon contract、LaTeX、Mermaid、SwiftUI adapter 与 ExampleApp policy test targets | 使用 Swift Testing 与 XCTest；2026-09-01 的 iPhone 16 Pro / iOS 18.5 全量共 299 项：298 项通过、0 失败、1 项跳过 |
+| Tests | Core、core/addon contract、LaTeX、确定性 Mermaid、SwiftUI adapter、ExampleApp policy 与 app-hosted Mermaid integration targets | 使用 Swift Testing 与 XCTest；2026-09-01 的 iPhone 17 Pro / iOS 26.5 Package 全量共 298 个逻辑测试：297 项通过、0 失败、1 项跳过；app-hosted Mermaid 另有 1 项通过 |
 | ExampleApp | `AppDelegate` / `SceneDelegate`、列表与详情页（块渲染、SSE、Pager 等） | 独立 Xcode 工程，提供宿主集成示例 |
 
 ### 4) 公开入口

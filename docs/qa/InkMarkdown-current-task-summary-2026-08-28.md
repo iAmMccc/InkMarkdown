@@ -39,10 +39,10 @@
 - `maximumSourceLength` 已通过 renderer/session initializer 开放配置：默认 50,000，创建时固化不可变 snapshot，append、reset、finish 与 promotion 共用同一 canonical source。
 - 已建立代码级性能门槛与可复现基线文档；聚焦语义、长度与性能测试 37/37 通过。
 - 本轮 review remediation 已收口：internal `InkPreparedMarkdownSource` 保证一次顶层 source filter 覆盖 Block 构造、Thought view 创建/复用与 suffix；promotion 后环境变化经 session-to-host display seam 刷新；复用 Thought 会完整协调折叠能力；Thought 富文本 fallback 只补缺失背景；公开 API 文档、DEBUG-only Unified Logging、import、测试命名与 Swift 2-space 格式规范已对齐。
-- 测试策略已收口：删除 UI、重复边界与入口排列测试；只保留 sourceFilter、Thought scanner、富文本背景、render session/continuity、addon 注册与真实 Mermaid PNG 等数据、状态、调用次数与渲染语义关键链路。2026-09-01，XcodeBuildMCP 在 iPhone 16 Pro / iOS 18.5 完成 299 项全量回归：298 通过、0 失败、1 跳过（本机无 iOS 14 runtime）。
+- 测试策略已收口：删除 UI、重复边界与入口排列测试；只保留 sourceFilter、Thought scanner、富文本背景、render session/continuity、addon 注册与真实 Mermaid PNG 等数据、状态、调用次数与渲染语义关键链路。真实 Mermaid PNG/右缘裁切用例已从无 App 宿主的 SwiftPM runner 迁入 ExampleApp app-hosted target；Package target 保留 8 项确定性 Mermaid 契约。2026-09-01，在 iPhone 17 Pro / iOS 26.5 完成 Package 全量 298 个逻辑测试：297 通过、0 失败、1 跳过；app-hosted Mermaid 另有 1 项通过。
 - 2026-09-01 以同一生产源码重复执行 ExampleApp：iPad 覆盖 Thought 卡片范围、inline code 背景、suffix 边界、可折叠能力 true→false→true、流式追加、宽度切换、卸载重挂、promotion 与特大字号刷新；iPhone 覆盖窄宽静态/配置布局、表格、LaTeX、Mermaid 与流式状态刷新。网络图片仅停留在占位符，未宣称外网加载通过。
 - 四 product 消费者冒烟已从 ExampleApp 的联合链接中拆出：Core、SwiftUI、LaTeX、Mermaid 各由只选择单一 product 的外部 fixture 独立构建；package 测试 job 的 `-only-testing` 仅表示执行分流，不再描述为构建图隔离。
-- `git diff --check` 已通过。当前分支为 `feat/swiftUI`；readiness 基线、CI/消费者、API 收敛、ExampleApp 状态同步、治理文档与首轮复审证据已按功能提交至 `7993112`…`049db14`，本摘要所在提交收口最终复审修正。文档、兼容性验收与独立审查已完成；仅 push、PR 与同一 SHA 的远端 CI 仍待交付。
+- 当前分支为 `feat/swiftUI`；readiness 基线、CI/消费者、API 收敛、ExampleApp 状态同步、治理文档与既有复审证据已按功能提交。当前 follow-up 正在本地收口 Mermaid app-hosted 测试边界、对应 CI job 与证据文档；按维护者最新要求，本轮只允许 commit，push、PR 更新与同一 SHA 的远端 CI 延后处理。
 
 ## 未解决问题
 
@@ -54,7 +54,7 @@
 
 ## 下一步计划
 
-1. 推送 `feat/swiftUI`，创建到 `main` 的 PR，并等待全部必要 job 在同一 PR head SHA 上通过；不得合并、打 tag 或发布 Release。
+1. 完成本轮本地功能提交与独立复审；push `feat/swiftUI`、更新到 `main` 的 PR、等待同一 PR head SHA 的必要 job，均按维护者要求延期，后续获得明确授权后再执行。
 2. 获取可用的 iOS/iPadOS 14–15 runtime 或设备，完成最低版本、旋转、Split View 与宽度协商验证。
 3. 完成网络图片、表格/链接交互与系统级 VoiceOver 人工验收；保持 UI 验收在 ExampleApp，不扩张 UI 单测。
 4. 建立真机性能基线，覆盖滚动、流式长文、图片/生成图加载、WebKit 冷启动、内存峰值和长会话。

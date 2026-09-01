@@ -290,7 +290,9 @@ InkMarkdown/
 ├── Tests/InkMarkdownMermaidTests/ # Mermaid addon key-path tests
 ├── Tests/InkMarkdownSwiftUITests/ # SwiftUI adapter contracts
 ├── Tests/ExampleAppPolicyTests/ # ExampleApp business-policy tests
-├── ExampleApp/               # UIKit + SwiftUI demo app with streaming & components
+├── ExampleApp/
+│   ├── ExampleApp/           # UIKit + SwiftUI demo app with streaming & components
+│   └── ExampleAppMermaidIntegrationTests/ # App-hosted WebKit → PNG key path
 └── docs/                     # Architectural decisions (ADR), specs & guides
 ```
 
@@ -308,6 +310,16 @@ Use [XcodeBuildMCP](https://www.xcodebuildmcp.com/) or `xcodebuild` with an iOS 
 xcodebuild test \
   -scheme InkMarkdown-Package \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
+```
+
+The one real Mermaid WebKit-to-PNG regression requires an application lifecycle and therefore runs through the ExampleApp scheme:
+
+```bash
+xcodebuild test \
+  -project ExampleApp/ExampleApp.xcodeproj \
+  -scheme ExampleApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
+  -only-testing:ExampleAppMermaidIntegrationTests
 ```
 
 ### Running the Example App

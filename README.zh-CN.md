@@ -290,7 +290,9 @@ InkMarkdown/
 ├── Tests/InkMarkdownMermaidTests/ # Mermaid addon 关键路径测试
 ├── Tests/InkMarkdownSwiftUITests/ # SwiftUI adapter 契约测试
 ├── Tests/ExampleAppPolicyTests/ # ExampleApp 业务策略测试
-├── ExampleApp/               # UIKit + SwiftUI 示例程序 (包含流式与组件演示)
+├── ExampleApp/
+│   ├── ExampleApp/           # UIKit + SwiftUI 示例程序（包含流式与组件演示）
+│   └── ExampleAppMermaidIntegrationTests/ # App-hosted WebKit → PNG 关键链路
 └── docs/                     # 架构决策 (ADR)、语义规范与开发指南
 ```
 
@@ -308,6 +310,16 @@ InkMarkdown 源码直接引用 `UIKit`，因此在 macOS 主机环境直接执�
 xcodebuild test \
   -scheme InkMarkdown-Package \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest'
+```
+
+唯一真实 Mermaid WebKit → PNG 回归需要 App 生命周期，因此通过 ExampleApp scheme 运行：
+
+```bash
+xcodebuild test \
+  -project ExampleApp/ExampleApp.xcodeproj \
+  -scheme ExampleApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
+  -only-testing:ExampleAppMermaidIntegrationTests
 ```
 
 ### 打开 ExampleApp 示例工程

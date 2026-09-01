@@ -7,7 +7,7 @@
 | Item | Value | Evidence |
 |------|-------|----------|
 | Framework | **Swift Testing + XCTest** | `import Testing` / `@Test` / `@Suite`；现有 XCTest 测试 |
-| Location | `Tests/` 下的 Core、addon contract、LaTeX、Mermaid、SwiftUI adapter 与 ExampleApp policy targets | `Package.swift` testTarget |
+| Location | `Tests/` 下的 Core、addon contract、LaTeX、确定性 Mermaid、SwiftUI adapter 与 ExampleApp policy targets；`ExampleApp/ExampleAppMermaidIntegrationTests/` 为 app-hosted WebKit integration target | `Package.swift` testTarget + `ExampleApp.xcodeproj` |
 | Host requirement | **iOS Simulator**（UIKit / SwiftUI adapter） | `docs/current-status.md`、`AGENTS.md` |
 | P0 release gate | SwiftUI adapter P0 闸门：`Tests/InkMarkdownSwiftUITests/InkMarkdownP0GateTests.swift`（静态/流式测量、thought identity、promotion、trait 重测）；iOS 14 ICS 用例标记 `.disabled`（**实测未交付**） | `@Suite("SwiftUI Adapter P0 闸门")` |
 | Static declarations | Core `@Test` + XCTest；SwiftUI adapter 契约与 P0 闸门；参数化 `@Test(arguments:)` 会展开为额外 execution case | 测试源码 |
@@ -19,7 +19,8 @@
 |------|--------|
 | `InkMarkdownTests.swift` | 固定行高、段落间距、appearance 默认值、混排、流式边界、标题/列表上下文样式 |
 | `StreamingPerformanceTests.swift` | 增量与全量输出一致性；增量耗时 ≤ 全量 30% 闸门 |
-| `../InkMarkdownMermaidTests/InkMermaidRendererTests.swift` | Mermaid fence、cache、limits、bridge 与唯一真实 WebKit PNG 关键链路；宽 journey 在 400px 约束下检查右侧内容未裁切（每次尝试 120s hosted-Simulator 冷启动预算，production 仍只重试一次） |
+| `../InkMarkdownMermaidTests/InkMermaidRendererTests.swift` | Mermaid fence、cache、limits 与 bridge 资源等无需 App 生命周期的确定性契约 |
+| `ExampleApp/ExampleAppMermaidIntegrationTests/MermaidRenderingIntegrationTests.swift` | 唯一真实 WebKit → PNG 关键链路；宽 journey 在 400px 约束下检查右侧内容未裁切，使用 production 默认 timeout 与一次有界重试 |
 | `Snapshots/RenderSnapshot.swift` | 快照模型 + `RenderContractAssertions` 助手 |
 | `Snapshots/SnapshotScaffoldTests.swift` | 快照基建冒烟 |
 | `../InkMarkdownSwiftUITests/InkMarkdownAdapterWorkloadTests.swift` | Adapter 单环境工作负载回归闸门（静态长文测量、百片流式、promotion 时长；非 FPS/hitch 签收） |
@@ -46,6 +47,13 @@ P0 闸门位于 `Tests/InkMarkdownSwiftUITests/InkMarkdownP0GateTests.swift`，�
 xcodebuild -scheme InkMarkdown-Package \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
   test
+
+# 唯一需要真实 App 生命周期的 Mermaid PNG integration：
+xcodebuild -project ExampleApp/ExampleApp.xcodeproj \
+  -scheme ExampleApp \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
+  -only-testing:ExampleAppMermaidIntegrationTests \
+  test
 ```
 
 **错误做法：** 在 macOS host 直接执行 `swift test` 会报 `no such module 'UIKit'`——这是 host 平台限制，**不算** InkMarkdown 库逻辑失败。
@@ -60,6 +68,7 @@ xcodebuild -scheme InkMarkdown-Package \
 | 快照脚手架可用性 | ExampleApp UI 自动化（库测试未覆盖） |
 | appearance 默认数值 | SwiftUI 完整 Markdown 语义、交互与可访问性矩阵 |
 | SwiftUI 静态配置刷新、会话状态机、headless finish、重置与配置 snapshot | iOS/iPadOS 14 验证与性能基线 |
+| App-hosted Mermaid WebKit → PNG 与右缘裁切关键链路 | 网络图片、完整表格/链接交互与系统级 VoiceOver 人工验收 |
 | CI 自动运行 iOS 测试（`.github/workflows/ci.yml`，push/PR 指定 Xcode 26.6 + iOS Simulator 26.5，见 `CONCERNS.md` High-2 Done） | SwiftUI ExampleApp UI 自动化 |
 
 ### 6) Performance Testing Notes

@@ -27,7 +27,7 @@
   - 为已实现组件补充可访问性状态表达与字号变化相关处理；
   - 完整 VoiceOver、系统级 Dynamic Type、全部组件语义与 iOS/iPadOS 14 runtime 验证仍未完成，不能据此宣称“完整无障碍”或最低系统支持。
 - **自动化验证与手工验收边界**：
-  - 按 2026-09-01 验证记录，`InkMarkdown-Package` 在 iPhone 16 Pro / iOS 18.5 共 299 项：298 项通过、0 项失败、1 项跳过（本机无 iOS 14 runtime）；
+  - 按 2026-09-01 最新验证记录，`InkMarkdown-Package` 在 iPhone 17 Pro / iOS 26.5 共 298 个逻辑测试：297 项通过、0 项失败、1 项跳过（本机无 iOS 14 runtime）；另有 1 项 ExampleApp app-hosted Mermaid PNG 关键链路通过；
   - 自动化测试聚焦数据、状态、调用次数与关键渲染语义，UI 行为通过同一生产源码的 ExampleApp 手工验收；该记录不表示 `0.0.2` 已达到发布条件。
 
 ### Changed

@@ -399,7 +399,7 @@ thought 的正文未变不代表展示未变。单独到达 `</think>` 时，`is
 
 Swift Testing、XCTest、`xcodebuild` 与 XcodeBuildMCP 对 skipped 的摘要格式不同。分组日志中的 “tests in suites” 可能包含 skipped；把各组数量直接相加并写成“全部通过”，会得到“300 项通过、另 1 项跳过”这种总数多算一次的矛盾结论。
 
-状态文档必须分别记录：总计、通过、失败、跳过，并优先采用结构化 result bundle 或 XcodeBuildMCP 汇总。2026-09-01 当前结果为共 299 项：298 项通过、0 失败、1 项跳过。
+状态文档必须分别记录：总计、通过、失败、跳过，并优先采用结构化 result bundle 或 XcodeBuildMCP 汇总。2026-09-01 当前 Package 结果为 298 个逻辑测试：297 项通过、0 失败、1 项跳过；ExampleApp app-hosted Mermaid 关键链路另有 1 项通过。
 
 ---
 

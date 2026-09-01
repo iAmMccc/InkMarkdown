@@ -70,10 +70,12 @@ xcodebuildmcp --version
 | 项目 | 结果 |
 | --- | --- |
 | 日期 | 2026-09-01 |
-| Scheme | `InkMarkdown-Package` |
-| Destination | iPhone 16 Pro / iOS 18.5 Simulator |
-| 测试结果 | 299 项总计：298 项通过，0 项失败，1 项跳过；跳过项为本机无 iOS 14 runtime 的最低版本用例 |
-| 运行方式 | XcodeBuildMCP 自动发现 + `test_sim` |
+| Package scheme | `InkMarkdown-Package` |
+| App-hosted scheme | `ExampleApp` / `ExampleAppMermaidIntegrationTests` |
+| Destination | iPhone 17 Pro / iOS 26.5 Simulator |
+| Package 测试结果 | 298 个逻辑测试：297 项通过，0 项失败，1 项跳过；跳过项为本机无 iOS 14 runtime 的最低版本用例 |
+| App-hosted 测试结果 | Mermaid PNG/右缘裁切关键链路 1 项通过 |
+| 运行方式 | XcodeBuildMCP transport 关闭后按仓库规则回退原生 `xcodebuild`；结果由 `xcresulttool` 结构化确认 |
 
 测试文件分布：
 
@@ -83,6 +85,7 @@ xcodebuildmcp --version
 | `Snapshots/` | 语义属性快照基建（`RenderSnapshot`） |
 | `StreamingPerformanceTests.swift` | 增量耗时 ≤ 全量耗时 30% 性能闸门及输出一致性 |
 | `../InkMarkdownSwiftUITests/` | 静态配置刷新、stream session 状态机、headless finish、重置和 configuration snapshot |
+| `ExampleApp/ExampleAppMermaidIntegrationTests/` | 由真实 App 生命周期承载唯一 Mermaid WebKit → PNG → 右缘像素关键链路 |
 
 ### 清理构建产物
 

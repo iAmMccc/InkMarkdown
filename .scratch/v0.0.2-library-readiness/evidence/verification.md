@@ -2,41 +2,40 @@
 
 Date: 2026-09-01
 
-Pre-review local HEAD: `19b06c39f4b4fdf373aff6dbe144199e387b3b51`. The release-candidate SHA is the PR head commit containing this evidence; GitHub's immutable PR/check metadata is authoritative because a commit cannot embed its own hash.
+Hosted-boundary remediation baseline: `23d867713b9ab967cf0346bff8d44895c3fcf3f5`. 本轮只允许本地 commit；push、PR 更新与远端 CI 按维护者要求延期。
 
 ## Local automated verification
 
 | Check | Tool / destination | Result |
 | --- | --- | --- |
-| Complete package test | XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro / iOS 18.5, Debug | 299 total: 298 passed, 0 failed, 1 skipped; 27.1s |
+| Complete package test | native `xcodebuild` fallback, `InkMarkdown-Package`, iPhone 17 Pro / iOS 26.5, Debug | 298 logical tests: 297 passed, 0 failed, 1 skipped; test operation 22.4s |
+| Deterministic Mermaid package target | native `xcodebuild` fallback, `InkMarkdownMermaidTests`, same destination | 8 passed, 0 failed, 0 skipped |
+| App-hosted Mermaid PNG integration | native `xcodebuild` fallback, `ExampleAppMermaidIntegrationTests`, same destination | 1 passed, 0 failed, 0 skipped; test operation 11.0s |
+| ExampleApp Debug build | native `xcodebuild` fallback, iPhone 17 Pro / iOS 26.5 | passed |
+| ExampleApp Release build | native `xcodebuild` fallback, iPhone 17 Pro / iOS 26.5 | passed |
 | ExampleApp Debug run | XcodeBuildMCP, iPad Pro 11-inch (M5) / iOS 26.5 | build, install, and launch passed; 12.0s |
 | ExampleApp Debug run | XcodeBuildMCP, iPhone 16 Pro / iOS 18.5 | build, install, and launch passed; 8.6s |
-| ExampleApp Release build | XcodeBuildMCP, iPhone 16 Pro / iOS 18.5 | passed; 31.0s |
 | Isolated consumer builds | XcodeBuildMCP, iPhone 16 Pro / iOS 18.5 | Core 9.2s; SwiftUI 4.0s; LaTeX 3.1s; Mermaid 2.3s; all passed |
-| Review-remediation Mermaid lane | XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro / iOS 18.5, Debug | wide journey/right-edge regression retained; exact committed-tree record below |
 | Package manifests | `swift package dump-package` | root exposes four products; consumer fixture contains four single-product targets |
 | GitHub configuration | Ruby YAML parser | all workflow, action, issue-form, and Dependabot YAML parsed |
-| Patch integrity | `git diff --check a9fc7cb..HEAD` | passed |
+| Patch integrity | `git diff --check` | passed |
 
 The skipped package test is the existing iOS 14-only ICS case; no iOS 14 runtime is installed on this machine.
 
-### Exact wide-journey remediation rerun
+### Current app-hosted wide-journey result
 
-- Timestamp: `2026-09-01T14:03:15+08:00` (`2026-09-01T06:03:15Z` artifact timestamp).
-- Clean committed HEAD: `d43b27e91a5f6d68e417ece7b3a2eb19b97033d4`.
-- Tested source tree: `65d41c7f2e434e39af12a7b81766e36085dd8a4d` (`HEAD:Sources`).
-- Tested test tree: `3d0207d4bc6c8724b07f98ceb23d692caa673f08` (`HEAD:Tests`).
-- Tool / scheme / destination: XcodeBuildMCP `test_sim`, `InkMarkdown-Package`, iPhone 16 Pro / iOS 18.5 Simulator, Debug.
-- Command: `test_sim(extraArgs: ["-only-testing:InkMarkdownMermaidTests"], progress: true)`.
-- Result: 9 passed, 0 failed, 0 skipped; 30.8s. This includes `rendersWideJourneyWithoutRightEdgeClipping()` with a 120-second per-attempt hosted-runner budget.
-- Build log: `~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/logs/test_sim_2026-09-01T06-03-15-409Z_pid53535_8b5d7c6a.log`.
-- Result bundle: `~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/result-bundles/test_sim_2026-09-01T06-03-15-409Z_pid53535_e2c652bd.xcresult`.
+- Scheme / target / destination: `ExampleApp` / `ExampleAppMermaidIntegrationTests`, iPhone 17 Pro / iOS 26.5 Simulator, Debug.
+- Result: `rendersWideJourneyWithoutRightEdgeClipping()` passed 1/1 using the production default timeout and production single retry.
+- Assertions: 400px output width, bounded height, PNG payload, cache identity, and right-side non-background pixel density protecting `Act` / `Export report`.
+- Result bundle: `~/Library/Developer/Xcode/DerivedData/ExampleApp-dtkjypnkylsasgccwnrxfzappddk/Logs/Test/Test-ExampleApp-2026.09.01_14-58-20-+0800.xcresult`.
+- The Package-side Mermaid target separately passed 8/8 deterministic tests. Its result bundle is `~/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Logs/Test/Test-InkMarkdown-Package-2026.09.01_14-59-36-+0800.xcresult`.
+- The full Package result bundle is `~/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Logs/Test/Test-InkMarkdown-Package-2026.09.01_15-01-42-+0800.xcresult`.
 
-The evidence-only remediation commit after `d43b27e` does not change `Sources/` or `Tests/`; the scoped tree hashes above remain the tested code identity. The earlier 299-test package run used the same `Sources/` tree; the only later test-tree change is the focused Mermaid timeout calibration rerun here. Final GitHub CI must still validate the complete PR head SHA.
+The preceding hostless 9-test run at `d43b27e` remains useful historical reproduction evidence, but it is superseded as a CI seam. GitHub run `33476630553` spent about 241 seconds across two 120-second attempts because its SwiftPM runner had no `UIApplication` and the WebContent process became unresponsive. The JavaScript watchdog could not run while WebKit's event loop was stalled. No production timeout, sleep, or retry was increased; the one real PNG regression moved to the lifecycle boundary it requires.
 
 ## Manual verification
 
-See `compatibility-and-ui.md` for the iPad/iPhone ExampleApp walkthrough. It records passed static, configuration, component, and streaming key paths plus the unverified network-image, minimum-runtime, physical-device, and full accessibility boundaries.
+See `compatibility-and-ui.md` for the iPad/iPhone ExampleApp walkthrough. It records passed static, configuration, component, streaming, and SwiftUI wide-Mermaid right-edge paths plus the unverified network-image, minimum-runtime, physical-device, full accessibility, and separate UIKit-bottom visual boundaries.
 
 ## Independent review
 
@@ -57,7 +56,7 @@ A third fresh-context verification pair inspected `049db14..cde27bc`. Standards 
 
 ## Remote delivery
 
-The PR head SHA and its required GitHub Actions jobs are the remote evidence. Do not edit this file merely to copy those values after CI succeeds: that would create a different, unverified SHA. Do not treat local verification as remote CI evidence.
+Remote delivery is intentionally deferred. No push or PR mutation is authorized in this run, and local verification is not remote CI evidence. When the maintainer later authorizes delivery, the PR head SHA and its required GitHub Actions jobs must be checked on that exact SHA.
 
 ## External decisions and blockers
 

@@ -20,7 +20,8 @@
 - [x] 完成 ExampleApp 手工验收。
 - [x] 完成独立 Standards 与 Spec 审查。
 - [x] 修复确认问题并重跑受影响验证；私密披露渠道属于需 maintainer 授权的外部决策，文档不虚构已可用。
-- [ ] 按功能提交、推送、创建或更新 PR、等待 CI。
+- [x] 按功能完成本地提交。
+- [ ] 推送、创建或更新 PR、等待同一 SHA 的必要 CI；按维护者要求延期。
 
 ## External decisions
 

@@ -37,3 +37,5 @@ Status: in-progress
 ## Delivery
 
 改动按功能粒度提交。最终推送 `feat/swiftUI`，创建或更新指向 `main` 的 PR，等待同一 SHA 的必要 CI 结果。
+
+> 2026-09-01 execution restriction: 维护者要求本轮只允许本地 commit。push、PR 创建/更新与远端 CI 均延期，后续获得明确授权后再执行；本 spec 因此保持 `in-progress`。
