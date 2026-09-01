@@ -103,8 +103,6 @@ struct InkMermaidRendererTests {
     #expect(result.pngData.isEmpty == false)
     #expect(result.cacheIdentity == request.cacheIdentity())
   }
-
-  /// 宽 journey 在窄 maxPixelWidth 下仍应把右侧 section 装进快照（回归：仅 resize viewport 会裁切）。
 }
 
 // WebKit page-process termination, bridge JavaScript errors and snapshot timeout require an iOS runtime;
