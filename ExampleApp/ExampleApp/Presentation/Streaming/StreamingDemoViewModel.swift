@@ -31,8 +31,10 @@ final class StreamingDemoViewModel: ObservableObject {
     "宿主收到 SSE/WebSocket 分片后，逐个调用 `session.append(...)`。\n\n",
     "流式阶段使用增量富文本；**finish 后**才提升为块级组件（如 `InkTableBlockView`）。\n\n",
     "- 流式期表格以管道字符富文本显示，非交互式真表\n",
-    "- `finish()` 只表示输入结束\n",
-    "- 终态 promotion 完成后表格才可滑动与复制\n\n",
+    "- `finish()` 只表示输入结束\n\n",
+    "  续段仍属于同一列表项，验证松散列表几何。\n\n",
+    "流式与终态使用同一链接回调：[Apple 开发者](https://developer.apple.com) 与引用式 [Swift.org][swift]。\n\n",
+    "[swift]: https://www.swift.org\n\n",
     "| 状态 | 语义 |\n| --- | --- |\n| streaming | 富文本增量 |\n| finished | 块级终态 |\n\n",
     "```swift\nsession.finish()\n```\n"
   ]

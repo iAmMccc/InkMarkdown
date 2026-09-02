@@ -319,7 +319,10 @@ private struct InkRenderer {
     // inlineCode 仍 monospaced()——因为是 context 下传而非事后回写，样式不再互踩。
     let quoteFont = scaledFont(UIFont.systemFont(ofSize: appearance.blockquote.fontSize), textStyle: .body)
     let quoteContext = context.withFont(quoteFont).coloring(appearance.blockquote.color)
+    // 列表项内的引用：缩进必须叠加列表内容起点，否则引用会脱离所属列表项的层级
+    //（归属正确性由 AST 结构保证，缩进由这里兑现）。
     let indent = scaledValue(appearance.blockquote.barWidth + appearance.blockquote.leftPadding, textStyle: .body)
+      + context.listIndent
 
     for (index, child) in children.enumerated() {
       let isLast = index == children.count - 1
@@ -410,7 +413,22 @@ private struct InkRenderer {
         } else if child is OrderedList || child is UnorderedList {
           nestedBlocks.append((i, renderBlock(child, context: nestedListContext)))
         } else if let paragraph = child as? Paragraph {
-          nestedBlocks.append((i, renderInlineChildren(of: paragraph, context: context)))
+          // // 为什么 续段要复用列表段落几何：
+          // loose list 的续段（同一条目内第二个段落）没有 marker，若不施加段落样式，
+          // 会从 x=0 重新排版并丢失固定行高，视觉上脱离所属列表项。
+          // 悬挂语义下内容列起点是 `listIndent + markerWidth`，续段首行与回绕行都应对齐该列。
+          let continuation = NSMutableAttributedString(
+            attributedString: renderInlineChildren(of: paragraph, context: context)
+          )
+          applyFixedLineHeight(
+            to: continuation,
+            lineHeight: scaledValue(appearance.text.lineHeight, textStyle: .body),
+            spacingAfter: 0
+          ) { para in
+            para.firstLineHeadIndent = listIndent + markerWidth
+            para.headIndent = listIndent + markerWidth
+          }
+          nestedBlocks.append((i, continuation))
         } else {
           nestedBlocks.append((i, renderBlock(child, context: nestedListContext)))
         }

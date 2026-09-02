@@ -20,7 +20,7 @@ final class InkMarkdownCoordinator {
   private var ownedAttachmentToken: InkBlockPresentationAttachmentToken?
 
   weak var containerView: InkMarkdownContainerView?
-  private var streamTextView: UITextView?
+  private var streamTextView: InkStreamingTextView?
   private weak var boundStreamTextView: UITextView?
   private weak var currentSession: InkMarkdownRenderSession?
   private var currentSessionCycleID: InkBlockPresentationCycleID?
@@ -250,6 +250,9 @@ final class InkMarkdownCoordinator {
     defer { isReconcilingStreaming = false }
 
     let configuration = resolvedConfiguration(session.configuration)
+    // 流式未 finish 阶段与终态块使用同一 `linkTapHandler` 契约：每次 reconcile 用当前
+    // configuration 的 handler 覆写，保证 promotion 前后与 configuration 更新后不留陈旧 callback。
+    streamTextView?.linkTapHandler = configuration.linkTapHandler
     let candidates: [InkBlockPresentationCandidate]
     if session.isPromoted {
       var assignedThoughtEvidence = false
@@ -395,21 +398,13 @@ final class InkMarkdownCoordinator {
     boundStreamTextView = nil
   }
 
-  private func makeOrReuseStreamTextView() -> UITextView {
-    let textView: UITextView
+  private func makeOrReuseStreamTextView() -> InkStreamingTextView {
+    let textView: InkStreamingTextView
     if let existing = streamTextView {
       textView = existing
     } else {
-      let newTextView = UITextView()
-      newTextView.isEditable = false
-      newTextView.isSelectable = true
-      newTextView.isScrollEnabled = false
-      newTextView.adjustsFontForContentSizeCategory = true
-      newTextView.backgroundColor = .clear
-      newTextView.textContainerInset = .zero
-      newTextView.textContainer.lineFragmentPadding = 0
-      streamTextView = newTextView
-      textView = newTextView
+      streamTextView = InkStreamingTextView()
+      textView = streamTextView!
     }
 
     return textView

@@ -63,7 +63,10 @@ let package = Package(
     ),
     .testTarget(
       name: "InkMarkdownTests",
-      dependencies: ["InkMarkdown"],
+      dependencies: [
+        "InkMarkdown",
+        "InkMarkdownSemanticCorpus",
+      ],
       path: "Tests/InkMarkdownTests"
     ),
     .testTarget(
@@ -83,8 +86,24 @@ let package = Package(
     ),
     .testTarget(
       name: "InkMarkdownSwiftUITests",
-      dependencies: ["InkMarkdownSwiftUI"],
+      dependencies: [
+        "InkMarkdownSwiftUI",
+        "InkMarkdown",
+        "InkMarkdownSemanticCorpus",
+      ],
       path: "Tests/InkMarkdownSwiftUITests"
+    ),
+    // 测试支撑 target：v0.0.2 canonical semantic corpus 的唯一存放处。
+    // 仅供 InkMarkdownTests / InkMarkdownSwiftUITests 依赖，不进入任何对外 product，
+    // 因此不构成 production abstraction（spec：不在库内新增公共抽象）。
+    .target(
+      name: "InkMarkdownSemanticCorpus",
+      dependencies: ["InkMarkdown"],
+      path: "Tests/Support/InkMarkdownSemanticCorpus",
+      swiftSettings: [
+        .swiftLanguageMode(.v5),
+        .enableExperimentalFeature("StrictConcurrency"),
+      ]
     ),
     .testTarget(
       name: "InkMarkdownCoreContractTests",
