@@ -67,7 +67,7 @@ swift-markdown Markup
 | 平台实施 | **ADR-008**：v0.0.2 仅承诺 iOS/iPadOS 14+ | manifest 与 ExampleApp deployment target 已收敛为 14.0；当前运行证据覆盖 iPhone / iPad 的 iOS Simulator 18.5 与 26.5，尚无 iOS/iPadOS 14 runtime 证据 | 补齐最低版本验证后才以 iOS/iPadOS 14+ 对外承诺 |
 | 图片 / 删除线 | **ADR-004**（默认占位）+ **ADR-006**（opt-in 真图）；删除线样式已实现 | opt-in 图片栈与本轮稳定性修复已落地；删除线已实现 `.strikethroughStyle` | 补齐完整语义、最低版本、人工交互与性能证据 |
 | 流式长度 | **ADR-005**：最大长度支持配置（默认 50_000） | renderer/session initializer 已开放配置，并共享不可变 source-limit snapshot；边界测试已落地 | 已收口；后续变更默认值须重跑性能基线 |
-| CI 构建 | 建立 iOS Simulator 自动测试 | 统一使用 Xcode 26.6 + iPhone 17 Pro/OS 26.5；Core、SwiftUI、addon contract/LaTeX、确定性 Mermaid addon 已拆分测试执行，真实 Mermaid PNG 由 ExampleApp app-hosted job 承载；四 product 另有独立消费者构建，ExampleApp 覆盖 Debug/Release | 工作流改动仅完成本地验证；按维护者要求，push、PR 更新与最终候选 SHA 的远端 CI 延后执行 |
+| CI 构建 | 建立 iOS Simulator 自动测试 | 统一使用 Xcode 26.6 + iPhone 17 Pro/OS 26.5；Core、SwiftUI、addon contract/LaTeX、确定性 Mermaid addon 已拆分测试执行，真实 Mermaid PNG 由 ExampleApp app-hosted job 承载；四 product 另有独立消费者构建，ExampleApp 覆盖 Debug/Release；PR job 显式检出并校验 head SHA，不把默认 merge ref 当作候选证据 | 工作流改动仅完成本地验证；按维护者要求，push、PR 更新与最终候选 SHA 的远端 CI 延后执行 |
 | SmartCodable | 早期文档提及依赖 | 实际未引用 | 从依赖说明中移除 |
 | 项目阶段 | `0.0.1` public beta 后的能力完善 | 已具备 UIKit core、ExampleApp 与 iPhone/iPad Simulator 测试；SwiftUI adapter 已实现并通过基础契约测试 | v0.0.2 完成最低版本、完整语义、可访问性、性能与 SwiftUI ExampleApp 验证后再发布 |
 

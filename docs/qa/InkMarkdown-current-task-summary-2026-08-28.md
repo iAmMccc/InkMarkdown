@@ -42,7 +42,7 @@
 - 测试策略已收口：删除 UI、重复边界与入口排列测试；只保留 sourceFilter、Thought scanner、富文本背景、render session/continuity、addon 注册与真实 Mermaid PNG 等数据、状态、调用次数与渲染语义关键链路。真实 Mermaid PNG/右缘裁切用例已从无 App 宿主的 SwiftPM runner 迁入 ExampleApp app-hosted target；Package target 保留 8 项确定性 Mermaid 契约。2026-09-01，在 iPhone 17 Pro / iOS 26.5 完成 Package 全量 298 个逻辑测试：297 通过、0 失败、1 跳过；app-hosted Mermaid 另有 1 项通过。
 - 2026-09-01 以同一生产源码重复执行 ExampleApp：iPad 覆盖 Thought 卡片范围、inline code 背景、suffix 边界、可折叠能力 true→false→true、流式追加、宽度切换、卸载重挂、promotion 与特大字号刷新；iPhone 覆盖窄宽静态/配置布局、表格、LaTeX、Mermaid 与流式状态刷新。网络图片仅停留在占位符，未宣称外网加载通过。
 - 四 product 消费者冒烟已从 ExampleApp 的联合链接中拆出：Core、SwiftUI、LaTeX、Mermaid 各由只选择单一 product 的外部 fixture 独立构建；package 测试 job 的 `-only-testing` 仅表示执行分流，不再描述为构建图隔离。
-- 当前分支为 `feat/swiftUI`；readiness 基线、CI/消费者、API 收敛、ExampleApp 状态同步、治理文档与既有复审证据已按功能提交。本轮 Mermaid app-hosted 测试边界、对应 CI job、证据文档与复审修复已完成本地功能粒度提交，Standards / Spec 窄复核均 PASS；按维护者最新要求，本轮只允许 commit，push、PR 更新与同一 SHA 的远端 CI 延后处理。
+- 当前分支为 `feat/swiftUI`；readiness 基线、CI/消费者、API 收敛、ExampleApp 状态同步、治理文档与既有复审证据已按功能提交。本轮 Mermaid app-hosted 测试边界、对应 CI job、证据文档与复审修复已完成本地功能粒度提交；发布门禁后续补充显式 PR head SHA 检出与校验，避免把默认 merge ref 当作候选证据。按维护者最新要求，本轮只允许 commit，push、PR 更新与同一 SHA 的远端 CI 延后处理。
 
 ## 未解决问题
 

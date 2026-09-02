@@ -24,6 +24,7 @@ Environment: XcodeBuildMCP, `InkMarkdown-Package`, iPhone 16 Pro, iOS 18.5, Debu
 - A dedicated external-consumer fixture builds Core, SwiftUI, LaTeX, and Mermaid product schemes separately, proving product-level compile/link isolation.
 - A raw SwiftPM test process is not a valid lifecycle host for real WKWebView rendering. The single real Mermaid PNG test therefore lives in `ExampleAppMermaidIntegrationTests`, where XCTest launches and retains ExampleApp. It asserts right-side ink after 400px fitting and uses production's default timeout plus one bounded retry.
 - The hosted CI job consumes the setup action's verified Simulator UDID, explicitly boots it, waits for `bootstatus`, then runs only the app-hosted integration target.
+- Every CI job derives one `CANDIDATE_SHA`: PR head SHA for `pull_request`, otherwise `github.sha`. Checkout pins that SHA, disables persisted credentials, and verifies `git rev-parse HEAD` before executing candidate code; the workflow token is limited to `contents: read`.
 
 ## Focused local results
 

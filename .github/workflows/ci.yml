@@ -16,6 +16,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -33,6 +36,8 @@ env:
   IOS_SIM_NAME: iPhone 17 Pro
   IOS_SIM_OS: "26.5"
   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+  # pull_request 默认 GITHUB_SHA 是合并测试 ref；发布证据必须绑定 PR head。
+  CANDIDATE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   package-tests:
@@ -66,8 +71,18 @@ jobs:
             filters: -only-testing:InkMarkdownMermaidTests
 
     steps:
-      - name: Checkout
+      - name: Checkout candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+
+      - name: Verify candidate checkout
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          echo "candidate_sha=${CANDIDATE_SHA}"
+          echo "checkout_sha=${actual_sha}"
+          test "${actual_sha}" = "${CANDIDATE_SHA}"
 
       - name: Set up pinned iOS toolchain
         id: ios
@@ -141,8 +156,18 @@ jobs:
             scheme: InkMarkdownMermaidConsumer
 
     steps:
-      - name: Checkout
+      - name: Checkout candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+
+      - name: Verify candidate checkout
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          echo "candidate_sha=${CANDIDATE_SHA}"
+          echo "checkout_sha=${actual_sha}"
+          test "${actual_sha}" = "${CANDIDATE_SHA}"
 
       - name: Set up pinned iOS toolchain
         id: ios
@@ -192,8 +217,18 @@ jobs:
         configuration: [Debug, Release]
 
     steps:
-      - name: Checkout
+      - name: Checkout candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+
+      - name: Verify candidate checkout
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          echo "candidate_sha=${CANDIDATE_SHA}"
+          echo "checkout_sha=${actual_sha}"
+          test "${actual_sha}" = "${CANDIDATE_SHA}"
 
       - name: Set up pinned iOS toolchain
         id: ios
@@ -242,8 +277,18 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Checkout
+      - name: Checkout candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+
+      - name: Verify candidate checkout
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          echo "candidate_sha=${CANDIDATE_SHA}"
+          echo "checkout_sha=${actual_sha}"
+          test "${actual_sha}" = "${CANDIDATE_SHA}"
 
       - name: Set up pinned iOS toolchain
         id: ios
