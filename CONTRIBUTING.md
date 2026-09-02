@@ -72,3 +72,4 @@ xcodebuild test \
 - 📝 [架构决策记录 (ADR)](docs/decisions/README.md)
 - 🆘 [支持说明](SUPPORT.md)
 - 🤝 [行为准则](CODE_OF_CONDUCT.md)
+- 🚦 [v0.0.2 发布清单](docs/release-checklist.md)

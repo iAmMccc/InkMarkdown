@@ -9,7 +9,7 @@
 ## Parallel tracks
 
 - [x] A：CI、四 product 消费者接入、ExampleApp build。
-- [x] B：README/CHANGELOG/CONTRIBUTING、开源协作资产。
+- [x] B：README/CHANGELOG/CONTRIBUTING、发布清单与开源协作资产。
 - [x] C：`0.0.1` 公开 interface 对比、深度审计、错误契约。
 - [x] D：可用 Simulator/runtime 盘点与 ExampleApp 人工矩阵；最低系统、真机性能及完整可访问性保留真实 blocker。
 

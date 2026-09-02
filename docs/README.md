@@ -25,6 +25,7 @@
 | 查询 swift-markdown API | [依赖 API 参考](references/README.md) |
 | 确认 Markdown 渲染语义 | [渲染语义规范](spec/README.md) |
 | 查看后续开发优先级 | [路线图](roadmap.md) |
+| 准备 v0.0.2 Release Candidate 或发布 | [v0.0.2 发布清单](release-checklist.md) |
 
 ## 文档分层
 
@@ -41,6 +42,7 @@
 | 行为契约 | Markdown 渲染语义 | [spec/](spec/README.md) |
 | 依赖知识 | swift-markdown API 参考 | [references/](references/README.md) |
 | 未来计划 | 未交付的后续规划 | [roadmap.md](roadmap.md) |
+| 发布门禁 | Release Candidate 与正式发布检查 | [release-checklist.md](release-checklist.md) |
 
 ## 按文档类型查找
 
