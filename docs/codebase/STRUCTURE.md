@@ -57,7 +57,7 @@ Sources/InkMarkdown/
 
 | 模块 | 目录布局 | 说明 |
 |------|--------|-------|
-| Tests | Core、core/addon contract、LaTeX、确定性 Mermaid、SwiftUI adapter、ExampleApp policy 与 app-hosted Mermaid integration targets | 使用 Swift Testing 与 XCTest；2026-09-01 的 iPhone 17 Pro / iOS 26.5 Package 全量共 298 个逻辑测试：297 项通过、0 失败、1 项跳过；app-hosted Mermaid 另有 1 项通过 |
+| Tests | Core、core/addon contract、LaTeX、确定性 Mermaid、SwiftUI adapter、ExampleApp policy 与 app-hosted Mermaid integration targets | 使用 Swift Testing 与 XCTest；2026-09-02 本地候选 iPhone 17 Pro / iOS 26.5 Package 全量：333 通过、0 失败、1 项跳过；非远端 CI |
 | ExampleApp | `AppDelegate` / `SceneDelegate`、列表与详情页（块渲染、SSE、Pager 等） | 独立 Xcode 工程，提供宿主集成示例 |
 
 ### 4) 公开入口

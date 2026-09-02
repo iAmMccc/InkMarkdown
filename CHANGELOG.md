@@ -23,19 +23,25 @@
   - 支持流式 PREFIX 思考卡片早期挂载与 Promotion 全生命周期的折叠状态保持（SSOT）。
 - **Chat 列表滚动与吐字控制 (`ChatScrollPolicy`)**：
   - 统一管理 120pt 粘底判定（stickToBottom）与用户拖拽/减速期间的吐字暂停（shouldPauseDisplay）。
+- **图片业务策略与有界网络加载（ADR-006 收口）**：
+  - 真图仍为 opt-in（`isEnabled` 默认 `false`）；开启后空 host allowlist 默认允许有效 HTTP(S)；
+  - 可选业务 allowlist；资源安全边界始终生效（默认 20 MiB 响应上限、最多 3 次重定向并重校验、最后订阅取消底层任务、loader semantic identity 参与缓存键、相对 URL 需 `baseURL`）；
+  - `ImageHTTPSessionDelegate` 合并重定向校验与有界字节累计。
 - **无障碍语义与 Dynamic Type 路径**：
   - 为已实现组件补充可访问性状态表达与字号变化相关处理；
   - 完整 VoiceOver、系统级 Dynamic Type、全部组件语义与 iOS/iPadOS 14 runtime 验证仍未完成，不能据此宣称“完整无障碍”或最低系统支持。
 - **自动化验证与手工验收边界**：
-  - 按 2026-09-01 最新验证记录，`InkMarkdown-Package` 在 iPhone 17 Pro / iOS 26.5 共 298 个逻辑测试：297 项通过、0 项失败、1 项跳过（本机无 iOS 14 runtime）；另有 1 项 ExampleApp app-hosted Mermaid PNG 关键链路通过；
-  - 自动化测试聚焦数据、状态、调用次数与关键渲染语义，UI 行为通过同一生产源码的 ExampleApp 手工验收；该记录不表示 `0.0.2` 已达到发布条件。
+  - 2026-09-02 本地候选（工作树 atop `8fb1640`，含未提交交互/图片/review 修复）在 iPhone 17 Pro / iOS 26.5 通过 XcodeBuildMCP 跑通 `InkMarkdown-Package`：333 通过、0 失败、1 跳过（本机无 iOS 14 runtime）；**不是远端 CI**；
+  - 自动化聚焦数据、状态、调用次数与关键渲染语义；UI / 真网图片 / 旋转 / Split View 见 ExampleApp 验收记录；该记录不表示 `0.0.2` 已达到发布条件。
 
 ### Changed
 - 将未发布的 SwiftUI adapter、LaTeX 与 Mermaid 能力拆为独立 products；已发布 `0.0.1` 仍只有 `InkMarkdown` product，消费者不应在 `0.0.1` 中导入 `0.0.2` 专用模块。
+- 图片业务策略默认从 fail-closed 调整为开启真图后开放有效 HTTP(S)（仍与 ADR-004 默认占位兼容）。
 
 ### Fixed
 - 修复 `InkThoughtScanner.stripThoughtTags` 正则由于 `^` 锚点导致非行首开标签未被剥离的 Bug；
 - 修复 `InkMarkdownRenderSession.updateRenderEnvironment` 在流式进行中 Trait 变化未同步刷新 `streamingThought` 配置的问题。
+- 修复 `InkImageStore` 在最后订阅取消时未取消 inflight，以及 `DisplayKey` 未纳入 loader identity 导致缓存串用的问题。
 
 ## [0.0.1] - 2026-07-30
 

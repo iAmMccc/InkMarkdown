@@ -49,11 +49,11 @@ InkMarkdownView(markdown)
 
 `.inkConfiguration(...)` 只是 Environment 注入 seam，不会创建第二套 SwiftUI Theme。静态视图仍通过同一个 UIKit rendering engine 渲染。
 
-### 组件与富媒体：工厂 + allowlist
+### 组件与富媒体：工厂 + 演示 CDN
 
 **2. 自定义组件与富媒体** 使用 `DemoInkConfigurationBuilder.makeComponentsConfiguration()`：
 
-- 图片：`demoImageEnabled` 开关 + `allowedHosts`（`placehold.co`、`picsum.photos`）。**仅 `isEnabled=true` 不够**，见 [FAQ §6](06-faq.md#6-图片只有--image)。
+- 图片：`demoImageEnabled` 开关；Example 显式收窄到 `placehold.co` / `picsum.photos`（验收预设）。库默认在 `isEnabled=true` 后开放有效 HTTP(S) host，见 [FAQ §6](06-faq.md#6-图片只有--image) 与 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)。
 - LaTeX / Mermaid：opt-in 开关；Mermaid 可能产生 WebKit 控制台噪声（只文档化）。
 
 ### 流式内容：宿主拥有 transport
@@ -89,7 +89,7 @@ finish 路径的 `@Published` defer 见 [09 §12](09-swiftui-uiviewrepresentable
 | 主题 | 限制 |
 | --- | --- |
 | 流式表格 | `InkStreamRenderer` 无 GFM 增量表；流式阶段表格呈管道文本，`finish()` 后 promotion 为真表 |
-| 远程图片 | 须 `isEnabled` + `allowedHosts`；库默认 fail-closed 未改 |
+| 远程图片 | 须 `isEnabled`；可选 `allowedHosts`。库默认开启后开放有效 HTTP(S)；Example 演示 CDN 为验收收窄 |
 | 真实 LLM | 预设网关 `https://www.rightapi.ai/codex/v1`，model `gpt-5.6-luna`；Example `LLMErrorMapper`（非库 API）映射 TLS 等 NSURLError。**禁止关 ATS** |
 | 控制台噪声 | LaunchServices、WebKit/Mermaid、TextKit 1、第三方 IME — 见 [FAQ §19](06-faq.md#19-控制台噪声simulator--系统) |
 | 长文样例 | 当前样例较短、不含 Mermaid；该页不创建 WKWebView |

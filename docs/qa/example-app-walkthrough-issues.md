@@ -59,17 +59,17 @@
 
 #### 归因分桶
 
-- **库契约**：`InkImageRendering.isEnabled` 默认 `false`；`ImageSecurityPolicy` **fail-closed**（空 allowlist + `rejectAll`）时即使 `isEnabled=true` 也会拒绝加载（见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)）。
-- **Example**：早期演示仅 toggle `isEnabled`，未配置 `allowedHosts`。
+- **库契约**：`InkImageRendering.isEnabled` 默认 `false`。开启后空 `allowedHosts` 默认允许有效 HTTP(S) host（ADR-006 业务策略默认开放）；资源安全边界始终生效。
+- **Example**：早期演示仅 toggle `isEnabled`；现以 `demoImageEnabled` 显式收窄到演示 CDN，便于固定验收。
 
 #### 本次处理
 
 - Example 增加 `demoImageEnabled` allowlist（`placehold.co`、`picsum.photos`），经 `DemoInkConfigurationBuilder.makeComponentsConfiguration()` 工厂注入。
-- **库默认 fail-closed 未改** — 宿主必须同时配置 `isEnabled` 与 allowlist（或等价安全策略）。
+- **库默认已改为业务策略开放** — 开启真图后无需配置 allowlist 即可加载有效 HTTP(S)；allowlist 仍是可选业务限制。
 
 #### 是否仍为已知限制
 
-**否（Example 路径）** — 在组件示例中按工厂配置后应可见远程图。未配置 allowlist 的宿主仍会得到 fail-closed 行为，属库契约。
+**否（Example 路径）** — 在组件示例中按工厂配置后应可见远程图。未配置 allowlist 的宿主在 `isEnabled=true` 时默认也可加载有效 HTTP(S)，除非显式设置 `emptyHostPolicy = .rejectAll` 或非空白名单。
 
 ---
 
@@ -416,7 +416,7 @@ iOS 14 `ScrollView` **无** `isDecelerating` API；ExampleApp **未** 引入第�
 | 编号 | 主题 | 仍为已知限制？ | 主文档 |
 | --- | --- | --- | --- |
 | P1/P5 | 链接 LaunchServices 警告 | 是（系统） | 本文 §P1/P5、[FAQ §19](../contributor-guide/06-faq.md#19-控制台噪声simulator--系统) |
-| P2.1 | 图片 fail-closed | 宿主未配 allowlist 时仍是 | [FAQ §6](../contributor-guide/06-faq.md#6-图片只有--image) |
+| P2.1 | 图片占位 / 策略 | 默认仍是 `isEnabled=false`；开启后 host 默认开放，allowlist 可选 | [FAQ §6](../contributor-guide/06-faq.md#6-图片只有--image) |
 | P2.2 | 跨段 `$$` | 否（Block 路径） | [FAQ §16](../contributor-guide/06-faq.md#16-公式与图表怎么-opt-in) |
 | P2.4 | Mermaid WebKit 噪声 | 是（系统） | 本文 §P2.4、[09 §13](../contributor-guide/09-swiftui-uiviewrepresentable-gotchas.md#13-simulator--系统控制台噪声) |
 | P3.1 | TextKit 1 警告 | 是（契约） | [FAQ §10](../contributor-guide/06-faq.md#10-会不会改成只支持-textkit-2) |

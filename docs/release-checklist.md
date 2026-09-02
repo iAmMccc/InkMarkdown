@@ -9,6 +9,7 @@
 - 发布范围与退出标准：[`roadmap.md`](roadmap.md)
 - 用户可见变更：[`CHANGELOG.md`](../CHANGELOG.md)
 - 本轮候选验证证据：[`.scratch/v0.0.2-library-readiness/evidence/`](../.scratch/v0.0.2-library-readiness/evidence/README.md)
+- 交互 / 图片本地候选证据（工作树 atop `8fb1640`）：[`qa/InkMarkdown-interaction-acceptance-2026-09-02.md`](qa/InkMarkdown-interaction-acceptance-2026-09-02.md)
 - 远端门禁：[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 
 出现冲突时先按知识层级判断：产品边界与架构服从 `AGENTS.md`、ADR 和 roadmap；渲染语义服从 `docs/spec/`；当前已交付 API、平台与验证事实由 manifest、源码和最新可复现证据证明。实现不符合既定规范时必须修复实现，不能仅改文档消除差异。

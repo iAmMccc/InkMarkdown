@@ -28,34 +28,30 @@
 - 空 Session 绑定必须覆盖旧 text storage；同一批流式输入的多个 dirty slot 必须可组合；Thought 的完成态和折叠态属于 presentation state。
 - 图片 attachment 的 nonisolated 测量回调保持纯函数；addon registry 通过单一加锁状态容器管理。
 - LaTeX/Mermaid 必须显式链接 product、import、register，再开启渲染；核心未注册时明确失败，不依赖反射或隐式 Bundle 回退。
-- 历史审查快照仅供追溯；当前事实以本摘要、`docs/current-status.md`、源码和最新结构化测试结果为准。
+- 历史审查快照仅供追溯；2026-09-02 当前候选门禁以 [interaction acceptance 2026-09-02](InkMarkdown-interaction-acceptance-2026-09-02.md) 为 SSOT，再由 `docs/current-status.md` 摘要引用。
 
 ## 当前进度
 
 - 原审查 12 项缺陷已完成代码收口；另完成表格重配清理、图片缓存完成边界、统一语义 identity、Mermaid runtime seam 和新增回归测试等系统性补强。
-- ExampleApp 已恢复编译；公开 Block API、配置比较、流式生命周期、图片旧订阅取消、新结果展示和 addon 注册边界已有回归覆盖。
+- 2026-08-28 历史候选曾恢复 ExampleApp 编译；该结果不充当 2026-09-02 当前工作树证据。公开 Block API、配置比较、流式生命周期、图片旧订阅取消、新结果展示和 addon 注册边界已有回归覆盖。
 - 文档已同步：中英文 README、当前状态、架构/风险基线、FAQ、SwiftUI/UIKit 踩坑指南和审查修复记录。旧审查文件已标记为历史快照；ADR-002 已标记为被 ADR-008 supersede。
 - 已新增 19 项 CommonMark/GFM 语义矩阵测试，并在共享 `InkTextContext` seam 修复多级列表累计缩进；标准 `<URL>` 与当前不支持的 GFM 裸 URL 回退边界已与固定版 `swift-markdown` 保持一致。
 - `maximumSourceLength` 已通过 renderer/session initializer 开放配置：默认 50,000，创建时固化不可变 snapshot，append、reset、finish 与 promotion 共用同一 canonical source。
 - 已建立代码级性能门槛与可复现基线文档；聚焦语义、长度与性能测试 37/37 通过。
 - 本轮 review remediation 已收口：internal `InkPreparedMarkdownSource` 保证一次顶层 source filter 覆盖 Block 构造、Thought view 创建/复用与 suffix；promotion 后环境变化经 session-to-host display seam 刷新；复用 Thought 会完整协调折叠能力；Thought 富文本 fallback 只补缺失背景；公开 API 文档、DEBUG-only Unified Logging、import、测试命名与 Swift 2-space 格式规范已对齐。
-- 测试策略已收口：删除 UI、重复边界与入口排列测试；只保留 sourceFilter、Thought scanner、富文本背景、render session/continuity、addon 注册与真实 Mermaid PNG 等数据、状态、调用次数与渲染语义关键链路。真实 Mermaid PNG/右缘裁切用例已从无 App 宿主的 SwiftPM runner 迁入 ExampleApp app-hosted target；Package target 保留 8 项确定性 Mermaid 契约。2026-09-01，在 iPhone 17 Pro / iOS 26.5 完成 Package 全量 298 个逻辑测试：297 通过、0 失败、1 跳过；app-hosted Mermaid 另有 1 项通过。
-- 2026-09-01 以同一生产源码重复执行 ExampleApp：iPad 覆盖 Thought 卡片范围、inline code 背景、suffix 边界、可折叠能力 true→false→true、流式追加、宽度切换、卸载重挂、promotion 与特大字号刷新；iPhone 覆盖窄宽静态/配置布局、表格、LaTeX、Mermaid 与流式状态刷新。网络图片仅停留在占位符，未宣称外网加载通过。
-- 四 product 消费者冒烟已从 ExampleApp 的联合链接中拆出：Core、SwiftUI、LaTeX、Mermaid 各由只选择单一 product 的外部 fixture 独立构建；package 测试 job 的 `-only-testing` 仅表示执行分流，不再描述为构建图隔离。
-- 当前分支为 `feat/swiftUI`；readiness 基线、CI/消费者、API 收敛、ExampleApp 状态同步、治理文档与既有复审证据已按功能提交。本轮 Mermaid app-hosted 测试边界、对应 CI job、证据文档与复审修复已完成本地功能粒度提交；发布门禁后续补充显式 PR head SHA 检出与校验，避免把默认 merge ref 当作候选证据。按维护者最新要求，本轮只允许 commit，push、PR 更新与同一 SHA 的远端 CI 延后处理。
+- Tickets 01–05（canonical corpus / 列表 / 表格 / 链接 / 测量）已在 `8fb1640` 提交。Tickets 06–07（图片业务策略默认开放、相对 URL、有界可取消网络加载、loader identity）实现与测试已在工作树完成，**尚未 commit**。
+- 2026-09-02 本地候选：`InkMarkdown-Package` @ iPhone 17 Pro / iOS 26.5 由 XcodeBuildMCP 验证 333 通过、0 失败、1 跳过（iOS 14 ICS）；有效 diff 的 `git diff --check` 通过。证据见 [interaction acceptance 2026-09-02](InkMarkdown-interaction-acceptance-2026-09-02.md)。
+- FAQ / README / current-status / CHANGELOG 已去掉「开启真图后仍 fail-closed」的过时表述，改为 ADR-006 业务策略默认开放。
 
 ## 未解决问题
 
-- iOS/iPadOS 14–15 runtime、旋转、Split View 与无初始宽度协商尚未验证；不得把较新 Simulator 结果替代最低版本证据。
-- ExampleApp 已完成 Thought、流式状态、表格/LaTeX/Mermaid 可见性、Dynamic Type 关键链路；网络图片真实加载、完整表格/链接交互与系统级 VoiceOver 仍缺完整走查。
-- 真机 FPS、hitch、内存峰值、WebKit 冷启动和长会话性能基线尚未建立。
-- 首批 CommonMark/GFM 语义矩阵已落地；引用链接、列表续段/混合嵌套、复杂表格单元格、跨富文本/Block/流式通道完整矩阵仍未完成。自定义 inline syntax 的删除线继承仍是已知契约限制。
-- 当前证据不足以宣布 v0.0.2 已发布或已完成最低版本支持。
+- ExampleApp Debug 本轮在编译前 **BLOCKED**（`gitconfig` github 代理 `127.0.0.1:6152` 失效，依赖无法解析）；Release 因相同前置条件未重复执行。真网 `placehold.co` / `picsum.photos`、旋转、Split View 人工矩阵未执行。
+- iOS/iPadOS 14–15 runtime、真机性能、完整 VoiceOver 仍为独立 release blocker。
+- 远端 CI / push / PR 未授权，不得写成已通过。
 
 ## 下一步计划
 
-1. 获得维护者明确授权后，再 push `feat/swiftUI`、更新到 `main` 的 PR，并等待同一 PR head SHA 的必要 job；本轮不执行这些远端动作。
-2. 获取可用的 iOS/iPadOS 14–15 runtime 或设备，完成最低版本、旋转、Split View 与宽度协商验证。
-3. 完成网络图片、表格/链接交互与系统级 VoiceOver 人工验收；保持 UI 验收在 ExampleApp，不扩张 UI 单测。
-4. 建立真机性能基线，覆盖滚动、流式长文、图片/生成图加载、WebKit 冷启动、内存峰值和长会话。
-5. 由 maintainer 决定私密安全/行为报告渠道；渠道未真实可用前不创建 `SECURITY.md`，不宣称 confidential intake 已运营。
+1. 修复本机 git github 代理或改用可用网络后，完成 ExampleApp Debug/Release 构建与 ticket 08 真网/旋转/Split View 走查，更新同一证据文件。
+2. 维护者授权后再 push / 更新 PR，并以同一候选 SHA 跑远端 CI。
+3. 获取 iOS/iPadOS 14–15 runtime 与真机性能基线。
+4. 图片与交互改动经维护者确认后再按功能粒度本地 commit（当前明确要求暂不 commit）。

@@ -21,6 +21,7 @@
 | 对比主流 iOS Markdown 库定位 | [生态 Reference](references/ios-markdown-ecosystem.md) |
 | 排查常见问题 | [FAQ](contributor-guide/06-faq.md) |
 | ExampleApp 走查 / 已知演示限制 | [ExampleApp 走查 SSOT](qa/example-app-walkthrough-issues.md) |
+| 2026-09-02 交互/图片候选验收证据 | [interaction acceptance 2026-09-02](qa/InkMarkdown-interaction-acceptance-2026-09-02.md) |
 | 排查 CI / 本机 Xcode 不一致 | [CI 与工具链排坑](contributor-guide/07-ci-and-toolchain-pitfalls.md) |
 | 查询 swift-markdown API | [依赖 API 参考](references/README.md) |
 | 确认 Markdown 渲染语义 | [渲染语义规范](spec/README.md) |

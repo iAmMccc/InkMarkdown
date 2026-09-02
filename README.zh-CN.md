@@ -256,7 +256,7 @@ InkMarkdownView(markdown)
 | 行内公式 (`$...$`) | 已支持 (Opt-in) | `InkImageAttachment` |
 | 块级公式 (`$$...$$`) | 已支持 (Opt-in) | 生成的 `InkImageBlock`（须使用 `InkBlockRenderer`） |
 | Mermaid 图表 | 已支持 (Opt-in) | 生成的 `InkImageBlock`（须使用 `InkBlockRenderer`） |
-| 图片 | 已支持 (Opt-in) | 默认占位文本；开启后行内图片为 `InkImageAttachment`，独占块为 `InkImageBlock` |
+| 图片 | 已支持 (Opt-in) | 默认文本占位（`isEnabled=false`）。开启后有效 HTTP(S) host 无需必填 allowlist；可选域名白名单、20 MiB 响应上限、重定向重校验、相对 URL 的 `baseURL`、最后订阅取消等资源边界始终生效（ADR-006）。行内为 `InkImageAttachment`，独占块为 `InkImageBlock` |
 | 思考过程 (`<think>` / `<thought>`) | 已支持 | `InkBlockRenderer` 输出可折叠 `InkThoughtBlock`；支持流式前缀 |
 
 > ℹ️ **说明**：关于完整渲染行为细节与边界边缘情况，请参阅[当前项目状态](docs/current-status.md)与[渲染语义规范](docs/spec/README.md)。

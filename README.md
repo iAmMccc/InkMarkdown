@@ -256,7 +256,7 @@ For streaming, the host app feeds received deltas to `session.append(_:)`, then 
 | Inline Math (`$...$`) | Supported (Opt-in) | `InkImageAttachment` |
 | Block Math (`$$...$$`) | Supported (Opt-in) | generated `InkImageBlock` (`InkBlockRenderer` required) |
 | Mermaid Diagrams | Supported (Opt-in) | generated `InkImageBlock` (`InkBlockRenderer` required) |
-| Images | Supported (Opt-in) | Text placeholder by default; enabled inline images use `InkImageAttachment`, standalone blocks use `InkImageBlock` |
+| Images | Supported (Opt-in) | Text placeholder by default (`isEnabled=false`). When enabled, valid HTTP(S) hosts load without a required allowlist; optional host allowlist, 20 MiB response budget, redirect revalidation, relative `baseURL`, and last-subscriber cancel remain in force (ADR-006) |
 | Thought Process (`<think>` / `<thought>`) | Supported | collapsible `InkThoughtBlock` from `InkBlockRenderer`; streaming prefix supported |
 
 > ℹ️ **Note**: For complete details on rendering behavior and edge cases, see [Current Project Status](docs/current-status.md) and [Rendering Spec](docs/spec/README.md).

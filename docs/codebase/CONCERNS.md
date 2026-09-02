@@ -95,4 +95,4 @@
 | iOS/iPadOS 14+ 范围 | ADR-008 已排除其他平台；manifest 已收敛，iOS/iPadOS 14 验证仍是 v0.0.2 blocker |
 | 依赖可重复构建 | 直接依赖 revision pin（ADR-001）；本地 Caches 可选 |
 | v0.0.2 前完善 + 发布证据 | 核心 UIKit implementation、CI、SwiftUI adapter 基础契约与 iPhone/iPad ExampleApp 关键链路证据已落地；最低系统、完整可访问性、网络图片与真机性能证据仍未完成 |
-| 完整语义测试矩阵 | 2026-09-01 iPhone 17 Pro / iOS 26.5 Package 全量共 298 个逻辑测试：297 项通过、0 失败、1 项跳过；app-hosted Mermaid PNG 关键链路另有 1 项通过；测试已按关键数据/状态/语义链路收口，SwiftUI adapter 仍缺完整人工交互与最低版本矩阵 |
+| 完整语义测试矩阵 | 2026-09-02 本地候选 iPhone 17 Pro / iOS 26.5 Package 全量：333 通过、0 失败、1 项跳过；非远端 CI。测试已按关键数据/状态/语义链路收口；ExampleApp 真网图片/旋转/Split View 与最低版本矩阵仍缺 |

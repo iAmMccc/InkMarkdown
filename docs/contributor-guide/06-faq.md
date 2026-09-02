@@ -42,14 +42,17 @@ for b in blocks { stack.addArrangedSubview(b.makeView()) }
 
 **默认如此**（`InkImageRendering.isEnabled` 默认 `false`，契约见 [ADR-004](../decisions/ADR-004-v1-image-and-strikethrough-contract.md)）。占位串：`plainText`，否则 `source`，再否则 `"image"`。
 
-**需要真图时**：详见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)。仅将 `appearance.imageRendering.isEnabled` 设为 `true` **不够** — `ImageSecurityPolicy` 默认 **fail-closed**（空 allowlist + `rejectAll`），未配置 `allowedHosts`（或等价白名单）时仍会拒绝加载并显示紧凑占位 `[🖼 image]`。
+**需要真图时**：详见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)。将 `appearance.imageRendering.isEnabled` 设为 `true` 后，空 `allowedHosts` 默认 **允许** 所有满足资源安全边界的 HTTP(S) host（业务策略默认开放）。域名 allowlist 是可选业务配置，不是开启真图的前置条件。
 
-宿主必须同时：
+库始终执行资源安全边界：scheme、HTTP 2xx、有效图片数据、默认最多 3 次重定向、默认可配置的 20 MiB 响应上限；相对 URL 需提供 `baseURL`，否则明确失败并走占位。
+
+宿主通常需要：
 
 1. `isEnabled = true`
-2. 配置 `allowedHosts` / 安全策略（或自定义 loader）
+2. （可选）配置 `allowedHosts` / `emptyHostPolicy`，或注入自定义 loader
+3. （可选）设置 `baseURL` 以解析相对图片地址
 
-ExampleApp **2. 自定义组件与富媒体**（`SwiftUIComponentsDemoView` / `UIKitComponentsDemoViewController`）通过 `DemoInkConfigurationBuilder.makeComponentsConfiguration()` 注入 allowlist（`placehold.co`、`picsum.photos`）与 `demoImageEnabled` 开关；走查细节见 [ExampleApp 走查 SSOT](../qa/example-app-walkthrough-issues.md#p2--自定义组件与富媒体)。
+ExampleApp **2. 自定义组件与富媒体**（`SwiftUIComponentsDemoView` / `UIKitComponentsDemoViewController`）通过 `DemoInkConfigurationBuilder.makeComponentsConfiguration()` 显式收窄到演示 CDN（`placehold.co`、`picsum.photos`）并提供 `demoImageEnabled` 开关；这是 Example 验收预设，不是库默认。走查细节见 [ExampleApp 走查 SSOT](../qa/example-app-walkthrough-issues.md#p2--自定义组件与富媒体)。
 
 库内提供行内 `InkImageAttachment`、独占块 `InkImageBlock`、`InkImageStore` 与 `ImageSecurityPolicy`。`Image` 是 **InlineMarkup**，纯块 handler 拦不住行内节点；库内独占段提升由 `InkImageBlockHandler` 负责。亦可自定义 `InkInlineSyntax` 或 `sourceFilter` 预处理图片语法。
 

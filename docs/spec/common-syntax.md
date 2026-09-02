@@ -38,7 +38,11 @@
 ## 图片 `Image`
 
 - **默认渲染**（`InkImageRendering.isEnabled == false`，与 [ADR-004](../decisions/ADR-004-v1-image-and-strikethrough-contract.md) 一致）：不加载图片，输出占位文本 `[🖼 plainText]`（优先 alt，否则 `source`，再否则 `"image"`）。
-- **opt-in 真图**（`isEnabled == true`，见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)）：行内经 `InkImageAttachment` 展示；独占段可经 `InkImageBlockHandler` 提升为块级 `InkImageBlock`（`promotesToBlock` 默认开启）。加载、缓存与安全策略由 `InkImageStore`、`InkImageLoading` 与 `ImageSecurityPolicy` 承担。
+- **opt-in 真图**（`isEnabled == true`，见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md)）：
+  - **业务策略**：空 host allowlist 默认允许有效 HTTP(S) host；宿主可注入 `allowedHosts` 做可选来源限制。
+  - **资源安全边界**（始终生效）：scheme、HTTP 2xx、有效图片数据、默认最多 3 次重定向（配置白名单时每次重校验）、默认可配置的 20 MiB 响应上限、最后订阅取消传播到底层任务；缓存身份含 loader semantic identity。
+  - **呈现**：行内经 `InkImageAttachment`；独占段可经 `InkImageBlockHandler` 提升为 `InkImageBlock`（`promotesToBlock` 默认开启）。
+  - **相对 URL**：宿主提供 `InkImageRendering.baseURL` 时解析；未提供则明确失败并走占位，不猜测来源。
 - **说明**：`Image` 属于行内 Markup；块路由 alone 无法拦截行内节点，库内块级提升由 `InkImageBlockHandler` 实现。宿主亦可通过 `InkInlineSyntax` 或 `sourceFilter` 自定义。
 
 ## 列表 `OrderedList` / `UnorderedList` + `ListItem`
