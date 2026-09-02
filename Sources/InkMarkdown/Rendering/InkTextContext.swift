@@ -1,4 +1,5 @@
 import UIKit
+import CoreText
 
 /// 行内渲染的样式上下文，随行内递归**向下传递**（context 下传，取代旧的 render-then-rewrite）。
 ///
@@ -29,6 +30,8 @@ struct InkTextContext {
   /// 记录一个 `.obliqueness` 值，由叶子 emit 时挂上，人工倾斜模拟斜体。
   /// 系统字体有 italic 变体、走不到这里；仅无 italic 变体的自定义字体需要。
   var obliqueness: CGFloat
+  /// 当前 run 是否来自 emphasis；用于字体级联到无 italic 变体时合成倾斜。
+  var requestsItalic: Bool
   /// 完整样式配置，供叶子读取其它样式项（如 inlineCode / link 色）。
   let appearance: InkAppearance
   /// 解析动态色时使用的 trait 快照。
@@ -39,6 +42,7 @@ struct InkTextContext {
     foregroundColor: UIColor,
     linkURL: URL? = nil,
     obliqueness: CGFloat = 0,
+    requestsItalic: Bool = false,
     appearance: InkAppearance,
     renderEnvironment: InkRenderEnvironment
   ) {
@@ -47,6 +51,7 @@ struct InkTextContext {
     self.resolvedForegroundColor = InkLaTeXColor(resolving: foregroundColor, environment: renderEnvironment)
     self.linkURL = linkURL
     self.obliqueness = obliqueness
+    self.requestsItalic = requestsItalic
     self.appearance = appearance
     self.renderEnvironment = renderEnvironment
   }
@@ -60,6 +65,9 @@ struct InkTextContext {
     var traits = font.fontDescriptor.symbolicTraits
     traits.insert(trait)
     var copy = self
+    if trait.contains(.traitItalic) {
+      copy.requestsItalic = true
+    }
     if let desc = font.fontDescriptor.withSymbolicTraits(traits) {
       copy.font = UIFont(descriptor: desc, size: font.pointSize)
     } else if trait == .traitItalic {
@@ -82,7 +90,36 @@ struct InkTextContext {
     copy.font = UIFont.monospacedSystemFont(ofSize: font.pointSize, weight: .regular)
     // 代码身份：即便处于 emphasis 内也不倾斜，清掉斜体兜底。
     copy.obliqueness = 0
+    copy.requestsItalic = false
     return copy
+  }
+
+  /// 返回当前文本所需的合成倾斜值。
+  ///
+  /// UIKit/Core Text 会为基准字体不含的字符选择级联字体；例如系统 italic 字体中的
+  /// CJK glyph 可能落到无 italic 变体的 PingFang。此时 font descriptor 仍不足以表达
+  /// 最终 glyph 的 emphasis，使用 `.obliqueness` 保留同一语义与可见效果。
+  func resolvedObliqueness(for text: String) -> CGFloat {
+    guard requestsItalic else { return obliqueness }
+    guard obliqueness == 0 else { return obliqueness }
+    let characters = Array(text.utf16)
+    guard !characters.isEmpty else { return 0 }
+    var glyphs = Array(repeating: CGGlyph(), count: characters.count)
+    let supportsAllCharacters = characters.withUnsafeBufferPointer { charactersBuffer in
+      glyphs.withUnsafeMutableBufferPointer { glyphsBuffer in
+        guard let charactersBase = charactersBuffer.baseAddress,
+              let glyphsBase = glyphsBuffer.baseAddress else {
+          return true
+        }
+        return CTFontGetGlyphsForCharacters(
+          font as CTFont,
+          charactersBase,
+          glyphsBase,
+          characters.count
+        )
+      }
+    }
+    return supportsAllCharacters ? 0 : 0.25
   }
 
   /// 派生新前景色（link 上色等）。

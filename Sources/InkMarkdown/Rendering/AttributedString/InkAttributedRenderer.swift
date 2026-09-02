@@ -675,8 +675,9 @@ private struct InkRenderer {
     }
 
     // 斜体兜底：字体无 italic 变体时以人工倾斜模拟（emphasis 内的普通字体）。
-    if context.obliqueness != 0 {
-      attrs[.obliqueness] = context.obliqueness
+    let resolvedObliqueness = context.resolvedObliqueness(for: plainText)
+    if resolvedObliqueness != 0 {
+      attrs[.obliqueness] = resolvedObliqueness
     }
     return NSAttributedString(string: plainText, attributes: attrs)
   }
