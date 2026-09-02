@@ -13,4 +13,3 @@
 - [x] 新 harness 复用现有最高层测试 seam，不复制四套 fixture，也不创建新的 public production abstraction。
 - [x] 自动化只保留该 tracer 所需关键断言；禁止 UI 测试、视觉 snapshot、重复入口或非核心排列测试。
 - [x] 相关聚焦测试在当前 iOS Simulator checkout 上通过，并记录实际 scheme、destination 与结果。
-

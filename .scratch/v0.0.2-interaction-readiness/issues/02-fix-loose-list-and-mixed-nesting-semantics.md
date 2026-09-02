@@ -13,4 +13,3 @@
 - [x] canonical corpus 只加入 loose-list 续段、混合嵌套和列表内引用关键 fixture，不扩张为层级与 marker 的排列矩阵。
 - [x] 自动化断言 paragraph style、累计 indent、文本与结构归属；禁止 UI 测试、视觉 frame 断言和内部递归实现断言。
 - [x] 聚焦测试通过，且 finish 语义投影与静态结果一致。
-

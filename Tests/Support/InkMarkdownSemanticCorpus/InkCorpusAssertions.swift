@@ -26,6 +26,38 @@ public enum InkCorpusAssertions {
     }
   }
 
+  /// 断言 attributed 产物的 inline traits 满足 fixture 预期。
+  public static func assertInlineSemantics(
+    of attributed: NSAttributedString,
+    fixture: InkSemanticCorpusFixture,
+    channel: String
+  ) {
+    for expectation in fixture.expectedInlineTraits {
+      guard let run = InkInlineTraitProjectionExtractor.run(
+        containing: expectation.text,
+        in: attributed
+      ) else {
+        Issue.record(
+          Comment(rawValue: "channel \(channel) fixture \(fixture.id) 找不到 inline run「\(expectation.text)」")
+        )
+        continue
+      }
+      if let expected = expectation.isBold, run.isBold != expected {
+        Issue.record("channel \(channel) fixture \(fixture.id) run「\(expectation.text)」粗体期望 \(expected)，实际 \(run.isBold)")
+      }
+      if let expected = expectation.isItalic, run.isItalic != expected {
+        Issue.record("channel \(channel) fixture \(fixture.id) run「\(expectation.text)」斜体期望 \(expected)，实际 \(run.isItalic)")
+      }
+      if let expected = expectation.isMonospace, run.isMonospace != expected {
+        Issue.record("channel \(channel) fixture \(fixture.id) run「\(expectation.text)」等宽期望 \(expected)，实际 \(run.isMonospace)")
+      }
+      if let expected = expectation.hasInlineCodeBackground,
+         run.hasInlineCodeBackground != expected {
+        Issue.record("channel \(channel) fixture \(fixture.id) run「\(expectation.text)」代码背景期望 \(expected)，实际 \(run.hasInlineCodeBackground)")
+      }
+    }
+  }
+
   /// 断言段落几何满足 fixture 预期。
   public static func assertParagraphSemantics(
     of attributed: NSAttributedString,
@@ -79,6 +111,54 @@ public enum InkCorpusAssertions {
           Comment(rawValue: "fixture \(fixture.id) 块类型 \(expectation.typeName) 期望 \(expectation.count.map(String.init) ?? "至少一次")，实际 \(actualCount)；序列：\(actualTypeNames)")
         )
       }
+    }
+  }
+
+  /// 断言表格结构投影与 fixture 的 canonical 预期完全一致。
+  public static func assertTableSemantics(
+    _ actual: [InkTableExpectation],
+    fixture: InkSemanticCorpusFixture,
+    channel: String
+  ) {
+    guard actual != fixture.expectedTables else { return }
+    Issue.record(
+      Comment(rawValue: "channel \(channel) fixture \(fixture.id) 表格结构不一致：\n期望 \(fixture.expectedTables)\n实际 \(actual)")
+    )
+  }
+
+  /// 断言两个 UIKit 呈现通道的表格行、列和对齐投影完全一致。
+  public static func assertTablePresentationsEqual(
+    _ lhs: [InkPresentedTableProjection],
+    _ rhs: [InkPresentedTableProjection],
+    fixture: InkSemanticCorpusFixture,
+    channels: (lhs: String, rhs: String)
+  ) {
+    guard lhs != rhs else { return }
+    Issue.record(
+      Comment(rawValue: "fixture \(fixture.id) 表格呈现在 \(channels.lhs) / \(channels.rhs) 不一致：\n\(channels.lhs) = \(lhs)\n\(channels.rhs) = \(rhs)")
+    )
+  }
+
+  /// 断言两个通道在 fixture 声明的段落锚点上具有相同几何投影。
+  public static func assertParagraphProjectionsEqual(
+    _ lhs: NSAttributedString,
+    _ rhs: NSAttributedString,
+    fixture: InkSemanticCorpusFixture,
+    channels: (lhs: String, rhs: String)
+  ) {
+    for expectation in fixture.expectedParagraphs {
+      let left = InkParagraphProjectionExtractor.paragraph(
+        containing: expectation.anchor,
+        in: lhs
+      )
+      let right = InkParagraphProjectionExtractor.paragraph(
+        containing: expectation.anchor,
+        in: rhs
+      )
+      guard left != right else { continue }
+      Issue.record(
+        Comment(rawValue: "fixture \(fixture.id) 锚点「\(expectation.anchor)」在 \(channels.lhs) / \(channels.rhs) 几何不一致：\(String(describing: left)) / \(String(describing: right))")
+      )
     }
   }
 

@@ -5,30 +5,13 @@
 
 import Testing
 import UIKit
+import InkMarkdownSemanticCorpus
 @testable import InkMarkdownSwiftUI
 @_spi(InkMarkdown) @testable import InkMarkdown
 
 @Suite("InkMarkdownRenderSession source limit 契约测试")
 @MainActor
 struct InkRenderSessionSourceLimitTests {
-
-  private func waitForRunLoop(
-    timeoutNanoseconds: UInt64 = 1_000_000_000,
-    stepNanoseconds: UInt64 = 10_000_000,
-    _ condition: () -> Bool
-  ) async {
-    var elapsed: UInt64 = 0
-    while !condition(), elapsed < timeoutNanoseconds {
-      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-        DispatchQueue.main.async {
-          RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-          continuation.resume()
-        }
-      }
-      try? await Task.sleep(nanoseconds: stepNanoseconds)
-      elapsed += stepNanoseconds
-    }
-  }
 
   @Test("session 与 renderer 在创建时共享同一个不可变上限 snapshot")
   func renderSession_sessionAndRendererShareSourceLimitSnapshot() {
@@ -79,7 +62,7 @@ struct InkRenderSessionSourceLimitTests {
     #expect(session.renderer.canonicalSource == session.streamRemainder)
 
     session.finish()
-    await waitForRunLoop { session.isPromoted }
+    await InkAsyncTestProbe.wait { session.isPromoted }
 
     #expect(session.isPromoted)
     #expect(session.currentText == "# accepted")

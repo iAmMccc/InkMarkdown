@@ -21,25 +21,6 @@ struct InkCorpusListTracerTests {
     return InkConfiguration(appearance: appearance)
   }
 
-  private func paragraph(containing anchor: String, in attributed: NSAttributedString) -> NSParagraphStyle? {
-    let nsRange = (attributed.string as NSString).range(of: anchor)
-    guard nsRange.location != NSNotFound else {
-      return nil
-    }
-    var matched: NSParagraphStyle?
-    attributed.enumerateAttribute(
-      .paragraphStyle,
-      in: NSRange(location: 0, length: attributed.length),
-      options: []
-    ) { value, attributeRange, stop in
-      guard let style = value as? NSParagraphStyle else { return }
-      guard NSIntersectionRange(attributeRange, nsRange).length > 0 else { return }
-      matched = style
-      stop.pointee = true
-    }
-    return matched
-  }
-
   // MARK: - loose list 续段
 
   @Test("loose list 续段继承累计缩进、内容列对齐与固定行高")
@@ -47,8 +28,14 @@ struct InkCorpusListTracerTests {
     let fixture = InkSemanticCorpus.looseListContinuation
     let attributed = InkChannelProjection.attributedSource(fixture, configuration: deterministicConfiguration())
 
-    let firstLine = try #require(paragraph(containing: "首段落在列表项内", in: attributed))
-    let continuation = try #require(paragraph(containing: "续段仍属于同一列表项", in: attributed))
+    let firstLine = try #require(InkParagraphProjectionExtractor.paragraph(
+      containing: "首段落在列表项内",
+      in: attributed
+    ))
+    let continuation = try #require(InkParagraphProjectionExtractor.paragraph(
+      containing: "续段仍属于同一列表项",
+      in: attributed
+    ))
 
     // 续段属于列表项：缩进非零且与首段内容列对齐（悬挂缩进语义）。
     #expect(continuation.headIndent == firstLine.headIndent)
@@ -66,9 +53,9 @@ struct InkCorpusListTracerTests {
     let fixture = InkSemanticCorpus.mixedListNesting
     let attributed = InkChannelProjection.attributedSource(fixture, configuration: deterministicConfiguration())
 
-    let outer = try #require(paragraph(containing: "无序外层", in: attributed))
-    let inner = try #require(paragraph(containing: "有序内层", in: attributed))
-    let deep = try #require(paragraph(containing: "无序深层", in: attributed))
+    let outer = try #require(InkParagraphProjectionExtractor.paragraph(containing: "无序外层", in: attributed))
+    let inner = try #require(InkParagraphProjectionExtractor.paragraph(containing: "有序内层", in: attributed))
+    let deep = try #require(InkParagraphProjectionExtractor.paragraph(containing: "无序深层", in: attributed))
 
     // 外层首行从列表起点排版（无前置缩进），悬挂列含 marker 宽度；
     // 更深层子列表的内容起点必须逐级累计。
@@ -85,7 +72,10 @@ struct InkCorpusListTracerTests {
     let fixture = InkSemanticCorpus.blockquoteInsideListItem
     let attributed = InkChannelProjection.attributedSource(fixture, configuration: deterministicConfiguration())
 
-    let quote = try #require(paragraph(containing: "引用仍在列表项内", in: attributed))
+    let quote = try #require(InkParagraphProjectionExtractor.paragraph(
+      containing: "引用仍在列表项内",
+      in: attributed
+    ))
     // 列表 marker 内容列 + 引用 bar/padding：引用必须落在列表项内部，而不是根级 x≈15。
     #expect(quote.headIndent > 15)
     // 竖线标记覆盖引用区间（引用前有列表项首段，属性不覆盖全文起点）。

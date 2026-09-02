@@ -9,6 +9,7 @@
 import Testing
 import UIKit
 import SwiftUI
+import InkMarkdownSemanticCorpus
 @testable import InkMarkdownSwiftUI
 @_spi(InkMarkdown) import InkMarkdown
 
@@ -93,7 +94,11 @@ struct InkMarkdownAdapterWorkloadTests {
     session.finish()
     session.renderer.onFinishParse?()
     session.renderer.onFinishDisplay?()
-    try await waitForPromotion(session)
+    #expect(
+      await InkAsyncTestProbe.wait(timeoutNanoseconds: 3_000_000_000) {
+        session.isPromoted
+      }
+    )
     let promotionElapsed = CACurrentMediaTime() - promotionStart
     #expect(promotionElapsed < 30.0, "promotion 耗时 \(String(format: "%.0f", promotionElapsed * 1000))ms 超过 30000ms 宽松上限")
 
@@ -102,21 +107,6 @@ struct InkMarkdownAdapterWorkloadTests {
       container.subviews.first(where: { $0 is InkThoughtBlockView }) as? InkThoughtBlockView
     )
     #expect(promotedThought.isDescendant(of: container))
-  }
-
-  private func waitForPromotion(_ session: InkMarkdownRenderSession) async throws {
-    var elapsed: UInt64 = 0
-    while !session.isPromoted, elapsed < 3_000_000_000 {
-      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-        DispatchQueue.main.async {
-          RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-          continuation.resume()
-        }
-      }
-      try await Task.sleep(nanoseconds: 10_000_000)
-      elapsed += 10_000_000
-    }
-    #expect(session.isPromoted)
   }
 
   private static let workloadStaticMarkdown: String = {

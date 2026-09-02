@@ -22,6 +22,7 @@ struct InkCorpusLinkTracerTests {
     guard fixture.channels.contains(.attributed) else { return }
     let attributed = InkChannelProjection.attributedSource(fixture, configuration: configuration)
     InkCorpusAssertions.assertLinkSemantics(of: attributed, fixture: fixture, channel: "attributed")
+    InkCorpusAssertions.assertInlineSemantics(of: attributed, fixture: fixture, channel: "attributed")
   }
 
   /// block 通道：富文本 fallback 块携带与 attributed 相同的链接语义。
@@ -30,6 +31,7 @@ struct InkCorpusLinkTracerTests {
     guard fixture.channels.contains(.block) else { return }
     let attributed = InkChannelProjection.blockAttributedSource(fixture, configuration: configuration)
     InkCorpusAssertions.assertLinkSemantics(of: attributed, fixture: fixture, channel: "block")
+    InkCorpusAssertions.assertInlineSemantics(of: attributed, fixture: fixture, channel: "block")
   }
 
   /// streaming finish 通道：终态投影与 attributed 静态投影**完全相等**。
@@ -47,6 +49,11 @@ struct InkCorpusLinkTracerTests {
     )
 
     InkCorpusAssertions.assertLinkSemantics(
+      of: streamingAttributed,
+      fixture: fixture,
+      channel: "streaming-finish"
+    )
+    InkCorpusAssertions.assertInlineSemantics(
       of: streamingAttributed,
       fixture: fixture,
       channel: "streaming-finish"

@@ -27,16 +27,15 @@ struct InkCorpusTableTracerTests {
   ])
   func tableStructure_transfersToBlock(fixture: InkSemanticCorpusFixture) {
     let tables = InkChannelProjection.tableBlocks(fixture, configuration: .standard)
-
-    #expect(tables.count == fixture.expectedTables.count)
-    for (table, expected) in zip(tables, fixture.expectedTables) {
-      let actual = InkChannelProjection.structure(of: table)
-      if actual != expected {
-        Issue.record(
-          Comment(rawValue: "fixture \(fixture.id) 表格结构不一致：\n期望 \(expected)\n实际 \(actual)")
-        )
-      }
-    }
+    InkCorpusAssertions.assertTableSemantics(
+      tables.map { InkChannelProjection.structure(of: $0) },
+      fixture: fixture,
+      channel: "block"
+    )
+    InkCorpusAssertions.assertBlockTypes(
+      InkChannelProjection.blockTypeNames(fixture, configuration: .standard),
+      fixture: fixture
+    )
   }
 
   /// 复杂单元格：块视图中的单元格文本视图保留强调、粗体、行内代码与链接语义。
@@ -46,41 +45,23 @@ struct InkCorpusTableTracerTests {
     let tables = InkChannelProjection.tableBlocks(fixture, configuration: .standard)
     let table = try #require(tables.first)
 
-    // 中间产物对照：共享 inline renderer 直接渲染单元格 markdown 时语义正确。
-    let directCell = InkAttributedRenderer.renderInline(
-      "`status`",
-      configuration: .standard,
-      baseFont: .systemFont(ofSize: 14),
-      textColor: .label
-    )
-    let directCode = Self.run(containing: "status", in: directCell)
-    if let directCode, !directCode.isMonospace {
-      Issue.record(Comment(rawValue: "renderInline 中间产物也非等宽：\(directCode)"))
-    }
-    #expect(directCode?.isMonospace == true)
-
     // 复杂单元格语义已在结构层锁定（rows 携带原始 Markdown）；
     // 这里证明块视图把单元格 Markdown 经共享 inline renderer 解析为真实 run。
     let view = table.makeView()
-    let cellTexts = Self.allTextViews(in: view).compactMap(\.attributedText)
+    let cellTexts = InkViewProjectionExtractor.textViews(in: view).compactMap(\.attributedText)
     let combined = NSMutableAttributedString()
     cellTexts.forEach { combined.append($0) }
 
-    let bold = Self.run(containing: "加粗", in: combined)
-    #expect(bold?.isBold == true)
-
-    let code = Self.run(containing: "status", in: combined)
-    #expect(code?.isMonospace == true)
-
-    // CJK 行内代码的平台字体回退（TextKit glyph 生成）不丢失代码背景身份。
-    let codeBackground = Self.hasInlineCodeBackground(combined)
-    #expect(codeBackground)
-
-    let link = Self.run(containing: "详情", in: combined)
-    if let link, link.url == nil {
-      Issue.record(Comment(rawValue: "链接 run 诊断：\(String(describing: link))；全文：\(combined.string)"))
-    }
-    #expect(link?.url == URL(string: "https://example.com/cell"))
+    InkCorpusAssertions.assertInlineSemantics(
+      of: combined,
+      fixture: fixture,
+      channel: "block-table-view"
+    )
+    InkCorpusAssertions.assertLinkSemantics(
+      of: combined,
+      fixture: fixture,
+      channel: "block-table-view"
+    )
   }
 
   /// 单元格链接与正文使用同一 `linkTapHandler` 契约：handler 返回 `true` 时拦截默认行为。
@@ -100,7 +81,7 @@ struct InkCorpusTableTracerTests {
     #expect(table.configuration.linkTapHandler != nil)
 
     let view = table.makeView()
-    let cellTextViews = Self.allTextViews(in: view)
+    let cellTextViews = InkViewProjectionExtractor.textViews(in: view)
     #expect(!cellTextViews.isEmpty)
 
     let linkCell = try #require(cellTextViews.first { $0.attributedText?.string.contains("详情") == true })
@@ -131,44 +112,8 @@ struct InkCorpusTableTracerTests {
 
     // 换行与滚动两种布局模式都能按既有契约构造。
     let wrapView = table.makeView()
-    #expect(wrapView != nil)
+    wrapView.layoutIfNeeded()
+    #expect(!wrapView.subviews.isEmpty)
   }
 
-  // MARK: - Helpers
-
-  private static func allTextViews(in view: UIView) -> [UITextView] {
-    var result: [UITextView] = []
-    if let textView = view as? UITextView {
-      result.append(textView)
-    }
-    for subview in view.subviews {
-      result.append(contentsOf: allTextViews(in: subview))
-    }
-    return result
-  }
-
-  private static func hasInlineCodeBackground(_ attributed: NSAttributedString) -> Bool {
-    var found = false
-    attributed.enumerateAttribute(.inkInlineCodeBackground, in: NSRange(location: 0, length: attributed.length), options: []) { value, _, stop in
-      if value != nil {
-        found = true
-        stop.pointee = true
-      }
-    }
-    return found
-  }
-
-  private static func run(containing text: String, in attributed: NSAttributedString) -> (string: String, isBold: Bool, isMonospace: Bool, url: URL?)? {
-    let nsString = attributed.string as NSString
-    let range = nsString.range(of: text)
-    guard range.location != NSNotFound else { return nil }
-    let attributes = attributed.attributes(at: range.location, effectiveRange: nil)
-    let font = attributes[.font] as? UIFont
-    return (
-      string: nsString.substring(with: range),
-      isBold: font?.fontDescriptor.symbolicTraits.contains(.traitBold) == true,
-      isMonospace: font?.fontDescriptor.symbolicTraits.contains(.traitMonoSpace) == true,
-      url: attributes[.link] as? URL
-    )
-  }
 }

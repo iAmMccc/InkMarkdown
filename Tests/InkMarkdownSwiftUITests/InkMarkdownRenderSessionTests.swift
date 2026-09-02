@@ -6,32 +6,13 @@
 import Testing
 import UIKit
 import SwiftUI
+import InkMarkdownSemanticCorpus
 @testable import InkMarkdownSwiftUI
 @_spi(InkMarkdown) import InkMarkdown
 
 @Suite("InkMarkdownRenderSession 契约测试")
 @MainActor
 struct InkMarkdownRenderSessionTests {
-
-  /// 等待 deferred @Published 写入在下一 runloop 生效（与 `headlessFinishPromotes` 轮询模式一致）。
-  private func waitForRunLoop(
-    timeoutNanoseconds: UInt64 = 1_000_000_000,
-    stepNanoseconds: UInt64 = 10_000_000,
-    _ condition: () -> Bool
-  ) async {
-    var elapsed: UInt64 = 0
-    while !condition(), elapsed < timeoutNanoseconds {
-      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-        DispatchQueue.main.async {
-          // 在 GCD 同步块内抽干 `.default` mode；Swift 6 禁止在 async 上下文直接调用 `RunLoop.run`。
-          RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-          continuation.resume()
-        }
-      }
-      try? await Task.sleep(nanoseconds: stepNanoseconds)
-      elapsed += stepNanoseconds
-    }
-  }
 
   @Test("初始状态验证：idle、空文本、空块列表、未提升")
   func renderSession_initialState() {
@@ -84,7 +65,7 @@ struct InkMarkdownRenderSessionTests {
     session.renderer.onFinishDisplay?()
     #expect(session.state == .displayingFinalContent)
     #expect(session.isPromoted == false)
-    await waitForRunLoop { session.state == .finished && session.isPromoted }
+    await InkAsyncTestProbe.wait { session.state == .finished && session.isPromoted }
     #expect(session.state == .finished)
     #expect(session.isPromoted == true)
     #expect(!session.blocks.isEmpty)
@@ -101,7 +82,7 @@ struct InkMarkdownRenderSessionTests {
     #expect(session.state == .displayingFinalContent)
     #expect(session.isPromoted == false)
 
-    await waitForRunLoop { session.state == .finished && session.isPromoted }
+    await InkAsyncTestProbe.wait { session.state == .finished && session.isPromoted }
     #expect(session.state == .finished)
     #expect(session.isPromoted == true)
     #expect(!session.blocks.isEmpty)
@@ -113,7 +94,7 @@ struct InkMarkdownRenderSessionTests {
     session.append("# 终态内容")
     session.finish()
 
-    await waitForRunLoop { session.state == .finished && session.isPromoted }
+    await InkAsyncTestProbe.wait { session.state == .finished && session.isPromoted }
 
     #expect(session.state == .finished)
     #expect(session.isPromoted == true)
@@ -121,7 +102,7 @@ struct InkMarkdownRenderSessionTests {
 
     let emptySession = InkMarkdownRenderSession()
     emptySession.finish()
-    await waitForRunLoop { emptySession.state == .finished && emptySession.isPromoted }
+    await InkAsyncTestProbe.wait { emptySession.state == .finished && emptySession.isPromoted }
     #expect(emptySession.state == .finished, "零内容流也必须完成终态生命周期")
     #expect(emptySession.isPromoted)
     #expect(emptySession.blocks.isEmpty)
@@ -163,7 +144,7 @@ struct InkMarkdownRenderSessionTests {
     session.finish()
     session.renderer.onFinishParse?()
     session.renderer.onFinishDisplay?()
-    await waitForRunLoop { session.state == .finished && session.isPromoted }
+    await InkAsyncTestProbe.wait { session.state == .finished && session.isPromoted }
     #expect(session.state == .finished)
 
     session.reset()
@@ -171,7 +152,7 @@ struct InkMarkdownRenderSessionTests {
     session.finish()
     session.renderer.onFinishParse?()
     session.renderer.onFinishDisplay?()
-    await waitForRunLoop { session.state == .finished && session.isPromoted }
+    await InkAsyncTestProbe.wait { session.state == .finished && session.isPromoted }
     #expect(session.state == .finished)
     #expect(session.isPromoted == true)
   }
@@ -182,7 +163,7 @@ struct InkMarkdownRenderSessionTests {
     finished.append("完成前的文本")
     finished.finish()
     finished.renderer.onFinishDisplay?()
-    await waitForRunLoop { finished.state == .finished && finished.isPromoted }
+    await InkAsyncTestProbe.wait { finished.state == .finished && finished.isPromoted }
     let finishedText = finished.currentText
     finished.append("额外分片")
     finished.cancel()
@@ -251,7 +232,7 @@ struct InkMarkdownRenderSessionTests {
     session.finish()
     session.renderer.onFinishParse?()
     session.renderer.onFinishDisplay?()
-    await waitForRunLoop { session.isPromoted }
+    await InkAsyncTestProbe.wait { session.isPromoted }
 
     #expect(session.blocks.first is InkThoughtBlock)
     if let thought = session.blocks.first as? InkThoughtBlock {
@@ -278,14 +259,14 @@ struct InkMarkdownRenderSessionTests {
     session.finish()
     session.renderer.onFinishParse?()
     session.renderer.onFinishDisplay?()
-    await waitForRunLoop { session.isPromoted }
+    await InkAsyncTestProbe.wait { session.isPromoted }
 
     if let thought = session.blocks.first as? InkThoughtBlock {
       #expect(thought.renderConfiguration.renderEnvironment.userInterfaceStyle == .unspecified)
     }
 
     session.updateRenderEnvironment(InkRenderEnvironment(userInterfaceStyle: .dark))
-    await waitForRunLoop { session.blocks.first != nil }
+    await InkAsyncTestProbe.wait { session.blocks.first != nil }
 
     if let thought = session.blocks.first as? InkThoughtBlock {
       #expect(thought.renderConfiguration.renderEnvironment.userInterfaceStyle == .dark)

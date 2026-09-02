@@ -5,29 +5,12 @@
 
 import Testing
 import UIKit
+import InkMarkdownSemanticCorpus
 @_spi(InkMarkdown) @testable import InkMarkdown
 
 @Suite("InkStreamRenderer source limit 契约测试")
 @MainActor
 struct InkStreamSourceLimitTests {
-
-  private func waitForRunLoop(
-    timeoutNanoseconds: UInt64 = 1_000_000_000,
-    stepNanoseconds: UInt64 = 10_000_000,
-    _ condition: () -> Bool
-  ) async {
-    var elapsed: UInt64 = 0
-    while !condition(), elapsed < timeoutNanoseconds {
-      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-        DispatchQueue.main.async {
-          RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-          continuation.resume()
-        }
-      }
-      try? await Task.sleep(nanoseconds: stepNanoseconds)
-      elapsed += stepNanoseconds
-    }
-  }
 
   @Test("默认上限保持 50_000，并在 renderer 创建时固化")
   func sourceLimit_defaultSourceLimitSnapshot() {
@@ -60,7 +43,7 @@ struct InkStreamSourceLimitTests {
     #expect(renderer.canonicalSource == "# keep")
 
     renderer.finish()
-    await waitForRunLoop { renderer.currentAttributedString().length > 0 }
+    await InkAsyncTestProbe.wait { renderer.currentAttributedString().length > 0 }
 
     #expect(renderer.canonicalSource == "# keep")
     #expect(renderer.currentAttributedString().string == "keep")

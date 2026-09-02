@@ -14,4 +14,3 @@
 - [x] configuration 更新后的新 handler 生效，旧 handler 不再收到点击。
 - [x] ExampleApp 当前主导航包含正文、表格与 streaming 链接手工入口。
 - [x] 自动化只覆盖 destination、handler true/false、configuration 更新与 promotion 关键链路；禁止 UIApplication/Safari UI 测试、UI automation 和重复入口测试。
-

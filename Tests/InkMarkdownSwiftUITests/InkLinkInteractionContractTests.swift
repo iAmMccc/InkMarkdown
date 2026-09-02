@@ -29,9 +29,10 @@ struct InkLinkInteractionContractTests {
     let session = InkMarkdownRenderSession(configuration: configuration)
     session.append("[流式链接](https://example.com/stream) 后续内容")
     let (container, coordinator) = try attachStreaming(session: session)
+    defer { coordinator.teardown(from: container) }
 
     // 等待流式解析产出链接文本（handler 接线本身在 reconcile 同步完成）。
-    let textView = try await waitForStreamTextView(in: container, coordinator: coordinator)
+    let textView = try await waitForStreamTextView(in: container)
     #expect(textView.attributedText.string.contains("流式链接"))
 
     try assertDelegateAsksHandler(
@@ -52,7 +53,8 @@ struct InkLinkInteractionContractTests {
     let session = InkMarkdownRenderSession(configuration: configuration)
     session.append("[流式链接](https://example.com/stream) 内容")
     let (container, coordinator) = try attachStreaming(session: session)
-    let textView = try await waitForStreamTextView(in: container, coordinator: coordinator)
+    defer { coordinator.teardown(from: container) }
+    let textView = try await waitForStreamTextView(in: container)
 
     let range = (textView.attributedText.string as NSString).range(of: "流式链接")
     #expect(range.location != NSNotFound)
@@ -76,7 +78,9 @@ struct InkLinkInteractionContractTests {
     let session = InkMarkdownRenderSession(configuration: configuration)
     session.append("[流式链接](https://example.com/stream) 结束前内容")
     session.finish()
-    await waitForPromotion(session)
+    await InkAsyncTestProbe.wait(timeoutNanoseconds: 3_000_000_000) {
+      session.isPromoted
+    }
     #expect(session.isPromoted)
 
     // 终态块携带同一 handler：直接调用块上的 handler 等价于视图命中链接后的委托路径。
@@ -108,7 +112,7 @@ struct InkLinkInteractionContractTests {
     coordinator.updateStatic(markdown: "[链接](https://example.com/a)", configuration: oldConfiguration)
     coordinator.updateStatic(markdown: "[链接](https://example.com/b)", configuration: newConfiguration)
 
-    let textViews = allTextViews(in: container)
+    let textViews = InkViewProjectionExtractor.textViews(in: container)
     #expect(!textViews.isEmpty)
 
     // 旧配置产生的视图已被替换；当前视图的委托走新 handler。
@@ -130,17 +134,6 @@ struct InkLinkInteractionContractTests {
 
   // MARK: - Helpers
 
-  private func allTextViews(in view: UIView) -> [UITextView] {
-    var result: [UITextView] = []
-    if let textView = view as? UITextView {
-      result.append(textView)
-    }
-    for subview in view.subviews {
-      result.append(contentsOf: allTextViews(in: subview))
-    }
-    return result
-  }
-
   private func attachStreaming(
     session: InkMarkdownRenderSession
   ) throws -> (InkMarkdownContainerView, InkMarkdownCoordinator) {
@@ -153,37 +146,19 @@ struct InkLinkInteractionContractTests {
 
   /// 等待流式 remainder 文本视图挂载并出现链接文本。
   private func waitForStreamTextView(
-    in container: InkMarkdownContainerView,
-    coordinator: InkMarkdownCoordinator
+    in container: InkMarkdownContainerView
   ) async throws -> UITextView {
-    var elapsed: UInt64 = 0
-    let stepNanoseconds: UInt64 = 10_000_000
-    while elapsed < 2_000_000_000 {
-      if let textView = findStreamTextView(in: container),
-         textView.attributedText.string.contains("流式链接") {
-        return textView
-      }
-      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-        DispatchQueue.main.async {
-          RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-          continuation.resume()
-        }
-      }
-      elapsed += stepNanoseconds
-    }
-    throw TestFailure("流式文本视图未在超时前产出链接内容")
-  }
-
-  private func findStreamTextView(in view: UIView) -> UITextView? {
-    if let textView = view as? UITextView, textView.attributedText.length > 0 {
-      return textView
-    }
-    for subview in view.subviews {
-      if let found = findStreamTextView(in: subview) {
-        return found
+    await InkAsyncTestProbe.wait(timeoutNanoseconds: 2_000_000_000) {
+      InkViewProjectionExtractor.textViews(in: container).contains {
+        $0.attributedText.string.contains("流式链接")
       }
     }
-    return nil
+    return try #require(
+      InkViewProjectionExtractor.textViews(in: container).first {
+        $0.attributedText.string.contains("流式链接")
+      },
+      "流式文本视图未在超时前产出链接内容"
+    )
   }
 
   private func assertDelegateAsksHandler(
@@ -210,22 +185,6 @@ struct InkLinkInteractionContractTests {
     #expect(spy.recordedURLs.contains(expectedURL))
   }
 
-  private func waitForPromotion(
-    _ session: InkMarkdownRenderSession,
-    timeoutNanoseconds: UInt64 = 3_000_000_000
-  ) async {
-    var elapsed: UInt64 = 0
-    let stepNanoseconds: UInt64 = 10_000_000
-    while !session.isPromoted, elapsed < timeoutNanoseconds {
-      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-        DispatchQueue.main.async {
-          RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-          continuation.resume()
-        }
-      }
-      elapsed += stepNanoseconds
-    }
-  }
 }
 
 /// handler 间谍：记录回调 URL 并按配置返回是否接管。
@@ -247,9 +206,4 @@ private final class LinkHandlerSpy {
       return recorder.shouldHandle
     }
   }
-}
-
-private struct TestFailure: Error, CustomStringConvertible {
-  let description: String
-  init(_ description: String) { self.description = description }
 }

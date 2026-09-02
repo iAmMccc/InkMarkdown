@@ -32,6 +32,35 @@ public struct InkLinkExpectation: Sendable, Equatable {
   public var isLink: Bool { destination != nil }
 }
 
+/// 一个 canonical fixture 对单个 inline run 的语义预期。
+public struct InkInlineTraitExpectation: Sendable, Equatable {
+
+  /// 用于定位 run 的文本。
+  public var text: String
+  /// 粗体 trait；`nil` 表示不断言。
+  public var isBold: Bool?
+  /// 斜体 trait；`nil` 表示不断言。
+  public var isItalic: Bool?
+  /// 等宽 trait；`nil` 表示不断言。
+  public var isMonospace: Bool?
+  /// 行内代码背景身份；`nil` 表示不断言。
+  public var hasInlineCodeBackground: Bool?
+
+  public init(
+    text: String,
+    isBold: Bool? = nil,
+    isItalic: Bool? = nil,
+    isMonospace: Bool? = nil,
+    hasInlineCodeBackground: Bool? = nil
+  ) {
+    self.text = text
+    self.isBold = isBold
+    self.isItalic = isItalic
+    self.isMonospace = isMonospace
+    self.hasInlineCodeBackground = hasInlineCodeBackground
+  }
+}
+
 /// 一个 fixture 对段落几何（缩进/悬挂/固定行高）的最小预期。
 public struct InkParagraphExpectation: Sendable, Equatable {
 
@@ -136,6 +165,8 @@ public struct InkSemanticCorpusFixture: Sendable {
     case everyCharacters(Int)
     /// 按空行（`\n\n`）边界切分。
     case blankLines
+    /// 按行切分并保留换行符，覆盖表格 header / delimiter / data-row 边界。
+    case lines
   }
 
   /// 稳定 ID（测试报告与证据引用用，不得改名）。
@@ -152,6 +183,9 @@ public struct InkSemanticCorpusFixture: Sendable {
 
   /// 预期出现的链接语义。
   public let expectedLinks: [InkLinkExpectation]
+
+  /// 预期出现的 inline trait 语义。
+  public let expectedInlineTraits: [InkInlineTraitExpectation]
 
   /// 预期段落几何（仅部分 fixture 需要）。
   public let expectedParagraphs: [InkParagraphExpectation]
@@ -174,6 +208,7 @@ public struct InkSemanticCorpusFixture: Sendable {
     markdown: String,
     streamingSplit: StreamingSplit = .everyCharacters(3),
     expectedLinks: [InkLinkExpectation] = [],
+    expectedInlineTraits: [InkInlineTraitExpectation] = [],
     expectedParagraphs: [InkParagraphExpectation] = [],
     expectedTables: [InkTableExpectation] = [],
     expectedBlockTypes: [InkBlockTypeExpectation] = [],
@@ -185,6 +220,7 @@ public struct InkSemanticCorpusFixture: Sendable {
     self.markdown = markdown
     self.streamingSplit = streamingSplit
     self.expectedLinks = expectedLinks
+    self.expectedInlineTraits = expectedInlineTraits
     self.expectedParagraphs = expectedParagraphs
     self.expectedTables = expectedTables
     self.expectedBlockTypes = expectedBlockTypes
@@ -212,6 +248,12 @@ public struct InkSemanticCorpusFixture: Sendable {
         .components(separatedBy: "\n\n")
         .filter { !$0.isEmpty }
         .map { $0 + "\n\n" }
+    case .lines:
+      let lines = markdown.components(separatedBy: "\n")
+      return lines.enumerated().compactMap { index, line in
+        let chunk = line + (index < lines.count - 1 ? "\n" : "")
+        return chunk.isEmpty ? nil : chunk
+      }
     }
   }
 }
@@ -382,7 +424,20 @@ public enum InkSemanticCorpus {
     | **加粗** | `status` | [详情](https://example.com/cell) |
     | *斜体* | ***粗斜*** | 普通 |
     """,
-    streamingSplit: .blankLines,
+    streamingSplit: .everyCharacters(3),
+    expectedLinks: [
+      InkLinkExpectation(text: "详情", destination: "https://example.com/cell"),
+    ],
+    expectedInlineTraits: [
+      InkInlineTraitExpectation(text: "加粗", isBold: true),
+      InkInlineTraitExpectation(
+        text: "status",
+        isMonospace: true,
+        hasInlineCodeBackground: true
+      ),
+      InkInlineTraitExpectation(text: "斜体", isItalic: true),
+      InkInlineTraitExpectation(text: "粗斜", isBold: true, isItalic: true),
+    ],
     expectedTables: [
       InkTableExpectation(
         headers: ["名称", "状态", "备注"],
@@ -392,6 +447,9 @@ public enum InkSemanticCorpus {
         ],
         alignments: [.left, .center, .right]
       ),
+    ],
+    expectedBlockTypes: [
+      InkBlockTypeExpectation(typeName: "InkTableBlock", count: 1),
     ],
     channels: [.block, .streamingFinish, .swiftUI]
   )
@@ -408,13 +466,16 @@ public enum InkSemanticCorpus {
     | --- | --- |
     | a \\| b | 或运算 |
     """,
-    streamingSplit: .blankLines,
+    streamingSplit: .everyCharacters(2),
     expectedTables: [
       InkTableExpectation(
         headers: ["表达式", "含义"],
         rows: [["a | b", "或运算"]],
         alignments: [nil, nil]
       ),
+    ],
+    expectedBlockTypes: [
+      InkBlockTypeExpectation(typeName: "InkTableBlock", count: 1),
     ],
     unsupportedNotes: [
       "escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。",
@@ -431,7 +492,7 @@ public enum InkSemanticCorpus {
     | 1 |  |
     | 2 | 3 | 4 | 5 |
     """,
-    streamingSplit: .blankLines,
+    streamingSplit: .lines,
     expectedTables: [
       InkTableExpectation(
         headers: ["A", "B", "C"],
@@ -441,6 +502,9 @@ public enum InkSemanticCorpus {
         ],
         alignments: [nil, nil, nil]
       ),
+    ],
+    expectedBlockTypes: [
+      InkBlockTypeExpectation(typeName: "InkTableBlock", count: 1),
     ],
     channels: [.block, .streamingFinish, .swiftUI]
   )

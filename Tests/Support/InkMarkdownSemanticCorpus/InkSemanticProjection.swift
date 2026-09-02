@@ -19,6 +19,45 @@ public struct InkLinkProjection: Sendable, Equatable {
   public let destination: String?
 }
 
+/// 单个 inline run 的语义投影。
+public struct InkInlineTraitProjection: Sendable, Equatable {
+
+  /// run 文本。
+  public let text: String
+  /// 是否携带粗体 trait。
+  public let isBold: Bool
+  /// 是否携带斜体 trait。
+  public let isItalic: Bool
+  /// 是否携带等宽 trait。
+  public let isMonospace: Bool
+  /// 是否携带 InkMarkdown 行内代码背景身份。
+  public let hasInlineCodeBackground: Bool
+}
+
+/// 从富文本中按锚点抽取 inline run 语义。
+public enum InkInlineTraitProjectionExtractor {
+
+  /// 返回锚点起点处的 inline trait 投影；找不到时返回 `nil`。
+  public static func run(
+    containing text: String,
+    in attributed: NSAttributedString
+  ) -> InkInlineTraitProjection? {
+    let nsString = attributed.string as NSString
+    let range = nsString.range(of: text)
+    guard range.location != NSNotFound else { return nil }
+    let attributes = attributed.attributes(at: range.location, effectiveRange: nil)
+    let traits = (attributes[.font] as? UIFont)?.fontDescriptor.symbolicTraits
+    let obliqueness = (attributes[.obliqueness] as? NSNumber)?.doubleValue ?? 0
+    return InkInlineTraitProjection(
+      text: nsString.substring(with: range),
+      isBold: traits?.contains(.traitBold) == true,
+      isItalic: traits?.contains(.traitItalic) == true || obliqueness != 0,
+      isMonospace: traits?.contains(.traitMonoSpace) == true,
+      hasInlineCodeBackground: attributes[.inkInlineCodeBackground] != nil
+    )
+  }
+}
+
 /// 段落几何投影。
 public struct InkParagraphProjection: Sendable, Equatable {
 
@@ -120,6 +159,112 @@ public enum InkParagraphProjectionExtractor {
   }
 }
 
+/// 从 UIKit 呈现树抽取用户可观察富文本的共享入口。
+public enum InkViewProjectionExtractor {
+
+  /// 深度优先返回视图树中指定类型的全部实例。
+  @MainActor
+  public static func views<View: UIView>(
+    of type: View.Type,
+    in view: UIView
+  ) -> [View] {
+    var result: [View] = []
+    if let match = view as? View {
+      result.append(match)
+    }
+    for subview in view.subviews {
+      result.append(contentsOf: views(of: type, in: subview))
+    }
+    return result
+  }
+
+  /// 深度优先返回视图树中的全部 `UITextView`。
+  @MainActor
+  public static func textViews(in view: UIView) -> [UITextView] {
+    views(of: UITextView.self, in: view)
+  }
+
+  /// 按视图顺序拼接单棵呈现树中的富文本内容。
+  @MainActor
+  public static func attributedContent(in view: UIView) -> NSAttributedString {
+    attributedContent(in: [view])
+  }
+
+  /// 按视图顺序拼接一组呈现树中的富文本内容。
+  @MainActor
+  public static func attributedContent(in views: [UIView]) -> NSAttributedString {
+    let result = NSMutableAttributedString()
+    for view in views {
+      for textView in textViews(in: view) {
+        result.append(textView.attributedText)
+      }
+    }
+    return result
+  }
+}
+
+/// 表格 UIView 真正呈现出的行、列与对齐投影。
+public struct InkPresentedTableProjection: Sendable, Equatable {
+
+  /// UIKit 文本对齐的稳定、本地表示。
+  public enum Alignment: String, Sendable, Equatable {
+    case left
+    case center
+    case right
+    case justified
+    case natural
+  }
+
+  /// 第一行（表头）的显示文本。
+  public let headers: [String]
+  /// 后续数据行的显示文本。
+  public let rows: [[String]]
+  /// 各列在呈现控件上的实际对齐。
+  public let alignments: [Alignment]
+}
+
+/// 从 UIKit 表格呈现树抽取结构语义，不读取 block model 或私有缓存。
+public enum InkTablePresentationProjectionExtractor {
+
+  /// 识别表格的纵向 row stack，并返回用户实际可观察的单元格结构。
+  @MainActor
+  public static func projection(in view: UIView) -> InkPresentedTableProjection? {
+    for stack in InkViewProjectionExtractor.views(of: UIStackView.self, in: view)
+      where stack.axis == .vertical {
+      let rowTextViews = stack.arrangedSubviews
+        .map(InkViewProjectionExtractor.textViews(in:))
+        .filter { !$0.isEmpty }
+      guard let header = rowTextViews.first,
+            !header.isEmpty,
+            rowTextViews.count >= 2,
+            rowTextViews.allSatisfy({ $0.count == header.count }) else {
+        continue
+      }
+      return InkPresentedTableProjection(
+        headers: header.map { $0.attributedText.string },
+        rows: rowTextViews.dropFirst().map { row in
+          row.map { $0.attributedText.string }
+        },
+        alignments: header.map { alignment($0.textAlignment) }
+      )
+    }
+    return nil
+  }
+
+  private static func alignment(
+    _ alignment: NSTextAlignment
+  ) -> InkPresentedTableProjection.Alignment {
+    switch alignment {
+    case .left: return .left
+    case .center: return .center
+    case .right: return .right
+    case .justified: return .justified
+    case .natural: return .natural
+    @unknown default: return .natural
+    }
+  }
+}
+
 // MARK: - 通道投影抽取
 
 /// 各呈现通道 → 语义投影的统一抽取入口。
@@ -146,13 +291,7 @@ public enum InkChannelProjection {
     configuration: InkConfiguration
   ) -> NSAttributedString {
     let blocks = InkBlockRenderer.render(fixture.markdown, configuration: configuration)
-    let result = NSMutableAttributedString()
-    for block in blocks {
-      if let textBlock = block as? InkAttributedTextBlock {
-        result.append(textBlock.attributedText)
-      }
-    }
-    return result
+    return InkViewProjectionExtractor.attributedContent(in: blocks.map { $0.makeView() })
   }
 
   /// block 通道的块类型序列（公开类型名）。
@@ -165,6 +304,12 @@ public enum InkChannelProjection {
       .map { String(describing: type(of: $0)) }
   }
 
+  /// 已有 Block 列表的公开类型名序列。
+  @MainActor
+  public static func blockTypeNames(of blocks: [any InkRenderableBlock]) -> [String] {
+    blocks.map { String(describing: type(of: $0)) }
+  }
+
   /// block 通道的真实表格 Block 列表（结构语义载体：headers / rows / alignments）。
   @MainActor
   public static func tableBlocks(
@@ -175,7 +320,26 @@ public enum InkChannelProjection {
       .compactMap { $0 as? InkTableBlock }
   }
 
+  /// 已有 Block 列表中的表格结构投影。
+  @MainActor
+  public static func tableStructures(
+    of blocks: [any InkRenderableBlock]
+  ) -> [InkTableExpectation] {
+    blocks.compactMap { $0 as? InkTableBlock }.map { structure(of: $0) }
+  }
+
+  /// 把真实表格 Block 渲染为 UIView，再抽取用户可观察的表格结构。
+  @MainActor
+  public static func tablePresentationStructures(
+    of blocks: [any InkRenderableBlock]
+  ) -> [InkPresentedTableProjection] {
+    blocks
+      .compactMap { $0 as? InkTableBlock }
+      .compactMap { InkTablePresentationProjectionExtractor.projection(in: $0.makeView()) }
+  }
+
   /// 把真实表格 Block 的结构归约为 corpus 预期形态（对齐转为本地枚举）。
+  @MainActor
   public static func structure(of table: InkTableBlock) -> InkTableExpectation {
     InkTableExpectation(
       headers: table.headers,
@@ -231,22 +395,11 @@ public enum InkChannelProjection {
       lock.unlock()
     }
 
+    @MainActor
     func waitOrTimeout(timeoutNanoseconds: UInt64) async -> Bool {
-      let stepNanoseconds: UInt64 = 10_000_000
-      var elapsed: UInt64 = 0
-      while elapsed < timeoutNanoseconds {
-        if isSignalledFlag { return true }
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-          DispatchQueue.main.async {
-            // 与 InkMarkdownRenderSessionTests.waitForRunLoop 相同的模式：
-            // 在 GCD 同步块内抽干 `.default` mode，随后继续轮询。
-            RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-            continuation.resume()
-          }
-        }
-        elapsed += stepNanoseconds
+      await InkAsyncTestProbe.wait(timeoutNanoseconds: timeoutNanoseconds) {
+        isSignalledFlag
       }
-      return isSignalledFlag
     }
 
     private var isSignalledFlag: Bool {

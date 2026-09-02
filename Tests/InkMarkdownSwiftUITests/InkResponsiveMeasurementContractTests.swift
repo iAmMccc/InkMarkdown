@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import UIKit
 import InkMarkdown
+import InkMarkdownSemanticCorpus
 @testable import InkMarkdownSwiftUI
 @_spi(InkMarkdown) import InkMarkdown
 
@@ -75,7 +76,7 @@ struct InkResponsiveMeasurementContractTests {
     #expect(cacheCountAt375 > 0)
 
     // 相同宽度再次测量：复用缓存（条目数不增长）。
-    container.sizeThatFits(CGSize(width: 375, height: CGFloat.greatestFiniteMagnitude))
+    _ = container.sizeThatFits(CGSize(width: 375, height: CGFloat.greatestFiniteMagnitude))
     #expect(container.continuityMeasurementCacheCountForTesting == cacheCountAt375)
 
     // 宽度变化（Split View 拖动类比）：重测后仍得到有效高度，缓存收敛到新宽度。
@@ -93,9 +94,9 @@ struct InkResponsiveMeasurementContractTests {
     #expect(height375Again == height375)
   }
 
-  /// 环境签名（配置/trait）变化与宽度变化独立生效；同一呈现周期内块视图被复用。
-  @Test("宽度变化保留同一呈现周期的块视图实例")
-  func widthChange_preservesBlockViewIdentity() throws {
+  /// 宽度变化后内容与有效测量保持连续；允许 adapter 选择原位更新或合法重建视图。
+  @Test("宽度变化后保留渲染内容并完成有效重测")
+  func widthChange_preservesRenderedContentAndMeasurement() throws {
     let container = InkMarkdownContainerView()
     let coordinator = InkMarkdownCoordinator()
     coordinator.containerView = container
@@ -106,14 +107,22 @@ struct InkResponsiveMeasurementContractTests {
     container.setNeedsLayout()
     container.layoutIfNeeded()
 
-    let viewsBefore = container.subviews.map { ObjectIdentifier($0) }
-    #expect(!viewsBefore.isEmpty)
+    let contentBefore = InkViewProjectionExtractor.attributedContent(in: [container]).string
+    let sizeBefore = container.sizeThatFits(
+      CGSize(width: 375, height: CGFloat.greatestFiniteMagnitude)
+    )
+    #expect(!contentBefore.isEmpty)
+    #expect(sizeBefore.height > 0)
 
     container.frame = CGRect(x: 0, y: 0, width: 640, height: 100)
     container.setNeedsLayout()
     container.layoutIfNeeded()
 
-    let viewsAfter = container.subviews.map { ObjectIdentifier($0) }
-    #expect(viewsAfter == viewsBefore, "宽度变化应原位复用块视图（呈现状态保留），不得重建")
+    let contentAfter = InkViewProjectionExtractor.attributedContent(in: [container]).string
+    let sizeAfter = container.sizeThatFits(
+      CGSize(width: 640, height: CGFloat.greatestFiniteMagnitude)
+    )
+    #expect(contentAfter == contentBefore, "宽度变化不得丢失或改写已渲染内容")
+    #expect(sizeAfter.height > 0, "新宽度必须完成有效重测")
   }
 }

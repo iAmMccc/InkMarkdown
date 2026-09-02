@@ -5,6 +5,7 @@
 
 import Testing
 import UIKit
+import InkMarkdownSemanticCorpus
 @testable import InkMarkdownSwiftUI
 @_spi(InkMarkdown) import InkMarkdown
 
@@ -869,7 +870,7 @@ struct InkBlockPresentationContinuityTests {
 
     handoffSession.renderer.charactersPerFrame = 100
     handoffSession.append("\n旧 host 仍活跃")
-    await waitForRunLoop { oldThought.thought.contains("旧 host 仍活跃") }
+    await InkAsyncTestProbe.wait { oldThought.thought.contains("旧 host 仍活跃") }
     #expect(oldThought.thought.contains("旧 host 仍活跃"))
 
     let waitingCoordinator = InkMarkdownCoordinator()
@@ -880,20 +881,20 @@ struct InkBlockPresentationContinuityTests {
 
     // 接管等待期间继续到达增量，旧 owner 更新后不得覆盖等待者的登记。
     handoffSession.append("\n接管前增量")
-    await waitForRunLoop { oldThought.thought.contains("接管前增量") }
+    await InkAsyncTestProbe.wait { oldThought.thought.contains("接管前增量") }
     #expect(waitingContainer.subviews.isEmpty)
 
     oldCoordinator.teardown(from: oldContainer)
     #expect(oldContainer.subviews.isEmpty)
     #expect(waitingContainer.subviews.contains(where: { $0 is InkThoughtBlockView }))
-    #expect(waitingContainer.subviews.contains(where: { type(of: $0) == UITextView.self }))
+    #expect(waitingContainer.subviews.contains(where: { $0 is UITextView }))
 
     // 旧 teardown 不得移除新 display observer 或解绑新 renderer text view。
     handoffSession.append("\n</think>\n\n新 host 正文")
-    await waitForRunLoop {
+    await InkAsyncTestProbe.wait {
       let thought = waitingContainer.subviews.first(where: { $0 is InkThoughtBlockView })
         as? InkThoughtBlockView
-      let text = waitingContainer.subviews.first(where: { type(of: $0) == UITextView.self })
+      let text = waitingContainer.subviews.first(where: { $0 is UITextView })
         as? UITextView
       return thought?.isComplete == true && text?.text.contains("新 host 正文") == true
     }
@@ -902,7 +903,7 @@ struct InkBlockPresentationContinuityTests {
         as? InkThoughtBlockView
     )
     let handedOffText = try #require(
-      waitingContainer.subviews.first(where: { type(of: $0) == UITextView.self })
+      waitingContainer.subviews.first(where: { $0 is UITextView })
         as? UITextView
     )
     #expect(handedOffThought.isComplete)
@@ -917,7 +918,7 @@ struct InkBlockPresentationContinuityTests {
     #expect(cancelContainer.subviews.isEmpty, "idle session 不应创建空 remainder attachment")
 
     cancelSession.append("<think>\n即将取消")
-    await waitForRunLoop {
+    await InkAsyncTestProbe.wait {
       cancelContainer.subviews.contains(where: { $0 is InkThoughtBlockView })
     }
     let cancellingThought = try #require(
@@ -928,14 +929,14 @@ struct InkBlockPresentationContinuityTests {
     #expect(cancellingThought.isCollapsed)
 
     cancelSession.cancel()
-    await waitForRunLoop { cancelContainer.subviews.isEmpty }
+    await InkAsyncTestProbe.wait { cancelContainer.subviews.isEmpty }
     #expect(cancelSession.state == .cancelled)
     #expect(cancelContainer.subviews.isEmpty, "cancel 必须退休 Thought 与 remainder attachment")
 
     cancelSession.reset()
     #expect(cancelContainer.subviews.isEmpty)
     cancelSession.append("<think>\n新周期")
-    await waitForRunLoop {
+    await InkAsyncTestProbe.wait {
       cancelContainer.subviews.contains(where: { $0 is InkThoughtBlockView })
     }
     let resetThought = try #require(
@@ -945,21 +946,4 @@ struct InkBlockPresentationContinuityTests {
     #expect(!resetThought.isCollapsed, "reset 后新周期不得复活 cancel 前的 live state")
   }
 
-  private func waitForRunLoop(
-    timeoutNanoseconds: UInt64 = 1_000_000_000,
-    stepNanoseconds: UInt64 = 10_000_000,
-    _ condition: () -> Bool
-  ) async {
-    var elapsed: UInt64 = 0
-    while !condition(), elapsed < timeoutNanoseconds {
-      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-        DispatchQueue.main.async {
-          RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
-          continuation.resume()
-        }
-      }
-      try? await Task.sleep(nanoseconds: stepNanoseconds)
-      elapsed += stepNanoseconds
-    }
-  }
 }

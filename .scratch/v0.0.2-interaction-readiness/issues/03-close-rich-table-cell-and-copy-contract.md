@@ -14,4 +14,3 @@
 - [x] ExampleApp 当前主导航提供复杂表格和长按复制入口，不恢复旧顶层组件 Pager。
 - [x] 自动化只覆盖 parser 结构、inline semantics、alignment、核心列宽输入和复制数据关键路径；UI、横滑、长按和视觉结果只做 ExampleApp 手工验收。
 - [x] 不新增 streaming 增量网格引擎；未完成阶段保持 pipe 文本，finish 后仍可 promotion 为真实表格。
-
