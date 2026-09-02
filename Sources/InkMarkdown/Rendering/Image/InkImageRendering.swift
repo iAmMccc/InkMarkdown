@@ -162,7 +162,13 @@ public struct InkImageRendering: Sendable {
   /// 动图播放策略。
   public var animatedImagePolicy: AnimatedImagePolicy = .staticFirstFrame
 
-  /// 相对路径基准 URL（v1.0 预留，当前未生效）
+  /// 相对图片地址的解析基准（ADR-006 相对 URL 契约）。
+  ///
+  /// - 提供 `baseURL`：相对 source（无 scheme，如 `docs/img.png`）解析为**确定**的
+  ///   绝对请求 URL，参与加载与缓存身份规范化。
+  /// - 未提供（默认）：相对 source 返回明确的 unsupported/no-base-URL 结果
+  ///   （行内/块级通道按既有占位契约呈现），库不猜测来源。
+  /// - 带 scheme 的绝对地址不受本字段影响。
   public var baseURL: URL? = nil
 
   /// 块级通道加载失败（含 Store rejected）时的备用展示；`nil` 时显示紧凑 alt 标签（约一行）。
@@ -207,6 +213,21 @@ public struct InkImageRendering: Sendable {
   ) {
     callbackStorage.loadFinished = handler
     loadFinishedSemanticIdentity = handler == nil ? nil : semanticIdentity
+  }
+
+  /// 把配置层的 fallback identity 解析为 Store 实际使用的 loader identity。
+  /// loader 自身声明的 identity 优先；否则使用直接赋值生成或 setter 显式提供的身份。
+  func resolvedLoaderSemanticIdentity(
+    for loader: any InkImageLoading,
+    source: ImageSource?
+  ) -> InkSemanticIdentity? {
+    if let identity = loader.semanticIdentity {
+      return identity
+    }
+    if source?.generatedRequest != nil {
+      return generatedLoaderSemanticIdentity
+    }
+    return loaderSemanticIdentity
   }
 }
 

@@ -37,7 +37,12 @@ public final class InkImageStore {
 
   // MARK: - Inflight（按 sourceID + DisplayKey 合并）
 
-  private var inflight: [NSString: Task<UIImage, Error>] = [:]
+  private struct InflightLoad {
+    let id: UUID
+    let task: Task<UIImage, Error>
+  }
+
+  private var inflight: [NSString: InflightLoad] = [:]
   private var activeCount: Int = 0
   private var pendingLoads: [PendingLoad] = []
 
@@ -54,6 +59,16 @@ public final class InkImageStore {
 
     func loadImage(source: ImageSource, display: DisplayContext) async throws -> UIImage {
       throw ImageLoadError.generatedLoaderUnavailable(owner: owner)
+    }
+  }
+
+  /// 把配置层 identity 带到 Store 的既有 loader seam；不扩大 `resolve` 的公开 interface。
+  private struct SemanticIdentityImageLoaderAdapter: InkImageLoading {
+    let base: any InkImageLoading
+    let semanticIdentity: InkSemanticIdentity?
+
+    func loadImage(source: ImageSource, display: DisplayContext) async throws -> UIImage {
+      try await base.loadImage(source: source, display: display)
     }
   }
 
@@ -117,10 +132,11 @@ public final class InkImageStore {
   /// 获取渲染配置对应的加载器：自定义 loader 优先，否则复用 Store 持有的默认实例。
   public func loader(for rendering: InkImageRendering, source: ImageSource? = nil) -> InkImageLoading {
     if let generatedRequest = source?.generatedRequest {
-      return rendering.generatedLoader ?? MissingGeneratedImageLoader(owner: generatedRequest.owner)
+      let loader = rendering.generatedLoader ?? MissingGeneratedImageLoader(owner: generatedRequest.owner)
+      return loaderWithResolvedIdentity(loader, rendering: rendering, source: source)
     }
     if let custom = rendering.loader {
-      return custom
+      return loaderWithResolvedIdentity(custom, rendering: rendering, source: source)
     }
     let policy = rendering.securityPolicy
     if let cached = defaultLoaders[policy] {
@@ -129,6 +145,18 @@ public final class InkImageStore {
     let loader = DefaultURLSessionImageLoader(securityPolicy: policy)
     defaultLoaders[policy] = loader
     return loader
+  }
+
+  private func loaderWithResolvedIdentity(
+    _ loader: any InkImageLoading,
+    rendering: InkImageRendering,
+    source: ImageSource?
+  ) -> any InkImageLoading {
+    guard loader.semanticIdentity == nil,
+          let identity = rendering.resolvedLoaderSemanticIdentity(for: loader, source: source) else {
+      return loader
+    }
+    return SemanticIdentityImageLoaderAdapter(base: loader, semanticIdentity: identity)
   }
 
   // MARK: - 核心 API
@@ -147,7 +175,7 @@ public final class InkImageStore {
     loader: InkImageLoading,
     onLoad: ((UIImage?) -> Void)? = nil
   ) -> ResolveResult {
-    let key = DisplayKey(source: source, display: display)
+    let key = DisplayKey(source: source, display: display, loader: loader)
 
     if let cached = cache.object(forKey: key.cacheKey) {
       return .ready(cached)
@@ -208,44 +236,55 @@ public final class InkImageStore {
     key: DisplayKey
   ) {
     activeCount += 1
+    let loadID = UUID()
     let task = Task.detached { [weak self] in
-      // 成功/失败路径在同一 MainActor 临界区写 cache 并清理 inflight，
-      // 避免「cache 已就绪但 inflightCount 仍为 1」的观测窗口；
-      // defer 仅兜底取消等未走到上述路径的情况。
-      var completedOnMain = false
-      defer {
-        if !completedOnMain {
-          Task { @MainActor [weak self] in
-            self?.completeLoad(cacheKey: key.cacheKey)
-          }
-        }
-      }
       do {
         let image = try await loader.loadImage(source: source, display: display)
-        await MainActor.run { [weak self] in
-          guard let self else { return }
-          self.cache.setObject(image, forKey: key.cacheKey, cost: image.memoryCost)
-          self.broadcast(cacheKey: key.cacheKey, image: image)
-          self.subscribers.removeValue(forKey: key.cacheKey)
-          self.completeLoad(cacheKey: key.cacheKey)
-        }
-        completedOnMain = true
+        // 自定义 loader 可能忽略取消；旧 generation 绝不能写缓存或覆盖新请求。
+        try Task.checkCancellation()
+        await self?.finishLoadSuccess(
+          cacheKey: key.cacheKey,
+          loadID: loadID,
+          image: image
+        )
         return image
       } catch {
-        await MainActor.run { [weak self] in
-          guard let self else { return }
-          self.broadcastFailure(cacheKey: key.cacheKey, error: error)
-          self.completeLoad(cacheKey: key.cacheKey)
-        }
-        completedOnMain = true
+        await self?.finishLoadFailure(
+          cacheKey: key.cacheKey,
+          loadID: loadID,
+          error: error
+        )
         throw error
       }
     }
-    inflight[key.cacheKey] = task
+    inflight[key.cacheKey] = InflightLoad(id: loadID, task: task)
   }
 
-  private func completeLoad(cacheKey: NSString) {
-    guard inflight.removeValue(forKey: cacheKey) != nil else { return }
+  private func finishLoadSuccess(
+    cacheKey: NSString,
+    loadID: UUID,
+    image: UIImage
+  ) {
+    guard inflight[cacheKey]?.id == loadID else { return }
+    cache.setObject(image, forKey: cacheKey, cost: image.memoryCost)
+    broadcast(cacheKey: cacheKey, image: image)
+    subscribers.removeValue(forKey: cacheKey)
+    completeLoad(cacheKey: cacheKey, loadID: loadID)
+  }
+
+  private func finishLoadFailure(
+    cacheKey: NSString,
+    loadID: UUID,
+    error: Error
+  ) {
+    guard inflight[cacheKey]?.id == loadID else { return }
+    broadcastFailure(cacheKey: cacheKey, error: error)
+    completeLoad(cacheKey: cacheKey, loadID: loadID)
+  }
+
+  private func completeLoad(cacheKey: NSString, loadID: UUID) {
+    guard inflight[cacheKey]?.id == loadID else { return }
+    inflight.removeValue(forKey: cacheKey)
     activeCount = max(0, activeCount - 1)
     drainPendingLoads()
   }
@@ -291,14 +330,21 @@ public final class InkImageStore {
     return ImageLoadSubscription(cancel: { [weak self] in
       guard let self else { return }
       self.subscribers[cacheKey]?.removeAll { $0.id == id }
-      if self.subscribers[cacheKey]?.isEmpty != false {
-        self.subscribers.removeValue(forKey: cacheKey)
-        self.removeQueuedLoad(cacheKey: cacheKey)
-      }
+      self.dropLoadIfUnsubscribed(cacheKey: cacheKey)
     })
   }
 
-  /// 只有排队项可以因无人订阅取消；active/inflight 继续运行以便复用和写入缓存。
+  /// 最后一个订阅消失时：移除排队项；若 inflight 已无订阅者则取消底层任务（ADR-006）。
+  private func dropLoadIfUnsubscribed(cacheKey: NSString) {
+    guard subscribers[cacheKey]?.isEmpty != false else { return }
+    subscribers.removeValue(forKey: cacheKey)
+    removeQueuedLoad(cacheKey: cacheKey)
+    guard let load = inflight.removeValue(forKey: cacheKey) else { return }
+    activeCount = max(0, activeCount - 1)
+    load.task.cancel()
+    drainPendingLoads()
+  }
+
   private func removeQueuedLoad(cacheKey: NSString) {
     pendingLoads.removeAll { $0.key.cacheKey == cacheKey }
   }

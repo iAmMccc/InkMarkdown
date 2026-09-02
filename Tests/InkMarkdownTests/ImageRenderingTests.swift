@@ -241,17 +241,70 @@ struct InkImageStoreTests {
     }
   }
 
+  /// 带稳定语义身份的 mock loader，用于验证 cache identity 隔离。
+  final class IdentifiedMockImageLoader: InkImageLoading, @unchecked Sendable {
+    let identity: InkSemanticIdentity
+    private let inner: MockImageLoader
+
+    init(identity: InkSemanticIdentity, inner: MockImageLoader = MockImageLoader()) {
+      self.identity = identity
+      self.inner = inner
+    }
+
+    var semanticIdentity: InkSemanticIdentity? { identity }
+
+    func loadImage(source: ImageSource, display: DisplayContext) async throws -> UIImage {
+      try await inner.loadImage(source: source, display: display)
+    }
+
+    var currentLoadCount: Int { inner.currentLoadCount }
+    var currentCompletedCount: Int { inner.currentCompletedCount }
+  }
+
+  /// 即使 Swift Task 已取消仍会返回结果，用于验证 Store generation 隔离。
+  final class CancellationIgnoringLoader: InkImageLoading, @unchecked Sendable {
+    private let queue = DispatchQueue(label: "inkmarkdown.tests.noncooperative-image-loader")
+    private let images: [UIImage]
+    private var loadCount = 0
+
+    init(images: [UIImage]) {
+      self.images = images
+    }
+
+    var semanticIdentity: InkSemanticIdentity? { "test.loader.noncooperative.v1" }
+
+    func loadImage(source: ImageSource, display: DisplayContext) async throws -> UIImage {
+      let index = queue.sync { () -> Int in
+        loadCount += 1
+        return loadCount - 1
+      }
+      let delay: TimeInterval = index == 0 ? 0.3 : 0.02
+      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+        DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
+          continuation.resume()
+        }
+      }
+      return images[min(index, images.count - 1)]
+    }
+
+    var currentLoadCount: Int {
+      queue.sync { loadCount }
+    }
+  }
+
   @MainActor
   private func waitUntilReady(
     store: InkImageStore,
     source: ImageSource,
     display: DisplayContext,
     loader: MockImageLoader,
+    loaderForResolve: (any InkImageLoading)? = nil,
     timeoutNanoseconds: UInt64 = 2_000_000_000
   ) async -> Bool {
+    let resolveLoader = loaderForResolve ?? loader
     let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
     while DispatchTime.now().uptimeNanoseconds < deadline {
-      let result = store.resolve(source: source, display: display, loader: loader)
+      let result = store.resolve(source: source, display: display, loader: resolveLoader)
       if case .ready = result { return true }
       try? await Task.sleep(nanoseconds: 10_000_000)
     }
@@ -437,6 +490,149 @@ struct InkImageStoreTests {
     #expect(!callbackCalled)
   }
 
+  /// 最后订阅取消时底层 inflight 任务被取消，loader 不应完成。
+  @Test @MainActor func inflightCancelledWhenLastSubscriberDrops() async {
+    let store = InkImageStore()
+    let loader = MockImageLoader()
+    loader.delay = 500_000_000
+    let source = ImageSource(url: URL(string: "https://example.com/cancel-inflight.png")!)
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    let result = store.resolve(source: source, display: display, loader: loader)
+    if case .loading(let subscribe) = result {
+      let subscription = subscribe { _ in }
+      subscription.cancel()
+    } else {
+      Issue.record("应为 .loading")
+    }
+
+    try? await Task.sleep(nanoseconds: 100_000_000)
+    #expect(store.inflightCount == 0)
+
+    try? await Task.sleep(nanoseconds: 600_000_000)
+    #expect(loader.currentCompletedCount == 0, "取消后 loader 不应完成")
+  }
+
+  /// loader semantic identity 参与缓存键：更换 identity 后不得复用旧结果。
+  @Test @MainActor func loaderIdentitySeparatesCache() async {
+    let store = InkImageStore()
+    let innerA = MockImageLoader()
+    let innerB = MockImageLoader()
+    let loaderA = IdentifiedMockImageLoader(identity: InkSemanticIdentity("test.loader.a.v1"), inner: innerA)
+    let loaderB = IdentifiedMockImageLoader(identity: InkSemanticIdentity("test.loader.b.v1"), inner: innerB)
+
+    let source = ImageSource(url: URL(string: "https://example.com/same-identity-key.png")!)
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
+
+    _ = store.resolve(source: source, display: display, loader: loaderA)
+    let readyA = await waitUntilReady(store: store, source: source, display: display, loader: innerA, loaderForResolve: loaderA)
+    #expect(readyA)
+    #expect(innerA.currentLoadCount == 1)
+
+    let second = store.resolve(source: source, display: display, loader: loaderB)
+    if case .ready = second {
+      Issue.record("不同 loader identity 不应命中缓存")
+    }
+    let readyB = await waitUntilReady(store: store, source: source, display: display, loader: innerB, loaderForResolve: loaderB)
+    #expect(readyB)
+    #expect(innerB.currentLoadCount == 1)
+  }
+
+  /// `InkImageRendering.setLoader` 的 fallback identity 必须穿透 Store loader seam。
+  @Test @MainActor func renderingLoaderIdentitySeparatesStoreCache() async {
+    let store = InkImageStore()
+    let innerA = MockImageLoader()
+    let innerB = MockImageLoader()
+    var renderingA = InkImageRendering()
+    renderingA.setLoader(innerA, semanticIdentity: "test.rendering-loader.a.v1")
+    var renderingB = InkImageRendering()
+    renderingB.setLoader(innerB, semanticIdentity: "test.rendering-loader.b.v1")
+
+    let source = ImageSource(url: URL(string: "https://example.com/rendering-loader-key.png")!)
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
+    let loaderA = store.loader(for: renderingA, source: source)
+    let loaderB = store.loader(for: renderingB, source: source)
+
+    _ = store.resolve(source: source, display: display, loader: loaderA)
+    #expect(await waitUntilReady(
+      store: store,
+      source: source,
+      display: display,
+      loader: innerA,
+      loaderForResolve: loaderA
+    ))
+
+    if case .ready = store.resolve(source: source, display: display, loader: loaderB) {
+      Issue.record("不同 rendering loader identity 不应命中旧缓存")
+    }
+    #expect(await waitUntilReady(
+      store: store,
+      source: source,
+      display: display,
+      loader: innerB,
+      loaderForResolve: loaderB
+    ))
+    #expect(innerA.currentLoadCount == 1)
+    #expect(innerB.currentLoadCount == 1)
+  }
+
+  /// 已取消的旧 loader 即使忽略取消并返回，也不得覆盖同 key 的新 generation。
+  @Test @MainActor func cancelledOldGenerationCannotOverwriteNewLoad() async {
+    let store = InkImageStore()
+    let oldImage = makeTestImage(width: 10, height: 10)
+    let newImage = makeTestImage(width: 20, height: 20)
+    let loader = CancellationIgnoringLoader(images: [oldImage, newImage])
+    let source = ImageSource(url: URL(string: "https://example.com/generation.png")!)
+    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
+
+    let first = store.resolve(source: source, display: display, loader: loader)
+    var oldCallbackCalled = false
+    let oldSubscription: InkImageStore.ImageLoadSubscription
+    if case .loading(let subscribe) = first {
+      oldSubscription = subscribe { _ in oldCallbackCalled = true }
+    } else {
+      Issue.record("首次请求应为 loading")
+      return
+    }
+
+    let startDeadline = DispatchTime.now().uptimeNanoseconds + 1_000_000_000
+    while loader.currentLoadCount < 1, DispatchTime.now().uptimeNanoseconds < startDeadline {
+      try? await Task.sleep(nanoseconds: 1_000_000)
+    }
+    #expect(loader.currentLoadCount == 1)
+    oldSubscription.cancel()
+    #expect(store.inflightCount == 0)
+
+    let second = store.resolve(source: source, display: display, loader: loader)
+    var newCallbackWidth: CGFloat?
+    if case .loading(let subscribe) = second {
+      _ = subscribe { newCallbackWidth = $0?.size.width }
+    } else {
+      Issue.record("取消旧 generation 后同 key 应启动新请求")
+    }
+
+    let readyDeadline = DispatchTime.now().uptimeNanoseconds + 1_000_000_000
+    var readyWidth: CGFloat?
+    while DispatchTime.now().uptimeNanoseconds < readyDeadline {
+      if case .ready(let image) = store.resolve(source: source, display: display, loader: loader) {
+        readyWidth = image.size.width
+        break
+      }
+      try? await Task.sleep(nanoseconds: 5_000_000)
+    }
+    #expect(loader.currentLoadCount == 2)
+    #expect(readyWidth == 20)
+    #expect(newCallbackWidth == 20)
+
+    try? await Task.sleep(nanoseconds: 350_000_000)
+    if case .ready(let finalImage) = store.resolve(source: source, display: display, loader: loader) {
+      #expect(finalImage.size.width == 20, "旧 generation 返回后不得覆盖新缓存")
+    } else {
+      Issue.record("新 generation 的成功缓存不应被旧任务移除")
+    }
+    #expect(!oldCallbackCalled)
+  }
+
   /// #16 activeCount 守卫
   @Test @MainActor func activeCountGuard() {
     var config = InkImageStore.Configuration()
@@ -503,6 +699,69 @@ struct InkImageStoreTests {
 
     #expect(allReady, "所有 6 张图片应该在队列 drain 后全部处于 ready 状态")
   }
+}
+
+// MARK: - ImageHTTPSessionDelegate 有界加载与重定向
+
+@Test func httpSessionDelegate_rejectsOversizedContentLength() {
+  var policy = ImageSecurityPolicy()
+  policy.maxResponseBytes = 1024
+  let delegate = ImageHTTPSessionDelegate(policy: policy)
+  let session = URLSession(configuration: .ephemeral)
+  let task = session.dataTask(with: URL(string: "https://example.com/big.png")!)
+  let url = URL(string: "https://example.com/big.png")!
+  let response = HTTPURLResponse(
+    url: url,
+    statusCode: 200,
+    httpVersion: nil,
+    headerFields: ["Content-Length": "999999"]
+  )!
+
+  var disposition: URLSession.ResponseDisposition?
+  delegate.urlSession(
+    session,
+    dataTask: task,
+    didReceive: response,
+    completionHandler: { disposition = $0 }
+  )
+  #expect(disposition == .cancel)
+  task.cancel()
+}
+
+@Test func httpSessionDelegate_blocksRedirectBeyondMaxCount() {
+  var policy = ImageSecurityPolicy()
+  policy.maxRedirects = 2
+  let delegate = ImageHTTPSessionDelegate(policy: policy)
+  let session = URLSession(configuration: .ephemeral)
+  let task = session.dataTask(with: URL(string: "https://start.example.com/a")!)
+  let redirectResponse = HTTPURLResponse(
+    url: URL(string: "https://start.example.com/a")!,
+    statusCode: 302,
+    httpVersion: nil,
+    headerFields: nil
+  )!
+  let redirectRequest = URLRequest(url: URL(string: "https://hop.example.com/b")!)
+
+  for _ in 0..<2 {
+    var allowed: URLRequest?
+    delegate.urlSession(
+      session,
+      task: task,
+      willPerformHTTPRedirection: redirectResponse,
+      newRequest: redirectRequest
+    ) { allowed = $0 }
+    #expect(allowed != nil)
+  }
+
+  var blocked: URLRequest?
+  delegate.urlSession(
+    session,
+    task: task,
+    willPerformHTTPRedirection: redirectResponse,
+    newRequest: redirectRequest
+  ) { blocked = $0 }
+  #expect(blocked == nil, "超过 maxRedirects 后应拒绝跳转")
+  task.cancel()
 }
 
 // MARK: - #9 ImageIO 降采样正确性

@@ -37,11 +37,14 @@ public struct ImageSource: Hashable, Sendable {
 
   /// 从 URL 构建图片来源，并生成请求 URL 与规范化 ID。
   ///
+  /// 默认值与 ``ImageSecurityPolicy`` 的规范化默认一致：query 默认**保留**（兼容
+  /// 签名 / 尺寸参数），fragment 默认剥离。同一规范化规则同时决定实际请求与缓存身份。
+  ///
   /// - Parameters:
   ///   - url: 原始 URL。
-  ///   - stripsQuery: 为 `true` 时从 ``requestURL`` 中移除 query 组件。
-  ///   - stripsFragment: 为 `true` 时从 ``requestURL`` 中移除 fragment 组件。
-  public init(url: URL, stripsQuery: Bool = true, stripsFragment: Bool = true) {
+  ///   - stripsQuery: 为 `true` 时从 ``requestURL`` 中移除 query 组件；默认 `false`。
+  ///   - stripsFragment: 为 `true` 时从 ``requestURL`` 中移除 fragment 组件；默认 `true`。
+  public init(url: URL, stripsQuery: Bool = false, stripsFragment: Bool = true) {
     self.rawURL = url
     self.scheme = Self.imageScheme(for: url)
 

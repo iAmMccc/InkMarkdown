@@ -2,13 +2,17 @@ import UIKit
 
 /// 内置默认图片加载器：支持 HTTP(S)、本地文件、Data URL、Asset 与 Bundle 路径。
 ///
-/// 远程请求通过 ``ImageSecurityPolicy`` 控制 scheme、主机白名单与重定向校验；
+/// 远程请求通过 ``ImageSecurityPolicy`` 控制 scheme、host 白名单、重定向与响应大小上限
+///（资源安全边界由 ``ImageHTTPSessionDelegate`` 在传输层执行：超限响应在完整载入前失败）；
 /// 解码阶段使用 ``ImageIODownsampler`` 按 ``DisplayContext/maxPixelWidth`` 降采样。
 public final class DefaultURLSessionImageLoader: InkImageLoading, @unchecked Sendable {
 
-  private let session: URLSession
+  /// 当前会话的稳定语义身份；同一实例复用缓存，不同策略实例不得共享结果。
+  public let semanticIdentity: InkSemanticIdentity? = .unique()
+
   /// 须强引用：``URLSession`` 对 delegate 仅弱引用。
-  private let redirectValidator: RedirectValidator
+  private let session: URLSession
+  private let sessionDelegate: ImageHTTPSessionDelegate
   private let downsampleHelper = ImageIODownsampler()
 
   /// 使用指定安全策略创建加载器。
@@ -18,11 +22,11 @@ public final class DefaultURLSessionImageLoader: InkImageLoading, @unchecked Sen
     configuration.timeoutIntervalForResource = 60
     configuration.waitsForConnectivity = false
     configuration.httpMaximumConnectionsPerHost = 4
-    let redirectValidator = RedirectValidator(policy: securityPolicy)
-    self.redirectValidator = redirectValidator
+    let delegate = ImageHTTPSessionDelegate(policy: securityPolicy)
+    self.sessionDelegate = delegate
     self.session = URLSession(
       configuration: configuration,
-      delegate: redirectValidator,
+      delegate: delegate,
       delegateQueue: nil
     )
   }
@@ -34,9 +38,8 @@ public final class DefaultURLSessionImageLoader: InkImageLoading, @unchecked Sen
   public func loadImage(source: ImageSource, display: DisplayContext) async throws -> UIImage {
     switch source.scheme {
     case .http, .https:
-      let (data, response) = try await session.inkData(from: source.requestURL)
-      guard let httpResponse = response as? HTTPURLResponse,
-            (200...299).contains(httpResponse.statusCode) else {
+      let (data, response) = try await sessionDelegate.boundedData(from: source.requestURL, session: session)
+      guard (200...299).contains(response.statusCode) else {
         throw ImageLoadError.invalidResponse
       }
       guard isImageData(data) else {

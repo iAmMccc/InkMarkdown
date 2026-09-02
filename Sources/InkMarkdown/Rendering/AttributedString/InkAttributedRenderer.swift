@@ -708,9 +708,10 @@ private struct InkRenderer {
   private func renderImage(_ image: Markdown.Image, context: InkTextContext) -> NSAttributedString {
     let rendering = appearance.imageRendering
 
+    // 统一 source 解析：相对 URL 提供 baseURL 时解析为绝对地址，未提供时按
+    // no-base-URL 契约回落占位（库不猜测来源）。
     guard rendering.isEnabled,
-          let urlString = image.source,
-          let url = URL(string: urlString) else {
+          let urlString = image.source else {
       let display = image.plainText.isEmpty ? (image.source ?? "image") : image.plainText
       var attrs: [NSAttributedString.Key: Any] = [
         .font: UIFont.systemFont(ofSize: context.font.pointSize),
@@ -722,13 +723,25 @@ private struct InkRenderer {
       return NSAttributedString(string: "[\u{1F5BC} \(display)]", attributes: attrs)
     }
 
-    let source = ImageSource(
-      url: url,
-      stripsQuery: rendering.securityPolicy.stripsQuery,
-      stripsFragment: rendering.securityPolicy.stripsFragment
-    )
+    let source: ImageSource
+    switch InkImageSourceResolution.resolve(from: urlString, rendering: rendering) {
+    case .resolved(let resolved):
+      source = resolved
+    case .rejected:
+      let display = image.plainText.isEmpty ? (image.source ?? "image") : image.plainText
+      return NSAttributedString(
+        string: "[\u{1F5BC} \(display)]",
+        attributes: [
+          .font: scaledFont(UIFont.systemFont(ofSize: context.font.pointSize), textStyle: .body),
+          .foregroundColor: appearance.text.secondaryColor,
+        ]
+      )
+    }
 
-    if checkSecurityPolicy(source: source, rendering: rendering) != nil {
+    if rendering.securityPolicy.rejectionReason(
+      for: source,
+      maxDataURLBytes: rendering.storeConfiguration.maxDataURLBytes
+    ) != nil {
       let display = image.plainText.isEmpty ? (image.source ?? "image") : image.plainText
       return NSAttributedString(
         string: "[\u{1F5BC} \(display)]",
@@ -749,38 +762,6 @@ private struct InkRenderer {
     }
 
     return result
-  }
-
-  private func checkSecurityPolicy(source: ImageSource, rendering: InkImageRendering) -> ImageRejectReason? {
-    let policy = rendering.securityPolicy
-
-    guard policy.allowedSchemes.contains(source.scheme) else {
-      return .schemeNotAllowed(String(describing: source.scheme))
-    }
-
-    if source.scheme == .http || source.scheme == .https {
-      if let host = source.rawURL.host {
-        if policy.allowedHosts.isEmpty {
-          switch policy.emptyHostPolicy {
-          case .rejectAll:
-            return .hostNotAllowed(host)
-          case .allowAll:
-            break
-          }
-        } else if !policy.allowedHosts.contains(host) {
-          return .hostNotAllowed(host)
-        }
-      }
-    }
-
-    if source.scheme == .data {
-      let dataSize = source.rawURL.absoluteString.count
-      if dataSize > rendering.storeConfiguration.maxDataURLBytes {
-        return .payloadTooLarge(dataSize)
-      }
-    }
-
-    return nil
   }
 
   private func renderHTMLBlock(_ html: Markdown.HTMLBlock, context: InkTextContext) -> NSAttributedString {

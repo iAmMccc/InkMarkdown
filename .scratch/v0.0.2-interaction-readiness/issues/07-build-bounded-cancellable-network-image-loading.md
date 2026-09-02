@@ -4,15 +4,14 @@
 
 **Blocked by:** 06 / 开放图片业务策略并闭环相对 URL。
 
-**Status:** ready-for-agent
+**Status:** done (2026-09-02, 本地候选：ImageHTTPSessionDelegate + InkImageStore inflight 取消与 loader identity；InkImageStoreTests + delegate 契约测试全绿)
 
-- [ ] 新增可配置网络响应大小上限，默认 20 MiB；超限响应在完整载入和解码前安全失败。
-- [ ] HTTP(S) 只接受 2xx 与有效图片数据；非 2xx、非图片和解码失败使用既有 fallback。
-- [ ] 默认最多跟随 3 次重定向；配置 host 业务策略时，每次重定向重新校验。
-- [ ] 最后一个订阅取消时，取消传播到底层网络任务；仍有订阅时共享 inflight 请求继续运行。
-- [ ] 取消或陈旧请求结果不能覆盖新 source，也不能回调已取消订阅者。
-- [ ] cache identity 包含 source、display parameters 与 loader semantic identity；更换 loader 后不得复用旧结果。
-- [ ] 失败结果不写入成功缓存；库不执行隐藏自动重试。
-- [ ] 保持内存 cache、inflight 合并、并发与等待队列能力；不新增磁盘缓存。
-- [ ] 自动化只覆盖响应预算、2xx/图片校验、redirect、最后订阅取消、inflight 合并、loader identity、失败与不缓存失败关键路径；禁止真实网络单元测试排列和 UI 测试。
-
+- [x] 新增可配置网络响应大小上限，默认 20 MiB；超限响应在完整载入和解码前安全失败。
+- [x] HTTP(S) 只接受 2xx 与有效图片数据；非 2xx、非图片和解码失败使用既有 fallback。
+- [x] 默认最多跟随 3 次重定向；配置 host 业务策略时，每次重定向重新校验。
+- [x] 最后一个订阅取消时，取消传播到底层网络任务；仍有订阅时共享 inflight 请求继续运行。
+- [x] 取消或陈旧请求结果不能覆盖新 source，也不能回调已取消订阅者。
+- [x] cache identity 包含 source、display parameters 与 loader semantic identity；更换 loader 后不得复用旧结果。
+- [x] 失败结果不写入成功缓存；库不执行隐藏自动重试。
+- [x] 保持内存 cache、inflight 合并、并发与等待队列能力；不新增磁盘缓存。
+- [x] 自动化只覆盖响应预算、2xx/图片校验、redirect、最后订阅取消、inflight 合并、loader identity、失败与不缓存失败关键路径；禁止真实网络单元测试排列和 UI 测试。

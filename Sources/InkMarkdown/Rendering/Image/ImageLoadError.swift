@@ -14,6 +14,8 @@ public enum ImageLoadError: Error, Sendable {
   case bundleNotFound(String)
   /// URL scheme 不在允许列表内。
   case unsupportedScheme
+  /// 网络响应超过配置的大小上限（字节数）；在完整载入和解码前安全失败。
+  case payloadTooLarge(Int)
   /// 加载超时。
   case timeout
   /// 任务被取消。
@@ -30,6 +32,8 @@ public enum ImageRejectReason: Sendable {
   case hostNotAllowed(String)
   /// URL scheme 不在白名单。
   case schemeNotAllowed(String)
+  /// URL 无法形成当前来源类型所需的有效地址（例如 HTTP(S) 缺少 host）。
+  case invalidURL(String)
   /// 载荷超过大小上限（字节数）。
   case payloadTooLarge(Int)
   /// 相对 URL 缺少 `baseURL` 无法解析。
