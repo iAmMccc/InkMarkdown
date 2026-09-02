@@ -35,7 +35,7 @@ final class StreamingDemoViewModel: ObservableObject {
     "  续段仍属于同一列表项，验证松散列表几何。\n\n",
     "流式与终态使用同一链接回调：[Apple 开发者](https://developer.apple.com) 与引用式 [Swift.org][swift]。\n\n",
     "[swift]: https://www.swift.org\n\n",
-    "| 状态 | 语义 |\n| --- | --- |\n| streaming | 富文本增量 |\n| finished | 块级终态 |\n\n",
+    "| 状态 | 文档 |\n| --- | --- |\n| streaming | [Apple 开发者](https://developer.apple.com) |\n| finished | [Swift.org](https://www.swift.org) |\n\n",
     "```swift\nsession.finish()\n```\n"
   ]
 

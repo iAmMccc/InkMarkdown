@@ -30,6 +30,36 @@ final class UIKitStandardMarkdownDemoViewController: UIViewController {
       2. 第二步：调用渲染引擎
       3. 第三步：赋值给视图展示
 
+    ## 松散列表（续段归属）
+
+    - 首段落在列表项内
+
+      续段仍属于同一列表项，保持列表缩进与悬挂对齐。
+
+    ## 有序 / 无序混合嵌套
+
+    - 无序外层
+      1. 有序内层
+         - 无序深层
+
+    ## 列表内引用
+
+    - 列表项开头
+
+      > 引用仍在列表项内，不提升为根级内容。
+
+    ## 链接矩阵
+
+    行内式：[CommonMark 规范](https://spec.commonmark.org/0.31.2/)
+
+    引用式：参见 [Swift 文档][swift-docs]。
+
+    自动链接：<https://www.apple.com>
+
+    相对链接：[项目内文档](docs/guide.md)
+
+    [swift-docs]: https://www.swift.org/documentation/
+
     ```swift
     import InkMarkdown
 

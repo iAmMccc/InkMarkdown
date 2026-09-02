@@ -29,6 +29,21 @@ final class UIKitComponentsDemoViewController: UIViewController {
     | LaTeX | `iosMath` 本地渲染 | 块级公式居中展示 |
     | Mermaid | `WebKit` 本地渲染 | 流程图/时序图位图生成 |
 
+    ### 复杂单元格与链接
+
+    | 名称 | 状态 | 备注 |
+    | :--- | :---: | ---: |
+    | **加粗** | `行内代码` | [打开苹果官网](https://www.apple.com) |
+    | *斜体* | ***粗斜*** | [CommonMark 规范](https://spec.commonmark.org/0.31.2/) |
+
+    ### 转义竖线与不齐行
+
+    | 表达式 | 含义 |
+    | --- | --- |
+    | a \\| b | 或运算（转义竖线应留在单元格内） |
+    | 空单元格见右 |  |
+    | 两列 | 多余列被忽略 | 补充 |
+
     ## 2. 块级与行内图片
 
     正文内嵌行内图标 ![图标](https://placehold.co/20x20/2563eb/ffffff/png?text=i) 混排展示。
@@ -36,6 +51,10 @@ final class UIKitComponentsDemoViewController: UIViewController {
     下面是独占一行的块级图（支持点击全屏查看）：
 
     ![自然风光](https://picsum.photos/seed/ink-comp-uikit/800/450)
+
+    ### 加载失败（fallback）
+
+    ![失败示例](https://picsum.photos/id/999999/200/200)
 
     ## 3. LaTeX 数学公式
 

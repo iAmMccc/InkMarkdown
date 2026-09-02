@@ -26,6 +26,8 @@ enum DemoInkConfigurationBuilder {
     if enableImage {
       appearance.imageRendering = InkAppearance.demoImageEnabled.imageRendering
     }
+    // Ticket 08：组件页文案承诺「长按复制」，须在配置层真正开启。
+    appearance.table.enableLongPressCopy = true
 
     var config = InkConfiguration(appearance: appearance)
     config.renderEnvironment = InkRenderEnvironment(userInterfaceStyle: userInterfaceStyle)

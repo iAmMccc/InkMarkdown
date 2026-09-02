@@ -79,7 +79,9 @@ extension InkAppearance {
 
   /// Demo 用图片 opt-in：开启真图渲染、块通道点击放大，并对演示 CDN 显式 allowlist。
   ///
-  /// 这是 ExampleApp 工厂预设，**不是**库默认：库默认 fail-closed（空 `allowedHosts` + `rejectAll`）。
+  /// 这是 ExampleApp 工厂预设，**不是**库默认。库默认：`isEnabled = false`；开启后空
+  /// `allowedHosts` + `.allowAll`（业务策略默认开放，ADR-006）。本 Demo 显式收窄到
+  /// `placehold.co` / `picsum.photos`，用于验收固定内容与重定向链路。
   /// `onImageTap` 需在持有 presenting VC 处注入（见 ``RenderedListViewController``）。
   static var demoImageEnabled: InkAppearance {
     var a = InkAppearance()
