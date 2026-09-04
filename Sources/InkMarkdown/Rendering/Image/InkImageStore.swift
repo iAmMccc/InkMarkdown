@@ -1,5 +1,23 @@
 import UIKit
 
+/// 管理闭包式 NotificationCenter 观察者生命周期。
+///
+/// center 与 token 创建后均不可变；`deinit` 只执行线程安全的 observer 移除，因此可跨
+/// actor 释放，而不访问 ``InkImageStore`` 的主 actor 状态。
+final class InkNotificationObserverToken: @unchecked Sendable {
+  private let center: NotificationCenter
+  private let token: any NSObjectProtocol
+
+  init(center: NotificationCenter, token: any NSObjectProtocol) {
+    self.center = center
+    self.token = token
+  }
+
+  deinit {
+    center.removeObserver(token)
+  }
+}
+
 /// 图片渲染的核心状态管理器：内存缓存、并发加载与订阅通知。
 ///
 /// 同一 `canonicalID` 的并发请求合并为单次加载；超出并发上限的请求进入待处理队列。
@@ -76,8 +94,9 @@ public final class InkImageStore {
 
   private var subscribers: [NSString: [(id: UUID, callback: (UIImage?) -> Void)]] = [:]
 
-  /// 按安全策略复用的内置 URLSession 加载器，避免 renderer / block 各自泄漏 session。
+  /// 按安全策略复用的内置 URLSession 加载器，避免 renderer / block 各自创建 session。
   private var defaultLoaders: [ImageSecurityPolicy: DefaultURLSessionImageLoader] = [:]
+  private var memoryWarningObserver: InkNotificationObserverToken?
 
   /// 图片加载订阅句柄；调用 ``cancel`` 可取消回调。
   public struct ImageLoadSubscription {
@@ -88,19 +107,25 @@ public final class InkImageStore {
   // MARK: - Init
 
   /// 使用指定配置创建 Store。
-  public init(configuration: Configuration = .init()) {
+  public convenience init(configuration: Configuration = .init()) {
+    self.init(configuration: configuration, notificationCenter: .default)
+  }
+
+  /// 内部可注入通知中心，使 observer 生命周期可被确定性验证。
+  init(configuration: Configuration = .init(), notificationCenter: NotificationCenter) {
     self.configuration = configuration
     applyConfiguration(configuration)
 
-    NotificationCenter.default.addObserver(
+    let token = notificationCenter.addObserver(
       forName: UIApplication.didReceiveMemoryWarningNotification,
       object: nil,
       queue: .main
     ) { [weak self] _ in
-      Task { @MainActor in
+      MainActor.assumeIsolated {
         self?.cache.removeAllObjects()
       }
     }
+    memoryWarningObserver = InkNotificationObserverToken(center: notificationCenter, token: token)
   }
 
   /// 更新运行时配置（含共享单例）。变更立即作用于缓存与并发上限。

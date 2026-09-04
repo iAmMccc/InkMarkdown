@@ -35,14 +35,8 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   ///   - rendering: 图片渲染配置；须已按需开启 ``InkImageRendering/isEnabled``。
   /// - Note: Block 路由在 UIKit 主线程调用；须在主线程构造。
   @MainActor
-  public init(source: ImageSource, rendering: InkImageRendering) {
-    self.source = source
-    self.rendering = rendering
-    self.store = InkImageStore.shared
-    self.imageView = UIImageView()
-    self.placeholderView = UIView()
-    super.init(frame: .zero)
-    setupViews()
+  public convenience init(source: ImageSource, rendering: InkImageRendering) {
+    self.init(source: source, resolvedStore: .shared, rendering: rendering)
   }
 
   /// 0.0.1 兼容初始化器：显式注入 ``InkImageStore``。
@@ -53,7 +47,18 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   ///   - rendering: 图片渲染配置。
   @available(*, deprecated, renamed: "init(source:rendering:)", message: "请改用 init(source:rendering:)；store 默认为 InkImageStore.shared。")
   @MainActor
-  public init(source: ImageSource, store: InkImageStore, rendering: InkImageRendering) {
+  public convenience init(source: ImageSource, store: InkImageStore, rendering: InkImageRendering) {
+    self.init(source: source, resolvedStore: store, rendering: rendering)
+  }
+
+  /// 模块内部的显式 Store 注入 seam；用于确定性测试与内部集成。
+  @MainActor
+  convenience init(source: ImageSource, rendering: InkImageRendering, store: InkImageStore) {
+    self.init(source: source, resolvedStore: store, rendering: rendering)
+  }
+
+  @MainActor
+  private init(source: ImageSource, resolvedStore store: InkImageStore, rendering: InkImageRendering) {
     self.source = source
     self.store = store
     self.rendering = rendering

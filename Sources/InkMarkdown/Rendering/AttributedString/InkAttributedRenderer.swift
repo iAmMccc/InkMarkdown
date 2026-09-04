@@ -376,6 +376,10 @@ private struct InkRenderer {
     // 这样多位序号、任务列表 checkbox 与普通圆点都能自然对齐。
     let markers = items.enumerated().map { index, item in
       if ordered {
+        if let checkbox = item.checkbox {
+          let box = checkbox == .checked ? "\u{2611} " : "\u{2610} "
+          return "\(start + index). \(box)"
+        }
         return "\(start + index). "
       }
       if let checkbox = item.checkbox {
@@ -923,11 +927,13 @@ private struct InkRenderer {
       guard let imgAttachment = value as? InkImageAttachment else { return }
       mutable.addAttribute(.baselineOffset, value: CGFloat(0), range: range)
       if imgAttachment.bounds.height > lineHeight {
-        let para = NSMutableParagraphStyle()
-        para.baseWritingDirection = .natural
-        para.minimumLineHeight = lineHeight
-        para.maximumLineHeight = max(lineHeight, imgAttachment.bounds.height)
-        mutable.addAttribute(.paragraphStyle, value: para, range: range)
+        let paraRange = (mutable.string as NSString).paragraphRange(for: range)
+        let currentPara = mutable.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as? NSParagraphStyle
+        let updatedPara = InkImageParagraphStyle.elevating(
+          currentPara,
+          toAtLeast: max(lineHeight, imgAttachment.bounds.height)
+        )
+        mutable.addAttribute(.paragraphStyle, value: updatedPara, range: paraRange)
       }
     }
   }

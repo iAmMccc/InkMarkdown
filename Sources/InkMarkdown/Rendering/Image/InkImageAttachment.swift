@@ -1,5 +1,14 @@
 import UIKit
 
+/// 大图只抬升段落上限；段落缩进、对齐、间距与既有最小行高均由调用方保留。
+enum InkImageParagraphStyle {
+  static func elevating(_ existing: NSParagraphStyle?, toAtLeast height: CGFloat) -> NSMutableParagraphStyle {
+    let result = (existing?.mutableCopy() as? NSMutableParagraphStyle) ?? NSMutableParagraphStyle()
+    result.maximumLineHeight = max(result.maximumLineHeight, height)
+    return result
+  }
+}
+
 /// 行内图片通道：以 `NSTextAttachment` 嵌入 `NSAttributedString`。
 ///
 /// **纯变换阶段**（``InkAttributedRenderer``）仅构造 attachment，不触发 Store 解析。
@@ -253,12 +262,8 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
 
     let existing = textStorage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil)
       as? NSParagraphStyle
-    let para = (existing?.mutableCopy() as? NSMutableParagraphStyle) ?? NSMutableParagraphStyle()
-    let lockedMinimum = para.minimumLineHeight
-    let targetMaximum = max(lockedMinimum, maxImageHeight)
-    guard targetMaximum > para.maximumLineHeight else { return }
-
-    para.maximumLineHeight = targetMaximum
+    let para = InkImageParagraphStyle.elevating(existing, toAtLeast: maxImageHeight)
+    guard para.maximumLineHeight > (existing?.maximumLineHeight ?? 0) else { return }
     textStorage.addAttribute(.paragraphStyle, value: para, range: paragraphRange)
   }
 

@@ -223,6 +223,13 @@ struct InkSemanticMatrixTests {
     #expect(snapshot.plainText == "☐ 待办\n☑ 已完成\n☑ 大写完成")
   }
 
+  @Test("有序任务列表同时保留序号与 checkbox")
+  func orderedTaskList_preservesOrdinalAndCheckboxMarkers() {
+    let snapshot = RenderSnapshotting.snapshot("3. [ ] 待办\n4. [x] 已完成")
+
+    #expect(snapshot.plainText == "3. ☐ 待办\n4. ☑ 已完成")
+  }
+
   @Test("嵌套引用保持竖线标记并递进缩进")
   func nestedBlockquotes_increaseIndent() {
     let source = "> 外层引用\n>\n> > 内层引用"

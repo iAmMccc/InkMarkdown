@@ -3,6 +3,29 @@ import UIKit
 @testable import InkMarkdown
 import Markdown
 
+@MainActor
+private final class NotificationDeliveryCounter {
+  var value = 0
+}
+
+private final class ObserverTrackingNotificationCenter: NotificationCenter, @unchecked Sendable {
+  private let stateLock = NSLock()
+  private var storedRemovalCount = 0
+
+  var removalCount: Int {
+    stateLock.lock()
+    defer { stateLock.unlock() }
+    return storedRemovalCount
+  }
+
+  override func removeObserver(_ observer: Any) {
+    stateLock.lock()
+    storedRemovalCount += 1
+    stateLock.unlock()
+    super.removeObserver(observer)
+  }
+}
+
 // MARK: - #1 ImageSource scheme 解析
 
 @Test @MainActor func imageSource_httpScheme() {
@@ -210,7 +233,7 @@ import Markdown
 @Suite(.serialized)
 struct InkImageStoreTests {
 
-  /// 可控延迟 / 失败的加载器；串行队列保护可变计数（兼容 iOS 14+ / async）。
+  /// 可控延迟 / 失败的加载器；串行队列保护可变计数（兼容 iOS 15+ / async）。
   final class MockImageLoader: InkImageLoading, @unchecked Sendable {
     private var loadCount = 0
     private var completedCount = 0
@@ -452,6 +475,42 @@ struct InkImageStoreTests {
 
     let afterWarning = store.resolve(source: source, display: display, loader: loader)
     if case .ready = afterWarning { Issue.record("内存警告后不应缓存命中") }
+  }
+
+  @Test @MainActor func notificationObserverToken_removesRegistrationOnDeinit() {
+    let center = NotificationCenter()
+    let name = Notification.Name("InkImageStore.ObserverLifetime.Test")
+    let counter = NotificationDeliveryCounter()
+    var observer: InkNotificationObserverToken?
+
+    let token = center.addObserver(forName: name, object: nil, queue: .main) { _ in
+      MainActor.assumeIsolated {
+        counter.value += 1
+      }
+    }
+    observer = InkNotificationObserverToken(center: center, token: token)
+
+    center.post(name: name, object: nil)
+    #expect(counter.value == 1)
+    #expect(observer != nil)
+
+    observer = nil
+    center.post(name: name, object: nil)
+    #expect(counter.value == 1)
+  }
+
+  @Test @MainActor func storeDeinit_removesMemoryWarningObserver() {
+    let center = ObserverTrackingNotificationCenter()
+    weak var releasedStore: InkImageStore?
+
+    do {
+      let store = InkImageStore(notificationCenter: center)
+      releasedStore = store
+      #expect(center.removalCount == 0)
+    }
+
+    #expect(releasedStore == nil)
+    #expect(center.removalCount == 1)
   }
 
   /// #8 Tail 重渲不重复下载
@@ -841,6 +900,29 @@ struct InkImageStoreTests {
   }
 }
 
+@Test @MainActor func imageParagraphStyle_elevatesOnlyMaximumLineHeight() {
+  let original = NSMutableParagraphStyle()
+  original.minimumLineHeight = 22
+  original.maximumLineHeight = 22
+  original.alignment = .right
+  original.firstLineHeadIndent = 18
+  original.headIndent = 42
+  original.paragraphSpacing = 9
+
+  let elevated = InkImageParagraphStyle.elevating(original, toAtLeast: 130)
+
+  #expect(elevated.minimumLineHeight == 22)
+  #expect(elevated.maximumLineHeight == 130)
+  #expect(elevated.alignment == .right)
+  #expect(elevated.firstLineHeadIndent == 18)
+  #expect(elevated.headIndent == 42)
+  #expect(elevated.paragraphSpacing == 9)
+  #expect(original.maximumLineHeight == 22)
+
+  let notRegressed = InkImageParagraphStyle.elevating(elevated, toAtLeast: 90)
+  #expect(notRegressed.maximumLineHeight == 130)
+}
+
 // MARK: - #13 错误降级
 
 @Test @MainActor func errorDegradation_disabledShowsPlaceholder() {
@@ -940,11 +1022,13 @@ private func waitForImageLoads(
 @MainActor
 private func makeImageTextStorage(
   attachments: [InkImageAttachment],
-  lockedLineHeight: CGFloat = 22
+  lockedLineHeight: CGFloat = 22,
+  configureParagraph: ((NSMutableParagraphStyle) -> Void)? = nil
 ) -> (NSTextStorage, NSLayoutManager) {
   let para = NSMutableParagraphStyle()
   para.minimumLineHeight = lockedLineHeight
   para.maximumLineHeight = lockedLineHeight
+  configureParagraph?(para)
 
   let text = NSMutableAttributedString(string: "Hello ", attributes: [.paragraphStyle: para])
   for (index, attachment) in attachments.enumerated() {
@@ -987,6 +1071,44 @@ private func makeImageTextStorage(
   let paragraphRange = (storage.string as NSString).paragraphRange(for: NSRange(location: 0, length: 1))
   let style = storage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSParagraphStyle
   #expect(style?.minimumLineHeight == lockedLineHeight)
+  #expect(style?.maximumLineHeight == 130)
+}
+
+@Test @MainActor func applyImage_preservesExistingParagraphGeometry() async {
+  let url = URL(string: "https://example.com/indented-inline.png")!
+  let loader = SizedMockImageLoader(
+    imagesByURL: [url.absoluteString: makeTestImage(width: 100, height: 130)]
+  )
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.loader = loader
+
+  let store = InkImageStore()
+  let attachment = InkImageAttachment(source: ImageSource(url: url), rendering: rendering, store: store)
+  let (storage, layoutManager) = makeImageTextStorage(attachments: [attachment]) { paragraph in
+    paragraph.alignment = .right
+    paragraph.firstLineHeadIndent = 18
+    paragraph.headIndent = 42
+    paragraph.paragraphSpacing = 9
+  }
+
+  InkImageAttachment.bindAttachments(in: storage, layoutManager: layoutManager, store: store)
+  await waitForImageLoads(
+    count: 1,
+    loader: loader,
+    storage: storage,
+    expectedMaximumLineHeight: 130
+  )
+
+  let paragraphRange = (storage.string as NSString).paragraphRange(
+    for: NSRange(location: 0, length: 1)
+  )
+  let style = storage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil)
+    as? NSParagraphStyle
+  #expect(style?.alignment == .right)
+  #expect(style?.firstLineHeadIndent == 18)
+  #expect(style?.headIndent == 42)
+  #expect(style?.paragraphSpacing == 9)
   #expect(style?.maximumLineHeight == 130)
 }
 
@@ -1135,10 +1257,10 @@ private func makeImageTextStorage(
   rendering.loader = loader
 
   let store = InkImageStore()
-  let block = InkImageBlockView(
+  let block = InkImageBlock(
     source: ImageSource(url: url),
-    store: store,
-    rendering: rendering
+    rendering: rendering,
+    store: store
   )
   block.configure(containerWidth: 300, loader: loader)
 
@@ -1157,10 +1279,10 @@ private func makeImageTextStorage(
 @Test @MainActor func imageBlock_noneTapActionDoesNotInstallGesture() {
   var rendering = InkImageRendering()
   rendering.tapAction = .none
-  let block = InkImageBlockView(
+  let block = InkImageBlock(
     source: ImageSource(url: URL(string: "https://example.com/none.png")!),
-    store: InkImageStore(),
-    rendering: rendering
+    rendering: rendering,
+    store: InkImageStore()
   )
   let hasTap = block.gestureRecognizers?.contains { $0 is UITapGestureRecognizer } ?? false
   #expect(!hasTap)
@@ -1169,12 +1291,11 @@ private func makeImageTextStorage(
 @Test @MainActor func imageBlock_callbackTapActionInvokesOnImageTap() async {
   let url = URL(string: "https://example.com/tap-callback.png")!
   let loader = SizedMockImageLoader(
-    imagesByURL: [url.absoluteString: makeTestImage(width: 80, height: 60)]
+    imagesByURL: [url.absoluteString: makeTestImage(width: 200, height: 100)]
   )
-
+  var callCount = 0
   var tappedSource: ImageSource?
   var tappedImage: UIImage?
-  var callCount = 0
 
   var rendering = InkImageRendering()
   rendering.isEnabled = true
@@ -1187,10 +1308,10 @@ private func makeImageTextStorage(
   }
 
   let store = InkImageStore()
-  let block = InkImageBlockView(
+  let block = InkImageBlock(
     source: ImageSource(url: url),
-    store: store,
-    rendering: rendering
+    rendering: rendering,
+    store: store
   )
   #expect(block.gestureRecognizers?.contains { $0 is UITapGestureRecognizer } == true)
 
@@ -1219,10 +1340,10 @@ private func makeImageTextStorage(
     callCount += 1
   }
 
-  let block = InkImageBlockView(
+  let block = InkImageBlock(
     source: ImageSource(url: url),
-    store: InkImageStore(),
-    rendering: rendering
+    rendering: rendering,
+    store: InkImageStore()
   )
   block.handleConfiguredTap()
   #expect(callCount == 1)
@@ -1271,10 +1392,10 @@ private func makeImageTextStorage(
   var rendering = InkImageRendering()
   rendering.isEnabled = true
   rendering.placeholderHeight = 160
-  let block = InkImageBlockView(
+  let block = InkImageBlock(
     source: ImageSource(url: URL(string: "https://example.com/unconfigured.png")!),
-    store: InkImageStore(),
-    rendering: rendering
+    rendering: rendering,
+    store: InkImageStore()
   )
   #expect(block.intrinsicContentSize.height == 0)
 }
@@ -1290,10 +1411,10 @@ private func makeImageTextStorage(
   rendering.loader = loader
 
   let store = InkImageStore()
-  let block = InkImageBlockView(
+  let block = InkImageBlock(
     source: ImageSource(url: url),
-    store: store,
-    rendering: rendering
+    rendering: rendering,
+    store: store
   )
   block.configure(containerWidth: 300, loader: loader)
 
@@ -1343,7 +1464,7 @@ private func makeImageTextStorage(
   }
   #expect(didCacheImage)
 
-  let block = InkImageBlockView(source: source, store: store, rendering: rendering)
+  let block = InkImageBlock(source: source, rendering: rendering, store: store)
   #expect(block.intrinsicContentSize.height == 0)
 
   block.configure(containerWidth: containerWidth, loader: loader)

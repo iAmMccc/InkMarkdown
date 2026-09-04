@@ -94,6 +94,6 @@ enum InkSemanticComparator {
   }
 
   private static func sameDynamicType(_ lhs: Any, _ rhs: Any) -> Bool {
-    String(reflecting: type(of: lhs)) == String(reflecting: type(of: rhs))
+    ObjectIdentifier(type(of: lhs)) == ObjectIdentifier(type(of: rhs))
   }
 }

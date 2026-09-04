@@ -13,14 +13,15 @@ struct InkImageBlockAPITests {
 
   @Test("InkImageBlock 是 UIView 子类")
   func imageBlock_isUIViewSubclass() {
-    #expect(InkImageBlock.self is UIView.Type)
+    #expect(InkImageBlock.isSubclass(of: UIView.self))
     let block = InkImageBlock(
       source: ImageSource(url: URL(string: "https://example.com/a.png")!),
       rendering: InkImageRendering()
     )
-    #expect(block is UIView)
+    #expect(block.isKind(of: UIView.self))
   }
 
+  @available(*, deprecated)
   @Test("deprecated init(source:store:rendering:) 可编译并创建视图")
   func imageBlock_deprecatedStoreInitCompiles() {
     let store = InkImageStore()
@@ -34,18 +35,18 @@ struct InkImageBlockAPITests {
     #expect(block.source.rawURL.absoluteString.contains("legacy.png"))
   }
 
-  @Test("makeView 返回 UIView 且为 InkImageBlock 实例")
-  func imageBlock_makeViewReturnsInkImageBlockView() {
+  @Test("makeView 返回原 InkImageBlock 实例")
+  func imageBlock_makeViewReturnsSameBlock() {
     let block = InkImageBlock(
       source: ImageSource(url: URL(string: "https://example.com/b.png")!),
       rendering: InkImageRendering()
     )
     let view = block.makeView()
-    #expect(view is UIView)
     #expect(view is InkImageBlock)
     #expect(view === block)
   }
 
+  @available(*, deprecated)
   @Test("InkImageBlockView 为 InkImageBlock 兼容别名")
   func imageBlock_viewTypealias() {
     let legacy = InkImageBlockView(
@@ -53,7 +54,7 @@ struct InkImageBlockAPITests {
       store: InkImageStore(),
       rendering: InkImageRendering()
     )
-    #expect(legacy is InkImageBlock)
-    #expect(legacy is UIView)
+    #expect(legacy.isKind(of: UIView.self))
+    #expect(legacy.source.rawURL.absoluteString.contains("alias.png"))
   }
 }

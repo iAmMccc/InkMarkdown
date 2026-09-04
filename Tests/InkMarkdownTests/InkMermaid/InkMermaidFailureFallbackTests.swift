@@ -143,7 +143,7 @@ private func waitForGeneratedLoaderCompletion(
       """,
       configuration: config
     )
-    guard let block = blocks.first?.makeView() as? InkImageBlockView else {
+    guard let block = blocks.first?.makeView() as? InkImageBlock else {
       Issue.record("应生成 InkImageBlock")
       return
     }
@@ -194,7 +194,7 @@ private func waitForGeneratedLoaderCompletion(
       source: "sequenceDiagram\n  A->>B: hi",
       styleIdentity: "light"
     ))
-    let block = InkImageBlockView(source: source, store: store, rendering: rendering)
+    let block = InkImageBlock(source: source, rendering: rendering, store: store)
     block.configure(containerWidth: 280, loader: slowLoader)
 
     let texts = collectLabelTexts(in: block)
@@ -211,10 +211,10 @@ private func waitForGeneratedLoaderCompletion(
     rendering.isEnabled = true
     rendering.loader = loader
 
-    let block = InkImageBlockView(
+    let block = InkImageBlock(
       source: ImageSource(url: url),
-      store: InkImageStore(),
-      rendering: rendering
+      rendering: rendering,
+      store: InkImageStore()
     )
     block.configure(containerWidth: 300, loader: loader)
     await waitForLoaderCompletion(count: 1, loader: loader)
@@ -238,7 +238,7 @@ private func waitForGeneratedLoaderCompletion(
     rendering.failureFallback = .sourceCode(mermaidSource, language: "mermaid")
 
     let store = InkImageStore()
-    let block = InkImageBlockView(source: generatedSource, store: store, rendering: rendering)
+    let block = InkImageBlock(source: generatedSource, rendering: rendering, store: store)
 
     let failingLoader = FailingGeneratedImageLoader()
     block.configure(containerWidth: 300, loader: failingLoader)
@@ -270,7 +270,7 @@ private func waitForGeneratedLoaderCompletion(
       source: "flowchart TD\n  Q-->R",
       styleIdentity: "light"
     ))
-    let block = InkImageBlockView(source: source, store: InkImageStore(), rendering: rendering)
+    let block = InkImageBlock(source: source, rendering: rendering, store: InkImageStore())
     block.configure(containerWidth: 260, loader: FailingGeneratedImageLoader())
 
     let deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000
