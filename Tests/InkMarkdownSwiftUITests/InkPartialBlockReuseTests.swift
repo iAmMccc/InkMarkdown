@@ -6,7 +6,7 @@
 import Testing
 import UIKit
 @testable import InkMarkdownSwiftUI
-@_spi(InkMarkdown) import InkMarkdown
+@_spi(InkMarkdown) @testable import InkMarkdown
 
 private struct TestReusableLabelBlock: InkReusableBlock {
   let text: String
@@ -184,8 +184,8 @@ struct InkPartialBlockReuseTests {
     var rendering = InkImageRendering()
     rendering.isEnabled = true
     let source = ImageSource(url: URL(string: "https://example.com/image.png")!)
-    let first = InkImageBlock(source: source, store: InkImageStore(), rendering: rendering)
-    let second = InkImageBlock(source: source, store: InkImageStore(), rendering: rendering)
+    let first = InkImageBlock(source: source, rendering: rendering, store: InkImageStore())
+    let second = InkImageBlock(source: source, rendering: rendering, store: InkImageStore())
 
     #expect(!second.hasEquivalentContent(to: first))
   }
@@ -226,8 +226,8 @@ struct InkPartialBlockReuseTests {
     let coordinator = makeCoordinator(for: container)
     var oldBlock: InkImageBlock? = InkImageBlock(
       source: ImageSource(url: oldURL),
-      store: store,
-      rendering: oldRendering
+      rendering: oldRendering,
+      store: store
     )
     let releasedOldBlock = TestWeakReference(oldBlock)
     coordinator.updateBlocks([try #require(oldBlock)], configuration: .standard)
@@ -236,8 +236,8 @@ struct InkPartialBlockReuseTests {
 
     let newBlock = InkImageBlock(
       source: ImageSource(url: newURL),
-      store: store,
-      rendering: newRendering
+      rendering: newRendering,
+      store: store
     )
     coordinator.updateBlocks([newBlock], configuration: .standard)
     newBlock.frame = CGRect(x: 0, y: 0, width: 200, height: 160)

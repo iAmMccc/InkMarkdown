@@ -1,4 +1,5 @@
 import UIKit
+import InkMarkdown
 
 /// 流式 remainder 富文本的承载视图：自持 `linkTapHandler` 并作为自身 delegate。
 ///
@@ -16,14 +17,21 @@ final class InkStreamingTextView: UITextView, UITextViewDelegate {
   }
 
   init() {
-    super.init(frame: .zero, textContainer: nil)
+    let textContainer = NSTextContainer(size: CGSize(width: 0, height: CGFloat.greatestFiniteMagnitude))
+    textContainer.lineFragmentPadding = 0
+    let layoutManager = InkMarkdownLayoutManager()
+    layoutManager.usesFontLeading = false
+    layoutManager.addTextContainer(textContainer)
+    let textStorage = NSTextStorage()
+    textStorage.addLayoutManager(layoutManager)
+
+    super.init(frame: .zero, textContainer: textContainer)
     isEditable = false
     isSelectable = true
     isScrollEnabled = false
     adjustsFontForContentSizeCategory = true
     backgroundColor = .clear
     textContainerInset = .zero
-    textContainer.lineFragmentPadding = 0
     // Markdown 文本在解析阶段已由引擎打上 .link 属性，无需系统数据探测器参与。
     dataDetectorTypes = []
   }

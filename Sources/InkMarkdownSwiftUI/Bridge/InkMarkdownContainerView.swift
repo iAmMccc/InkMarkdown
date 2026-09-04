@@ -6,6 +6,18 @@
 @_spi(InkMarkdown) import InkMarkdown
 import UIKit
 
+enum InkIntrinsicMeasurementWidthResolver {
+  static func resolve(
+    contentWidth: CGFloat,
+    windowWidth: CGFloat,
+    legacyFallbackWidth: CGFloat
+  ) -> CGFloat {
+    if contentWidth > 0 { return contentWidth }
+    if windowWidth > 0 { return windowWidth }
+    return max(legacyFallbackWidth, 0)
+  }
+}
+
 /// 承载 Markdown 块级视图的 UIKit 容器视图。
 ///
 /// 测量入口唯一：`sizeThatFits` 与 `intrinsicContentSize` 调用 `measureContent`。
@@ -298,11 +310,11 @@ final class InkMarkdownContainerView: UIView {
   }
 
   override var intrinsicContentSize: CGSize {
-    reportContinuityLayoutEnvironmentIfNeeded()
-    let width = resolvedWidth
+    let width = intrinsicMeasurementWidth
     guard width > 0 else {
       return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
     }
+    reportContinuityLayoutEnvironmentIfNeeded(width)
     let height = measureContent(for: width)
     return CGSize(width: UIView.noIntrinsicMetric, height: height)
   }
@@ -340,6 +352,28 @@ final class InkMarkdownContainerView: UIView {
     return 0
   }
 
+  /// iOS 15 的 `UIViewRepresentable` 没有 proposal-based 测量入口。宿主层级首轮宽度
+  /// 仍为零时，优先采用实际 window 宽度；仅在 iOS 15 且尚未挂入 window 时退回主屏宽度。
+  private var intrinsicMeasurementWidth: CGFloat {
+    let legacyFallbackWidth: CGFloat
+    if #unavailable(iOS 16.0) {
+      legacyFallbackWidth = legacyMainScreenWidth
+    } else {
+      legacyFallbackWidth = 0
+    }
+    return InkIntrinsicMeasurementWidthResolver.resolve(
+      contentWidth: resolvedWidth,
+      windowWidth: window?.bounds.width ?? 0,
+      legacyFallbackWidth: legacyFallbackWidth
+    )
+  }
+
+  /// `UIScreen.main` 自 iOS 16 起废弃；此兼容入口只会编译并运行于 iOS 15 路径。
+  @available(iOS, introduced: 15.0, obsoleted: 16.0)
+  private var legacyMainScreenWidth: CGFloat {
+    UIScreen.main.bounds.width
+  }
+
   private func reportContinuityLayoutEnvironmentIfNeeded(
     _ proposedWidth: CGFloat? = nil,
     forceEnvironmentChange: Bool = false
@@ -370,15 +404,15 @@ final class InkMarkdownContainerView: UIView {
   private func measureContent(for width: CGFloat) -> CGFloat {
     guard width > 0 else { return 0 }
 
-    // Measurement keys use the exact CGFloat width. Invalidate on the same equality
-    // rule so sub-pixel layout jitter cannot accumulate one N-slot cache per width.
-    if lastMeasuredWidth != width {
+    // Measurement key 使用精确 CGFloat；容差内必须复用上次规范宽度，否则虽不清缓存，
+    // 仍会为每个亚像素抖动追加一组新 key，最终形成无界缓存增长。
+    if lastMeasuredWidth <= 0 || abs(lastMeasuredWidth - width) > 0.1 {
       continuityMeasurementCache.removeAll(keepingCapacity: true)
       lastMeasuredWidth = width
     }
 
     blockMeasurementInvocationCount = 0
-    return measureContinuityContent(for: width)
+    return measureContinuityContent(for: lastMeasuredWidth)
   }
 
   @discardableResult

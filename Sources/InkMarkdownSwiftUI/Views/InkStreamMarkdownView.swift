@@ -76,26 +76,8 @@ public struct InkStreamMarkdownView: View {
     session.updateRenderEnvironment(
       InkRenderEnvironment(
         userInterfaceStyle: colorScheme == .dark ? .dark : .light,
-        contentSizeCategory: uiContentSizeCategory(from: sizeCategory)
+        contentSizeCategory: UIContentSizeCategory.from(swiftUICategory: sizeCategory)
       )
     )
-  }
-
-  private func uiContentSizeCategory(from swiftUICategory: ContentSizeCategory) -> UIContentSizeCategory {
-    switch swiftUICategory {
-    case .extraSmall: return .extraSmall
-    case .small: return .small
-    case .medium: return .medium
-    case .large: return .large
-    case .extraLarge: return .extraLarge
-    case .extraExtraLarge: return .extraExtraLarge
-    case .extraExtraExtraLarge: return .extraExtraExtraLarge
-    case .accessibilityMedium: return .accessibilityMedium
-    case .accessibilityLarge: return .accessibilityLarge
-    case .accessibilityExtraLarge: return .accessibilityExtraLarge
-    case .accessibilityExtraExtraLarge: return .accessibilityExtraExtraLarge
-    case .accessibilityExtraExtraExtraLarge: return .accessibilityExtraExtraExtraLarge
-    @unknown default: return .large
-    }
   }
 }

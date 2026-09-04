@@ -91,9 +91,83 @@ struct InkMarkdownP0GateTests {
     #expect(container.blockMeasurementInvocationCount >= 1)
   }
 
-  @Test("iOS 14 ICS 回传高度", .disabled("本机无 iOS 14 Simulator runtime，未交付"))
-  func ios14ICS_heightNotDelivered() {
-    Issue.record("iOS 14 ICS 回传高度需在 iOS 14 runtime 上实测；当前环境未交付")
+  @Test("零宽容器从 window 建立固有尺寸测量基准")
+  func zeroWidthContainer_usesWindowForIntrinsicMeasurement() {
+    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 360, height: 800))
+    let zeroWidthHost = UIView(frame: CGRect(x: 0, y: 0, width: 0, height: 800))
+    let container = InkMarkdownContainerView()
+    let coordinator = InkMarkdownCoordinator()
+    window.addSubview(zeroWidthHost)
+    zeroWidthHost.addSubview(container)
+    coordinator.containerView = container
+    defer { coordinator.teardown(from: container) }
+
+    coordinator.updateStatic(markdown: "# 固有尺寸验证", configuration: InkConfiguration.standard)
+
+    // 这是当前 runtime 的代码路径契约；iOS 15 runtime 仍须单独实测。
+    #expect(container.bounds.width == 0)
+    #expect(container.superview?.bounds.width == 0)
+    #expect(container.window === window)
+    #expect(container.intrinsicContentSize.height > 0)
+  }
+
+  @Test("固有尺寸宽度解析保留 iOS 15 detached fallback")
+  func intrinsicWidthResolver_usesLegacyFallbackLast() {
+    #expect(
+      InkIntrinsicMeasurementWidthResolver.resolve(
+        contentWidth: 0,
+        windowWidth: 0,
+        legacyFallbackWidth: 375
+      ) == 375
+    )
+    #expect(
+      InkIntrinsicMeasurementWidthResolver.resolve(
+        contentWidth: 0,
+        windowWidth: 360,
+        legacyFallbackWidth: 375
+      ) == 360
+    )
+    #expect(
+      InkIntrinsicMeasurementWidthResolver.resolve(
+        contentWidth: 320,
+        windowWidth: 360,
+        legacyFallbackWidth: 375
+      ) == 320
+    )
+  }
+
+  @Test("流式富文本持有 InkMarkdownLayoutManager")
+  func streamingTextView_usesMarkdownLayoutManager() {
+    let textView = InkStreamingTextView()
+    textView.attributedText = InkAttributedRenderer.render("`inline code`\n\n> quote")
+    let codeLocation = (textView.attributedText.string as NSString).range(of: "inline code").location
+
+    #expect(textView.layoutManager is InkMarkdownLayoutManager)
+    #expect(
+      textView.attributedText.attribute(
+        .inkInlineCodeBackground,
+        at: codeLocation,
+        effectiveRange: nil
+      ) is InkInlineCodeBackgroundInfo
+    )
+    let quoteLocation = (textView.attributedText.string as NSString).range(of: "quote").location
+    #expect(
+      textView.attributedText.attribute(
+        .inkBlockquoteBar,
+        at: quoteLocation,
+        effectiveRange: nil
+      ) is InkBlockquoteBarInfo
+    )
+  }
+
+  @Test("SwiftUI Dynamic Type 映射覆盖普通与辅助功能档位")
+  func contentSizeCategoryMapping_preservesSemanticCategory() {
+    #expect(UIContentSizeCategory.from(swiftUICategory: .extraSmall) == .extraSmall)
+    #expect(UIContentSizeCategory.from(swiftUICategory: .large) == .large)
+    #expect(
+      UIContentSizeCategory.from(swiftUICategory: .accessibilityExtraExtraExtraLarge)
+        == .accessibilityExtraExtraExtraLarge
+    )
   }
 
   private static let longStaticFixture: String = {

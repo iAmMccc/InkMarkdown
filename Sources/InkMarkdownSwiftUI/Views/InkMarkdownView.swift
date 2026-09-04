@@ -36,7 +36,6 @@ public struct InkMarkdownView: View {
   private let configuration: InkConfiguration?
 
   @Environment(\.inkConfiguration) private var environmentConfiguration
-  @Environment(\.colorScheme) private var colorScheme
 
   /// 创建一个 Markdown 渲染视图。
   ///
@@ -61,12 +60,7 @@ public struct InkMarkdownView: View {
   /// 解析当前生效的渲染配置。
   /// 优先级：显式传入配置 > 环境注入配置 > 默认标准配置。
   private var resolvedConfiguration: InkConfiguration {
-    var resolved = configuration ?? environmentConfiguration ?? .standard
-    resolved.renderEnvironment = InkRenderEnvironment(
-      userInterfaceStyle: colorScheme == .dark ? .dark : .light,
-      contentSizeCategory: UITraitCollection.current.preferredContentSizeCategory
-    )
-    return resolved
+    configuration ?? environmentConfiguration ?? .standard
   }
 
   public var body: some View {

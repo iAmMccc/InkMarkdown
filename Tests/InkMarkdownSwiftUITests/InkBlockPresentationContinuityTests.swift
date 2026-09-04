@@ -169,8 +169,12 @@ struct InkBlockPresentationContinuityTests {
         CGSize(width: jitteredWidth, height: CGFloat.greatestFiniteMagnitude)
       )
       #expect(
+        container.blockMeasurementInvocationCount == 0,
+        "0.1pt 容差内的宽度抖动必须复用规范宽度的 measurement"
+      )
+      #expect(
         container.continuityMeasurementCacheCountForTesting == 2,
-        "精确 width key 的微小抖动也必须先淘汰旧宽度 slots"
+        "亚像素宽度抖动不得清空或扩张 measurement cache"
       )
     }
     thoughtView.onReservedHeightChanged?()
