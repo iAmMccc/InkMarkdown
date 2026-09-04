@@ -9,7 +9,7 @@
 | Framework | **Swift Testing + XCTest** | `import Testing` / `@Test` / `@Suite`；现有 XCTest 测试 |
 | Location | `Tests/` 下的 Core、addon contract、LaTeX、确定性 Mermaid、SwiftUI adapter 与 ExampleApp policy targets；`ExampleApp/ExampleAppMermaidIntegrationTests/` 为 app-hosted WebKit integration target | `Package.swift` testTarget + `ExampleApp.xcodeproj` |
 | Host requirement | **iOS Simulator**（UIKit / SwiftUI adapter） | `docs/current-status.md`、`AGENTS.md` |
-| P0 release gate | SwiftUI adapter P0 闸门：`Tests/InkMarkdownSwiftUITests/InkMarkdownP0GateTests.swift`（静态/流式测量、thought identity、promotion、trait 重测）；iOS 14 ICS 用例标记 `.disabled`（**实测未交付**） | `@Suite("SwiftUI Adapter P0 闸门")` |
+| P0 release gate | SwiftUI adapter P0 闸门：`Tests/InkMarkdownSwiftUITests/InkMarkdownP0GateTests.swift`（静态/流式测量、thought identity、promotion、trait 重测、iOS 15 固有尺寸协商契约） | `@Suite("SwiftUI Adapter P0 闸门")` |
 | Static declarations | Core `@Test` + XCTest；SwiftUI adapter 契约与 P0 闸门；参数化 `@Test(arguments:)` 会展开为额外 execution case | 测试源码 |
 | Coverage gate | 无强制 coverage 阈值文件 | scan / 仓库根 |
 
@@ -67,7 +67,7 @@ xcodebuild -project ExampleApp/ExampleApp.xcodeproj \
 | 增量与全量输出一致性 + 性能闸门 | opt-in 图片策略契约测试（默认占位 + 开启真图） |
 | 快照脚手架可用性 | ExampleApp UI 自动化（库测试未覆盖） |
 | appearance 默认数值 | SwiftUI 完整 Markdown 语义、交互与可访问性矩阵 |
-| SwiftUI 静态配置刷新、会话状态机、headless finish、重置与配置 snapshot | iOS/iPadOS 14 验证与性能基线 |
+| SwiftUI 静态配置刷新、会话状态机、headless finish、重置与配置 snapshot | iOS/iPadOS 15 runtime 验证与性能基线 |
 | App-hosted Mermaid WebKit → PNG 与右缘裁切关键链路 | 网络图片、完整表格/链接交互与系统级 VoiceOver 人工验收 |
 | CI 自动运行 iOS 测试（`.github/workflows/ci.yml`，push/PR 指定 Xcode 26.6 + iOS Simulator 26.5，见 `CONCERNS.md` High-2 Done） | SwiftUI ExampleApp UI 自动化 |
 

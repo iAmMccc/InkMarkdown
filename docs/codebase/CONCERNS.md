@@ -12,7 +12,7 @@
 | ~~High~~ Done | ~~流式显示刷新逻辑处于测试盲区~~ | `onDisplayFrame` 由 CADisplayLink 驱动，集成测试不触发；节流分支此前无任何测试执行 | 行为变化无回归防线 | 已抽 `refreshTextStorage` 纯函数 seam 并补测试（`InkStreamRendererRefreshTests.swift`） |
 | ~~Med~~ Done | ~~finish 后 append 无保护~~ | `InkStreamRenderer.append` 无终态守卫，可覆盖 finalize 结果 | 终态被污染、onFinishDisplay 提前触发 | 已加 `guard !isFinished` 并有测试钉住 |
 | ~~Med~~ Done | ~~配置语义相等性只看数量与 nil 性~~ | `InkConfiguration.isSemanticallyEqualTo` 曾把内容不同的配置误判相等，SwiftUI Coordinator 据此漏更新 | 配置内容变化不触发重渲 | 已收敛到 `InkSemanticComparator`：值类型比较完整状态，不透明闭包、loader 与回调使用显式 `InkSemanticIdentity`；直接赋值保守刷新。配置语义与 Coordinator 幂等测试共同钉住 |
-| Med | 最低平台验证 | ADR-008 仅承诺 iOS/iPadOS 14+；manifest 已仅声明 `.iOS(.v14)`，当前全量回归来自 iPhone 17 / iOS 26.5 | 可能把较高版本 Simulator 结果误当作最低版本支持 | v0.0.2 前完成 iOS/iPadOS 14 验证；不为其他平台建立路径 |
+| Med | 最低平台验证 | ADR-010 将当前范围提升为 iOS/iPadOS 15+；manifest 已仅声明 `.iOS(.v15)`，当前全量回归来自 iPhone 17 Pro Max / iOS 26.5 | 可能把较高版本 Simulator 结果误当作最低版本支持 | v0.0.2 前完成 iOS/iPadOS 15 验证；不为其他平台建立路径 |
 | ~~Med~~ Done | ~~`isSemanticallyEqualTo` 对「同类型不同状态」仍判相等~~ | 内置扩展通过 `InkConfigurationSemanticsProviding` 或稳定 `InkSemanticIdentity` 比较完整状态；未知扩展保守判为不等价；块复用比较已覆盖样式、渲染配置、表格边界、图片 store 与生成 loader | 已避免 Coordinator 因有损比较漏更新，也避免旧异步图片结果回灌新块 | 新增有状态扩展时必须提供完整值语义或稳定 identity，并补配置与块复用回归 |
 | Low | 增量性能基准偶发超时 | `StreamingPerformanceTests.incremental_renderIsFasterThanFullRender` 在机器高负载下偶发失败（同日多次复跑通过，P3 与模块级复跑均通过） | 负载相关 flaky，非逻辑回归 | 复跑确认；必要时给基准加宽裕或标注 flaky |
 | ~~Med~~ Done | ~~流式 `maximumSourceLength = 50_000` 固定~~ | renderer/session initializer 已开放自定义上限并共享不可变 snapshot；ADR-005 | canonical source、finish 与 promotion 已统一 | 默认值变更时重跑 source-limit 与性能门槛 |
@@ -73,7 +73,7 @@
 | 议题 | 决策摘要 | ADR |
 |------|----------|-----|
 | 依赖策略 | 默认固定 revision；`Packages/Caches` 作为可选离线路径 | [ADR-001](../decisions/ADR-001-swift-markdown-dependency-pinning.md) |
-| 平台范围 | 当前产品路线仅支持 iOS 14+ / iPadOS 14+；不支持其他平台 | [ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md) |
+| 平台范围 | 当前产品路线仅支持 iOS 15+ / iPadOS 15+；不支持其他平台 | [ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)、[ADR-010](../decisions/ADR-010-v0.0.2-minimum-platform-ios-15.md) |
 | docs/codebase | 作为项目结构与状态证据层 | [ADR-003](../decisions/ADR-003-docs-codebase-evidence-layer.md) |
 | 图片 / 删除线 | v1 默认占位 + opt-in 真图（ADR-006）；删除线样式已实现 | [ADR-004](../decisions/ADR-004-v1-image-and-strikethrough-contract.md)、[ADR-006](../decisions/ADR-006-opt-in-image-rendering.md) |
 | maximumSourceLength | 可配置，默认 50_000 | [ADR-005](../decisions/ADR-005-stream-max-parse-length-configurable.md) |
@@ -92,7 +92,7 @@
 | Intent (docs / AGENTS) | Reality (repo) |
 |------------------------|----------------|
 | UIKit-first engine + SwiftUI adapter 产品路线 | 已发布 `0.0.1` 为 UIKit-first；当前 source 已有独立 `InkMarkdownSwiftUI` adapter，v0.0.2 尚未发布 |
-| iOS/iPadOS 14+ 范围 | ADR-008 已排除其他平台；manifest 已收敛，iOS/iPadOS 14 验证仍是 v0.0.2 blocker |
+| iOS/iPadOS 15+ 范围 | ADR-010 已提升最低平台，ADR-008 继续排除其他平台；manifest 已收敛，iOS/iPadOS 15 验证仍是 v0.0.2 blocker |
 | 依赖可重复构建 | 直接依赖 revision pin（ADR-001）；本地 Caches 可选 |
 | v0.0.2 前完善 + 发布证据 | 核心 UIKit implementation、CI、SwiftUI adapter 基础契约与 iPhone/iPad ExampleApp 关键链路证据已落地；最低系统、完整可访问性、网络图片与真机性能证据仍未完成 |
-| 完整语义测试矩阵 | 2026-09-02 本地候选 iPhone 17 Pro / iOS 26.5 Package 全量：333 通过、0 失败、1 项跳过；非远端 CI。测试已按关键数据/状态/语义链路收口；ExampleApp 真网图片/旋转/Split View 与最低版本矩阵仍缺 |
+| 完整语义测试矩阵 | 2026-09-04 当前工作树 iPhone 17 Pro Max / iOS 26.5 Package 全量：342 通过、0 失败、0 跳过；ExampleApp Debug/Release 与 1 项宿主测试通过；非远端 CI。真网图片/旋转/Split View 与最低版本矩阵仍缺 |

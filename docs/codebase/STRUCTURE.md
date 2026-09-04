@@ -57,7 +57,7 @@ Sources/InkMarkdown/
 
 | 模块 | 目录布局 | 说明 |
 |------|--------|-------|
-| Tests | Core、core/addon contract、LaTeX、确定性 Mermaid、SwiftUI adapter、ExampleApp policy 与 app-hosted Mermaid integration targets | 使用 Swift Testing 与 XCTest；2026-09-02 本地候选 iPhone 17 Pro / iOS 26.5 Package 全量：333 通过、0 失败、1 项跳过；非远端 CI |
+| Tests | Core、core/addon contract、LaTeX、确定性 Mermaid、SwiftUI adapter、ExampleApp policy 与 app-hosted Mermaid integration targets | 使用 Swift Testing 与 XCTest；2026-09-04 当前工作树 iPhone 17 Pro Max / iOS 26.5 Package 全量：342 通过、0 失败、0 跳过；非远端 CI |
 | ExampleApp | `AppDelegate` / `SceneDelegate`、列表与详情页（块渲染、SSE、Pager 等） | 独立 Xcode 工程，提供宿主集成示例 |
 
 ### 4) 公开入口
@@ -84,4 +84,4 @@ Sources/InkMarkdown/
 - `Sources/InkMarkdown/**`
 - `Tests/InkMarkdownTests/**`
 - `docs/codebase/.codebase-scan.txt`
-- 当前候选已跟踪 `Sources` 下的 74 个 Swift 源文件；`git status --porcelain=v2` 为空
+- 执行时的 `Sources` 文件清单与 `git status --porcelain=v2`；不在本文固化易漂移的数量或洁净状态

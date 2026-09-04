@@ -11,7 +11,8 @@
 | [ADR-005](ADR-005-stream-max-parse-length-configurable.md) | 流式长度上限可配置（历史名 `maxParseLength`；现名 `maximumSourceLength`） | Accepted |
 | [ADR-006](ADR-006-opt-in-image-rendering.md) | opt-in 图片真图渲染（默认保持占位） | Accepted |
 | [ADR-007](ADR-007-local-generated-diagrams-and-formulas.md) | LaTeX / Mermaid 本地生成图复用统一 Image Store | Accepted |
-| [ADR-008](ADR-008-swiftui-adapter-architecture.md) | v0.0.2 以独立 SwiftUI Adapter Product 正式支持 SwiftUI | Accepted（块呈现连续性由 ADR-009 amend） |
+| [ADR-008](ADR-008-swiftui-adapter-architecture.md) | v0.0.2 以独立 SwiftUI Adapter Product 正式支持 SwiftUI | Accepted（由 ADR-009、ADR-010 amend） |
 | [ADR-009](ADR-009-block-presentation-continuity.md) | 块呈现连续性由 SwiftUI Adapter 持有 | Accepted |
+| [ADR-010](ADR-010-v0.0.2-minimum-platform-ios-15.md) | v0.0.2 最低平台升级为 iOS / iPadOS 15 | Accepted |
 
 编号递增且只增不删；决策变更时补充新 ADR；部分变更时将旧 ADR 标记为 Amended 或 Superseded。

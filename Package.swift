@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
   name: "InkMarkdown",
   platforms: [
-    .iOS(.v14)
+    .iOS(.v15)
   ],
   products: [
     // 对外暴露的库产品

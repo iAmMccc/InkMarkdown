@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
   name: "InkMarkdownConsumerSmoke",
   platforms: [
-    .iOS(.v14),
+    .iOS(.v15),
   ],
   products: [
     .library(name: "InkMarkdownCoreConsumer", targets: ["InkMarkdownCoreConsumer"]),

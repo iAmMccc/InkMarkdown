@@ -2,13 +2,13 @@
 
 ## Status
 
-Accepted（Amended by ADR-009）
+Accepted（Amended by ADR-009、ADR-010）
 
 ## Date
 
 2026-08-17
 
-> 2026-08-28 amendment： [ADR-009](ADR-009-block-presentation-continuity.md) 将静态、流式与 promotion 的块呈现连续性收敛到 SwiftUI adapter 内部 module，并取代“`InkThoughtBlock` / render session 持有 live Thought 折叠态”的局部设计。本文的 product、依赖方向、平台与公开 interface 决策保持有效。
+> 2026-08-28 amendment： [ADR-009](ADR-009-block-presentation-continuity.md) 将静态、流式与 promotion 的块呈现连续性收敛到 SwiftUI adapter 内部 module，并取代“`InkThoughtBlock` / render session 持有 live Thought 折叠态”的局部设计。2026-09-04 amendment：[ADR-010](ADR-010-v0.0.2-minimum-platform-ios-15.md) 将 v0.0.2 最低平台从 iOS / iPadOS 14 提升为 15；本文保留原始平台决策作为历史记录。
 
 ## Context
 
@@ -90,6 +90,7 @@ Accepted（Amended by ADR-009）
 
 - [SwiftUI Adapter 总体技术设计](../contributor-guide/08-swiftui-adapter-architecture.md)
 - [ADR-009：块呈现连续性由 SwiftUI Adapter 持有](ADR-009-block-presentation-continuity.md)
+- [ADR-010：v0.0.2 最低平台升级为 iOS / iPadOS 15](ADR-010-v0.0.2-minimum-platform-ios-15.md)
 - [Block Presentation Continuity module 技术设计](../contributor-guide/11-block-presentation-continuity.md)
 - [ADR-002: v1.0 对外平台范围仅 iOS 14+](ADR-002-v1-platform-scope-ios-only.md)（平台范围由本 ADR supersede）
 - [SwiftUI Markdown 生态研究](../references/swiftui-markdown-ecosystem-research.md)

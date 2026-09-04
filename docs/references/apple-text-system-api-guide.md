@@ -27,7 +27,7 @@
 | UIKit 结合 | `UITextView.attributedText` 直接支持 | 需要转换为 `NSAttributedString` 或用于 SwiftUI |
 | InkMarkdown | 当前公开导出类型 | 未作为公开导出类型 |
 
-由于 InkMarkdown 支持 iOS 14 并原生适配 UIKit，因此选用 `NSAttributedString` 作为核心输出形态。
+由于 InkMarkdown v0.0.2 的部署目标为 iOS 15+，且使用 UIKit rendering engine，因此选用 `NSAttributedString` 作为核心输出形态；iOS / iPadOS 15 runtime 仍待验证，不能仅凭部署声明视为已交付支持。
 
 ## TextKit 1 架构与对象关系
 

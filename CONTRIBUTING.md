@@ -17,7 +17,7 @@
 ## 开发与环境配置
 
 - **Swift 工具链**：Swift 6.2+（Package 采用 Swift 5 语言模式）
-- **目标平台**：iOS 14.0+
+- **目标平台**：iOS 15.0+
 - **本地依赖**：`swift-markdown` 依赖采用 Git revision 锁定。离线开发可参阅 [ADR-001](docs/decisions/ADR-001-swift-markdown-dependency-pinning.md)。
 
 ### 构建与测试

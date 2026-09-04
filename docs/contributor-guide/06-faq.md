@@ -9,7 +9,7 @@
 | 旧说法 | 现状 |
 | --- | --- |
 | 本地 `path:` + SmartCodable | 默认 manifest 已 **pin swift-markdown revision**（ADR-001）；`Packages/Caches` + `path:` 仅作为可选离线路径。SmartCodable 未使用 |
-| iOS / iPadOS / 其他平台 | 当前产品路线仅承诺 iOS 14+ / iPadOS 14+；不支持其他平台。已发布 `0.0.1` 为 UIKit-first；未发布的 v0.0.2 已有 SwiftUI adapter 及 iPhone/iPad Simulator 基础测试，iOS/iPadOS 14 验证尚未交付 |
+| iOS / iPadOS / 其他平台 | 当前产品路线仅承诺 iOS 15+ / iPadOS 15+；不支持其他平台。已发布 `0.0.1` 为 UIKit-first；未发布的 v0.0.2 已有 SwiftUI adapter 及新版 Simulator 基础测试，iOS/iPadOS 15 验证尚未交付 |
 | `customTableBlockFactory` / `InkTableStyleConfig` | `InkBlockHandler` + `InkAppearance.Table` |
 
 ## 2. 表格变成一堆 `|`？
@@ -66,7 +66,7 @@ ExampleApp **2. 自定义组件与富媒体**（`SwiftUIComponentsDemoView` / `U
 
 ## 9. 当前支持哪些平台？
 
-当前产品路线仅支持 iOS 14+ / iPadOS 14+，不支持其他平台（[ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)）。`Package.swift` 已仅声明 `.iOS(.v14)`，源码直接依赖 UIKit；这不构成 macOS、tvOS、watchOS 或 visionOS support promise。当前全量回归证据来自 iPhone 17 / iOS 26.5；18.5 仅是历史基线，最低版本验证仍是 v0.0.2 release blocker；以[当前状态](../current-status.md)为准。
+当前产品路线仅支持 iOS 15+ / iPadOS 15+，不支持其他平台（[ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md)）。`Package.swift` 已仅声明 `.iOS(.v15)`，源码直接依赖 UIKit；这不构成 macOS、tvOS、watchOS 或 visionOS support promise。当前全量回归证据来自 iPhone 17 Pro Max / iOS 26.5；最低版本验证仍是 v0.0.2 release blocker；以[当前状态](../current-status.md)为准。
 
 ## CI 红了但本机绿？
 

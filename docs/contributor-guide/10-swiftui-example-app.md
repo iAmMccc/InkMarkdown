@@ -107,4 +107,4 @@ finish 路径的 `@Published` defer 见 [09 §12](09-swiftui-uiviewrepresentable
 - `ExampleApp/ExampleApp/Detail/`：UIKit 对称示例 ViewController。
 - `ExampleApp/ExampleApp.xcodeproj/project.pbxproj`：将本地包的 `InkMarkdownSwiftUI` product 链接到示例 App。
 
-这些示例只证明 adapter 的接入路径和交互入口；它们不代表尚未完成的 iOS/iPadOS 14 全量验证、完整语义/可访问性矩阵或性能基线已经交付。
+这些示例只证明 adapter 的接入路径和交互入口；它们不代表尚未完成的 iOS/iPadOS 15 全量验证、完整语义/可访问性矩阵或性能基线已经交付。

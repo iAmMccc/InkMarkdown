@@ -8,7 +8,7 @@
 | --- | --- |
 | macOS + Xcode | 提供 Swift 6.2 工具链；以 `swift --version` 输出为准 |
 | Swift | 6.2+ |
-| 目标平台 | 已发布 `0.0.1`：iOS 14+；v0.0.2 目标：iOS / iPadOS 14+（最低版本运行验证待完成） |
+| 目标平台 | 历史 `0.0.1` manifest：iOS 14+；当前 v0.0.2 分支：iOS / iPadOS 15+（最低版本运行验证待完成） |
 | iOS 模拟器 | 安装至少一个可用模拟器 |
 | 网络/缓存 | 首次解析远程依赖需联网；离线缓存脚本见后文 |
 
@@ -69,13 +69,13 @@ xcodebuildmcp --version
 
 | 项目 | 结果 |
 | --- | --- |
-| 日期 | 2026-09-01 |
+| 日期 | 2026-09-04 |
 | Package scheme | `InkMarkdown-Package` |
 | App-hosted scheme | `ExampleApp` / `ExampleAppMermaidIntegrationTests` |
-| Destination | iPhone 17 Pro / iOS 26.5 Simulator |
-| Package 测试结果 | 2026-09-02 本地候选：333 通过，0 失败，1 跳过（本机无 iOS 14 runtime）；非远端 CI |
+| Destination | iPhone 17 Pro Max / iOS 26.5 Simulator |
+| Package 测试结果 | 2026-09-04 当前工作树：342 通过，0 失败，0 跳过（本机无 iOS 15 runtime）；非远端 CI |
 | App-hosted 测试结果 | Mermaid PNG/右缘裁切关键链路 1 项通过 |
-| 运行方式 | XcodeBuildMCP transport 关闭后按仓库规则回退原生 `xcodebuild`；结果由 `xcresulttool` 结构化确认 |
+| 运行方式 | 当前 Agent 会话未暴露已安装的 XcodeBuildMCP，按仓库规则回退原生 `xcodebuild`；结果由 `xcresulttool` 结构化确认 |
 
 测试文件分布：
 

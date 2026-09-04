@@ -16,7 +16,7 @@ SwiftUI 调用者获得声明式的 view、configuration injection 和流式呈�
 
 ### 2.1 目标
 
-1. 在 iOS 14+ 与 iPadOS 14+ 正式支持 SwiftUI 宿主。
+1. 在 iOS 15+ 与 iPadOS 15+ 正式支持 SwiftUI 宿主。
 2. 保持 UIKit 与 SwiftUI 的**渲染语义对齐**：相同 Markdown 输入、`InkConfiguration`、opt-in 能力与交互规则应得到等价结果。
 3. 保持现有 UIKit public interface 与渲染行为可用；SwiftUI 是新增 product，不是替代品。
 4. 为静态和流式内容提供小而稳定的 SwiftUI interface，并将复杂生命周期收进 deep module。
@@ -35,7 +35,7 @@ v0.0.2 不包含：
 
 ### 2.3 成功定义
 
-SwiftUI adapter 的价值不是“另一种普通 Markdown view”。它应让 iOS 14+ 的 SwiftUI 宿主复用 InkMarkdown 的 UIKit-first 输出契约：`NSAttributedString`、异构 `UIView` block、可配置的 Markdown 语义和 delta 流式输入，同时保持 SwiftUI 的组合方式。
+SwiftUI adapter 的价值不是“另一种普通 Markdown view”。它应让 iOS 15+ 的 SwiftUI 宿主复用 InkMarkdown 的 UIKit-first 输出契约：`NSAttributedString`、异构 `UIView` block、可配置的 Markdown 语义和 delta 流式输入，同时保持 SwiftUI 的组合方式。
 
 ## 3. 设计思想
 
@@ -174,14 +174,14 @@ InkMarkdown 是渲染库，不应把宿主应用的业务模型伪装成库内 V
 
 这不是教条式分层：目标是让一个 bug 的知识、修复和验证停留在对应 module，获得 locality；让同一 renderer 语义服务 UIKit 与 SwiftUI，获得 leverage。
 
-## 7. iOS 14 / iPadOS 14 兼容策略
+## 7. iOS 15 / iPadOS 15 兼容策略
 
-支持范围仅为 iOS 14+ 与 iPadOS 14+。Apple 的 `UIViewRepresentable` 可用于该范围，但其 `sizeThatFits` 仅在 iOS/iPadOS 16+ 可用，`Color(uiColor:)` 仅在 iOS/iPadOS 15+ 可用。
+支持范围仅为 iOS 15+ 与 iPadOS 15+。Apple 的 `UIViewRepresentable` 可用于该范围，但其 `sizeThatFits` 仅在 iOS/iPadOS 16+ 可用。
 
 因此 adapter 必须把平台可用性收敛在 compatibility implementation：
 
 - iOS/iPadOS 16+ 使用 SwiftUI 提供的尺寸协商；
-- iOS/iPadOS 14–15 使用不依赖全局屏幕宽度的 UIKit 尺寸回传策略；
+- iOS/iPadOS 15 优先使用容器与 window 宽度进行 UIKit 固有尺寸协商；仅在 detached 且宽度未知时使用受可用性隔离的主屏宽度兜底；
 - 颜色与 trait 转换使用 availability-safe 路径；
 - view 清理使用 `UIViewRepresentable` 生命周期提供的 teardown seam；
 - iPad Split View、旋转、Dynamic Type 与多次 attach/detach 都是正式验证场景。
@@ -213,7 +213,7 @@ InkMarkdown 是渲染库，不应把宿主应用的业务模型伪装成库内 V
 | 阶段 | 范围 | 完成标准 |
 | --- | --- | --- |
 | A. Product foundation | 新增独立 SwiftUI product、ADR、设计文档、公开范围与测试入口 | 依赖方向可编译；文档明确当前 beta 与目标交付的区别 |
-| B. Static semantics | 静态 adapter、完整 configuration 传播、尺寸/生命周期策略 | UIKit/SwiftUI 语义矩阵通过；iOS 14 与 iPad 场景通过 |
+| B. Static semantics | 静态 adapter、完整 configuration 传播、尺寸/生命周期策略 | UIKit/SwiftUI 语义矩阵通过；iOS 15 与 iPad 场景通过 |
 | C. Streaming session | render session、流式 adapter、终态 promotion、取消/reset | 状态机、重复绑定、结束与重置测试通过；无来源分叉 |
 | D. Release evidence | ExampleApp、可访问性、性能基线、README/状态/路线更新 | v0.0.2 的所有 release blocker 有可复现证据 |
 
@@ -225,7 +225,7 @@ InkMarkdown 是渲染库，不应把宿主应用的业务模型伪装成库内 V
 2. SwiftUI static presentation adapter；
 3. render-session 与 streaming presentation adapter；
 4. configuration / Environment resolution；
-5. iOS 14–15 layout and lifecycle compatibility；
+5. iOS 15 layout and lifecycle compatibility；
 6. SwiftUI 验证矩阵、性能基线与 ExampleApp 验收。
 
 这些文档必须遵守本文的产品范围、依赖方向和语义真相；若需改变其中任一项，应先更新 ADR，而不是以局部补丁绕开设计。

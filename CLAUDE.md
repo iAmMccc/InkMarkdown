@@ -33,9 +33,9 @@ InkMarkdown/
 
 - **Swift 工具链**：6.2+
 - **UI 框架**：UIKit rendering engine；v0.0.2 独立 SwiftUI adapter
-- **v0.0.2 目标平台 / 发布边界**：iOS 14+、iPadOS 14+；不支持其他平台
+- **v0.0.2 目标平台 / 发布边界**：iOS 15+、iPadOS 15+；不支持其他平台
 
-> 📌 已发布 `0.0.1` 的 iPad 验证尚未完成，不能将此目标描述为当前已交付支持。SwiftUI adapter 必须把 iOS 14–15 与 iOS 16+ 的可用性差异收敛在自身 implementation 中。
+> 📌 已发布 `0.0.1` 的 iPad 验证尚未完成，不能将此目标描述为当前已交付支持。SwiftUI adapter 必须把 iOS 15 与 iOS 16+ 的可用性差异收敛在自身 implementation 中。
 
 ## 依赖管理
 
@@ -175,7 +175,7 @@ Single-context：根目录 [CONTEXT.md](CONTEXT.md) + [docs/decisions/](docs/dec
 
 - ✅ `0.0.1` 已作为 UIKit-first public beta 发布。
 - ✅ UIKit rendering engine、配置/扩展点与 ExampleApp 已具备。
-- ⏳ v0.0.2 的 release blocker 是完整语义对齐、iOS/iPadOS 14 验证、可访问性、性能基线与发布文档；独立 `InkMarkdownSwiftUI` product、基础契约测试和 ExampleApp 的静态/配置/流式示例入口已具备。
+- ⏳ v0.0.2 的 release blocker 是完整语义对齐、iOS/iPadOS 15 验证、可访问性、性能基线与发布文档；独立 `InkMarkdownSwiftUI` product、基础契约测试和 ExampleApp 的静态/配置/流式示例入口已具备。
 - ⚠️ 已拒绝的 SwiftUI spike 已移出仓库；SwiftUI source 保持在独立 `InkMarkdownSwiftUI` product，ExampleApp 通过 `UIHostingController` 接入，不改变 UIKit rendering engine 边界。
 
 完整且可维护的状态基线见 [docs/current-status.md](docs/current-status.md)。

@@ -29,13 +29,15 @@
   - `ImageHTTPSessionDelegate` 合并重定向校验与有界字节累计。
 - **无障碍语义与 Dynamic Type 路径**：
   - 为已实现组件补充可访问性状态表达与字号变化相关处理；
-  - 完整 VoiceOver、系统级 Dynamic Type、全部组件语义与 iOS/iPadOS 14 runtime 验证仍未完成，不能据此宣称“完整无障碍”或最低系统支持。
+  - 完整 VoiceOver、系统级 Dynamic Type、全部组件语义与 iOS/iPadOS 15 runtime 验证仍未完成，不能据此宣称“完整无障碍”或最低系统支持。
 - **自动化验证与手工验收边界**：
-  - 2026-09-02 本地候选（工作树 atop `8fb1640`，含未提交交互/图片/review 修复）在 iPhone 17 Pro / iOS 26.5 通过 XcodeBuildMCP 跑通 `InkMarkdown-Package`：333 通过、0 失败、1 跳过（本机无 iOS 14 runtime）；**不是远端 CI**；
+  - 2026-09-04 当前未提交工作树在 iPhone 17 Pro Max / iOS 26.5 经原生 `xcodebuild` + `xcresulttool` 验证：`InkMarkdown-Package` 342 通过、0 失败、0 跳过，ExampleApp Debug/Release 构建通过，宿主测试 1 通过；**不是远端 CI**；
+  - Package 与 ExampleApp Debug/Release build result bundle 为 0 warnings；ExampleApp 宿主测试依赖构建仍报告上游 `swift-cmark` module-map 与 Xcode 26 dependency-scan 两条警告。
   - 自动化聚焦数据、状态、调用次数与关键渲染语义；UI / 真网图片 / 旋转 / Split View 见 ExampleApp 验收记录；该记录不表示 `0.0.2` 已达到发布条件。
 
 ### Changed
 - 将未发布的 SwiftUI adapter、LaTeX 与 Mermaid 能力拆为独立 products；已发布 `0.0.1` 仍只有 `InkMarkdown` product，消费者不应在 `0.0.1` 中导入 `0.0.2` 专用模块。
+- v0.0.2 最低部署目标由 iOS / iPadOS 14 提升为 15；详见 ADR-010。历史 `0.0.1` 平台声明不变。
 - 图片业务策略默认从 fail-closed 调整为开启真图后开放有效 HTTP(S)（仍与 ADR-004 默认占位兼容）。
 
 ### Fixed

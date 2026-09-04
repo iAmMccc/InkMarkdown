@@ -88,7 +88,7 @@ TextKit 2 仅作为远期试探（验证 Fragment 机制是否满足自定义绘
 | 版本 | 定义 |
 | --- | --- |
 | **v0.0.1** | 已发布 UIKit-first public beta |
-| **v0.0.2** | 独立 SwiftUI adapter product；完整语义对齐、iOS/iPadOS 14 验证、性能基线与示例为 release blocker |
+| **v0.0.2** | 独立 SwiftUI adapter product；完整语义对齐、iOS/iPadOS 15 验证、性能基线与示例为 release blocker |
 | **v1.0** | 稳定的 UIKit-first + SwiftUI adapter 渲染库：包含契约测试、CI、规范 interface 与完整文档；**不强制公开 IR** |
 | **v2.0** | 引入 InkIR + Transformer + 扩展决策树；根据实际需求评估 native SwiftUI renderer |
 | **v2.x** | 补全图片与删除线语义，完善可访问性与性能 |
@@ -111,7 +111,7 @@ v0.0.1 beta  →  v0.0.2 SwiftUI adapter  →  v1.0 稳定契约  →  v2 InkIR 
 | S1 | 独立 SwiftUI product | `InkMarkdownSwiftUI → InkMarkdown` 单向依赖；UIKit core 不 import SwiftUI |
 | S2 | 完整语义对齐 | 静态、流式、配置、扩展和 opt-in 的数据、状态与关键渲染语义有必要自动化覆盖；视觉与交互通过 ExampleApp 手工验收 |
 | S3 | 流式生命周期 | render session 的结束、取消、重置、重新绑定与终态 block promotion 可测 |
-| S4 | iOS/iPadOS 兼容 | iOS 14、当前 iOS、iPhone 与 iPad 容器场景均有验证证据 |
+| S4 | iOS/iPadOS 兼容 | iOS 15、当前 iOS、iPhone 与 iPad 容器场景均有验证证据 |
 | S5 | 交付证据 | ExampleApp 手工矩阵、必要自动化测试、可访问性、性能基线、README、状态和 ADR 一致 |
 
 完整设计见 [SwiftUI Adapter 总体技术设计](contributor-guide/08-swiftui-adapter-architecture.md)。
@@ -183,7 +183,7 @@ v0.0.1 beta  →  v0.0.2 SwiftUI adapter  →  v1.0 稳定契约  →  v2 InkIR 
 | IR 重构引发渲染回归 | 先完成 A2 快照全集覆盖，再进行 B3 |
 | 中端与 Handler 职责重叠 | 遵循 B6 扩展决策指南 |
 | TextKit 2 无法兼容自定义绘制 | 执行 D1 试探，保留 TextKit 1 为主线 |
-| 平台支持与声明不符 | 在完成 Phase S 的 iOS/iPadOS 14 最低版本验证前，不将 iOS/iPadOS 14+ 作为已完成交付宣传；不承诺其他平台 |
+| 平台支持与声明不符 | 在完成 Phase S 的 iOS/iPadOS 15 最低版本验证前，不将 iOS/iPadOS 15+ 作为已完成交付宣传；不承诺其他平台 |
 
 ## 5. 变更历史
 

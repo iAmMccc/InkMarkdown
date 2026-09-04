@@ -38,9 +38,9 @@ InkMarkdown/
 
 - **Swift 工具链**：6.2+
 - **UI 框架**：UIKit rendering engine；v0.0.2 独立 SwiftUI adapter
-- **v0.0.2 目标平台 / 发布边界**：iOS 14+、iPadOS 14+；不支持其他平台
+- **v0.0.2 目标平台 / 发布边界**：iOS 15+、iPadOS 15+；不支持其他平台
 
-> 📌 已发布 `0.0.1` 的 iPad 验证尚未完成，不能将此目标描述为当前已交付支持。`UIViewRepresentable` 覆盖最低平台，但部分 SwiftUI convenience capability 晚于 iOS 14；兼容实现必须把可用性差异收敛在 adapter 内。
+> 📌 已发布 `0.0.1` 的 iPad 验证尚未完成，不能将此目标描述为当前已交付支持。`UIViewRepresentable` 覆盖最低平台，但部分 SwiftUI convenience capability 晚于 iOS 15；兼容实现必须把可用性差异收敛在 adapter 内。
 
 ## 依赖管理
 
@@ -162,7 +162,7 @@ SwiftUI 的总体设计、范围和退出标准以 [SwiftUI Adapter 总体技术
 3. `get_documentation` — 读取选定技术内的符号文档
 4. `get_version` — 排查 MCP 版本与连通性
 
-本项目硬边界：iOS 14+ / iPadOS 14+；不支持其他平台。查到的 API 可用性必须对照该边界。
+本项目硬边界：iOS 15+ / iPadOS 15+；不支持其他平台。查到的 API 可用性必须对照该边界。
 
 硬性约束：
 - 先查 `apple-docs`，再断言 Apple API 签名、可用性、废弃状态或推荐替代方案。
@@ -209,7 +209,7 @@ SwiftUI 的总体设计、范围和退出标准以 [SwiftUI Adapter 总体技术
 | `xcodebuildmcp` | Xcode 项目发现、构建、测试、Simulator、日志与 UI 自动化 | MCP 未在当前会话暴露时先修复注册 / 加载，再考虑原生命令回退 |
 | `swift-testing-pro` | 新增、审查或重构 Swift Testing 测试 | 本项目使用 Swift 6.2 与 Swift Testing；UI 测试仍使用 XCTest |
 | `swift-concurrency` | 流式渲染、后台解析、主线程 / actor 边界、Sendable 与竞态问题 | 先读取 `Package.swift` 的 Swift 5 language mode；不要为了“现代化”无关重写现有 GCD 状态机 |
-| `swift-api-design-guidelines` | v1.0 public API 审计、命名、参数标签与中文文档注释 | 该 skill 面向更新工具链；以项目 Swift 6.2 与 iOS 14+ 可用性为硬边界，不引入 6.3-only API |
+| `swift-api-design-guidelines` | v1.0 public API 审计、命名、参数标签与中文文档注释 | 该 skill 面向更新工具链；以项目 Swift 6.2 与 iOS 15+ 可用性为硬边界，不引入 6.3-only API |
 | `ios-accessibility` | UIKit 组件的 VoiceOver、Dynamic Type、交互与可访问性测试 | 只采用 UIKit / 通用章节；忽略与本项目无关的 SwiftUI 实现建议 |
 | `changelog-automation` | CHANGELOG、SemVer、发布说明与提交约定 | 生成内容必须结合本仓库真实 Git 历史，不套用示例版本或虚构变更 |
 
@@ -288,6 +288,6 @@ Single-context：根目录 [CONTEXT.md](CONTEXT.md) + [docs/decisions/](docs/dec
 
 - ✅ `0.0.1` 已作为 UIKit-first public beta 发布。
 - ✅ `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer`、`InkAppearance` / `InkConfiguration` 与 UIKit ExampleApp 已具备。
-- ✅ 2026-08-27 通过 XcodeBuildMCP 在 iPhone 17 / iOS 26.5 验证 `InkMarkdown-Package` scheme：313 项总计，312 项通过，0 项失败，1 项跳过；具体证据以 [docs/current-status.md](docs/current-status.md) 为准。
-- ⏳ `InkMarkdownSwiftUI` adapter 源码已按 ADR-008 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 等公开类型），基础契约测试与 ExampleApp 的静态、配置、流式示例入口已具备；完整语义对齐测试、iOS/iPadOS 14 验证、可访问性、性能基线和发布文档仍为 v0.0.2 release blocker。
+- ✅ 2026-09-04 当前未提交工作树在 iPhone 17 Pro Max / iOS 26.5 验证 `InkMarkdown-Package` scheme：342 项通过，0 项失败，0 项跳过；具体证据与工具回退说明以 [docs/current-status.md](docs/current-status.md) 为准。
+- ⏳ `InkMarkdownSwiftUI` adapter 源码已按 ADR-008 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 等公开类型），基础契约测试与 ExampleApp 的静态、配置、流式示例入口已具备；完整语义对齐测试、iOS/iPadOS 15 验证、可访问性、性能基线和发布文档仍为 v0.0.2 release blocker。
 - ⚠️ 此前被拒绝的 SwiftUI spike 已移出仓库；当前 v0.0.2 adapter 已按 ADR-008 作为独立 product 完整实现，基础契约测试与 ExampleApp 示例入口已验证，完整发布验收仍待完成。

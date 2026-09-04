@@ -23,7 +23,7 @@
 
 ## 2. 产品与平台边界
 
-- [ ] `Package.swift` 仍只声明 iOS 14+；没有把未验证平台写成受支持平台。
+- [ ] `Package.swift` 仅声明 iOS 15+；没有把未验证平台写成受支持平台。
 - [ ] `InkMarkdown` 保持 UIKit-first rendering engine。
 - [ ] `InkMarkdownSwiftUI` 仍是复用 UIKit 语义的独立 adapter，而非第二套 native SwiftUI renderer。
 - [ ] 四个 product 均能由外部消费者独立导入和构建：`InkMarkdown`、`InkMarkdownSwiftUI`、`InkMarkdownLaTeX`、`InkMarkdownMermaid`。
@@ -70,7 +70,7 @@ UI 与视觉行为通过 ExampleApp 手工验收，不以 UI 自动化或视觉�
 
 ## 7. 平台与性能发布门槛
 
-- [ ] iOS 14 与 iPadOS 14 的实际 runtime 或设备验证通过；仅设置 deployment target 或编译成功不算最低版本运行证据。
+- [ ] iOS 15 与 iPadOS 15 的实际 runtime 或设备验证通过；仅设置 deployment target 或编译成功不算最低版本运行证据。
 - [ ] 当前 iOS 的 iPhone 与 iPad 验证通过。
 - [ ] 真机性能基线覆盖滚动、流式长文、图片/生成图加载、WebKit 冷启动、内存峰值和长会话，并记录可复现输入与测量方法。
 - [ ] 性能结论没有使用未经复现的 FPS、内存或竞品数字。

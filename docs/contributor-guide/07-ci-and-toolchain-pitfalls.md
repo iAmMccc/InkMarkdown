@@ -21,7 +21,7 @@ CI 不会使用：
 - 本机 `DerivedData`、`.build`、`Packages/Caches`
 - 本机已安装的模拟器列表
 
-项目需符合：`swift-tools-version: 6.2`、UIKit、`iOS 14+`。PR 合并门禁以 CI 固定的环境为准。
+项目需符合：`swift-tools-version: 6.2`、UIKit、`iOS 15+`。PR 合并门禁以 CI 固定的环境为准。
 
 ## 2. 本地与 CI 环境差异
 

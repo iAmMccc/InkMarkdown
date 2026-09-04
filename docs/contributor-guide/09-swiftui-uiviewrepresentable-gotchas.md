@@ -15,7 +15,7 @@
 在静态渲染首次加载、内容变更或流式渲染追加文本时，容器视图在更新 Markdown blocks 后高度保持为 0 或初始高度不变，导致外部容器（如 `VStack`、`List`、`ScrollView`）无法感知内容尺寸变化，出现内容重叠或被截断。
 
 ### 1.2 根因分析
-SwiftUI 的布局系统依赖 UIKit 视图向外宣告自身的尺寸。在 iOS 14 / 15 中，SwiftUI 主要通过 `intrinsicContentSize` 进行尺寸协商。
+SwiftUI 的布局系统依赖 UIKit 视图向外宣告自身的尺寸。在最低支持的 iOS 15 中，SwiftUI 主要通过 `intrinsicContentSize` 进行尺寸协商。
 当 [`InkMarkdownContainerView`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 内部执行 `updateBlocks` 替换或增删子视图时，若未主动通知 UIKit/SwiftUI 布局系统该视图的固有尺寸已改变，SwiftUI 就不会触发重新测量和父容器重新布局，从而导致高度坍塌。
 
 ### 1.3 解决方案
@@ -25,10 +25,10 @@ SwiftUI 的布局系统依赖 UIKit 视图向外宣告自身的尺寸。在 iOS 
 
 ---
 
-## 2. iOS 14 布局死循环
+## 2. iOS 15 布局死循环
 
 ### 2.1 问题现象
-在 iOS 14 / 15 环境下，视图渲染时出现 CPU 占用 100%、界面卡死、死循环重绘，或 Xcode 控制台持续打印布局循环警告。
+在 iOS 15 环境下，视图渲染时出现 CPU 占用 100%、界面卡死、死循环重绘，或 Xcode 控制台持续打印布局循环警告。
 
 ### 2.2 典型反模式（硬性禁令）
 **绝对不要在 SwiftUI 视图层使用 `GeometryReader` 读取宽度，然后写回 `@State` / `@Binding` 来驱动底层 UIKit 视图的布局！**
@@ -48,7 +48,7 @@ GeometryReader 尺寸微调 / 重新触发
 
 ### 2.3 解决方案
 1. **尺寸协商交由系统原生机制**：
-   - **iOS 14-15**：依靠 [`InkMarkdownContainerView`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 的 `intrinsicContentSize` 与 `sizeThatFits(_:)` 向 SwiftUI 提供测量依据。
+   - **iOS 15**：依靠 [`InkMarkdownContainerView`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 的 `intrinsicContentSize` 与 `sizeThatFits(_:)` 向 SwiftUI 提供测量依据。
    - **iOS 16+**：在 [`InkMarkdownRepresentable`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownRepresentable.swift) 中实现 `sizeThatFits(_:uiView:context:)`，直接响应 SwiftUI 的 `ProposedViewSize`。
 2. **保持单向数据流**：SwiftUI 仅向底层单向注入 `markdown` 与 `configuration`，尺寸完全由布局引擎在测量阶段确定，视图内部不产生回写状态。
 
@@ -242,7 +242,7 @@ SwiftUI 会在布局测量、滚动、环境变量变化以及父视图状态求
 - [ ] 切换 Dark / Light 模式时，富文本与块级组件颜色能否正确同步刷新？
 - [ ] 异步缓存测试是否等待 Store 的完成契约，而不是观察 loader 内部计数猜测缓存已写入？
 - [ ] 测试报告是否区分总数、通过数与跳过数，避免把 skipped 同时计入 passed？
-- [ ] 是否在 iOS 14、iOS 16+ 及 iPadOS 上均完成了布局与尺寸验证？
+- [ ] 是否在 iOS 15、iOS 16+ 及 iPadOS 上均完成了布局与尺寸验证？
 
 ---
 
@@ -399,7 +399,7 @@ thought 的正文未变不代表展示未变。单独到达 `</think>` 时，`is
 
 Swift Testing、XCTest、`xcodebuild` 与 XcodeBuildMCP 对 skipped 的摘要格式不同。分组日志中的 “tests in suites” 可能包含 skipped；把各组数量直接相加并写成“全部通过”，会得到“300 项通过、另 1 项跳过”这种总数多算一次的矛盾结论。
 
-状态文档必须分别记录：通过、失败、跳过，并优先采用结构化 result bundle 或 XcodeBuildMCP 汇总。2026-09-02 当前本地 Package 候选为 333 通过、0 失败、1 项跳过；该数字来自工作树 atop `8fb1640`，不是远端 CI。
+状态文档必须分别记录：通过、失败、跳过，并优先采用结构化 result bundle 或 XcodeBuildMCP 汇总。2026-09-02 候选的 333 通过、0 失败、1 跳过仅是历史记录；2026-09-04 当前工作树的结构化结果为 342 通过、0 失败、0 跳过，仍不是远端 CI。
 
 ---
 
@@ -425,7 +425,7 @@ Swift 闭包、类型擦除 loader 和交互回调没有通用值相等性。只
 
 | 风险 | 触发条件 | 预防与验收 |
 | --- | --- | --- |
-| 最低系统行为分叉 | iOS / iPadOS 14–15 不提供新版本 `UIViewRepresentable` 尺寸入口 | 保留 intrinsic-size 兼容路径；在真实 14、15 runtime 分别验证首次宽度为 0、宽度建立、旋转和重复挂载 |
+| 最低系统行为分叉 | iOS / iPadOS 15 不提供新版本 `UIViewRepresentable` 尺寸入口 | 保留 intrinsic-size 兼容路径；在真实 15 runtime 验证首次宽度为 0、宽度建立、旋转和重复挂载 |
 | `sizeThatFits` 重复调用 | SwiftUI 在一次 layout pass 内多次提议相同或不同宽度 | 测量保持无副作用并命中 width-keyed cache；用计数探针验证不会重建 blocks 或发布状态 |
 | iPad Split View 连续宽度变化 | 分屏拖动、Stage Manager、窗口多次 resize | 只使旧宽度测量槽失效；验证窄宽表格、代码、图片与长链接不截断、不产生布局循环 |
 | 超大 Dynamic Type 与 Bold Text | 辅助功能字号、粗体文本、运行时类别切换 | 字体、行高、baseline、列宽和 ReservedHeight 使用同一 trait；用 AX5 及以上字号走查文本裁切与控件命中区域 |
