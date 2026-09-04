@@ -1,6 +1,25 @@
 import UIKit
 import InkMarkdown
 
+enum DemoPresentationContext {
+  /// 返回当前前台 Scene 的最上层展示控制器，供 SwiftUI Demo 注入 UIKit 预览入口。
+  static func topViewController() -> UIViewController? {
+    guard let root = UIApplication.shared.connectedScenes
+      .compactMap({ $0 as? UIWindowScene })
+      .first(where: { $0.activationState == .foregroundActive })?
+      .windows
+      .first(where: \.isKeyWindow)?
+      .rootViewController
+    else { return nil }
+
+    var top = root
+    while let presented = top.presentedViewController {
+      top = presented
+    }
+    return top
+  }
+}
+
 extension UIViewController {
   /// 弹出 InkMarkdown 自带的全屏图片预览；无可用 `UIImage` 时不展示。
   ///

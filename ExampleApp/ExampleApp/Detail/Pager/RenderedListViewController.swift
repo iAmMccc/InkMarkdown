@@ -1,6 +1,5 @@
 import UIKit
 import InkMarkdown
-import Markdown
 
 // MARK: - Table Block Handler
 
@@ -300,7 +299,11 @@ final class RenderedListViewController: UIViewController, PagerListController {
 
 // MARK: - H1 Action Card Block Handler
 
-struct H1ActionCardBlockHandler: InkBlockHandler {
+struct H1ActionCardBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+  func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
+    other is H1ActionCardBlockHandler
+  }
+
   func canHandle(_ markup: Markup) -> Bool {
     (markup as? Markdown.Heading)?.level == 1
   }

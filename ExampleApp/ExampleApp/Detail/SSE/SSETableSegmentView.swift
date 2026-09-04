@@ -1,6 +1,5 @@
 import UIKit
 @_spi(InkMarkdown) import InkMarkdown
-import Markdown
 
 /// 表格片段视图：SSE 吐字场景下逐行渲染表格。
 ///

@@ -12,6 +12,14 @@ import InkMarkdown
 /// 展示 SwiftUI 下自定义组件与富媒体扩展（表格、图片、LaTeX 公式、Mermaid 图表）。
 struct SwiftUIComponentsDemoView: View {
 
+  private static let interactiveImageRendering: InkImageRendering = {
+    var appearance = InkAppearance.demoImageEnabled
+    appearance.enableDemoBlockImageTap {
+      DemoPresentationContext.topViewController()
+    }
+    return appearance.imageRendering
+  }()
+
   @Environment(\.colorScheme) private var colorScheme
   @State private var enableLaTeX = true
   @State private var enableMermaid = true
@@ -25,6 +33,9 @@ struct SwiftUIComponentsDemoView: View {
       enableImage: enableImage,
       userInterfaceStyle: colorScheme == .dark ? .dark : .light
     )
+    if enableImage {
+      config.appearance.imageRendering = Self.interactiveImageRendering
+    }
     config.blockHandlers = [H1ActionCardBlockHandler()] + InkConfiguration.defaultBlockHandlers
     return config
   }

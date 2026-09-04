@@ -81,14 +81,18 @@ extension InkAppearance {
   ///
   /// 这是 ExampleApp 工厂预设，**不是**库默认。库默认：`isEnabled = false`；开启后空
   /// `allowedHosts` + `.allowAll`（业务策略默认开放，ADR-006）。本 Demo 显式收窄到
-  /// `placehold.co` / `picsum.photos`，用于验收固定内容与重定向链路。
+  /// `placehold.co` / `picsum.photos` / `fastly.picsum.photos`，用于验收固定内容与重定向链路。
   /// `onImageTap` 需在持有 presenting VC 处注入（见 ``RenderedListViewController``）。
   static var demoImageEnabled: InkAppearance {
     var a = InkAppearance()
     a.imageRendering.isEnabled = true
     a.imageRendering.promotesToBlock = true
     a.imageRendering.tapAction = .callback
-    a.imageRendering.securityPolicy.allowedHosts = ["placehold.co", "picsum.photos"]
+    a.imageRendering.securityPolicy.allowedHosts = [
+      "placehold.co",
+      "picsum.photos",
+      "fastly.picsum.photos",
+    ]
     a.imageRendering.securityPolicy.emptyHostPolicy = .rejectAll
     return a
   }

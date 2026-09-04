@@ -227,10 +227,11 @@ final class SSEChatViewController: UIViewController {
 
     let suggestions = ["深度思考", "公式图表", "图文混排", "复杂表格", "代码示例", "列表说明"]
     for title in suggestions {
-      let btn = UIButton(type: .system)
+      var buttonConfiguration = UIButton.Configuration.plain()
+      buttonConfiguration.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
+      let btn = UIButton(configuration: buttonConfiguration)
       btn.setTitle(title, for: .normal)
       btn.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
-      btn.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
       btn.backgroundColor = .tertiarySystemFill
       btn.layer.cornerRadius = 14
       btn.layer.cornerCurve = .continuous
