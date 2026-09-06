@@ -32,15 +32,24 @@ public enum LLMStreamError: LocalizedError {
 }
 
 /// 大模型流式问答服务（支持本地 Mock 与任意 OpenAI 兼容的真实 SSE 服务）。
-public final class OpenAISSEService: NSObject, @unchecked Sendable {
+@MainActor
+public final class OpenAISSEService: NSObject {
 
   public static let shared = OpenAISSEService()
 
+  private let mockService: MockSSEService
+  private var activeRequest: StreamRequestDelivery?
   private var activeDataTask: URLSessionDataTask?
   private var sseDelegate: SSEStreamParserDelegate?
   private var session: URLSession?
 
-  private override init() {
+  override init() {
+    mockService = MockSSEService()
+    super.init()
+  }
+
+  init(mockService: MockSSEService) {
+    self.mockService = mockService
     super.init()
   }
 
@@ -61,15 +70,31 @@ public final class OpenAISSEService: NSObject, @unchecked Sendable {
     // 先中断上一次未完成的请求
     cancel()
 
+    let delivery = StreamRequestDelivery(onChunk: onChunk, onComplete: onComplete, onError: onError)
+    activeRequest = delivery
+    delivery.onTermination = { [weak self, weak delivery] in
+      guard let self, self.activeRequest === delivery else { return }
+      self.mockService.cancel()
+      self.activeDataTask?.cancel()
+      self.activeDataTask = nil
+      self.session?.invalidateAndCancel()
+      self.session = nil
+      self.sseDelegate = nil
+      self.activeRequest = nil
+    }
+    let onChunk: @MainActor (String) -> Void = { delivery.receive($0) }
+    let onComplete: @MainActor () -> Void = { delivery.finish() }
+    let onError: @MainActor (LLMStreamError) -> Void = { delivery.fail($0) }
+
     // 1. 本地 Mock 模式
     if config.isMock {
-      MockSSEService.shared.askStream(
+      mockService.askStream(
         question: question,
         onChunk: { chunk in
-          Task { @MainActor in onChunk(chunk) }
+          DispatchQueue.main.async { onChunk(chunk) }
         },
         onComplete: {
-          Task { @MainActor in onComplete() }
+          DispatchQueue.main.async { onComplete() }
         }
       )
       return
@@ -78,12 +103,12 @@ public final class OpenAISSEService: NSObject, @unchecked Sendable {
     // 2. 真实网络请求前置校验
     let trimmedKey = config.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedKey.isEmpty else {
-      Task { @MainActor in onError(.missingAPIKey) }
+      DispatchQueue.main.async { onError(.missingAPIKey) }
       return
     }
 
     guard let endpointURL = config.chatCompletionsURL else {
-      Task { @MainActor in onError(.invalidURL(config.baseURL)) }
+      DispatchQueue.main.async { onError(.invalidURL(config.baseURL)) }
       return
     }
 
@@ -116,7 +141,7 @@ public final class OpenAISSEService: NSObject, @unchecked Sendable {
     }
 
     guard let bodyData = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]) else {
-      Task { @MainActor in onError(.networkError(NSError(domain: "OpenAISSEService", code: -1, userInfo: [NSLocalizedDescriptionKey: "请求体序列化失败"]))) }
+      DispatchQueue.main.async { onError(.networkError(NSError(domain: "OpenAISSEService", code: -1, userInfo: [NSLocalizedDescriptionKey: "请求体序列化失败"]))) }
       return
     }
     request.httpBody = bodyData
@@ -141,14 +166,15 @@ public final class OpenAISSEService: NSObject, @unchecked Sendable {
     task.resume()
   }
 
+  deinit {
+    // Each demo now owns its transport; releasing that owner also releases the
+    // URLSession delegate cycle even when the view never receives onDisappear.
+    session?.invalidateAndCancel()
+  }
+
   /// 中断当前活跃的流式请求。
   public func cancel() {
-    MockSSEService.shared.cancel()
-    activeDataTask?.cancel()
-    activeDataTask = nil
-    session?.invalidateAndCancel()
-    session = nil
-    sseDelegate = nil
+    activeRequest?.cancel()
   }
 }
 
@@ -245,7 +271,7 @@ private final class SSEStreamParserDelegate: NSObject, URLSessionDataDelegate, @
     let shouldCloseReasoning = isEmittingReasoning
     isEmittingReasoning = false
 
-    Task { @MainActor in
+    DispatchQueue.main.async {
       if shouldCloseReasoning {
         self.onChunk("\n</think>\n\n")
       }
@@ -338,7 +364,7 @@ private final class SSEStreamParserDelegate: NSObject, URLSessionDataDelegate, @
 
     if !chunksToEmit.isEmpty {
       let finalChunks = chunksToEmit
-      Task { @MainActor in
+      DispatchQueue.main.async {
         for chunk in finalChunks {
           self.onChunk(chunk)
         }

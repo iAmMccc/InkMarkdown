@@ -84,6 +84,8 @@ final class ChatDemoViewModel: ObservableObject {
     scrollPolicy.shouldAutoScroll
   }
 
+  private let streamService = OpenAISSEService()
+
   // MARK: - Actions
 
   func sendMessage(_ prompt: String, config: LLMConfiguration) {
@@ -106,18 +108,21 @@ final class ChatDemoViewModel: ObservableObject {
     scrollPolicy = ChatScrollPolicy()
     scrollPolicy.messagesCountChanged()
 
-    OpenAISSEService.shared.askStream(
+    let requestSession = session
+    streamService.askStream(
       question: question,
       config: config,
-      onChunk: { [weak self] chunk in
-        guard let self = self else { return }
-        self.session.append(chunk)
+      onChunk: { [weak self, weak requestSession] chunk in
+        guard let self, let requestSession, self.session === requestSession else { return }
+        requestSession.append(chunk)
       },
-      onComplete: { [weak self] in
-        self?.handleStreamComplete()
+      onComplete: { [weak self, weak requestSession] in
+        guard let self, self.session === requestSession else { return }
+        self.handleStreamComplete()
       },
-      onError: { [weak self] error in
-        self?.handleStreamError(error)
+      onError: { [weak self, weak requestSession] error in
+        guard let self, self.session === requestSession else { return }
+        self.handleStreamError(error)
       }
     )
   }
@@ -126,7 +131,7 @@ final class ChatDemoViewModel: ObservableObject {
     promotionCancellable?.cancel()
     promotionCancellable = nil
 
-    OpenAISSEService.shared.cancel()
+    streamService.cancel()
     session.cancel()
     isLoading = false
 
@@ -197,20 +202,23 @@ final class ChatDemoViewModel: ObservableObject {
     guard let idx = streamingAssistantIndex, idx < messages.count else { return }
 
     if session.isPromoted {
-      finalizePromotedMessage(at: idx)
+      finalizePromotedMessage(at: idx, completedSession: session)
       return
     }
 
     promotionCancellable?.cancel()
-    promotionCancellable = session.$isPromoted
+    let completedSession = session
+    promotionCancellable = completedSession.$isPromoted
       .filter { $0 }
       .receive(on: DispatchQueue.main)
-      .sink { [weak self] _ in
-        self?.finalizePromotedMessage(at: idx)
+      .sink { [weak self, weak completedSession] _ in
+        guard let completedSession else { return }
+        self?.finalizePromotedMessage(at: idx, completedSession: completedSession)
       }
   }
 
-  private func finalizePromotedMessage(at idx: Int) {
+  private func finalizePromotedMessage(at idx: Int, completedSession: InkMarkdownRenderSession) {
+    guard session === completedSession else { return }
     promotionCancellable?.cancel()
     promotionCancellable = nil
 

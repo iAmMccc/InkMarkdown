@@ -5,15 +5,26 @@ import Foundation
 /// 真实业务里，`onChunk` 对应 SSE 的每一帧 `data:` 回调，`onComplete`
 /// 对应 `[DONE]` 事件。这里用 `Timer` 把预设的 Markdown 回答按行/句切块逐帧吐出，
 /// 还原「边收边吐」的网络流式手感——demo 不依赖任何真实网络。
+@MainActor
 final class MockSSEService {
 
   static let shared = MockSSEService()
-  private init() {}
-
-  /// 帧间隔（秒），越小吐字越快。
-  private let chunkInterval: TimeInterval = 0.03
-
+  private let firstByteDelay: TimeInterval
+  private let chunkInterval: TimeInterval
+  private let answer: @MainActor (String) -> String
+  private var pendingStart: DispatchWorkItem?
   private var timer: Timer?
+  private var activeRequest: StreamRequestDelivery?
+
+  init(
+    firstByteDelay: TimeInterval = 0.6,
+    chunkInterval: TimeInterval = 0.03,
+    answer: @escaping @MainActor (String) -> String = { MockAnswerRouter.route(question: $0) }
+  ) {
+    self.firstByteDelay = firstByteDelay
+    self.chunkInterval = chunkInterval
+    self.answer = answer
+  }
 
   /// 发起一次流式问答。
   /// - Parameters:
@@ -22,37 +33,52 @@ final class MockSSEService {
   ///   - onComplete: 全部推送完毕时回调（已在主线程）。
   func askStream(
     question: String,
-    onChunk: @escaping (String) -> Void,
-    onComplete: @escaping () -> Void
+    onChunk: @escaping @MainActor (String) -> Void,
+    onComplete: @escaping @MainActor () -> Void
   ) {
     cancel()
 
-    let answer = MockAnswerRouter.route(question: question)
-    let chunks = Self.splitIntoStreamChunks(answer)
+    let request = StreamRequestDelivery(onChunk: onChunk, onComplete: onComplete, onError: { _ in })
+    activeRequest = request
+    request.onTermination = { [weak self, weak request] in
+      guard let self, self.activeRequest === request else { return }
+      self.pendingStart?.cancel()
+      self.pendingStart = nil
+      self.timer?.invalidate()
+      self.timer = nil
+      self.activeRequest = nil
+    }
+    let chunks = Self.splitIntoStreamChunks(answer(question))
     var cursor = 0
-
-    let firstByteDelay: TimeInterval = 0.6
-    DispatchQueue.main.asyncAfter(deadline: .now() + firstByteDelay) { [weak self] in
-      guard let self else { return }
-      self.timer = Timer.scheduledTimer(withTimeInterval: self.chunkInterval, repeats: true) { [weak self] t in
-        guard let self else { return }
-        guard cursor < chunks.count else {
-          t.invalidate()
-          self.timer = nil
-          onComplete()
-          return
+    let start = DispatchWorkItem { [weak self, request] in
+      MainActor.assumeIsolated {
+        guard let self, request.isActive else { return }
+        self.pendingStart = nil
+        self.timer = Timer.scheduledTimer(withTimeInterval: self.chunkInterval, repeats: true) { [weak self] timer in
+          MainActor.assumeIsolated {
+            guard self != nil, request.isActive else {
+              timer.invalidate()
+              request.cancel()
+              return
+            }
+            guard cursor < chunks.count else {
+              request.finish()
+              return
+            }
+            let chunk = chunks[cursor]
+            cursor += 1
+            request.receive(chunk)
+          }
         }
-        let chunk = chunks[cursor]
-        onChunk(chunk)
-        cursor += 1
       }
     }
+    pendingStart = start
+    DispatchQueue.main.asyncAfter(deadline: .now() + firstByteDelay, execute: start)
   }
 
-  /// 中断当前流（页面退出或重新发送时调用）。
+  /// 中断当前流，包括尚未开始的首字延迟。
   func cancel() {
-    timer?.invalidate()
-    timer = nil
+    activeRequest?.cancel()
   }
 
   // MARK: - 分块策略

@@ -405,9 +405,6 @@ final class SSEChatViewController: UIViewController {
     UIView.animate(withDuration: duration) { self.view.layoutIfNeeded() }
   }
 
-  deinit {
-    OpenAISSEService.shared.cancel()
-  }
 }
 
 // MARK: - UITextFieldDelegate

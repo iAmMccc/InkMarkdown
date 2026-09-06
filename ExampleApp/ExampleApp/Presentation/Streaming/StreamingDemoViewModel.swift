@@ -95,6 +95,8 @@ final class StreamingDemoViewModel: ObservableObject {
     }
   }
 
+  private let streamService = OpenAISSEService()
+
   // MARK: - Actions
 
   func sendRealPrompt(config: LLMConfiguration) {
@@ -112,7 +114,7 @@ final class StreamingDemoViewModel: ObservableObject {
     isLoading = true
     nextChunkIndex = 0
 
-    OpenAISSEService.shared.askStream(
+    streamService.askStream(
       question: prompt,
       config: config,
       onChunk: { [weak self] chunk in
@@ -143,7 +145,7 @@ final class StreamingDemoViewModel: ObservableObject {
   }
 
   func cancelStreaming() {
-    OpenAISSEService.shared.cancel()
+    streamService.cancel()
     isLoading = false
     session.cancel()
   }
