@@ -73,12 +73,37 @@ final class InkLaTeXImageRendererTests: XCTestCase {
   }
 
   func latexImageRenderer_producesImageForBasicExpression() async throws {
-    XCTAssertEqual(InkLaTeXImageRenderer.rendererVersion, "iosMath-2.3.1-r1")
+    XCTAssertEqual(InkLaTeXImageRenderer.rendererVersion, "iosMath-2.3.1-r2")
     let result = try await InkLaTeXImageRenderer().render(makeRequest(latex: "x^2 + y^2"))
 
     XCTAssertGreaterThan(result.image.size.width, 0)
     XCTAssertGreaterThan(result.image.size.height, 0)
     XCTAssertEqual(result.stableID, makeRequest(latex: "x^2 + y^2").stableID(resolvedColor: InkLaTeXColor(red: 0, green: 0, blue: 0)))
+  }
+
+  func testRendererScalesCompleteFormulaToPixelWidthAndHeightBudgets() async throws {
+    let request = InkLaTeXRenderRequest(
+      latex: String(repeating: "x + ", count: 80) + "y",
+      mode: .inline,
+      display: DisplayContext(maxPixelWidth: 160.5, scale: 3),
+      style: .init(
+        fontSize: 18,
+        color: .init(red: 0, green: 0, blue: 0),
+        horizontalPadding: 4,
+        verticalPadding: 4,
+        maxPixelHeight: 120
+      )
+    )
+
+    let result = try await InkLaTeXImageRenderer().render(request)
+
+    let actualPixelWidth = result.image.cgImage?.width ?? 0
+    let actualPixelHeight = result.image.cgImage?.height ?? 0
+    XCTAssertGreaterThan(actualPixelWidth, 0)
+    XCTAssertGreaterThan(actualPixelHeight, 0)
+    XCTAssertLessThanOrEqual(actualPixelWidth, Int(floor(request.display.maxPixelWidth)))
+    XCTAssertLessThanOrEqual(actualPixelHeight, Int(floor(request.style.maxPixelHeight)))
+    XCTAssertEqual(result.size, result.image.size)
   }
 
   private func makeRequest(latex: String, scale: CGFloat = 2) -> InkLaTeXRenderRequest {

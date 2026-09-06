@@ -5,7 +5,7 @@ import UIKit
 /// 基于 iosMath 的 LaTeX addon 渲染后端。
 struct InkLaTeXAddonRenderer: Sendable {
   /// 变更图片生成逻辑时递增，以使既有缓存自然失效。
-  static let rendererVersion = "iosMath-2.3.1-r1"
+  static let rendererVersion = "iosMath-2.3.1-r2"
 
   /// 异步生成公式图片。输入校验不触碰 UI；iosMath 与 UIKit 绘制严格在 MainActor 上执行。
   func render(_ request: InkLaTeXRenderRequest) async throws -> InkLaTeXRenderResult {
@@ -58,7 +58,6 @@ struct InkLaTeXAddonRenderer: Sendable {
 
   @MainActor
   private func renderOnMain(_ request: InkLaTeXRenderRequest) throws -> InkLaTeXRenderResult {
-    let maxPointHeight = request.style.maxPixelHeight / request.display.scale
     let label = MTMathUILabel()
     label.displayErrorInline = false
     label.mode = request.mode == .inline ? .text : .display
@@ -70,15 +69,57 @@ struct InkLaTeXAddonRenderer: Sendable {
       throw InkLaTeXError.renderingFailed(error.localizedDescription)
     }
 
-    let measured = label.sizeThatFits(CGSize(width: CGFloat.greatestFiniteMagnitude, height: maxPointHeight))
-    let size = CGSize(
+    // Measure the complete formula first, then scale the rasterization plan as a whole.
+    // Passing the width budget to iosMath can clip or reflow a formula; uniform scaling
+    // preserves its geometry while making both output pixel limits authoritative.
+    let measured = label.sizeThatFits(CGSize(
+      width: CGFloat.greatestFiniteMagnitude,
+      height: CGFloat.greatestFiniteMagnitude
+    ))
+    let naturalSize = CGSize(
       width: ceil(measured.width + request.style.horizontalPadding * 2),
       height: ceil(measured.height + request.style.verticalPadding * 2)
     )
-    guard size.width > 0,
-          size.height > 0,
-          size.width * request.display.scale <= InkLaTeXImageRenderer.maximumPixelDimension,
-          size.height * request.display.scale <= request.style.maxPixelHeight else {
+    guard naturalSize.width.isFinite,
+          naturalSize.height.isFinite,
+          naturalSize.width > 0,
+          naturalSize.height > 0 else {
+      throw InkLaTeXError.imageTooLarge
+    }
+
+    // UIGraphicsImageRenderer allocates an integer number of pixels. Floor the public
+    // budgets first so a request such as 160.5px cannot round up to 161px on output.
+    let pixelWidthBudget = max(
+      1,
+      Int(floor(min(request.display.maxPixelWidth, InkLaTeXImageRenderer.maximumPixelDimension)))
+    )
+    let pixelHeightBudget = max(
+      1,
+      Int(floor(min(request.style.maxPixelHeight, InkLaTeXImageRenderer.maximumPixelDimension)))
+    )
+    let naturalPixelWidth = max(1, Int(ceil(naturalSize.width * request.display.scale)))
+    let naturalPixelHeight = max(1, Int(ceil(naturalSize.height * request.display.scale)))
+    let widthScale = CGFloat(pixelWidthBudget) / CGFloat(naturalPixelWidth)
+    let heightScale = CGFloat(pixelHeightBudget) / CGFloat(naturalPixelHeight)
+    let outputScale = min(1, widthScale, heightScale)
+    guard outputScale.isFinite, outputScale > 0 else {
+      throw InkLaTeXError.imageTooLarge
+    }
+
+    let outputPixelWidth = max(
+      1,
+      min(pixelWidthBudget, Int(ceil(CGFloat(naturalPixelWidth) * outputScale)))
+    )
+    let outputPixelHeight = max(
+      1,
+      min(pixelHeightBudget, Int(ceil(CGFloat(naturalPixelHeight) * outputScale)))
+    )
+    let outputPointSize = CGSize(
+      width: pointDimension(forPixelCount: outputPixelWidth, scale: request.display.scale),
+      height: pointDimension(forPixelCount: outputPixelHeight, scale: request.display.scale)
+    )
+    guard outputPointSize.width > 0,
+          outputPointSize.height > 0 else {
       throw InkLaTeXError.imageTooLarge
     }
 
@@ -94,14 +135,31 @@ struct InkLaTeXAddonRenderer: Sendable {
     let format = UIGraphicsImageRendererFormat()
     format.scale = request.display.scale
     format.opaque = false
-    let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
+    let image = UIGraphicsImageRenderer(size: outputPointSize, format: format).image { context in
+      context.cgContext.scaleBy(x: outputScale, y: outputScale)
       label.layer.render(in: context.cgContext)
+    }
+    let actualPixelWidth = image.cgImage?.width
+      ?? Int(ceil(image.size.width * image.scale))
+    let actualPixelHeight = image.cgImage?.height
+      ?? Int(ceil(image.size.height * image.scale))
+    guard actualPixelWidth <= pixelWidthBudget,
+          actualPixelHeight <= pixelHeightBudget,
+          actualPixelWidth <= Int(InkLaTeXImageRenderer.maximumPixelDimension),
+          actualPixelHeight <= Int(InkLaTeXImageRenderer.maximumPixelDimension) else {
+      throw InkLaTeXError.imageTooLarge
     }
     return InkLaTeXRenderResult(
       image: image,
       stableID: request.stableID(resolvedColor: request.style.color ?? InkLaTeXColor(.label)),
-      size: size
+      size: image.size
     )
+  }
+
+  /// Keep a renderer point dimension just below the exact pixel boundary so Core Graphics
+  /// rounding cannot allocate one pixel beyond the already-floored budget.
+  private func pointDimension(forPixelCount pixelCount: Int, scale: CGFloat) -> CGFloat {
+    (CGFloat(pixelCount) / scale).nextDown
   }
 }
 
