@@ -93,6 +93,7 @@ public final class InkStreamRenderer: @unchecked Sendable {
   public let maximumSourceLength: Int
 
   /// 每帧显示的字符数。60fps 下：1=60字/秒，2=120字/秒，3=180字/秒。
+  /// 非正值按每帧 1 个字符推进；大于剩余长度时仅显示剩余内容。
   public var charactersPerFrame: Int = 2
 
   /// 每帧显示内容变化时回调（用于通知外部更新 cell 高度）。
@@ -141,7 +142,6 @@ public final class InkStreamRenderer: @unchecked Sendable {
   private var displayLink: CADisplayLink?
 
   /// 每帧推进的字符数（自适应）
-  private var chunkSize: Int = 3
 
   /// 标记流是否已结束
   private var isFinished: Bool = false
@@ -158,8 +158,18 @@ public final class InkStreamRenderer: @unchecked Sendable {
   /// 上次应用到 textView 的解析版本
   private var lastAppliedParseVersion: UInt64 = 0
 
-  /// 本次解析产物中需要刷新的起点；稳定前缀无需重写 textStorage
-  private var preloadRefreshLocation: Int = 0
+  /// 自上次显示端消费快照以来，所有解析结果中最早需要刷新的起点。
+  ///
+  /// `nil` 表示没有尚未消费的解析结果。多个后台解析结果可能在同一显示帧
+  /// 之间完成，不能让后完成的结果覆盖更早的 dirty location。
+  private var preloadRefreshLocation: Int?
+
+  private struct PreloadSnapshot {
+    let content: NSAttributedString
+    let parseVersion: UInt64
+    let refreshLocation: Int
+    let finalParseCompleted: Bool
+  }
 
   /// 渲染代次：reset/finish 后丢弃旧后台解析结果，避免过期任务回写
   private var renderGeneration: UInt64 = 0
@@ -215,6 +225,29 @@ public final class InkStreamRenderer: @unchecked Sendable {
   public func updateConfiguration(_ configuration: InkConfiguration, source: String) {
     self.configuration = configuration
     reset(to: source)
+  }
+
+  /// 仅同步后续渲染使用的配置快照，不重置当前流或启动新的显示周期。
+  ///
+  /// SwiftUI adapter 在已完成会话切换 trait 时使用此 seam：终态块由 adapter
+  /// 重新渲染，renderer 则保留最新配置供后续 `reset()` / `append()` 使用。
+  /// 公开 ``updateConfiguration(_:source:)`` 仍保留重解析语义。
+  @_spi(InkMarkdown)
+  @MainActor
+  public func updateConfigurationSnapshot(_ configuration: InkConfiguration) {
+    self.configuration = configuration
+  }
+
+  /// 以当前绑定的 `UITextView` 宿主环境重新绑定行内图片。
+  ///
+  /// SwiftUI adapter 在流式文本视图的实际宽度、window screen 或 display scale
+  /// 变化后调用此 seam。显示上下文由 `InkImageAttachment` 的统一宿主 helper 从
+  /// 同一个 text view 解析，避免跨 host 各自猜测屏幕尺寸；未挂载或尚无有效宽度时
+  /// helper 会等待下一次有效 layout。
+  @_spi(InkMarkdown)
+  @MainActor
+  public func refreshImageAttachments() {
+    bindImageAttachmentsIfNeeded()
   }
 
   deinit {
@@ -322,7 +355,10 @@ public final class InkStreamRenderer: @unchecked Sendable {
         self.lastFilteredContent = result.content
       }
       self.preloadContent = result.content
-      self.preloadRefreshLocation = result.refreshLocation
+      self.preloadRefreshLocation = Self.mergingEarliestRefreshLocation(
+        current: self.preloadRefreshLocation,
+        incoming: result.refreshLocation
+      )
       self.parseVersion += 1
       self.preloadLock.unlock()
     }
@@ -344,7 +380,7 @@ public final class InkStreamRenderer: @unchecked Sendable {
     let generation = renderGeneration
     finalParseCompleted = false
     parseVersion = 0
-    preloadRefreshLocation = 0
+    preloadRefreshLocation = canonicalSource.isEmpty ? nil : 0
     preloadLock.unlock()
 
     let config = configuration.capturingRenderEnvironmentForBackgroundParse()
@@ -384,7 +420,10 @@ public final class InkStreamRenderer: @unchecked Sendable {
           self.lastFilteredContent = result.content
         }
         self.preloadContent = result.content
-        self.preloadRefreshLocation = result.refreshLocation
+        self.preloadRefreshLocation = Self.mergingEarliestRefreshLocation(
+          current: self.preloadRefreshLocation,
+          incoming: result.refreshLocation
+        )
         self.preloadLock.unlock()
         DispatchQueue.main.async { [weak self] in
           self?.startDisplayLink()
@@ -407,6 +446,7 @@ public final class InkStreamRenderer: @unchecked Sendable {
     renderGeneration += 1
     let generation = renderGeneration
     finalParseCompleted = false
+    preloadRefreshLocation = 0
     preloadLock.unlock()
 
     parseQueue.async { [weak self] in
@@ -494,6 +534,30 @@ public final class InkStreamRenderer: @unchecked Sendable {
     return 0
   }
 
+  /// 合并自上次显示消费以来到达的解析结果。显示端只在同一把锁内消费并
+  /// 清空该槽位，因此解析结果若在消费之后到达，会进入下一显示批次。
+  static func mergingEarliestRefreshLocation(current: Int?, incoming: Int) -> Int {
+    let incoming = max(0, incoming)
+    guard let current else { return incoming }
+    return min(current, incoming)
+  }
+
+  private func consumePreloadSnapshot() -> PreloadSnapshot {
+    preloadLock.lock()
+    let content = preloadContent
+    let refreshLocation = min(preloadRefreshLocation ?? content.length, content.length)
+    let snapshot = PreloadSnapshot(
+      content: content,
+      parseVersion: parseVersion,
+      refreshLocation: refreshLocation,
+      finalParseCompleted: finalParseCompleted
+    )
+    // 解析结果在此锁释放后到达时，写入的是下一批 dirty location；不会被本次消费覆盖。
+    preloadRefreshLocation = nil
+    preloadLock.unlock()
+    return snapshot
+  }
+
   /// 把 `content[0..<showLength)` 的刷新应用到 textStorage：只重写 `refreshLocation`
   /// 之后受影响的尾部，跳过完全无变化的帧。
   ///
@@ -526,13 +590,18 @@ public final class InkStreamRenderer: @unchecked Sendable {
 
   // MARK: - Display Link
 
+  /// 驱动一次显示帧；仅供性能与显示一致性契约测试使用。
+  @_spi(Performance)
+  @MainActor
+  public func driveDisplayFrameForTesting() {
+    onDisplayFrame()
+  }
+
   @MainActor
   private func startDisplayLink() {
     guard displayLink == nil else { return }
     let link = CADisplayLink(target: DisplayLinkTarget(renderer: self), selector: #selector(DisplayLinkTarget.onFrame))
-    if #available(iOS 15.0, *) {
-      link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
-    }
+    link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
     link.add(to: .main, forMode: .common)
     displayLink = link
   }
@@ -548,12 +617,11 @@ public final class InkStreamRenderer: @unchecked Sendable {
   fileprivate func onDisplayFrame() {
     guard !isDisplayPaused else { return }
 
-    preloadLock.lock()
-    let content = preloadContent
-    let parseVersion = self.parseVersion
-    let refreshLocation = min(preloadRefreshLocation, content.length)
-    let finalParseCompleted = self.finalParseCompleted
-    preloadLock.unlock()
+    let snapshot = consumePreloadSnapshot()
+    let content = snapshot.content
+    let parseVersion = snapshot.parseVersion
+    let refreshLocation = snapshot.refreshLocation
+    let finalParseCompleted = snapshot.finalParseCompleted
 
     let totalLength = content.length
 
@@ -603,9 +671,10 @@ public final class InkStreamRenderer: @unchecked Sendable {
       return
     }
 
-    chunkSize = charactersPerFrame
-
-    let newDisplayIndex = min(displayIndex + chunkSize, totalLength)
+    // Clamp the delta before adding it to the cursor. Public speed values may be
+    // Int.max, zero or negative; none may overflow or move the cursor backwards.
+    let chunkSize = min(max(1, charactersPerFrame), totalLength - displayIndex)
+    let newDisplayIndex = displayIndex + chunkSize
 
     guard let tv = textView else {
       displayIndex = newDisplayIndex
@@ -683,10 +752,8 @@ public final class InkStreamRenderer: @unchecked Sendable {
     // 后台线程，这里会立刻 fatal error 兜底，而不是静默在错误的线程上操作 TextKit。
     MainActor.assumeIsolated {
       guard let tv = textView else { return }
-      let layoutManager = tv.layoutManager
       InkImageAttachment.bindAttachments(
-        in: tv.textStorage,
-        layoutManager: layoutManager,
+        in: tv,
         onHeightChange: { [weak self] in
           self?.notifyHeightChangeIfNeeded()
         },
@@ -700,9 +767,7 @@ public final class InkStreamRenderer: @unchecked Sendable {
   /// 立即将所有已解析内容显示完毕
   @MainActor
   private func _flushDisplay() {
-    preloadLock.lock()
-    let content = preloadContent
-    preloadLock.unlock()
+    let content = consumePreloadSnapshot().content
 
     let totalLength = content.length
     guard totalLength > 0 else { return }

@@ -1,5 +1,6 @@
 import Testing
 import UIKit
+import InkMarkdownSemanticCorpus
 @_spi(Performance) @testable import InkMarkdown
 
 // MARK: - 显示刷新 seam（refreshTextStorage）测试
@@ -113,4 +114,92 @@ import UIKit
   }
   #expect(textStorage.string == full.string)
   #expect(!textStorage.string.contains("<ref/>"))
+}
+
+/// 真实 renderer 回归：显示暂停期间连续解析的结果必须在下一批显示消费时
+/// 保留最早 dirty location。前面的普通段落在追加 Setext 下划线后会改变属性，
+/// 后续尾部又经过 sourceFilter；一次消费不能只应用最后一个尾部更新而漏掉前缀。
+@Test @MainActor func displayFrame_consumesPrefixRewriteAndLaterTailTogether() async {
+  let configuration = InkConfiguration(
+    sourceFilter: { $0.replacingOccurrences(of: "<ref/>", with: "") }
+  )
+  let renderer = InkStreamRenderer(configuration: configuration)
+  renderer.charactersPerFrame = Int.max
+  let textView = UITextView(frame: CGRect(x: 0, y: 0, width: 320, height: 200))
+  textView.textContainer.size = CGSize(width: 320, height: CGFloat.greatestFiniteMagnitude)
+  renderer.bindTextView(textView)
+  renderer.isDisplayPaused = true
+
+  let initialSource = "Title\n"
+  renderer.append(initialSource)
+  let initialContent = InkAttributedRenderer.render(initialSource, configuration: configuration)
+  #expect(await InkAsyncTestProbe.wait { renderer.currentAttributedString().isEqual(to: initialContent) })
+
+  // Resume only long enough to drive the initial snapshot into textStorage. The
+  // scheduled flush from isDisplayPaused is kept on the main queue until after
+  // these synchronous test frames, so the same seam exercises the real consumer.
+  renderer.isDisplayPaused = false
+  renderer.driveDisplayFrameForTesting()
+  renderer.driveDisplayFrameForTesting()
+  renderer.isDisplayPaused = true
+  #expect(textView.textStorage.isEqual(to: initialContent))
+
+  // The Setext underline changes the already displayed title's attributes. The
+  // later source-filtered tail must be merged into the same pending snapshot.
+  let finalSource = "Title\n---\n<ref/>Tail"
+  renderer.append("---\n")
+  renderer.append("<ref/>Tail")
+  let finalContent = InkAttributedRenderer.render(finalSource, configuration: configuration)
+  #expect(await InkAsyncTestProbe.wait { renderer.currentAttributedString().isEqual(to: finalContent) })
+
+  renderer.isDisplayPaused = false
+  renderer.driveDisplayFrameForTesting()
+  let displayedPrefixLength = min(initialContent.length, finalContent.length)
+  #expect(
+    textView.textStorage.attributedSubstring(
+      from: NSRange(location: 0, length: displayedPrefixLength)
+    ).isEqual(
+      to: finalContent.attributedSubstring(
+        from: NSRange(location: 0, length: displayedPrefixLength)
+      )
+    )
+  )
+  renderer.driveDisplayFrameForTesting()
+  renderer.isDisplayPaused = true
+
+  #expect(textView.textStorage.string == finalContent.string)
+  // UITextView fills missing separator attributes during TextKit normalization.
+  // Compare semantic text runs; an unstyled newline need not stay attribute-empty.
+  let tailRange = (finalContent.string as NSString).range(of: "Tail")
+  #expect(textView.textStorage.attributedSubstring(from: tailRange).isEqual(
+    to: finalContent.attributedSubstring(from: tailRange)
+  ))
+  let actualParagraphStyle = textView.textStorage.attribute(
+    .paragraphStyle,
+    at: 0,
+    effectiveRange: nil
+  ) as? NSParagraphStyle
+  let expectedParagraphStyle = finalContent.attribute(
+    .paragraphStyle,
+    at: 0,
+    effectiveRange: nil
+  ) as? NSParagraphStyle
+  #expect(actualParagraphStyle?.isEqual(expectedParagraphStyle) == true)
+}
+
+@Test(arguments: [0, -1, Int.min])
+@MainActor
+func displayFrame_nonpositiveSpeedStillMakesProgress(speed: Int) async {
+  let renderer = InkStreamRenderer()
+  renderer.charactersPerFrame = speed
+  let textView = UITextView(frame: CGRect(x: 0, y: 0, width: 320, height: 200))
+  renderer.bindTextView(textView)
+  renderer.isDisplayPaused = true
+  renderer.append("abc")
+  #expect(await InkAsyncTestProbe.wait { renderer.currentAttributedString().string == "abc" })
+  renderer.isDisplayPaused = false
+  renderer.driveDisplayFrameForTesting()
+  renderer.driveDisplayFrameForTesting()
+  renderer.isDisplayPaused = true
+  #expect(textView.textStorage.string == "a")
 }
