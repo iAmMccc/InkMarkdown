@@ -7,6 +7,8 @@ final class InkTableBlockView: UIView {
 
   private var headers: [String]
   private var rows: [[String]]
+  private var preparedHeaders: [InkPreparedMarkdownSource]?
+  private var preparedRows: [[InkPreparedMarkdownSource]]?
   private var alignments: [Table.ColumnAlignment?]
   private var layoutMode: InkTableLayoutMode
   private var config: InkAppearance.Table
@@ -15,10 +17,24 @@ final class InkTableBlockView: UIView {
   private var contentRoot: UIView?
   private var contentStack: UIStackView?
   private var copyGestureRecognizer: UILongPressGestureRecognizer?
+  private var lastMeasuredContentWidth: CGFloat = 0
+  private var layoutContentWidthOverride: CGFloat?
+  private var isRebuildingForWidth = false
 
-  init(headers: [String], rows: [[String]], alignments: [Table.ColumnAlignment?], layoutMode: InkTableLayoutMode, config: InkAppearance.Table, configuration: InkConfiguration) {
+  init(
+    headers: [String],
+    rows: [[String]],
+    alignments: [Table.ColumnAlignment?],
+    layoutMode: InkTableLayoutMode,
+    config: InkAppearance.Table,
+    configuration: InkConfiguration,
+    preparedHeaders: [InkPreparedMarkdownSource]? = nil,
+    preparedRows: [[InkPreparedMarkdownSource]]? = nil
+  ) {
     self.headers = headers
     self.rows = rows
+    self.preparedHeaders = preparedHeaders
+    self.preparedRows = preparedRows
     self.alignments = alignments
     self.layoutMode = layoutMode
     self.config = config
@@ -38,14 +54,19 @@ final class InkTableBlockView: UIView {
     alignments: [Table.ColumnAlignment?],
     layoutMode: InkTableLayoutMode,
     config: InkAppearance.Table,
-    configuration: InkConfiguration
+    configuration: InkConfiguration,
+    preparedHeaders: [InkPreparedMarkdownSource]? = nil,
+    preparedRows: [[InkPreparedMarkdownSource]]? = nil
   ) {
     self.headers = headers
     self.rows = rows
+    self.preparedHeaders = preparedHeaders
+    self.preparedRows = preparedRows
     self.alignments = alignments
     self.layoutMode = layoutMode
     self.config = config
     self.configuration = configuration
+    lastMeasuredContentWidth = 0
     contentRoot?.removeFromSuperview()
     contentRoot = nil
     contentStack = nil
@@ -57,8 +78,21 @@ final class InkTableBlockView: UIView {
     invalidateIntrinsicContentSize()
   }
 
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    // scroll 内容保持自然宽度；宿主宽度变化只应改变 UIScrollView viewport。
+    guard layoutMode == .wrap, !isRebuildingForWidth, bounds.width > 0 else { return }
+    let contentWidth = InkTableRenderHelper.contentWidth(for: self, config: config)
+    guard abs(contentWidth - lastMeasuredContentWidth) > 0.5 else { return }
+    rebuildLayout(forContentWidth: contentWidth)
+  }
+
   override func sizeThatFits(_ size: CGSize) -> CGSize {
     let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 320)
+    let requestedContentWidth = max(1, targetWidth - config.horizontalInset * 2)
+    if layoutMode == .wrap, abs(requestedContentWidth - lastMeasuredContentWidth) > 0.5 {
+      rebuildLayout(forContentWidth: requestedContentWidth)
+    }
     let availableWidth = max(0, targetWidth - config.horizontalInset * 2)
     guard let stack = contentStack else {
       return CGSize(width: targetWidth, height: config.verticalInset)
@@ -90,7 +124,27 @@ final class InkTableBlockView: UIView {
 
   // MARK: - Setup
 
+  private func rebuildLayout(forContentWidth contentWidth: CGFloat) {
+    guard !isRebuildingForWidth else { return }
+    isRebuildingForWidth = true
+    defer { isRebuildingForWidth = false }
+
+    contentRoot?.removeFromSuperview()
+    contentRoot = nil
+    contentStack = nil
+    if let copyGestureRecognizer {
+      removeGestureRecognizer(copyGestureRecognizer)
+      self.copyGestureRecognizer = nil
+    }
+    lastMeasuredContentWidth = contentWidth
+    layoutContentWidthOverride = contentWidth
+    defer { layoutContentWidthOverride = nil }
+    setup()
+  }
+
   private func setup() {
+    lastMeasuredContentWidth = layoutContentWidthOverride
+      ?? InkTableRenderHelper.contentWidth(for: self, config: config)
     switch layoutMode {
     case .wrap:
       setupWrapMode()
@@ -102,7 +156,15 @@ final class InkTableBlockView: UIView {
   // MARK: - Wrap 模式
 
   private func setupWrapMode() {
-    let contentWidths = InkTableRenderHelper.measureColumnContentWidths(headers: headers, rows: rows, config: config, configuration: configuration)
+    let contentWidths = InkTableRenderHelper.measureColumnContentWidths(
+      headers: headers,
+      rows: rows,
+      config: config,
+      configuration: configuration,
+      containerWidth: lastMeasuredContentWidth,
+      preparedHeaders: preparedHeaders,
+      preparedRows: preparedRows
+    )
     let ratios = InkTableRenderHelper.widthsToRatios(contentWidths)
 
     let container = InkTableRenderHelper.makeContainer(config: config)
@@ -139,7 +201,16 @@ final class InkTableBlockView: UIView {
   // MARK: - Scroll 模式
 
   private func setupScrollMode() {
-    let fixedWidths = InkTableRenderHelper.measureColumnContentWidths(headers: headers, rows: rows, config: config, configuration: configuration)
+    let fixedWidths = InkTableRenderHelper.measureColumnContentWidths(
+      headers: headers,
+      rows: rows,
+      config: config,
+      configuration: configuration,
+      containerWidth: lastMeasuredContentWidth,
+      maximumColumnWidth: .greatestFiniteMagnitude,
+      preparedHeaders: preparedHeaders,
+      preparedRows: preparedRows
+    )
 
     let scrollView = UIScrollView()
     scrollView.showsHorizontalScrollIndicator = true
@@ -193,14 +264,33 @@ final class InkTableBlockView: UIView {
   private func populateStack(_ stack: UIStackView, widthMode: InkTableRenderHelper.ColumnWidthMode) {
     if !headers.isEmpty {
       let headerRow = UIView()
-      InkTableRenderHelper.makeRow(texts: headers, isHeader: true, widthMode: widthMode, alignments: alignments, config: config, configuration: configuration, rowContainer: headerRow)
+      InkTableRenderHelper.makeRow(
+        texts: headers,
+        isHeader: true,
+        widthMode: widthMode,
+        alignments: alignments,
+        config: config,
+        configuration: configuration,
+        rowContainer: headerRow,
+        preparedTexts: preparedHeaders
+      )
       stack.addArrangedSubview(headerRow)
       stack.addArrangedSubview(InkTableRenderHelper.makeSeparator(config: config))
     }
 
     for (index, row) in rows.enumerated() {
       let rowView = UIView()
-      InkTableRenderHelper.makeRow(texts: row, isHeader: false, widthMode: widthMode, alignments: alignments, config: config, configuration: configuration, rowContainer: rowView)
+      let preparedRow = preparedRows.flatMap { index < $0.count ? $0[index] : nil }
+      InkTableRenderHelper.makeRow(
+        texts: row,
+        isHeader: false,
+        widthMode: widthMode,
+        alignments: alignments,
+        config: config,
+        configuration: configuration,
+        rowContainer: rowView,
+        preparedTexts: preparedRow
+      )
       stack.addArrangedSubview(rowView)
       if index < rows.count - 1 {
         stack.addArrangedSubview(InkTableRenderHelper.makeSeparator(config: config))
