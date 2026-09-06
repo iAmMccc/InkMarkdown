@@ -13,10 +13,61 @@ public struct PreviewLoadPolicy: Sendable {
   /// 高清预览解码的最长边像素上限。
   public var maxPreviewPixel: CGFloat = 4096
 
-  /// 是否绕过 ``InkImageStore``，避免高清图进入内存缓存。
+  /// 是否绕过 ``InkImageStore``，避免高清图进入内存缓存；设为 `false` 时，
+  /// 宿主可通过预览控制器的 `store` 参数复用已有 Store，未提供时由控制器持有独立 Store。
   public var bypassStore: Bool = true
 
   public init() {}
+}
+
+private enum InkPreviewStoreLoadError: Error {
+  case rejected
+}
+
+/// Bridges one Store subscription into an async task without retaining preview controller.
+@MainActor
+private final class InkPreviewStoreLoadBridge {
+  private var continuation: CheckedContinuation<UIImage, Error>?
+  private var subscription: InkImageStore.ImageLoadSubscription?
+  private var didFinish = false
+
+  func install(_ continuation: CheckedContinuation<UIImage, Error>) {
+    guard !didFinish else {
+      continuation.resume(throwing: CancellationError())
+      return
+    }
+    self.continuation = continuation
+    if Task.isCancelled {
+      finish(.failure(CancellationError()))
+    }
+  }
+
+  func setSubscription(_ subscription: InkImageStore.ImageLoadSubscription) {
+    guard !didFinish else {
+      subscription.cancel()
+      return
+    }
+    self.subscription = subscription
+  }
+
+  func finish(_ result: Result<UIImage, Error>) {
+    guard !didFinish else { return }
+    didFinish = true
+    subscription?.cancel()
+    subscription = nil
+    let continuation = self.continuation
+    self.continuation = nil
+    switch result {
+    case .success(let image):
+      continuation?.resume(returning: image)
+    case .failure(let error):
+      continuation?.resume(throwing: error)
+    }
+  }
+
+  func cancel() {
+    finish(.failure(CancellationError()))
+  }
 }
 
 // MARK: - InkImagePreviewController
@@ -33,9 +84,11 @@ public final class InkImagePreviewController: UIViewController {
   private let source: ImageSource
   private let displayImage: UIImage
   private let loader: InkImageLoading?
+  private let store: InkImageStore?
   private let previewPolicy: PreviewLoadPolicy
 
   private var highResTask: Task<Void, Never>?
+  private var highResGeneration = UUID()
 
   // MARK: - Views
 
@@ -70,16 +123,20 @@ public final class InkImagePreviewController: UIViewController {
   ///   - source: 图片来源，用于后台加载高清图。
   ///   - displayImage: 已有的降采样图，入场立即展示。
   ///   - loader: 高清图加载器；为 `nil` 时仅展示 `displayImage`。
+  ///   - store: `bypassStore == false` 时由宿主注入的图片 Store。注入后复用宿主缓存；
+  ///     省略时控制器持有独立的默认配置 Store，保证高清加载仍按 Store 路径执行。
   ///   - previewPolicy: 高清解码与缓存策略。
   public init(
     source: ImageSource,
     displayImage: UIImage,
     loader: InkImageLoading? = nil,
+    store: InkImageStore? = nil,
     previewPolicy: PreviewLoadPolicy = .init()
   ) {
     self.source = source
     self.displayImage = displayImage
     self.loader = loader
+    self.store = store ?? (previewPolicy.bypassStore ? nil : InkImageStore())
     self.previewPolicy = previewPolicy
     super.init(nibName: nil, bundle: nil)
     modalPresentationStyle = .overFullScreen
@@ -213,32 +270,42 @@ public final class InkImagePreviewController: UIViewController {
   private func loadHighResImage() {
     guard let loader else { return }
 
-    let screenScale = UIScreen.main.scale
-    let screenBounds = UIScreen.main.bounds
+    let metrics = InkDisplayMetrics.resolve(for: view)
     let zoomCap = scrollView.maximumZoomScale
     let maxPixel = min(
-      max(screenBounds.width, screenBounds.height) * screenScale * zoomCap,
+      max(metrics.bounds.width, metrics.bounds.height) * metrics.scale * zoomCap,
       previewPolicy.maxPreviewPixel
     )
     let display = DisplayContext(
       maxPixelWidth: maxPixel,
-      scale: screenScale,
+      scale: metrics.scale,
       contentMode: .fit
     )
 
-    highResTask = Task { [weak self, source] in
-      guard let self else { return }
+    // bypassStore=false 未注入 Store 时使用控制器自持的隔离 Store；不退回进程级
+    // shared，避免预览把高清图写入不相关的全局缓存。
+    let store = store
+    let bypassStore = previewPolicy.bypassStore
+    let generation = UUID()
+    highResGeneration = generation
+    highResTask = Task { [weak self, source, loader, display, store, bypassStore] in
       do {
-        let highResImage = try await loader.loadImage(source: source, display: display)
+        let highResImage: UIImage
+        if bypassStore {
+          highResImage = try await loader.loadImage(source: source, display: display)
+        } else {
+          guard let store else { return }
+          highResImage = try await Self.loadFromStore(
+            store: store,
+            source: source,
+            display: display,
+            loader: loader
+          )
+        }
         guard !Task.isCancelled else { return }
-        await MainActor.run {
-          UIView.transition(
-            with: self.imageView,
-            duration: 0.3,
-            options: .transitionCrossDissolve
-          ) {
-            self.imageView.image = highResImage
-          }
+        await MainActor.run { [weak self] in
+          guard let self, self.highResGeneration == generation else { return }
+          self.applyHighResImage(highResImage)
         }
       } catch {
         // 高清图加载失败不影响预览，继续使用降采样图
@@ -246,11 +313,58 @@ public final class InkImagePreviewController: UIViewController {
     }
   }
 
+  /// Store subscription path used when preview policy keeps the host-owned cache boundary.
+  @MainActor
+  private static func loadFromStore(
+    store: InkImageStore,
+    source: ImageSource,
+    display: DisplayContext,
+    loader: InkImageLoading
+  ) async throws -> UIImage {
+    let bridge = InkPreviewStoreLoadBridge()
+    return try await withTaskCancellationHandler(operation: {
+      try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<UIImage, Error>) in
+        bridge.install(continuation)
+        let result = store.resolve(source: source, display: display, loader: loader)
+        switch result {
+        case .ready(let image):
+          bridge.finish(.success(image))
+        case .rejected:
+          bridge.finish(.failure(InkPreviewStoreLoadError.rejected))
+        case .loading(let subscribe), .queued(let subscribe):
+          let subscription = subscribe { [weak bridge] image in
+            guard let bridge else { return }
+            if let image {
+              bridge.finish(.success(image))
+            } else {
+              bridge.finish(.failure(ImageLoadError.decodeFailed))
+            }
+          }
+          bridge.setSubscription(subscription)
+        }
+      }
+    }, onCancel: {
+      Task { @MainActor in
+        bridge.cancel()
+      }
+    })
+  }
+
+  @MainActor
+  private func applyHighResImage(_ image: UIImage) {
+    UIView.transition(
+      with: imageView,
+      duration: 0.3,
+      options: .transitionCrossDissolve
+    ) { [weak self] in
+      self?.imageView.image = image
+    }
+  }
+
   // MARK: - Dismiss
 
   private func dismissPreview() {
-    highResTask?.cancel()
-    highResTask = nil
+    cancelHighResTask()
     imageView.image = nil
 
     UIView.animate(withDuration: 0.25, animations: {
@@ -260,6 +374,18 @@ public final class InkImagePreviewController: UIViewController {
     }) { _ in
       self.dismiss(animated: false)
     }
+  }
+
+  private func cancelHighResTask() {
+    highResTask?.cancel()
+    highResTask = nil
+    highResGeneration = UUID()
+  }
+
+  public override func viewDidDisappear(_ animated: Bool) {
+    super.viewDidDisappear(animated)
+    // Covers interactive and host-triggered dismiss paths that bypass dismissPreview().
+    cancelHighResTask()
   }
 
   // MARK: - Image Centering

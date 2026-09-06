@@ -221,6 +221,92 @@ private final class ObserverTrackingNotificationCenter: NotificationCenter, @unc
   #expect(store.configuration.maxConcurrentLoads == 7)
 }
 
+@Test @MainActor func defaultStoresIsolateCompleteRenderingConfiguration() {
+  var firstRendering = InkImageRendering()
+  firstRendering.storeConfiguration.maxConcurrentLoads = 1
+  firstRendering.storeConfiguration.maxPendingLoads = 2
+
+  var secondRendering = InkImageRendering()
+  secondRendering.storeConfiguration.maxConcurrentLoads = 2
+  secondRendering.storeConfiguration.maxPendingLoads = 4
+
+  let first = InkImageStore.defaultStore(for: firstRendering)
+  let firstAgain = InkImageStore.defaultStore(for: firstRendering)
+  let second = InkImageStore.defaultStore(for: secondRendering)
+
+  #expect(first === firstAgain)
+  #expect(first !== second)
+  #expect(first.configuration == firstRendering.storeConfiguration)
+  #expect(second.configuration == secondRendering.storeConfiguration)
+  let defaultStore = InkImageStore.defaultStore(for: InkImageRendering())
+  #expect(defaultStore.configuration == InkImageStore.Configuration())
+  #expect(defaultStore !== InkImageStore.shared)
+
+  first.updateConfiguration(secondRendering.storeConfiguration)
+  let firstAfterOwnerReconfiguration = InkImageStore.defaultStore(for: firstRendering)
+  #expect(firstAfterOwnerReconfiguration !== first)
+  #expect(firstAfterOwnerReconfiguration.configuration == firstRendering.storeConfiguration)
+}
+
+@Test @MainActor func updateConfigurationDrainsAcceptedQueueAfterConcurrencyIncrease() {
+  var configuration = InkImageStore.Configuration()
+  configuration.maxConcurrentLoads = 1
+  configuration.maxPendingLoads = 2
+  let store = InkImageStore(configuration: configuration)
+  let loader = InkImageStoreTests.MockImageLoader()
+  loader.delay = 1_000_000_000
+  let display = DisplayContext(maxPixelWidth: 300, scale: 2)
+
+  _ = store.resolve(
+    source: ImageSource(url: URL(string: "https://example.com/active.png")!),
+    display: display,
+    loader: loader
+  )
+  _ = store.resolve(
+    source: ImageSource(url: URL(string: "https://example.com/queued.png")!),
+    display: display,
+    loader: loader
+  )
+  #expect(store.currentActiveCount == 1)
+  #expect(store.pendingLoadCount == 1)
+
+  configuration.maxConcurrentLoads = 2
+  store.updateConfiguration(configuration)
+
+  #expect(store.currentActiveCount == 2)
+  #expect(store.pendingLoadCount == 0)
+}
+
+@Test @MainActor func shrinkingPendingLimitPreservesAcceptedFIFOAndRejectsNewRequests() {
+  var configuration = InkImageStore.Configuration()
+  configuration.maxConcurrentLoads = 1
+  configuration.maxPendingLoads = 3
+  let store = InkImageStore(configuration: configuration)
+  let loader = InkImageStoreTests.MockImageLoader()
+  loader.delay = 1_000_000_000
+  let display = DisplayContext(maxPixelWidth: 300, scale: 2)
+
+  let sources = (0..<4).map {
+    ImageSource(url: URL(string: "https://example.com/queued-\($0).png")!)
+  }
+  for source in sources.prefix(3) {
+    _ = store.resolve(source: source, display: display, loader: loader)
+  }
+  #expect(store.currentActiveCount == 1)
+  #expect(store.pendingLoadCount == 2)
+
+  configuration.maxPendingLoads = 1
+  store.updateConfiguration(configuration)
+
+  let rejected = store.resolve(source: sources[3], display: display, loader: loader)
+  if case .rejected(.pendingQueueFull(let limit)) = rejected {
+    #expect(limit == 1)
+  } else {
+    Issue.record("缩容后新请求应按新 pending 上限拒绝")
+  }
+  #expect(store.pendingLoadCount == 2)
+}
+
 
 @Test @MainActor func dataURL_withinLimit() {
   let small = "data:image/png;base64," + String(repeating: "A", count: 100)
@@ -787,6 +873,53 @@ struct InkImageStoreTests {
   task.cancel()
 }
 
+@Test func httpSessionDelegate_cancellationDuringTaskRegistrationFinishesContinuation() async {
+  let enteredRegistration = AsyncStream<Void>.makeStream()
+  let releaseRegistration = DispatchSemaphore(value: 0)
+  let delegate = ImageHTTPSessionDelegate(
+    policy: ImageSecurityPolicy(),
+    beforeTaskInstall: {
+      enteredRegistration.continuation.yield()
+      releaseRegistration.wait()
+    }
+  )
+  let session = URLSession(configuration: .ephemeral)
+  let requestTask = Task {
+    do {
+      return Result<(Data, HTTPURLResponse), Error>.success(
+        try await delegate.boundedData(
+          from: URL(string: "https://example.com/cancellation-registration.png")!,
+          session: session
+        )
+      )
+    } catch {
+      return Result<(Data, HTTPURLResponse), Error>.failure(error)
+    }
+  }
+
+  for await _ in enteredRegistration.stream {
+    break
+  }
+  requestTask.cancel()
+  releaseRegistration.signal()
+  enteredRegistration.continuation.finish()
+  let result = await requestTask.value
+  session.invalidateAndCancel()
+
+  guard case .failure(let error) = result else {
+    Issue.record("取消登记竞态不应成功完成")
+    return
+  }
+  guard let imageError = error as? ImageLoadError else {
+    Issue.record("取消登记竞态应返回 ImageLoadError，实际为 \(error)")
+    return
+  }
+  guard case .cancelled = imageError else {
+    Issue.record("取消登记竞态应返回 cancelled，实际为 \(imageError)")
+    return
+  }
+}
+
 @Test func httpSessionDelegate_blocksRedirectBeyondMaxCount() {
   var policy = ImageSecurityPolicy()
   policy.maxRedirects = 2
@@ -1200,6 +1333,67 @@ private func makeImageTextStorage(
   #expect(loader.currentCompletedCount == 1)
 }
 
+@Test @MainActor func inlineAttachmentMaterializationIdentityIncludesDisplayContext() async {
+  let url = URL(string: "https://example.com/display-context.png")!
+  let loader = SizedMockImageLoader(
+    imagesByURL: [url.absoluteString: makeTestImage(width: 80, height: 80)]
+  )
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.loader = loader
+
+  let store = InkImageStore()
+  let attachment = InkImageAttachment(
+    source: ImageSource(url: url),
+    rendering: rendering,
+    store: store
+  )
+  let firstDisplay = DisplayContext(maxPixelWidth: 300, scale: 2)
+  let firstLoader = store.loader(for: rendering, source: attachment.source)
+  attachment.materialize(display: firstDisplay, loader: firstLoader)
+  await waitForImageLoads(count: 1, loader: loader)
+
+  attachment.materialize(display: firstDisplay, loader: firstLoader)
+  for _ in 0..<5 { await Task.yield() }
+  #expect(loader.currentLoadCount == 1)
+
+  let widerDisplay = DisplayContext(maxPixelWidth: 600, scale: 2)
+  let widerLoader = store.loader(for: rendering, source: attachment.source)
+  attachment.materialize(display: widerDisplay, loader: widerLoader)
+  await waitForImageLoads(count: 2, loader: loader)
+  #expect(loader.currentLoadCount == 2)
+}
+
+@Test @MainActor func textViewBindingHelperRematerializesAfterHostWidthChange() async {
+  let url = URL(string: "https://example.com/text-view-resize.png")!
+  let loader = SizedMockImageLoader(
+    imagesByURL: [url.absoluteString: makeTestImage(width: 120, height: 80)]
+  )
+  var rendering = InkImageRendering()
+  rendering.isEnabled = true
+  rendering.loader = loader
+
+  let attachment = InkImageAttachment(
+    source: ImageSource(url: url),
+    rendering: rendering
+  )
+  let textView = UITextView(frame: CGRect(x: 0, y: 0, width: 220, height: 100))
+  textView.textContainerInset = UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 12)
+  textView.textContainer.lineFragmentPadding = 4
+  textView.textStorage.setAttributedString(NSAttributedString(attachment: attachment))
+
+  textView.textContainer.size = CGSize(width: 198, height: CGFloat.greatestFiniteMagnitude)
+  InkImageAttachment.bindAttachments(in: textView)
+  await waitForImageLoads(count: 1, loader: loader)
+
+  textView.frame.size.width = 320
+  textView.textContainer.size = CGSize(width: 298, height: CGFloat.greatestFiniteMagnitude)
+  InkImageAttachment.bindAttachments(in: textView)
+  await waitForImageLoads(count: 2, loader: loader)
+
+  #expect(loader.currentLoadCount == 2)
+}
+
 // MARK: - InkImageBlock / InkImageBlockHandler 端到端
 
 @Test @MainActor func imageBlockHandler_promotesStandaloneImageParagraph() {
@@ -1442,7 +1636,8 @@ private func makeImageTextStorage(
   let store = InkImageStore()
   let source = ImageSource(url: url)
   let containerWidth: CGFloat = 300
-  let scale = UIScreen.main.scale
+  let block = InkImageBlock(source: source, rendering: rendering, store: store)
+  let scale = InkDisplayMetrics.resolve(for: block).scale
   let display = DisplayContext(
     maxPixelWidth: containerWidth * scale,
     scale: scale,
@@ -1464,7 +1659,6 @@ private func makeImageTextStorage(
   }
   #expect(didCacheImage)
 
-  let block = InkImageBlock(source: source, rendering: rendering, store: store)
   #expect(block.intrinsicContentSize.height == 0)
 
   block.configure(containerWidth: containerWidth, loader: loader)
@@ -1474,6 +1668,15 @@ private func makeImageTextStorage(
   ).height
   #expect(measuredHeight == 100)
   #expect(measuredHeight != rendering.placeholderHeight)
+}
+
+@Test @MainActor func displayMetrics_prefersContextualViewBounds() {
+  let view = UIView(frame: CGRect(x: 0, y: 0, width: 444, height: 777))
+  let metrics = InkDisplayMetrics.resolve(for: view)
+
+  #expect(metrics.bounds == view.bounds)
+  #expect(metrics.scale > 0)
+  #expect(InkDisplayMetrics.availableWidth(for: view) == 444)
 }
 
 @Test @MainActor func inlineAttachment_unloadedBoundsHeightIsCompact() {

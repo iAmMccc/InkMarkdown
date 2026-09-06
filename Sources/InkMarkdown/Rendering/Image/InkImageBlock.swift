@@ -36,7 +36,11 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   /// - Note: Block 路由在 UIKit 主线程调用；须在主线程构造。
   @MainActor
   public convenience init(source: ImageSource, rendering: InkImageRendering) {
-    self.init(source: source, resolvedStore: .shared, rendering: rendering)
+    self.init(
+      source: source,
+      resolvedStore: InkImageStore.defaultStore(for: rendering),
+      rendering: rendering
+    )
   }
 
   /// 0.0.1 兼容初始化器：显式注入 ``InkImageStore``。
@@ -45,7 +49,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   ///   - source: 图片源。
   ///   - store: 图片加载与缓存 Store。
   ///   - rendering: 图片渲染配置。
-  @available(*, deprecated, renamed: "init(source:rendering:)", message: "请改用 init(source:rendering:)；store 默认为 InkImageStore.shared。")
+  @available(*, deprecated, renamed: "init(source:rendering:)", message: "请改用 init(source:rendering:)；默认 Store 按 rendering.storeConfiguration 隔离。")
   @MainActor
   public convenience init(source: ImageSource, store: InkImageStore, rendering: InkImageRendering) {
     self.init(source: source, resolvedStore: store, rendering: rendering)
@@ -161,7 +165,6 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
 
   @MainActor
   private func configureIfNeeded() {
-    store.prepareForRendering(rendering)
     let loader = store.loader(for: rendering, source: source)
     configure(containerWidth: bounds.width, loader: loader)
   }
@@ -175,13 +178,12 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   public func configure(containerWidth: CGFloat, loader: InkImageLoading) {
     isConfigured = true
     subscription?.cancel()
-    store.prepareForRendering(rendering)
     let currentToken = UUID()
     loadToken = currentToken
 
     let effectiveWidth = min(containerWidth, rendering.sizing.maxBlockImageWidth ?? containerWidth)
     configuredMaxWidth = containerWidth
-    let scale = UIScreen.main.scale
+    let scale = InkDisplayMetrics.resolve(for: self).scale
     let display = DisplayContext(
       maxPixelWidth: effectiveWidth * scale,
       scale: scale,

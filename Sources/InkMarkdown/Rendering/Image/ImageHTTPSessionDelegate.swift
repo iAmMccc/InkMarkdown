@@ -14,9 +14,11 @@ import Foundation
 final class ImageHTTPSessionDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
 
   let policy: ImageSecurityPolicy
+  private let beforeTaskInstall: (@Sendable () -> Void)?
 
-  init(policy: ImageSecurityPolicy) {
+  init(policy: ImageSecurityPolicy, beforeTaskInstall: (@Sendable () -> Void)? = nil) {
     self.policy = policy
+    self.beforeTaskInstall = beforeTaskInstall
     self.redirectCounts = RedirectCounts()
     super.init()
   }
@@ -41,16 +43,24 @@ final class ImageHTTPSessionDelegate: NSObject, URLSessionDataDelegate, @uncheck
     return try await withTaskCancellationHandler(operation: {
       try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<(Data, HTTPURLResponse), Error>) in
         let task = session.dataTask(with: URLRequest(url: url))
-        guard box.install(task) else {
-          continuation.resume(throwing: ImageLoadError.cancelled)
-          return
-        }
+        let taskID = ObjectIdentifier(task)
+        // Register continuation before exposing task to cancellation. If cancellation wins
+        // the install race, finish() removes this entry and resumes it exactly once.
         lock.lock()
-        pendings[ObjectIdentifier(task)] = Pending(
+        pendings[taskID] = Pending(
           continuation: continuation,
           urlTask: task
         )
         lock.unlock()
+
+        // Internal deterministic test seam; production leaves it nil. The pending entry must
+        // exist before cancellation can observe the task install boundary.
+        beforeTaskInstall?()
+
+        guard box.install(task) else {
+          finish(taskID: taskID, result: .failure(ImageLoadError.cancelled))
+          return
+        }
         task.resume()
       }
     }, onCancel: {

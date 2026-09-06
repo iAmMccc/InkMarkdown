@@ -35,7 +35,20 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
   /// 回调完成后重置为 `false`。
   public internal(set) var shouldAnimateNextHeightChange: Bool = false
   nonisolated(unsafe) private var subscription: InkImageStore.ImageLoadSubscription?
-  private var didMaterialize = false
+  private enum LoaderIdentity: Equatable {
+    case semantic(String)
+    case instance(ObjectIdentifier)
+    case unknown(UUID)
+  }
+
+  private struct MaterializationIdentity: Equatable {
+    let display: DisplayContext
+    let store: ObjectIdentifier
+    let loader: LoaderIdentity
+  }
+
+  private var materializationIdentity: MaterializationIdentity?
+  private var materializationGeneration = UUID()
   private var lastLineFragmentWidth: CGFloat = 0
   /// `attachmentBounds` 是 TextKit 的 nonisolated 纯测量回调，只读取主线程发布的图片快照。
   nonisolated(unsafe) private var renderedImage: UIImage?
@@ -43,7 +56,7 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
   /// - Parameters:
   ///   - source: 图片来源。
   ///   - rendering: 图片渲染配置（尺寸、占位高度等）。
-  ///   - store: 可选 Store；渲染阶段可省略，显示层绑定时注入 ``InkImageStore/shared``。
+  ///   - store: 可选 Store；渲染阶段可省略，显示层绑定时按 rendering 选择默认 Store。
   nonisolated public init(
     source: ImageSource,
     rendering: InkImageRendering,
@@ -55,10 +68,14 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
     super.init(data: nil, ofType: nil)
   }
 
-  /// 使用共享 Store 创建（须在主线程调用）。
+  /// 使用默认渲染 Store 创建（须在主线程调用）。
   @MainActor
   public convenience init(source: ImageSource, rendering: InkImageRendering) {
-    self.init(source: source, rendering: rendering, store: .shared)
+    self.init(
+      source: source,
+      rendering: rendering,
+      store: InkImageStore.defaultStore(for: rendering)
+    )
   }
 
   public required init?(coder: NSCoder) {
@@ -95,21 +112,36 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
     store: InkImageStore,
     onHeightChange: (() -> Void)?
   ) {
-    let alreadyBound = didMaterialize
-      && self.layoutManager === layoutManager
-      && boundStore === store
+    bind(
+      to: layoutManager,
+      store: store,
+      displayContext: nil,
+      onHeightChange: onHeightChange
+    )
+  }
+
+  /// 显示层绑定兼容重载：宿主可传入真实容器的显示上下文，避免从全局屏幕推断
+  /// scale 或像素宽度。旧版 ``bind(to:store:onHeightChange:)`` 继续可用。
+  @MainActor
+  func bind(
+    to layoutManager: NSLayoutManager,
+    store: InkImageStore?,
+    displayContext: DisplayContext?,
+    onHeightChange: (() -> Void)?
+  ) {
 
     self.layoutManager = layoutManager
-    self.boundStore = store
+    self.boundStore = store ?? InkImageStore.defaultStore(for: rendering)
     self.onHeightChange = onHeightChange
-
-    guard !alreadyBound else { return }
 
     if let container = layoutManager.textContainers.first {
       let width = container.size.width - container.lineFragmentPadding * 2
       if width > 0 {
         lastLineFragmentWidth = width
-        ensureMaterializedIfNeeded(lineFragmentWidth: width)
+        ensureMaterializedIfNeeded(
+          lineFragmentWidth: width,
+          displayContext: displayContext
+        )
       }
     }
   }
@@ -125,7 +157,46 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
     onHeightChange: (() -> Void)? = nil,
     range: NSRange? = nil
   ) {
-    let resolvedStore = store ?? .shared
+    _bindAttachments(
+      in: textStorage,
+      layoutManager: layoutManager,
+      store: store,
+      displayContext: nil,
+      onHeightChange: onHeightChange,
+      range: range
+    )
+  }
+
+  /// 带宿主显示上下文的绑定入口。用于 SwiftUI/UIKit adapter 已知真实容器宽度与
+  /// scale 的路径；旧签名保留，未提供时继续使用兼容测量逻辑。
+  @MainActor
+  public static func bindAttachments(
+    in textStorage: NSTextStorage,
+    layoutManager: NSLayoutManager,
+    store: InkImageStore? = nil,
+    displayContext: DisplayContext,
+    onHeightChange: (() -> Void)? = nil,
+    range: NSRange? = nil
+  ) {
+    _bindAttachments(
+      in: textStorage,
+      layoutManager: layoutManager,
+      store: store,
+      displayContext: displayContext,
+      onHeightChange: onHeightChange,
+      range: range
+    )
+  }
+
+  @MainActor
+  private static func _bindAttachments(
+    in textStorage: NSTextStorage,
+    layoutManager: NSLayoutManager,
+    store: InkImageStore?,
+    displayContext: DisplayContext?,
+    onHeightChange: (() -> Void)?,
+    range: NSRange?
+  ) {
     guard textStorage.length > 0 else { return }
     let searchRange: NSRange
     if let range {
@@ -138,7 +209,12 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
     }
     textStorage.enumerateAttribute(.attachment, in: searchRange, options: []) { value, _, _ in
       guard let attachment = value as? InkImageAttachment else { return }
-      attachment.bind(to: layoutManager, store: resolvedStore, onHeightChange: onHeightChange)
+      attachment.bind(
+        to: layoutManager,
+        store: store,
+        displayContext: displayContext,
+        onHeightChange: onHeightChange
+      )
     }
   }
 
@@ -149,26 +225,57 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
   ///   - loader: 实际执行解码的加载器。
   @MainActor
   public func materialize(display: DisplayContext, loader: InkImageLoading) {
-    guard let store = boundStore else { return }
+    let store = boundStore ?? InkImageStore.defaultStore(for: rendering)
+    boundStore = store
+
+    let identity = MaterializationIdentity(
+      display: display,
+      store: ObjectIdentifier(store),
+      loader: loaderIdentity(for: loader)
+    )
+    guard materializationIdentity != identity else { return }
+
     subscription?.cancel()
-    store.prepareForRendering(rendering)
+    subscription = nil
+    materializationIdentity = identity
+    let generation = UUID()
+    materializationGeneration = generation
     let sizing = rendering.sizing
     let result = store.resolve(source: source, display: display, loader: loader)
     switch result {
     case .ready(let img):
-      applyImage(img, sizing: sizing, lineFragmentWidth: resolvedLineFragmentWidth())
+      applyImage(
+        img,
+        sizing: sizing,
+        lineFragmentWidth: resolvedLineFragmentWidth(),
+        generation: generation
+      )
     case .loading(let subscribe):
       subscription = subscribe { [weak self] image in
         guard let self else { return }
+        guard self.materializationGeneration == generation,
+              self.materializationIdentity == identity else { return }
         if let image {
-          self.applyImage(image, sizing: sizing, lineFragmentWidth: self.resolvedLineFragmentWidth())
+          self.applyImage(
+            image,
+            sizing: sizing,
+            lineFragmentWidth: self.resolvedLineFragmentWidth(),
+            generation: generation
+          )
         }
       }
     case .queued(let subscribe):
       subscription = subscribe { [weak self] image in
         guard let self else { return }
+        guard self.materializationGeneration == generation,
+              self.materializationIdentity == identity else { return }
         if let image {
-          self.applyImage(image, sizing: sizing, lineFragmentWidth: self.resolvedLineFragmentWidth())
+          self.applyImage(
+            image,
+            sizing: sizing,
+            lineFragmentWidth: self.resolvedLineFragmentWidth(),
+            generation: generation
+          )
         }
       }
     case .rejected:
@@ -177,24 +284,57 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
   }
 
   @MainActor
-  private func ensureMaterializedIfNeeded(lineFragmentWidth: CGFloat) {
-    guard !didMaterialize, let store = boundStore else { return }
-    didMaterialize = true
+  private func ensureMaterializedIfNeeded(
+    lineFragmentWidth: CGFloat,
+    displayContext: DisplayContext?
+  ) {
+    let store = boundStore ?? InkImageStore.defaultStore(for: rendering)
+    boundStore = store
     lastLineFragmentWidth = lineFragmentWidth
-    let sizing = rendering.sizing
-    let maxW = min(sizing.maxInlineImageWidth ?? lineFragmentWidth, lineFragmentWidth)
-    let scale = UIScreen.main.scale
-    let display = DisplayContext(
-      maxPixelWidth: max(maxW, 1) * scale,
-      scale: scale,
-      contentMode: .fit
-    )
+    let display = displayContext.map {
+      constrainedDisplayContext($0, lineFragmentWidth: lineFragmentWidth)
+    } ?? {
+      let sizing = rendering.sizing
+      let maxW = min(sizing.maxInlineImageWidth ?? lineFragmentWidth, lineFragmentWidth)
+      let scale = InkDisplayMetrics.resolve().scale
+      return DisplayContext(
+        maxPixelWidth: max(maxW, 1) * scale,
+        scale: scale,
+        contentMode: .fit
+      )
+    }()
     let loader = store.loader(for: rendering, source: source)
     materialize(display: display, loader: loader)
   }
 
+  /// 收敛宿主宽度与当前 attachment 自身的 inline 宽度上限。
+  ///
+  /// 宿主 helper 只计算一次真实 text view 宽度；每个 attachment 仍须把自己的
+  /// `maxInlineImageWidth` 纳入解码身份，避免较小的图片配置拿到过宽位图。
   @MainActor
-  private func applyImage(_ loadedImage: UIImage, sizing: ImageSizing, lineFragmentWidth: CGFloat?) {
+  private func constrainedDisplayContext(
+    _ context: DisplayContext,
+    lineFragmentWidth: CGFloat
+  ) -> DisplayContext {
+    let maxWidth = min(
+      rendering.sizing.maxInlineImageWidth ?? lineFragmentWidth,
+      lineFragmentWidth
+    )
+    return DisplayContext(
+      maxPixelWidth: min(context.maxPixelWidth, max(maxWidth, 1) * context.scale),
+      scale: context.scale,
+      contentMode: context.contentMode
+    )
+  }
+
+  @MainActor
+  private func applyImage(
+    _ loadedImage: UIImage,
+    sizing: ImageSizing,
+    lineFragmentWidth: CGFloat?,
+    generation: UUID
+  ) {
+    guard materializationGeneration == generation else { return }
     let maxW = resolvedMaxWidth(lineFragmentWidth: lineFragmentWidth)
     let fittedSize = fitted(
       loadedImage.size,
@@ -250,6 +390,19 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
     return min(rendering.sizing.maxInlineImageWidth ?? containerWidth, containerWidth)
   }
 
+  @MainActor
+  private func loaderIdentity(for loader: InkImageLoading) -> LoaderIdentity {
+    if let semanticIdentity = loader.semanticIdentity {
+      return .semantic(semanticIdentity.rawValue)
+    }
+    // Class loaders can be compared by reference. Value-type loaders without a declared
+    // semantic identity are intentionally treated as unknown and rematerialized conservatively.
+    if Mirror(reflecting: loader).displayStyle == .class {
+      return .instance(ObjectIdentifier(loader as AnyObject))
+    }
+    return .unknown(UUID())
+  }
+
   /// 段内 oversized 图抬升：整段写入 `maximumLineHeight`，取段内所有图片高度的 max，且不降低已有抬升。
   @MainActor
   private func elevateParagraphMaximumLineHeight(in textStorage: NSTextStorage, paragraphRange: NSRange) {
@@ -281,5 +434,77 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
 
   deinit {
     subscription?.cancel()
+  }
+}
+
+/// UITextView 宿主的行内图片绑定工具。
+///
+/// 该入口只在宿主已经有真实容器宽度时 materialize。宽度优先取 TextKit 已发布的
+/// `textContainer.size`，否则取 text view bounds 减去 textContainer inset；scale 优先
+/// 取实际 window screen，再回退到该 view 的 trait。未挂载且无有效宽度时留到下一次
+/// layout / sizeThatFits 调用，不从前台 scene 或全局 screen 猜测宿主尺寸。
+@MainActor
+public extension InkImageAttachment {
+
+  /// 在 UITextView 的真实容器上下文中绑定行内图片。
+  ///
+  /// - Parameters:
+  ///   - textView: 已安装 attachment 的文本宿主。
+  ///   - store: 可选的宿主 Store；省略时按 attachment 的 rendering 配置选择默认 Store。
+  ///   - onHeightChange: 图片实际高度变化后的宿主回调。
+  ///   - range: 可选增量绑定范围。
+  ///
+  /// 宿主在宽度、window screen 或 display scale 改变后应再次调用；attachment 会按完整
+  /// display / Store / loader identity 取消旧订阅并重新 materialize。
+  static func bindAttachments(
+    in textView: UITextView,
+    store: InkImageStore? = nil,
+    onHeightChange: (() -> Void)? = nil,
+    range: NSRange? = nil
+  ) {
+    guard let displayContext = displayContext(for: textView) else { return }
+    guard let layoutManager = textView.textContainer.layoutManager else { return }
+    bindAttachments(
+      in: textView.textStorage,
+      layoutManager: layoutManager,
+      store: store,
+      displayContext: displayContext,
+      onHeightChange: onHeightChange,
+      range: range
+    )
+  }
+
+  /// 返回宿主当前真实的行片段显示上下文；宽度无效时返回 `nil`。
+  ///
+  /// 该接口供跨模块 SwiftUI/UIKit bridge 在需要自定义绑定时复用同一套 width / scale
+  /// 规则；一般宿主直接调用 ``bindAttachments(in:store:onHeightChange:range:)`` 即可。
+  static func displayContext(for textView: UITextView) -> DisplayContext? {
+    let lineFragmentPadding = textView.textContainer.lineFragmentPadding
+    let rawContainerWidth = textView.textContainer.size.width
+    let width: CGFloat
+    if rawContainerWidth.isFinite, rawContainerWidth > 0 {
+      width = rawContainerWidth - lineFragmentPadding * 2
+    } else {
+      let insetWidth = textView.textContainerInset.left + textView.textContainerInset.right
+      width = textView.bounds.width - insetWidth - lineFragmentPadding * 2
+    }
+    guard width.isFinite, width > 0 else { return nil }
+
+    let scale: CGFloat?
+    if let screenScale = textView.window?.screen.scale,
+       screenScale.isFinite,
+       screenScale > 0 {
+      scale = screenScale
+    } else {
+      let traitScale = textView.traitCollection.displayScale
+      scale = traitScale.isFinite && traitScale > 0 ? traitScale : nil
+    }
+    guard let scale else { return nil }
+
+    return DisplayContext(
+      maxPixelWidth: width * scale,
+      scale: scale,
+      contentMode: .fit
+    )
   }
 }

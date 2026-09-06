@@ -28,7 +28,7 @@ public final class InkImageStore {
   // MARK: - 配置
 
   /// 图片 Store 的运行时配置。
-  public struct Configuration: Sendable, Equatable {
+  public struct Configuration: Sendable, Equatable, Hashable {
     /// 内存缓存总字节上限。
     public var totalCostLimit: Int = 60 * 1024 * 1024
     /// 内存缓存条目数上限。
@@ -46,8 +46,52 @@ public final class InkImageStore {
   /// 当前生效的配置。
   public private(set) var configuration: Configuration
 
-  /// 进程内共享的默认 Store，供块级 / 行内图片通道在未注入实例时使用。
+  /// 进程内共享的兼容 Store。
+  ///
+  /// 默认 block / attachment 渲染路径使用 ``defaultStore(for:)``，因此不会读取或改写
+  /// 此实例。需要沿用 0.0.1 全局 Store 语义的宿主可显式注入 ``shared``。
   @MainActor public static let shared = InkImageStore()
+
+  /// 默认 Store 的弱注册项；实际所有权由 block、attachment 或宿主持有。
+  private final class DefaultStoreRegistration {
+    weak var store: InkImageStore?
+
+    init(store: InkImageStore) {
+      self.store = store
+    }
+  }
+
+  /// 默认渲染路径按完整缓存 / 调度配置隔离 Store。
+  ///
+  /// 显式注入的 Store 不经过此注册表，也不会被渲染块暗中改写；调用方拥有其配置。
+  /// 注册表只保留弱引用，宿主释放 Store 后对应配置会在下一次查找时被清除。
+  @MainActor private static var defaultStores: [Configuration: DefaultStoreRegistration] = [:]
+
+  /// 返回指定渲染配置的默认 Store。
+  ///
+  /// 相同完整配置复用同一默认 Store；不同配置获得独立预算和调度状态，避免不同宿主
+  /// 按调用顺序互相覆盖。调用方须持有返回值或把它注入实际宿主；否则 Store 释放后，
+  /// 下一次查找会创建新的实例。公开 ``shared`` 仅作为旧 API 的显式 Store 入口，
+  /// 不参与该池。
+  @MainActor
+  public static func defaultStore(for rendering: InkImageRendering) -> InkImageStore {
+    let configuration = rendering.storeConfiguration
+    // 配置对象可能来自动态宿主；每次查找顺便清理已释放的弱注册项，避免配置数量
+    // 无界增长，同时不凭 hash 合并不同 Configuration。
+    defaultStores = defaultStores.filter { $0.value.store != nil }
+    if let registered = defaultStores[configuration]?.store {
+      if registered.configuration == configuration {
+        return registered
+      }
+      // The Store owner may have explicitly reconfigured a previously returned default
+      // instance. It no longer represents this registry key, so do not return it for the
+      // old configuration.
+      defaultStores.removeValue(forKey: configuration)
+    }
+    let store = InkImageStore(configuration: configuration)
+    defaultStores[configuration] = DefaultStoreRegistration(store: store)
+    return store
+  }
 
   // MARK: - 缓存
 
@@ -132,26 +176,18 @@ public final class InkImageStore {
   public func updateConfiguration(_ config: Configuration) {
     configuration = config
     applyConfiguration(config)
+    // 提升上限或释放运行中任务后，立即接管已接受的 FIFO 请求；缩容不取消
+    // 已运行任务，也不丢弃已接受请求。新请求仍由 resolve 按新 pending 上限拒绝。
+    drainPendingLoads()
   }
 
-  /// 将 ``InkImageRendering/storeConfiguration`` 应用到 Store，并在解析前调用。
+  /// 将 ``InkImageRendering/storeConfiguration`` 应用到 Store。
   ///
-  /// 缓存与 data URL 上限始终跟随 rendering；并发上限仅在 rendering 显式偏离默认值时覆盖，
-  /// 避免 ``configure(containerWidth:loader:)`` 把注入 Store 的 tight limit 重置为默认 4/32。
+  /// 这是 Store owner 的显式配置操作。图片块、attachment 和预览不会隐式调用此方法，
+  /// 因而不会把某一份 rendering 的预算写入另一个宿主持有的 Store；默认渲染路径使用
+  /// ``defaultStore(for:)`` 在创建时固化完整配置。
   public func prepareForRendering(_ rendering: InkImageRendering) {
-    var merged = configuration
-    let incoming = rendering.storeConfiguration
-    let defaults = Configuration()
-    merged.totalCostLimit = incoming.totalCostLimit
-    merged.countLimit = incoming.countLimit
-    merged.maxDataURLBytes = incoming.maxDataURLBytes
-    if incoming.maxConcurrentLoads != defaults.maxConcurrentLoads {
-      merged.maxConcurrentLoads = incoming.maxConcurrentLoads
-    }
-    if incoming.maxPendingLoads != defaults.maxPendingLoads {
-      merged.maxPendingLoads = incoming.maxPendingLoads
-    }
-    updateConfiguration(merged)
+    updateConfiguration(rendering.storeConfiguration)
   }
 
   /// 获取渲染配置对应的加载器：自定义 loader 优先，否则复用 Store 持有的默认实例。
