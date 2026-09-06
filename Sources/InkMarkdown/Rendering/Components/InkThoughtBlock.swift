@@ -238,6 +238,12 @@ public final class InkThoughtBlockView: UIView {
     self.bodyTextView = attributedBlock.makeView()
 
     super.init(frame: .zero)
+    (bodyTextView as? InkAttributedBlockTextView)?.onInlineImageHeightChange = { [weak self] in
+      guard let self else { return }
+      self.invalidateIntrinsicContentSize()
+      self.setNeedsLayout()
+      self.notifyReservedHeightIfNeeded()
+    }
     setupUI()
   }
 
@@ -409,12 +415,13 @@ public final class InkThoughtBlockView: UIView {
       renderConfiguration: self.renderConfiguration
     )
 
-    if let textView = bodyTextView as? UITextView {
-      textView.textStorage.setAttributedString(attributedThought)
-      if let layoutManager = textView.textContainer.layoutManager {
-        InkImageAttachment.bindAttachments(in: textView.textStorage, layoutManager: layoutManager)
-      }
-    }
+    let attributedBlock = InkAttributedTextBlock(
+      attributedText: attributedThought,
+      insets: .zero,
+      linkTapHandler: self.renderConfiguration.linkTapHandler,
+      linkTapSemanticIdentity: self.renderConfiguration.linkTapSemanticIdentityForBlockReuse
+    )
+    _ = attributedBlock.updateExistingView(bodyTextView)
 
     invalidateIntrinsicContentSize()
     setNeedsLayout()

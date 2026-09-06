@@ -67,9 +67,7 @@ public struct InkAttributedTextBlock: InkRenderableBlock, InkReusableBlock, @unc
     textView.isScrollEnabled = false
     textView.adjustsFontForContentSizeCategory = true
     textView.textContainerInset = insets
-    MainActor.assumeIsolated {
-      InkImageAttachment.bindAttachments(in: textStorage, layoutManager: layoutManager)
-    }
+    textView.bindInlineImageAttachments()
     return textView
   }
 
@@ -78,10 +76,8 @@ public struct InkAttributedTextBlock: InkRenderableBlock, InkReusableBlock, @unc
     guard let textView = view as? InkAttributedBlockTextView else { return false }
     textView.linkTapHandler = linkTapHandler
     textView.textStorage.setAttributedString(attributedText)
-    if let layoutManager = textView.textContainer.layoutManager {
-      InkImageAttachment.bindAttachments(in: textView.textStorage, layoutManager: layoutManager)
-    }
     textView.textContainerInset = insets
+    textView.bindInlineImageAttachments()
     textView.invalidateIntrinsicContentSize()
     return true
   }
@@ -105,6 +101,34 @@ final class InkAttributedBlockTextView: UITextView, UITextViewDelegate {
     didSet { delegate = linkTapHandler == nil ? nil : self }
   }
 
+  /// 宿主接收异步图片引起的高度变化；自身先失效文本测量。
+  var onInlineImageHeightChange: (() -> Void)?
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    bindInlineImageAttachments()
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    bindInlineImageAttachments()
+  }
+
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    guard previousTraitCollection?.displayScale != traitCollection.displayScale else { return }
+    bindInlineImageAttachments()
+  }
+
+  func bindInlineImageAttachments() {
+    InkImageAttachment.bindAttachments(in: self, onHeightChange: { [weak self] in
+      guard let self else { return }
+      self.invalidateIntrinsicContentSize()
+      self.setNeedsLayout()
+      self.onInlineImageHeightChange?()
+    })
+  }
+
   override func sizeThatFits(_ size: CGSize) -> CGSize {
     let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 320)
     guard targetWidth > 0, let layoutManager = textContainer.layoutManager else {
@@ -112,7 +136,7 @@ final class InkAttributedBlockTextView: UITextView, UITextViewDelegate {
     }
     let contentWidth = max(0, targetWidth - textContainerInset.left - textContainerInset.right)
     textContainer.size = CGSize(width: contentWidth, height: .greatestFiniteMagnitude)
-    InkImageAttachment.bindAttachments(in: textStorage, layoutManager: layoutManager)
+    bindInlineImageAttachments()
     _ = layoutManager.glyphRange(for: textContainer)
     let rect = layoutManager.usedRect(for: textContainer)
     let calculatedHeight = ceil(rect.height + textContainerInset.top + textContainerInset.bottom)
