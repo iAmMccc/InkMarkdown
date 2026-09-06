@@ -12,7 +12,7 @@
 | ~~High~~ Done | ~~流式显示刷新逻辑处于测试盲区~~ | `onDisplayFrame` 由 CADisplayLink 驱动，集成测试不触发；节流分支此前无任何测试执行 | 行为变化无回归防线 | 已抽 `refreshTextStorage` 纯函数 seam 并补测试（`InkStreamRendererRefreshTests.swift`） |
 | ~~Med~~ Done | ~~finish 后 append 无保护~~ | `InkStreamRenderer.append` 无终态守卫，可覆盖 finalize 结果 | 终态被污染、onFinishDisplay 提前触发 | 已加 `guard !isFinished` 并有测试钉住 |
 | ~~Med~~ Done | ~~配置语义相等性只看数量与 nil 性~~ | `InkConfiguration.isSemanticallyEqualTo` 曾把内容不同的配置误判相等，SwiftUI Coordinator 据此漏更新 | 配置内容变化不触发重渲 | 已收敛到 `InkSemanticComparator`：值类型比较完整状态，不透明闭包、loader 与回调使用显式 `InkSemanticIdentity`；直接赋值保守刷新。配置语义与 Coordinator 幂等测试共同钉住 |
-| Med | 最低平台验证 | ADR-010 将当前范围提升为 iOS/iPadOS 15+；manifest 已仅声明 `.iOS(.v15)`，当前全量回归来自 iPhone 17 Pro Max / iOS 26.5 | 可能把较高版本 Simulator 结果误当作最低版本支持 | v0.0.2 前完成 iOS/iPadOS 15 验证；不为其他平台建立路径 |
+| Med | 最低平台验证 | ADR-010 将当前范围提升为 iOS/iPadOS 15+；manifest 与源码兼容路径已收敛到 15，当前全量回归来自独立 iPhone 17 Pro / iOS 26.5 | 可能把较高版本 Simulator 结果误当作最低版本支持 | v0.0.2 前完成 iOS/iPadOS 15 验证；不为其他平台建立路径 |
 | ~~Med~~ Done | ~~`isSemanticallyEqualTo` 对「同类型不同状态」仍判相等~~ | 内置扩展通过 `InkConfigurationSemanticsProviding` 或稳定 `InkSemanticIdentity` 比较完整状态；未知扩展保守判为不等价；块复用比较已覆盖样式、渲染配置、表格边界、图片 store 与生成 loader | 已避免 Coordinator 因有损比较漏更新，也避免旧异步图片结果回灌新块 | 新增有状态扩展时必须提供完整值语义或稳定 identity，并补配置与块复用回归 |
 | Low | 增量性能基准偶发超时 | `StreamingPerformanceTests.incremental_renderIsFasterThanFullRender` 在机器高负载下偶发失败（同日多次复跑通过，P3 与模块级复跑均通过） | 负载相关 flaky，非逻辑回归 | 复跑确认；必要时给基准加宽裕或标注 flaky |
 | ~~Med~~ Done | ~~流式 `maximumSourceLength = 50_000` 固定~~ | renderer/session initializer 已开放自定义上限并共享不可变 snapshot；ADR-005 | canonical source、finish 与 promotion 已统一 | 默认值变更时重跑 source-limit 与性能门槛 |
@@ -95,4 +95,4 @@
 | iOS/iPadOS 15+ 范围 | ADR-010 已提升最低平台，ADR-008 继续排除其他平台；manifest 已收敛，iOS/iPadOS 15 验证仍是 v0.0.2 blocker |
 | 依赖可重复构建 | 直接依赖 revision pin（ADR-001）；本地 Caches 可选 |
 | v0.0.2 前完善 + 发布证据 | 核心 UIKit implementation、CI、SwiftUI adapter 基础契约与 iPhone/iPad ExampleApp 关键链路证据已落地；最低系统、完整可访问性、网络图片与真机性能证据仍未完成 |
-| 完整语义测试矩阵 | 2026-09-04 当前工作树 iPhone 17 Pro Max / iOS 26.5 Package 全量：342 通过、0 失败、0 跳过；ExampleApp Debug/Release 与 1 项宿主测试通过；非远端 CI。真网图片/旋转/Split View 与最低版本矩阵仍缺 |
+| 完整语义测试矩阵 | 2026-09-04 当前工作树独立 iPhone 17 Pro / iOS 26.5 Package 全量：343 通过、0 失败、0 跳过；ExampleApp Debug/Release 与 1 项宿主测试通过；非远端 CI。真网图片/旋转人工验收已通过；Split View 与最低版本矩阵仍缺 |

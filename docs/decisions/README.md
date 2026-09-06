@@ -14,5 +14,6 @@
 | [ADR-008](ADR-008-swiftui-adapter-architecture.md) | v0.0.2 以独立 SwiftUI Adapter Product 正式支持 SwiftUI | Accepted（由 ADR-009、ADR-010 amend） |
 | [ADR-009](ADR-009-block-presentation-continuity.md) | 块呈现连续性由 SwiftUI Adapter 持有 | Accepted |
 | [ADR-010](ADR-010-v0.0.2-minimum-platform-ios-15.md) | v0.0.2 最低平台升级为 iOS / iPadOS 15 | Accepted |
+| [ADR-011](ADR-011-image-store-configuration-ownership.md) | 图片 Store 配置由资源所有者决定 | Accepted |
 
 编号递增且只增不删；决策变更时补充新 ADR；部分变更时将旧 ADR 标记为 Amended 或 Superseded。

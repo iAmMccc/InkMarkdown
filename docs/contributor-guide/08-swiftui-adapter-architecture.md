@@ -181,7 +181,7 @@ InkMarkdown 是渲染库，不应把宿主应用的业务模型伪装成库内 V
 因此 adapter 必须把平台可用性收敛在 compatibility implementation：
 
 - iOS/iPadOS 16+ 使用 SwiftUI 提供的尺寸协商；
-- iOS/iPadOS 15 优先使用容器与 window 宽度进行 UIKit 固有尺寸协商；仅在 detached 且宽度未知时使用受可用性隔离的主屏宽度兜底；
+- iOS/iPadOS 15 优先使用容器与 window 宽度进行 UIKit 固有尺寸协商；仅在 detached 且宽度未知时使用前台 `UIWindowScene` 的 screen 宽度兜底；
 - 颜色与 trait 转换使用 availability-safe 路径；
 - view 清理使用 `UIViewRepresentable` 生命周期提供的 teardown seam；
 - iPad Split View、旋转、Dynamic Type 与多次 attach/detach 都是正式验证场景。

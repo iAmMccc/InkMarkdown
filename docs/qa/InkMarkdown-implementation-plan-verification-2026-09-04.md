@@ -5,21 +5,21 @@
 - 分支：`feat/swiftUI`
 - 基点：`eb7098f`
 - 状态：未提交工作树；不是远端 CI 结果
-- 工具链：Xcode 26.6（17F113），iPhone 17 Pro Max / iOS 26.5 Simulator
-- 执行路径：当前 Agent 会话未暴露 XcodeBuildMCP；确认本机 `xcodebuildmcp` 2.6.2 已安装后，按仓库降级规则使用原生 `xcodebuild`，再用 `xcresulttool` 读取结构化结果
+- 工具链：Xcode 26.6（17F113），独立 iPhone 17 Pro / iOS 26.5 Simulator
+- 执行路径：XcodeBuildMCP 2.6.2；Package 测试复用 ExampleApp 已解析的 SourcePackages checkout，避免网络解析阻塞
 
 ## 自动验证
 
 | Gate | 结果 | 结构化摘要 |
 | --- | --- | --- |
-| `InkMarkdown-Package` test | 通过 | 342 tests，342 passed，0 failed，0 skipped；0 build warnings |
-| `ExampleApp` Debug build | 通过 | 0 errors，0 build warnings |
-| `ExampleApp` Release build | 通过 | 0 errors，0 build warnings |
+| `InkMarkdown-Package` test | 通过 | 343 tests，343 passed，0 failed，0 skipped；无 Swift deprecated API 诊断 |
+| `ExampleApp` Debug build | 通过 | 0 errors；无 Swift deprecated API 诊断 |
+| `ExampleApp` Release build | 通过 | 0 errors；无 Swift deprecated API 诊断 |
 | `ExampleApp` host test | 通过 | 1 test，1 passed，0 failed，0 skipped |
 | consumer fixture manifest | 通过 | deployment platform 解析为 iOS 15.0；四个 consumer products 均存在 |
 | `git diff --check` | 通过 | 无空白错误 |
 
-ExampleApp host test 的依赖构建仍由 Xcode 报告两条警告，并已在全新 DerivedData 中复现：上游 `swift-cmark` 的 `DEFINES_MODULE was set, but no umbrella header could be found to generate the module map`，以及 Xcode 26 在 build-for-testing 中报告 `InkMarkdown` 缺少 `Markdown` 依赖。后者与 `Package.swift` 中已存在的显式 target dependency 不一致；添加 ExampleApp 侧重复 product dependency 不能消除，故未保留该无效改动，也未关闭 Explicit Modules 掩盖诊断。本记录不把这两条工具链/上游警告写成 0。
+ExampleApp host test 的依赖构建仍由 Xcode 报告两条警告，并已在全新 DerivedData 中复现：上游 `swift-cmark` 的 `DEFINES_MODULE was set, but no umbrella header could be found to generate the module map`，以及 Xcode 26 在 build-for-testing 中报告 `InkMarkdown` 缺少 `Markdown` 依赖。后者与 `Package.swift` 中已存在的显式 target dependency 不一致；添加 ExampleApp 侧重复 product dependency 不能消除，故未保留该无效改动，也未关闭 Explicit Modules 掩盖诊断。ExampleApp build 另有无 App Intents 依赖时跳过 metadata extraction 的工具链提示；三者均非 Swift deprecated API 诊断。
 
 ## 本轮新增或强化的回归
 
@@ -30,6 +30,9 @@ ExampleApp host test 的依赖构建仍由 Xcode 报告两条警告，并已在�
 - 零宽 UIKit host 从所属 window 建立首轮 intrinsic measurement width；detached 情形的 iOS 15 screen fallback 顺序由纯解析策略测试覆盖。这仍不是 iOS 15 runtime 证据。
 - SwiftUI `ContentSizeCategory` 到 UIKit category 的关键映射与 accessibility 上界有直接测试。
 - 亚像素宽度抖动复用 canonical measurement key，不清空也不扩张 continuity cache。
+- iOS 15 基线直接使用 `CADisplayLink.preferredFrameRateRange`，删除多余的 iOS 15 availability 分支。
+- 图片降采样、预览与表格宽度统一从当前 view、window 或前台 `UIWindowScene` 解析 bounds / scale，不再依赖全局 `UIScreen.main`；detached SwiftUI host 也使用前台 Scene 宽度兜底。
+- 新增 display metrics 上下文优先级回归；保留的 iOS 16 / 17 availability 分支只对应真实 API 能力差异。
 
 ## 后续 XcodeBuildMCP 人工验收
 
@@ -40,7 +43,7 @@ ExampleApp host test 的依赖构建仍由 Xcode 报告两条警告，并已在�
 | 人工场景 | 结果 | 验收摘要 |
 | --- | --- | --- |
 | 静态 Markdown | 通过 | Thought 折叠、删除后，相邻 Thought 的展开状态与顺序保持。 |
-| 自定义组件与富媒体 | 通过 | 表格、LaTeX、Mermaid 与宽图可见；更新自定义 H1 后 Thought 仍折叠。 |
+| 自定义组件与富媒体 | 通过 | 表格在竖屏/横屏按当前容器宽度重排；LaTeX、Mermaid 与宽图可见；更新自定义 H1 后 Thought 仍折叠。 |
 | 网络图片 | 修复后通过 | `picsum.photos` 跳转至 `fastly.picsum.photos` 后仍通过 allowlist；图片加载、点击全屏预览与点击退出均通过，故意 404 的图片继续显示 fallback。 |
 | 样式配置 | 通过 | 字号、段落间距、初始折叠策略与 Dark Mode 均即时更新。 |
 | 单文档流式渲染 | 通过 | streaming、折叠、窄宽、卸载/重挂载、finish promotion 与终态 Dynamic Type 更新通过。 |
@@ -53,7 +56,7 @@ ExampleApp host test 的依赖构建仍由 Xcode 报告两条警告，并已在�
 1. 图片 allowlist 缺少 Picsum 实际 CDN 重定向主机，导致安全重定向校验按设计拒绝请求；现已加入 `fastly.picsum.photos`，没有放宽任意主机策略。
 2. SwiftUI 页面每次计算配置都会重建未声明语义等价性的 `H1ActionCardBlockHandler`，状态变更后触发连续 reconcile，主线程长期占用 100%。该无状态 handler 现显式实现 `InkConfigurationSemanticsProviding`，更新 H1 后按钮、内容与折叠状态均稳定刷新。
 
-针对图片重定向策略的单测曾单独发起，但新的 Package 测试 DerivedData 在解析 `swift-markdown` 时因 GitHub 443 连接失败而未进入测试执行；既有 `ImageBusinessPolicyTests.redirectDelegate_revalidatesWhenAllowlistConfigured` 已覆盖逐跳重校验。最终 ExampleApp build、host test 与人工红绿回归均通过。
+首次新建 Package 测试 DerivedData 时，依赖解析停留在 GitHub fetch，未进入测试执行；改用 ExampleApp 已解析的固定 checkout 后，XcodeBuildMCP 全量执行 343 项并全部通过。最终 ExampleApp Debug / Release build、host test 与人工红绿回归均通过。
 
 ## 尚未完成的发布证据
 

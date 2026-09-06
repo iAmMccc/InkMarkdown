@@ -1,0 +1,188 @@
+{
+  "package26_latest": {
+    "schema": "xcodebuildmcp.output.test-result",
+    "schemaVersion": "3",
+    "didError": false,
+    "error": null,
+    "data": {
+      "summary": {
+        "status": "SUCCEEDED",
+        "durationMs": 30137,
+        "counts": {
+          "passed": 361,
+          "failed": 0,
+          "skipped": 0
+        },
+        "target": "simulator"
+      },
+      "artifacts": {
+        "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/logs/test_sim_2026-09-06T10-47-08-800Z_pid3868_95e08598.log",
+        "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/result-bundles/test_sim_2026-09-06T10-47-08-800Z_pid3868_56943eff.xcresult",
+        "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/test-products/test_sim_2026-09-06T10-47-08-800Z_pid3868_95173448.xctestproducts"
+      },
+      "diagnostics": {
+        "warnings": [],
+        "errors": [],
+        "testFailures": []
+      }
+    }
+  },
+  "package18_latest": {
+    "schema": "xcodebuildmcp.output.test-result",
+    "schemaVersion": "3",
+    "didError": false,
+    "error": null,
+    "data": {
+      "summary": {
+        "status": "SUCCEEDED",
+        "durationMs": 194834,
+        "counts": {
+          "passed": 361,
+          "failed": 0,
+          "skipped": 0
+        },
+        "target": "simulator"
+      },
+      "artifacts": {
+        "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/logs/test_sim_2026-09-06T10-47-49-062Z_pid3868_9c34e3c1.log",
+        "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/result-bundles/test_sim_2026-09-06T10-47-49-062Z_pid3868_c9f70229.xcresult",
+        "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/test-products/test_sim_2026-09-06T10-47-49-062Z_pid3868_f1124371.xctestproducts"
+      },
+      "diagnostics": {
+        "warnings": [],
+        "errors": [],
+        "testFailures": []
+      }
+    }
+  },
+  "app26_latest": {
+    "schema": "xcodebuildmcp.output.test-result",
+    "schemaVersion": "3",
+    "didError": false,
+    "error": null,
+    "data": {
+      "summary": {
+        "status": "SUCCEEDED",
+        "durationMs": 36483,
+        "counts": {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        "target": "simulator"
+      },
+      "artifacts": {
+        "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/logs/test_sim_2026-09-06T11-02-57-546Z_pid3868_55ef235d.log",
+        "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/result-bundles/test_sim_2026-09-06T11-02-57-546Z_pid3868_84ee5ab0.xcresult",
+        "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/test-products/test_sim_2026-09-06T11-02-57-546Z_pid3868_2bdb7013.xctestproducts"
+      },
+      "tests": {
+        "discovered": {
+          "total": 8,
+          "items": [
+            "ExampleAppMermaidIntegrationTests/MermaidRenderingIntegrationTests/rendersWideJourneyWithoutRightEdgeClipping",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/cancellationBeforeStartup",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/exactlyOnceTermination",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/queuedEventsAfterCancellation",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/reentrantReplacement",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/releasingOwnerStopsDelivery"
+          ]
+        }
+      },
+      "diagnostics": {
+        "warnings": [
+          {
+            "message": "'InkMarkdown' is missing a dependency on 'Markdown' because dependency scan of Swift module 'InkMarkdown' discovered a dependency on 'Markdown'"
+          }
+        ],
+        "errors": [],
+        "testFailures": []
+      }
+    }
+  },
+  "app18_latest": {
+    "schema": "xcodebuildmcp.output.test-result",
+    "schemaVersion": "3",
+    "didError": false,
+    "error": null,
+    "data": {
+      "summary": {
+        "status": "SUCCEEDED",
+        "durationMs": 24517,
+        "counts": {
+          "passed": 8,
+          "failed": 0,
+          "skipped": 0
+        },
+        "target": "simulator"
+      },
+      "artifacts": {
+        "buildLogPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/logs/test_sim_2026-09-06T10-58-48-164Z_pid3868_3d489bae.log",
+        "xcresultPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/result-bundles/test_sim_2026-09-06T10-58-48-168Z_pid3868_eaa0b651.xcresult",
+        "testProductsPath": "~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-124472009cd9/test-products/test_sim_2026-09-06T10-58-48-168Z_pid3868_f8642516.xctestproducts"
+      },
+      "tests": {
+        "discovered": {
+          "total": 8,
+          "items": [
+            "ExampleAppMermaidIntegrationTests/MermaidRenderingIntegrationTests/rendersWideJourneyWithoutRightEdgeClipping",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/cancellationBeforeStartup",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/exactlyOnceTermination",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/queuedEventsAfterCancellation",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/reentrantReplacement",
+            "ExampleAppMermaidIntegrationTests/StreamRequestLifecycleTests/releasingOwnerStopsDelivery"
+          ]
+        }
+      },
+      "diagnostics": {
+        "warnings": [
+          {
+            "message": "'InkMarkdown' is missing a dependency on 'Markdown' because dependency scan of Swift module 'InkMarkdown' discovered a dependency on 'Markdown'"
+          }
+        ],
+        "errors": [],
+        "testFailures": []
+      }
+    }
+  },
+  "ui18_mermaid": {
+    "schema": "xcodebuildmcp.output.capture-result",
+    "schemaVersion": "2",
+    "didError": false,
+    "error": null,
+    "data": {
+      "summary": {
+        "status": "SUCCEEDED"
+      },
+      "artifacts": {
+        "simulatorId": "E7E8FC79-33D4-421B-9A3D-C6DFFFBEE8D2",
+        "screenshotPath": "/var/folders/12/_z4y63_17874s0bbpnmwgn8w0000gn/T/screenshot_optimized_0c618c2d-67e6-4399-a07e-201a291e3225.jpg"
+      },
+      "capture": {
+        "format": "image/jpeg",
+        "width": 800,
+        "height": 368
+      }
+    }
+  },
+  "ui26_thought": {
+    "schema": "xcodebuildmcp.output.capture-result",
+    "schemaVersion": "2",
+    "didError": false,
+    "error": null,
+    "data": {
+      "summary": {
+        "status": "SUCCEEDED"
+      },
+      "artifacts": {
+        "simulatorId": "10F638E2-84FB-42AE-9BAE-0E246F463E8D",
+        "screenshotPath": "/var/folders/12/_z4y63_17874s0bbpnmwgn8w0000gn/T/screenshot_optimized_bae10fdd-cc48-46d1-8be5-675d50750b86.jpg"
+      },
+      "capture": {
+        "format": "image/jpeg",
+        "width": 368,
+        "height": 800
+      }
+    }
+  }
+}

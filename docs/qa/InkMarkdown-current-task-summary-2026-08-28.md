@@ -1,6 +1,12 @@
 # InkMarkdown 当前任务摘要
 
-> 摘要日期：2026-09-04。本文是本任务的唯一当前摘要。后续执行先读取本文，再核对 `docs/current-status.md`、源码和最新测试证据。旧聊天打印、原始审查快照、已完成参考和失败的代理状态不作为当前事实。
+> 摘要日期：2026-09-06。本文是本任务的唯一当前摘要。后续执行先读取本文，再核对 `docs/current-status.md`、源码和最新测试证据。旧聊天打印、原始审查快照、已完成参考和失败的代理状态不作为当前事实。
+
+## 最新执行记录
+
+2026-09-06 已按用户批准的 [项目审核报告](InkMarkdown-project-audit-2026-09-05.md) 实施 F01–F17 根因修复，新增 [ADR-011](../decisions/ADR-011-image-store-configuration-ownership.md) 记录图片 Store 配置所有权。iOS 26.5 与 iOS 18.5 的 Package 回归各 361 项通过、0 失败、0 跳过；示例 App 与交互证据以审核报告为准。当前修改保留在原工作树，未 commit/push。
+
+本轮明确不验收 iOS 15，优先保证 iOS 18 和 26；保持最低部署目标 15 和 Swift 5 language mode。验证使用固定 revision 的本地依赖覆盖，完成后恢复发布 manifest，不提交缓存或 path 依赖。
 
 ## 当前目标
 
@@ -40,7 +46,7 @@
 - 已建立代码级性能门槛与可复现基线文档；聚焦语义、长度与性能测试 37/37 通过。
 - 本轮 review remediation 已收口：internal `InkPreparedMarkdownSource` 保证一次顶层 source filter 覆盖 Block 构造、Thought view 创建/复用与 suffix；promotion 后环境变化经 session-to-host display seam 刷新；复用 Thought 会完整协调折叠能力；Thought 富文本 fallback 只补缺失背景；公开 API 文档、DEBUG-only Unified Logging、import、测试命名与 Swift 2-space 格式规范已对齐。
 - Tickets 01–07 实现与测试已在工作树完成。
-- 本地全量回归：`InkMarkdown-Package` @ iPhone 17 Pro Max / iOS 26.5 经原生 `xcodebuild` + `xcresulttool` 验证 **342 通过、0 失败、0 跳过、0 build warnings**；`ExampleApp` Debug/Release 构建通过且 0 build warnings，宿主测试 **1 通过、0 失败、0 跳过**。当前会话未暴露已安装的 XcodeBuildMCP；宿主测试依赖构建仍有上游 `swift-cmark` module-map 与 Xcode 26 dependency-scan 两条警告。
+- 本地全量回归：`InkMarkdown-Package` @ 独立 iPhone 17 Pro / iOS 26.5 经 XcodeBuildMCP 验证 **343 通过、0 失败、0 跳过**；`ExampleApp` Debug/Release 构建通过，宿主测试 **1 通过、0 失败、0 跳过**。构建与测试无 Swift deprecated API 诊断；宿主测试依赖构建仍有上游 `swift-cmark` module-map 与 Xcode 26 dependency-scan 两条警告。
 - FAQ / README / current-status / CHANGELOG 已去掉「开启真图后仍 fail-closed」的过时表述，改为 ADR-006 业务策略默认开放。
 
 ## 未解决问题
@@ -50,7 +56,7 @@
 
 ## 下一步计划
 
-1. 完成 ticket 08 的 ExampleApp 真网图片、旋转与 Split View 人工走查，更新 2026-09-04 验证记录。
+1. 完成 ticket 08 剩余的 iPad Split View 人工走查；iPhone 真网图片、旋转与完整交互矩阵已通过。
 2. 维护者授权后再 push / 更新 PR，并以同一候选 SHA 跑远端 CI。
 3. 获取 iOS/iPadOS 15 runtime 与真机性能基线。
 4. 图片与交互改动经维护者确认后再按功能粒度本地 commit（当前明确要求暂不 commit）。

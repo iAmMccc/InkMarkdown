@@ -263,6 +263,8 @@ For streaming, the host app feeds received deltas to `session.append(_:)`, then 
 
 > Version note: in released `0.0.1`, LaTeX and Mermaid support belonged to the single `InkMarkdown` product. In unreleased `0.0.2`, they require the separate products and registration shown above.
 
+Image resource budgets follow [ADR-011](docs/decisions/ADR-011-image-store-configuration-ownership.md): an explicitly injected Store owns its configuration; the default path selects a Store by the complete rendering configuration. Configure injected Stores directly instead of relying on a block to overwrite shared cache or concurrency limits.
+
 ---
 
 ## Project Structure

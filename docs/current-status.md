@@ -2,9 +2,15 @@
 
 > 当前任务执行入口：[InkMarkdown 当前任务摘要](qa/InkMarkdown-current-task-summary-2026-08-28.md)。本页只记录项目交付事实与发布 blocker。
 
-> 基线日期：2026-09-04。记录仓库可验证现状；计划与已交付能力严格区分。
+> 基线日期：2026-09-06。记录仓库可验证现状；计划与已交付能力严格区分。
 
-`0.0.1` 已作为 UIKit-first public beta 发布。核心 UIKit 渲染管线、块级组件、流式渲染及基础测试已具备；`0.0.2` 的目标是交付正式 `InkMarkdownSwiftUI` adapter product。此前被拒绝的 SwiftUI spike 已移出仓库；当前 adapter 已按 ADR-008 / ADR-009 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 与内部 Block Presentation Continuity module）。ADR-010 已将 v0.0.2 最低平台提升为 iOS / iPadOS 15；manifest、consumer fixture 与 ExampleApp 均收敛为 15.0。2026-09-04 当前未提交工作树在 iPhone 17 Pro Max / iOS 26.5 上通过 `InkMarkdown-Package` 342 项测试、ExampleApp Debug/Release 构建及 1 项宿主测试。
+`0.0.1` 已作为 UIKit-first public beta 发布。核心 UIKit 渲染管线、块级组件、流式渲染及基础测试已具备；`0.0.2` 的目标是交付正式 `InkMarkdownSwiftUI` adapter product。此前被拒绝的 SwiftUI spike 已移出仓库；当前 adapter 已按 ADR-008 / ADR-009 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 与内部 Block Presentation Continuity module）。ADR-010 已将 v0.0.2 最低平台提升为 iOS / iPadOS 15；manifest、consumer fixture、ExampleApp 与源码兼容路径均收敛为 15.0。2026-09-04 当前未提交工作树在独立 iPhone 17 Pro / iOS 26.5 上通过 `InkMarkdown-Package` 343 项测试、ExampleApp Debug/Release 构建及 1 项宿主测试。
+
+## 2026-09-06 审核修复验证
+
+用户批准按 [本轮审核报告](qa/InkMarkdown-project-audit-2026-09-05.md) 修复现有能力，图片配置所有权按 [ADR-011](decisions/ADR-011-image-store-configuration-ownership.md) 实施。当前工作树在 iPhone 17 Pro / iOS 26.5 与 iPhone 16 Pro / iOS 18.5 上分别通过 `InkMarkdown-Package` **361 项，0 失败、0 跳过**。该结果由 XcodeBuildMCP 实际运行取得，使用精确 revision 的本地依赖覆盖；不是远端 CI，也不代表已发布。
+
+本轮按用户要求不验收 iOS 15，优先覆盖 iOS 18 与 26；deployment target 仍为 15。以下旧版平台发布门槛保留为历史产品目标，不作为本轮审核修复的阻塞条件。示例 App、运行交互和最终依赖恢复证据见审核报告。
 
 ## 状态概览
 
@@ -21,7 +27,7 @@ swift-markdown Markup
 - **工具链**：Swift tools 6.2，包内使用 Swift 5 语言模式。
 - **依赖管理**：`swift-markdown` 锁定 revision `07ebc9c071b22a5d021031b798c3a84b76281213`（ADR-001，详见 `Package.swift` / `Package.resolved`）。
 - **CI 环境**：`.github/workflows/ci.yml` 指定 `macos-26` + **Xcode 26.6**（Build `17F113`）+ **iPhone 17 Pro / iOS 26.5**（详见 [CI 排坑](contributor-guide/07-ci-and-toolchain-pitfalls.md)）。
-- **验证结果**：2026-09-04 当前未提交工作树于 iPhone 17 Pro Max / iOS 26.5 完成 `InkMarkdown-Package` 全量回归：**342 通过**，**0 失败**，**0 跳过**，result bundle 为 **0 build warnings**；`ExampleApp` Debug/Release 构建均通过且各为 **0 build warnings**，宿主测试 **1 通过、0 失败、0 跳过**。当前会话未暴露已安装的 XcodeBuildMCP，故按规则回退原生 `xcodebuild` 并由 `xcresulttool` 结构化确认。宿主测试的依赖构建另有上游 `swift-cmark` module-map 与 Xcode 26 dependency-scan 两条警告；详见[验证记录](qa/InkMarkdown-implementation-plan-verification-2026-09-04.md)。UI / 真网图片、旋转与 Split View 仍待人工验收。
+- **验证结果**：2026-09-04 当前未提交工作树于独立 iPhone 17 Pro / iOS 26.5 使用 XcodeBuildMCP 2.6.2 完成 `InkMarkdown-Package` 全量回归：**343 通过**，**0 失败**，**0 跳过**；`ExampleApp` Debug/Release 构建均通过，宿主测试 **1 通过、0 失败、0 跳过**。构建与测试日志没有 Swift deprecated API 诊断；宿主测试仍有上游 `swift-cmark` module-map 与 Xcode 26 dependency-scan 警告，ExampleApp build 有 App Intents metadata extraction 跳过提示。真网图片、全屏预览、表格竖横屏重排及其余 ExampleApp 人工矩阵已通过；iPad Split View 仍待验收。详见[验证记录](qa/InkMarkdown-implementation-plan-verification-2026-09-04.md)。
 
 ## 已落地能力
 
@@ -54,15 +60,15 @@ swift-markdown Markup
 | 背景绘制 | 行内代码背景与引用竖线依赖 TextKit 1 布局管理器 / block view |
 | 超长流式输入 | `InkStreamRenderer` 与 `InkMarkdownRenderSession` initializer 可配置 `maximumSourceLength`；默认 50,000，创建时固化 snapshot，流式与终态共用 canonical source |
 | Mermaid 离线 PNG 测试 | 无 App 宿主的 SwiftPM runner 可能挂起离屏 WebProcess；唯一真实 PNG/右缘裁切关键链路已迁入 ExampleApp app-hosted test target，Package target 只保留确定性 addon/bridge 契约。Production renderer 仍只对 `.timedOut`、页面加载失败和页面进程终止丢弃页面并重试一次 |
-| 测试覆盖率 | 最新本地工作树回归见本文“本地验证基线”；**非远端 CI**。Block continuity 保留数据/状态关键路径自动化；**iOS/iPadOS 15 runtime 实测未交付**，完整产品可访问性、真网图片人工矩阵与真机性能基线仍为 blocker |
+| 测试覆盖率 | 最新本地工作树回归见本文“本地验证基线”；**非远端 CI**。Block continuity 保留数据/状态关键路径自动化；真网图片与核心交互矩阵已在独立 iPhone 17 Pro 验收；**iOS/iPadOS 15 runtime 实测未交付**，完整产品可访问性、iPad Split View 与真机性能基线仍为 blocker |
 | 发布工程 | 已有 `0.0.1` public beta 与 CHANGELOG；`0.0.2` 的 adapter 代码、基础契约测试和 SwiftUI ExampleApp 入口已具备，iOS/iPadOS 15 验证、可访问性、完整语义矩阵与性能基线仍是 release blocker |
 
 ## 决策与仓库现状差异
 
 | 主题 | 项目决策 / 目标 | 仓库现状 | 后续动作 |
 | --- | --- | --- | --- |
-| UI 范围 | UIKit rendering engine + v0.0.2 SwiftUI adapter | 已发布 `0.0.1` 为 UIKit；`InkMarkdownSwiftUI` 已按 ADR-008 / ADR-009 完成当前代码实现与关键契约测试；2026-09-04 ExampleApp Debug/Release 与宿主测试已通过，人工交互矩阵未执行 | 完成当前候选 ExampleApp 人工矩阵，再补齐可访问性与真机性能门槛 |
-| 平台矩阵 | iOS 15+、iPadOS 15+；不支持其他平台 | `Package.swift` 已仅声明 `.iOS(.v15)`，源码直接依赖 UIKit；当前最新自动回归目的地为 iPhone 17 Pro Max / iOS 26.5；iOS/iPadOS 15 runtime 尚未验证 | v0.0.2 前完成当前候选人工矩阵及 iOS/iPadOS 15 实机或 Simulator 验证；不为其他平台建立支持路径 |
+| UI 范围 | UIKit rendering engine + v0.0.2 SwiftUI adapter | 已发布 `0.0.1` 为 UIKit；`InkMarkdownSwiftUI` 已按 ADR-008 / ADR-009 完成当前代码实现与关键契约测试；2026-09-04 ExampleApp Debug/Release、宿主测试与 iPhone 人工交互矩阵已通过 | 补齐 iPad Split View、可访问性与真机性能门槛 |
+| 平台矩阵 | iOS 15+、iPadOS 15+；不支持其他平台 | `Package.swift` 已仅声明 `.iOS(.v15)`；iOS 15 可直接使用的 API 不再保留 iOS 14 availability 分支，显示尺寸从 view/window/前台 Scene 解析；当前最新自动回归目的地为独立 iPhone 17 Pro / iOS 26.5，iOS/iPadOS 15 runtime 尚未验证 | v0.0.2 前完成 iOS/iPadOS 15 实机或 Simulator 验证；不为其他平台建立支持路径 |
 | 依赖策略 | **ADR-001**：固定外部 revision | 已固定 `swift-markdown` revision；传递依赖 `swift-cmark` 遵循上游 manifest 的 `gfm` 分支与 resolved revision | 依赖升级时更新 revision 并验证测试 |
 | 平台实施 | **ADR-010**：v0.0.2 最低平台提升为 iOS/iPadOS 15+ | manifest、consumer fixture 与 ExampleApp deployment target 已收敛为 15.0；当前运行证据来自 iOS 26.5 Simulator，尚无 iOS/iPadOS 15 runtime 证据 | 补齐最低版本验证后才以 iOS/iPadOS 15+ 对外承诺 |
 | 图片 / 删除线 | **ADR-004**（默认占位）+ **ADR-006**（opt-in 真图）；删除线样式已实现 | opt-in 图片栈与本轮稳定性修复已落地；删除线已实现 `.strikethroughStyle` | 补齐完整语义、最低版本、人工交互与性能证据 |

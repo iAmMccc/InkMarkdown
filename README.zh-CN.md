@@ -263,6 +263,8 @@ InkMarkdownView(markdown)
 
 > 版本说明：已发布的 `0.0.1` 将 LaTeX 与 Mermaid 能力包含在单一 `InkMarkdown` product 中；尚未发布的 `0.0.2` 才需要使用上方独立 product 与注册流程。
 
+图片资源预算遵循 [ADR-011](docs/decisions/ADR-011-image-store-configuration-ownership.md)：显式注入的 Store 拥有自身配置；默认路径按完整渲染配置选择 Store。请直接配置注入的 Store，不依赖 block 覆盖共享缓存或并发上限。
+
 ---
 
 ## 项目结构

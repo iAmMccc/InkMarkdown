@@ -288,6 +288,6 @@ Single-context：根目录 [CONTEXT.md](CONTEXT.md) + [docs/decisions/](docs/dec
 
 - ✅ `0.0.1` 已作为 UIKit-first public beta 发布。
 - ✅ `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer`、`InkAppearance` / `InkConfiguration` 与 UIKit ExampleApp 已具备。
-- ✅ 2026-09-04 当前未提交工作树在 iPhone 17 Pro Max / iOS 26.5 验证 `InkMarkdown-Package` scheme：342 项通过，0 项失败，0 项跳过；具体证据与工具回退说明以 [docs/current-status.md](docs/current-status.md) 为准。
+- ✅ 2026-09-04 当前未提交工作树在独立 iPhone 17 Pro / iOS 26.5 使用 XcodeBuildMCP 验证 `InkMarkdown-Package` scheme：343 项通过，0 项失败，0 项跳过；具体证据以 [docs/current-status.md](docs/current-status.md) 为准。
 - ⏳ `InkMarkdownSwiftUI` adapter 源码已按 ADR-008 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 等公开类型），基础契约测试与 ExampleApp 的静态、配置、流式示例入口已具备；完整语义对齐测试、iOS/iPadOS 15 验证、可访问性、性能基线和发布文档仍为 v0.0.2 release blocker。
 - ⚠️ 此前被拒绝的 SwiftUI spike 已移出仓库；当前 v0.0.2 adapter 已按 ADR-008 作为独立 product 完整实现，基础契约测试与 ExampleApp 示例入口已验证，完整发布验收仍待完成。

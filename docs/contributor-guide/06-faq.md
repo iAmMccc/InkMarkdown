@@ -56,6 +56,8 @@ ExampleApp **2. 自定义组件与富媒体**（`SwiftUIComponentsDemoView` / `U
 
 库内提供行内 `InkImageAttachment`、独占块 `InkImageBlock`、`InkImageStore` 与 `ImageSecurityPolicy`。`Image` 是 **InlineMarkup**，纯块 handler 拦不住行内节点；库内独占段提升由 `InkImageBlockHandler` 负责。亦可自定义 `InkInlineSyntax` 或 `sourceFilter` 预处理图片语法。
 
+图片资源预算以 [ADR-011](../decisions/ADR-011-image-store-configuration-ownership.md) 为准：显式注入 Store 时，由宿主配置该 Store；默认路径根据完整 `storeConfiguration` 隔离预算。不要同时依赖注入 Store 与渲染配置互相覆盖。运行时提高 Store 并发上限会启动已排队请求；缩容保留已接受的请求，不静默取消。
+
 ## 7. 怎么加自定义行内语法扩展 / 块级组件路由？
 
 见 [04 开发与自定义扩展](04-development.md)。

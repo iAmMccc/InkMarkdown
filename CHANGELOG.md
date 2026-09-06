@@ -31,16 +31,24 @@
   - 为已实现组件补充可访问性状态表达与字号变化相关处理；
   - 完整 VoiceOver、系统级 Dynamic Type、全部组件语义与 iOS/iPadOS 15 runtime 验证仍未完成，不能据此宣称“完整无障碍”或最低系统支持。
 - **自动化验证与手工验收边界**：
-  - 2026-09-04 当前未提交工作树在 iPhone 17 Pro Max / iOS 26.5 经原生 `xcodebuild` + `xcresulttool` 验证：`InkMarkdown-Package` 342 通过、0 失败、0 跳过，ExampleApp Debug/Release 构建通过，宿主测试 1 通过；**不是远端 CI**；
-  - Package 与 ExampleApp Debug/Release build result bundle 为 0 warnings；ExampleApp 宿主测试依赖构建仍报告上游 `swift-cmark` module-map 与 Xcode 26 dependency-scan 两条警告。
+  - 2026-09-04 当前未提交工作树在独立 iPhone 17 Pro / iOS 26.5 经 XcodeBuildMCP 验证：`InkMarkdown-Package` 343 通过、0 失败、0 跳过，ExampleApp Debug/Release 构建通过，宿主测试 1 通过；**不是远端 CI**；
+  - 构建与测试无 Swift deprecated API 诊断；ExampleApp 宿主测试依赖构建仍报告上游 `swift-cmark` module-map 与 Xcode 26 dependency-scan 两条警告，App build 有 App Intents metadata extraction 跳过提示。
   - 自动化聚焦数据、状态、调用次数与关键渲染语义；UI / 真网图片 / 旋转 / Split View 见 ExampleApp 验收记录；该记录不表示 `0.0.2` 已达到发布条件。
 
 ### Changed
+- 图片 Store 的资源预算归属由 ADR-011 明确：显式注入实例由 owner 配置；默认实例按完整配置隔离并由宿主持有，block 不再按调用顺序修改共享预算。混用两份配置的调用方需把预算写到注入 Store。
 - 将未发布的 SwiftUI adapter、LaTeX 与 Mermaid 能力拆为独立 products；已发布 `0.0.1` 仍只有 `InkMarkdown` product，消费者不应在 `0.0.1` 中导入 `0.0.2` 专用模块。
 - v0.0.2 最低部署目标由 iOS / iPadOS 14 提升为 15；详见 ADR-010。历史 `0.0.1` 平台声明不变。
 - 图片业务策略默认从 fail-closed 调整为开启真图后开放有效 HTTP(S)（仍与 ADR-004 默认占位兼容）。
 
 ### Fixed
+- 流式合帧保留最早变更位置，已完成会话切换环境不重启打字机；极大或非正步长不会溢出、倒退或停滞。
+- SwiftUI 等待接管的宿主不会改写活跃宿主环境，取消、重置和 handoff 保持单一呈现所有者。
+- 表格 wrap 随实际内容宽度重排，scroll 保留自然宽度；cell 预处理、测量与复用共用 prepared source，避免重复 sourceFilter。
+- Thought fallback 分隔、列表块顺序及 marker 上下文、拒绝图片的外层链接保持一致。
+- 行内图片按实际宿主尺寸、scale、Store 和 loader 重新绑定；预览遵守缓存策略，外部关闭取消任务；HTTP 取消登记不会遗留 continuation。
+- LaTeX 完整公式按请求像素预算缩放，并以整数像素控制实际输出尺寸。
+- ExampleApp SSE 的延迟启动、已排队回调、服务释放和会话替换共用请求终止边界，迟到事件不再污染新消息。
 - 修复 `InkThoughtScanner.stripThoughtTags` 正则由于 `^` 锚点导致非行首开标签未被剥离的 Bug；
 - 修复 `InkMarkdownRenderSession.updateRenderEnvironment` 在流式进行中 Trait 变化未同步刷新 `streamingThought` 配置的问题。
 - 修复 `InkImageStore` 在最后订阅取消时未取消 inflight，以及 `DisplayKey` 未纳入 loader identity 导致缓存串用的问题。
