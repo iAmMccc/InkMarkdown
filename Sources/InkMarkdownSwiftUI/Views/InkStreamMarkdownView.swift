@@ -40,8 +40,6 @@ public struct InkStreamMarkdownView: View {
 
   private let session: InkMarkdownRenderSession
   @State private var isPromoted: Bool
-  @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.sizeCategory) private var sizeCategory
 
   /// 创建一个流式 Markdown 渲染视图。
   ///
@@ -67,17 +65,5 @@ public struct InkStreamMarkdownView: View {
       promotionGeneration: isPromoted
     )
     .onReceive(session.$isPromoted) { isPromoted = $0 }
-    .onAppear(perform: updateRenderEnvironment)
-    .onChange(of: colorScheme) { _ in updateRenderEnvironment() }
-    .onChange(of: sizeCategory) { _ in updateRenderEnvironment() }
-  }
-
-  private func updateRenderEnvironment() {
-    session.updateRenderEnvironment(
-      InkRenderEnvironment(
-        userInterfaceStyle: colorScheme == .dark ? .dark : .light,
-        contentSizeCategory: UIContentSizeCategory.from(swiftUICategory: sizeCategory)
-      )
-    )
   }
 }

@@ -858,7 +858,14 @@ struct InkBlockPresentationContinuityTests {
     let oldCoordinator = InkMarkdownCoordinator()
     let oldContainer = InkMarkdownContainerView()
     oldCoordinator.containerView = oldContainer
-    oldCoordinator.updateStreaming(session: handoffSession)
+    oldCoordinator.updateStreaming(
+      session: handoffSession,
+      renderEnvironment: InkRenderEnvironment(userInterfaceStyle: .light)
+    )
+    #expect(
+      handoffSession.configuration.renderEnvironment.userInterfaceStyle == .light,
+      "首次提交 attachment 的 host 才能应用自身环境"
+    )
     let oldThought = try #require(
       oldContainer.subviews.first(where: { $0 is InkThoughtBlockView })
         as? InkThoughtBlockView
@@ -868,8 +875,15 @@ struct InkBlockPresentationContinuityTests {
     let abandonedCoordinator = InkMarkdownCoordinator()
     let abandonedContainer = InkMarkdownContainerView()
     abandonedCoordinator.containerView = abandonedContainer
-    abandonedCoordinator.updateStreaming(session: handoffSession)
+    abandonedCoordinator.updateStreaming(
+      session: handoffSession,
+      renderEnvironment: InkRenderEnvironment(userInterfaceStyle: .dark)
+    )
     #expect(abandonedContainer.subviews.isEmpty)
+    #expect(
+      handoffSession.configuration.renderEnvironment.userInterfaceStyle == .light,
+      "等待 host 在 apply 失败时不得污染活跃 host 环境"
+    )
     abandonedCoordinator.teardown(from: abandonedContainer)
 
     handoffSession.renderer.charactersPerFrame = 100
@@ -880,8 +894,15 @@ struct InkBlockPresentationContinuityTests {
     let waitingCoordinator = InkMarkdownCoordinator()
     let waitingContainer = InkMarkdownContainerView()
     waitingCoordinator.containerView = waitingContainer
-    waitingCoordinator.updateStreaming(session: handoffSession)
+    waitingCoordinator.updateStreaming(
+      session: handoffSession,
+      renderEnvironment: InkRenderEnvironment(userInterfaceStyle: .dark)
+    )
     #expect(waitingContainer.subviews.isEmpty, "旧 attachment 未释放前，新 host 首次 apply 必须等待")
+    #expect(
+      handoffSession.configuration.renderEnvironment.userInterfaceStyle == .light,
+      "等待接管 host 不得在旧 owner 仍活跃时写入环境"
+    )
 
     // 接管等待期间继续到达增量，旧 owner 更新后不得覆盖等待者的登记。
     handoffSession.append("\n接管前增量")
@@ -892,6 +913,10 @@ struct InkBlockPresentationContinuityTests {
     #expect(oldContainer.subviews.isEmpty)
     #expect(waitingContainer.subviews.contains(where: { $0 is InkThoughtBlockView }))
     #expect(waitingContainer.subviews.contains(where: { $0 is UITextView }))
+    #expect(
+      handoffSession.configuration.renderEnvironment.userInterfaceStyle == .dark,
+      "接管成功后应应用新 host 在 coordinator 中保存的环境快照"
+    )
 
     // 旧 teardown 不得移除新 display observer 或解绑新 renderer text view。
     handoffSession.append("\n</think>\n\n新 host 正文")

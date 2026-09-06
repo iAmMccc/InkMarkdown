@@ -58,7 +58,10 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
     case .blocks(let blocks):
       context.coordinator.updateBlocks(blocks, configuration: effectiveConfig)
     case .streaming(let session):
-      context.coordinator.updateStreaming(session: session)
+      context.coordinator.updateStreaming(
+        session: session,
+        renderEnvironment: effectiveConfig.renderEnvironment
+      )
     }
   }
 

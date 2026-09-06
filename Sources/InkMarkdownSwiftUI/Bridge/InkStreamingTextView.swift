@@ -16,6 +16,13 @@ final class InkStreamingTextView: UITextView, UITextViewDelegate {
     didSet { delegate = linkTapHandler == nil ? nil : self }
   }
 
+  /// Coordinator wires this to the renderer after the text view owns a committed
+  /// continuity attachment. The callback is deliberately host-local: the renderer
+  /// asks the same text view for its width and display scale before rebinding.
+  var onDisplayContextChange: (() -> Void)?
+
+  private var lastDisplayContext: DisplayContext?
+
   init() {
     let textContainer = NSTextContainer(size: CGSize(width: 0, height: CGFloat.greatestFiniteMagnitude))
     textContainer.lineFragmentPadding = 0
@@ -44,6 +51,36 @@ final class InkStreamingTextView: UITextView, UITextViewDelegate {
   override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
     // 流式 remainder 不提供编辑菜单；链接点击不受影响。
     false
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    notifyDisplayContextIfNeeded()
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    // A view can keep the same bounds while moving between windows with different
+    // backing scales. Force the signature to be recomputed for that transition.
+    lastDisplayContext = nil
+    notifyDisplayContextIfNeeded()
+  }
+
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    // Display scale is part of the image materialization identity. Other trait
+    // changes also invalidate the host snapshot so an attached image gets the
+    // same rebinding opportunity as the surrounding text host.
+    guard previousTraitCollection != nil else { return }
+    lastDisplayContext = nil
+    notifyDisplayContextIfNeeded()
+  }
+
+  private func notifyDisplayContextIfNeeded() {
+    guard let displayContext = InkImageAttachment.displayContext(for: self) else { return }
+    guard displayContext != lastDisplayContext else { return }
+    lastDisplayContext = displayContext
+    onDisplayContextChange?()
   }
 
   func textView(

@@ -117,21 +117,21 @@ struct InkMarkdownP0GateTests {
       InkIntrinsicMeasurementWidthResolver.resolve(
         contentWidth: 0,
         windowWidth: 0,
-        legacyFallbackWidth: 375
+        sceneFallbackWidth: 375
       ) == 375
     )
     #expect(
       InkIntrinsicMeasurementWidthResolver.resolve(
         contentWidth: 0,
         windowWidth: 360,
-        legacyFallbackWidth: 375
+        sceneFallbackWidth: 375
       ) == 360
     )
     #expect(
       InkIntrinsicMeasurementWidthResolver.resolve(
         contentWidth: 320,
         windowWidth: 360,
-        legacyFallbackWidth: 375
+        sceneFallbackWidth: 375
       ) == 320
     )
   }

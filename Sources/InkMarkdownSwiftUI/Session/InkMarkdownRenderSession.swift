@@ -176,7 +176,9 @@ public final class InkMarkdownRenderSession: ObservableObject {
   ///
   /// 该方法仅更新 ``InkConfiguration/renderEnvironment``，不会引入第二套 SwiftUI 样式模型；
   /// 若会话正在流式显示，会以 remainder 派生缓冲重新解析，避免把思考标签回灌 textView。
-  /// 流式阶段不触发 ``objectWillChange``，终态 Block Promotion 后会通知 SwiftUI 重建。
+  /// 已完成会话只重渲染 blocks，不重置流式 renderer；renderer 仍同步保存最新配置，
+  /// 供后续 `reset()` / `append()` 使用。流式阶段不触发 ``objectWillChange``，终态
+  /// Block Promotion 后会通知 SwiftUI 重建。
   ///
   /// - Parameter environment: 从当前 ``UITraitCollection`` 或 SwiftUI `colorScheme` 等
   ///   捕获的 trait 快照；须与宿主界面实际外观一致。
@@ -184,6 +186,30 @@ public final class InkMarkdownRenderSession: ObservableObject {
     guard configuration.renderEnvironment != environment else { return }
 
     configuration.renderEnvironment = environment
+
+    if isPromoted || state == .finished {
+      // 终态不再调用 renderer.updateConfiguration(_:source:)：该公开 API 会 reset
+      // 并重新启动 display link。只保留未来 reset/append 所需的配置 snapshot，
+      // 同时重建已经提升的 blocks。
+      renderer.updateConfigurationSnapshot(configuration)
+      blocks = InkBlockRenderer.render(
+        currentText,
+        configuration: configuration
+      )
+      notifyDisplayUpdate(slots: .presentationEnvironment)
+      flushDisplayUpdateIfNeeded()
+      enqueuePublishedMutation { [weak self] in
+        self?.objectWillChange.send()
+      }
+      return
+    }
+
+    guard state == .streaming || state == .finishing || state == .displayingFinalContent else {
+      // idle/cancelled 没有活跃呈现，避免无意义 reset；后续流使用新 snapshot。
+      renderer.updateConfigurationSnapshot(configuration)
+      return
+    }
+
     if var thought = streamingThought {
       thought.config = configuration.appearance.thought
       thought.renderConfiguration = configuration
@@ -194,18 +220,8 @@ public final class InkMarkdownRenderSession: ObservableObject {
       renderer.finish()
     }
 
-    // 流式阶段 UIKit renderer 已 in-place 更新；终态需重渲染 blocks 以应用新 trait。
-    if isPromoted {
-      blocks = InkBlockRenderer.render(
-        currentText,
-        configuration: configuration
-      )
-      notifyDisplayUpdate(slots: .presentationEnvironment)
-      flushDisplayUpdateIfNeeded()
-      enqueuePublishedMutation { [weak self] in
-        self?.objectWillChange.send()
-      }
-    } else if state == .streaming || state == .finishing || state == .displayingFinalContent {
+    // 流式阶段 UIKit renderer 已 in-place 更新；adapter 只刷新当前 attachment。
+    if state == .streaming || state == .finishing || state == .displayingFinalContent {
       notifyDisplayUpdate(slots: [.streamingThought, .streamText])
       flushDisplayUpdateIfNeeded()
     }

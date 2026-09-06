@@ -265,6 +265,7 @@ struct InkMarkdownRenderSessionTests {
       #expect(thought.renderConfiguration.renderEnvironment.userInterfaceStyle == .unspecified)
     }
 
+    let canonicalSourceBeforeEnvironmentUpdate = session.renderer.canonicalSource
     session.updateRenderEnvironment(InkRenderEnvironment(userInterfaceStyle: .dark))
     await InkAsyncTestProbe.wait { session.blocks.first != nil }
 
@@ -272,6 +273,11 @@ struct InkMarkdownRenderSessionTests {
       #expect(thought.renderConfiguration.renderEnvironment.userInterfaceStyle == .dark)
     }
     #expect(session.configuration.renderEnvironment.userInterfaceStyle == .dark)
+    #expect(session.renderer.configuration.renderEnvironment.userInterfaceStyle == .dark)
+
+    // 终态环境更新不得把 renderer 退回可追加状态或重置 canonical source。
+    session.renderer.appendCanonical("不应进入已完成会话")
+    #expect(session.renderer.canonicalSource == canonicalSourceBeforeEnvironmentUpdate)
   }
 
   @Test("流式进行中 updateRenderEnvironment 同步更新 streamingThought 配置")
@@ -286,5 +292,23 @@ struct InkMarkdownRenderSessionTests {
 
     #expect(session.streamingThought?.renderConfiguration.renderEnvironment.userInterfaceStyle == .dark)
     #expect(session.configuration.renderEnvironment.userInterfaceStyle == .dark)
+  }
+
+  @Test("流式 textView 在真实宽度变化后发出图片重绑定信号")
+  func streamingTextView_displayContextChangeNotifiesHost() {
+    let textView = InkStreamingTextView()
+    var callbackCount = 0
+    textView.onDisplayContextChange = { callbackCount += 1 }
+
+    textView.frame = CGRect(x: 0, y: 0, width: 180, height: 120)
+    textView.setNeedsLayout()
+    textView.layoutIfNeeded()
+    let firstLayoutCallbackCount = callbackCount
+    #expect(firstLayoutCallbackCount > 0)
+
+    textView.frame.size.width = 280
+    textView.setNeedsLayout()
+    textView.layoutIfNeeded()
+    #expect(callbackCount > firstLayoutCallbackCount)
   }
 }

@@ -32,6 +32,9 @@ final class InkMarkdownCoordinator {
   private var hasRenderedStaticPresentation = false
   private var latestStaticInput: StaticInput?
   private var latestStaticConfiguration: InkConfiguration?
+  /// SwiftUI environment observed before this coordinator owns an attachment.
+  /// Waiting hosts may stage a value, but only a committed attachment may apply it.
+  private var pendingRenderEnvironment: InkRenderEnvironment?
   private var isReconcilingStatic = false
   private var isReconcilingStreaming = false
 
@@ -52,6 +55,7 @@ final class InkMarkdownCoordinator {
   }
 
   func updateStatic(markdown: String, configuration: InkConfiguration) {
+    pendingRenderEnvironment = nil
     let effective = resolvedConfiguration(configuration)
     guard let container = containerView else { return }
     guard attach(staticContinuity, session: nil, to: container) else { return }
@@ -80,6 +84,7 @@ final class InkMarkdownCoordinator {
     _ blocks: [InkRenderableBlock],
     configuration: InkConfiguration
   ) {
+    pendingRenderEnvironment = nil
     let effective = resolvedConfiguration(configuration)
     guard let container = containerView else { return }
     guard attach(staticContinuity, session: nil, to: container) else { return }
@@ -92,7 +97,18 @@ final class InkMarkdownCoordinator {
     )
   }
 
-  func updateStreaming(session: InkMarkdownRenderSession) {
+  func updateStreaming(
+    session: InkMarkdownRenderSession,
+    renderEnvironment: InkRenderEnvironment? = nil
+  ) {
+    let sessionChanged = currentSession !== session
+    if sessionChanged {
+      // A new session must not inherit a staged environment from the previous one.
+      pendingRenderEnvironment = renderEnvironment
+    } else if let renderEnvironment {
+      pendingRenderEnvironment = renderEnvironment
+    }
+
     clearStaticContinuityCallbacks()
     let wasShowingStaticPresentation = hasRenderedStaticPresentation
     if wasShowingStaticPresentation {
@@ -101,7 +117,6 @@ final class InkMarkdownCoordinator {
     latestStaticInput = nil
     latestStaticConfiguration = nil
     guard let container = containerView else { return }
-    let sessionChanged = currentSession !== session
     let presentationCycleChanged = !sessionChanged
       && currentSessionCycleID != session.presentationCycleID
     guard attach(session.presentationContinuity, session: session, to: container) else { return }
@@ -129,7 +144,8 @@ final class InkMarkdownCoordinator {
   }
 
   func teardown(from dismantledContainer: InkMarkdownContainerView? = nil) {
-    if let continuity = attachedContinuity,
+    let continuityToRelease = attachedContinuity
+    if let continuity = continuityToRelease,
        continuity.ownsAttachment(ownedAttachmentToken),
        let ownedAttachmentToken,
        let detachPlan = continuity.detach() {
@@ -142,8 +158,7 @@ final class InkMarkdownCoordinator {
         continuity.discardAttachment(ownedBy: ownedAttachmentToken)
       }
     }
-    attachedContinuity?.removeReconcileObserver(owner: self)
-    attachedContinuity?.requestReconcileForWaitingOwner(excluding: self)
+    continuityToRelease?.removeReconcileObserver(owner: self)
     containerView?.onContinuityLayoutEnvironmentChanged = nil
     detachFromCurrentSession()
     currentSession = nil
@@ -160,7 +175,13 @@ final class InkMarkdownCoordinator {
     hasRenderedStaticPresentation = false
     latestStaticInput = nil
     latestStaticConfiguration = nil
+    pendingRenderEnvironment = nil
     containerView = nil
+
+    // Remove the old session observer before synchronously waking a waiting owner.
+    // Its first environment apply may flush an update immediately; the dismantled
+    // coordinator must not re-enter presentation reconciliation during teardown.
+    continuityToRelease?.requestReconcileForWaitingOwner(excluding: self)
   }
 
   // MARK: - Private Helpers
@@ -312,6 +333,7 @@ final class InkMarkdownCoordinator {
     )
     guard container.apply(plan) else { return false }
     ownedAttachmentToken = plan.attachmentToken
+    applyPendingRenderEnvironmentIfOwned(for: session)
     installDisplayUpdateObserver(for: session)
 
     if session.requiresStreamingTextAttachment, let textView = streamTextView {
@@ -387,7 +409,50 @@ final class InkMarkdownCoordinator {
       guard let self, let session, self.containerView != nil else { return }
       guard let streamingSession = self.currentSession,
             streamingSession === session else { return }
+
+      // cancel/reset invalidates the old continuity token before notifying the
+      // current owner; the changed cycle is the legitimate path that removes
+      // stale Thought/remainder views from the still-mounted container.
+      let ownsAttachment: Bool
+      if let ownedAttachmentToken = self.ownedAttachmentToken {
+        ownsAttachment = session.presentationContinuity.ownsAttachment(ownedAttachmentToken)
+      } else {
+        ownsAttachment = false
+      }
+      guard ownsAttachment || self.currentSessionCycleID != session.presentationCycleID else {
+        return
+      }
       self.updateStreaming(session: streamingSession)
+    }
+  }
+
+  /// Apply SwiftUI's staged trait snapshot only after this coordinator's UIKit
+  /// attachment plan has committed. A waiting or abandoned host cannot mutate
+  /// the session environment owned by another host.
+  private func applyPendingRenderEnvironmentIfOwned(for session: InkMarkdownRenderSession) {
+    guard let pendingRenderEnvironment,
+          attachedContinuity === session.presentationContinuity,
+          let ownedAttachmentToken,
+          session.presentationContinuity.ownsAttachment(ownedAttachmentToken) else {
+      return
+    }
+
+    self.pendingRenderEnvironment = nil
+    guard session.configuration.renderEnvironment != pendingRenderEnvironment else { return }
+
+    session.updateRenderEnvironment(pendingRenderEnvironment)
+
+    // updateRenderEnvironment notifies the current observer synchronously. When
+    // called from reconcile, that callback is guarded by isReconcilingStreaming;
+    // schedule one follow-up pass after the plan returns.
+    DispatchQueue.main.async { [weak self, weak session] in
+      guard let self, let session,
+            self.currentSession === session,
+            self.containerView != nil,
+            self.attachedContinuity === session.presentationContinuity,
+            let ownedAttachmentToken = self.ownedAttachmentToken,
+            session.presentationContinuity.ownsAttachment(ownedAttachmentToken) else { return }
+      self.updateStreaming(session: session)
     }
   }
 
@@ -403,11 +468,32 @@ final class InkMarkdownCoordinator {
     if let existing = streamTextView {
       textView = existing
     } else {
-      streamTextView = InkStreamingTextView()
-      textView = streamTextView!
+      let created = InkStreamingTextView()
+      streamTextView = created
+      textView = created
+    }
+
+    textView.onDisplayContextChange = { [weak self, weak textView] in
+      guard let self, let textView else { return }
+      self.refreshStreamingImageAttachments(for: textView)
     }
 
     return textView
+  }
+
+  private func refreshStreamingImageAttachments(for textView: InkStreamingTextView) {
+    guard boundStreamTextView === textView,
+          let session = currentSession,
+          attachedContinuity === session.presentationContinuity,
+          let ownedAttachmentToken,
+          session.presentationContinuity.ownsAttachment(ownedAttachmentToken) else {
+      return
+    }
+
+    // InkStreamRenderer delegates width/scale resolution to the shared
+    // InkImageAttachment text-view helper, so every host uses the same display
+    // context and rebinding semantics.
+    session.renderer.refreshImageAttachments()
   }
 
 }

@@ -10,11 +10,11 @@ enum InkIntrinsicMeasurementWidthResolver {
   static func resolve(
     contentWidth: CGFloat,
     windowWidth: CGFloat,
-    legacyFallbackWidth: CGFloat
+    sceneFallbackWidth: CGFloat
   ) -> CGFloat {
     if contentWidth > 0 { return contentWidth }
     if windowWidth > 0 { return windowWidth }
-    return max(legacyFallbackWidth, 0)
+    return max(sceneFallbackWidth, 0)
   }
 }
 
@@ -353,25 +353,26 @@ final class InkMarkdownContainerView: UIView {
   }
 
   /// iOS 15 的 `UIViewRepresentable` 没有 proposal-based 测量入口。宿主层级首轮宽度
-  /// 仍为零时，优先采用实际 window 宽度；仅在 iOS 15 且尚未挂入 window 时退回主屏宽度。
+  /// 仍为零时，优先采用实际 window 宽度；仅在 iOS 15 且尚未挂入 window 时退回前台 Scene 宽度。
   private var intrinsicMeasurementWidth: CGFloat {
-    let legacyFallbackWidth: CGFloat
+    let sceneFallbackWidth: CGFloat
     if #unavailable(iOS 16.0) {
-      legacyFallbackWidth = legacyMainScreenWidth
+      sceneFallbackWidth = foregroundSceneWidth
     } else {
-      legacyFallbackWidth = 0
+      sceneFallbackWidth = 0
     }
     return InkIntrinsicMeasurementWidthResolver.resolve(
       contentWidth: resolvedWidth,
       windowWidth: window?.bounds.width ?? 0,
-      legacyFallbackWidth: legacyFallbackWidth
+      sceneFallbackWidth: sceneFallbackWidth
     )
   }
 
-  /// `UIScreen.main` 自 iOS 16 起废弃；此兼容入口只会编译并运行于 iOS 15 路径。
-  @available(iOS, introduced: 15.0, obsoleted: 16.0)
-  private var legacyMainScreenWidth: CGFloat {
-    UIScreen.main.bounds.width
+  private var foregroundSceneWidth: CGFloat {
+    UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .first(where: { $0.activationState == .foregroundActive })?
+      .screen.bounds.width ?? 0
   }
 
   private func reportContinuityLayoutEnvironmentIfNeeded(
