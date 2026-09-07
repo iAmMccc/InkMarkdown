@@ -1,6 +1,7 @@
 import Testing
 import UIKit
 @testable import InkMarkdown
+import InkMarkdownSemanticCorpus
 import Markdown
 
 @MainActor
@@ -1125,30 +1126,30 @@ private final class SizedMockImageLoader: InkImageLoading, @unchecked Sendable {
 }
 
 /// 等待 loader 完成指定次数，并再等到 `applyImage` 把段级行高写进 storage。
+///
+/// PresentationLoad 会把异步完成推迟一个 MainActor turn；在大型 suite 下用
+/// ``InkAsyncTestProbe`` 抽干 runloop，不能只靠短 sleep。
 @MainActor
 private func waitForImageLoads(
   count: Int,
   loader: SizedMockImageLoader,
   storage: NSTextStorage? = nil,
   expectedMaximumLineHeight: CGFloat? = nil,
-  timeoutNanoseconds: UInt64 = 2_000_000_000
+  timeoutNanoseconds: UInt64 = 5_000_000_000
 ) async {
-  let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
-  while loader.currentCompletedCount < count, DispatchTime.now().uptimeNanoseconds < deadline {
-    try? await Task.sleep(nanoseconds: 10_000_000)
+  _ = await InkAsyncTestProbe.wait(timeoutNanoseconds: timeoutNanoseconds) {
+    loader.currentCompletedCount >= count
   }
 
   guard let storage, let expectedMaximumLineHeight else {
-    // 给 MainActor 回调一个调度窗口，确保 applyImage 已执行。
-    for _ in 0..<5 { await Task.yield() }
+    _ = await InkAsyncTestProbe.wait(timeoutNanoseconds: 200_000_000) { true }
     return
   }
 
-  while DispatchTime.now().uptimeNanoseconds < deadline {
+  _ = await InkAsyncTestProbe.wait(timeoutNanoseconds: timeoutNanoseconds) {
     let paragraphRange = (storage.string as NSString).paragraphRange(for: NSRange(location: 0, length: 1))
     let style = storage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSParagraphStyle
-    if style?.maximumLineHeight == expectedMaximumLineHeight { return }
-    try? await Task.sleep(nanoseconds: 10_000_000)
+    return style?.maximumLineHeight == expectedMaximumLineHeight
   }
 }
 

@@ -34,7 +34,8 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
   /// 在 `applyImage` 中当图片实际高度与占位高度差值超过 50pt 时设为 `true`，
   /// 回调完成后重置为 `false`。
   public internal(set) var shouldAnimateNextHeightChange: Bool = false
-  nonisolated(unsafe) private var subscription: InkImageStore.ImageLoadSubscription?
+  /// 在 MainActor 显示绑定 / materialize 时惰性建立；nonisolated 构造阶段不创建。
+  nonisolated(unsafe) private var presentationLoad: InkImagePresentationLoad?
   private enum LoaderIdentity: Equatable {
     case semantic(String)
     case instance(ObjectIdentifier)
@@ -235,27 +236,23 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
     )
     guard materializationIdentity != identity else { return }
 
-    subscription?.cancel()
-    subscription = nil
     materializationIdentity = identity
     let generation = UUID()
     materializationGeneration = generation
     let sizing = rendering.sizing
-    let result = store.resolve(source: source, display: display, loader: loader)
-    switch result {
-    case .ready(let img):
-      applyImage(
-        img,
-        sizing: sizing,
-        lineFragmentWidth: resolvedLineFragmentWidth(),
-        generation: generation
-      )
-    case .loading(let subscribe):
-      subscription = subscribe { [weak self] image in
+
+    let load = presentationLoad ?? InkImagePresentationLoad()
+    presentationLoad = load
+    load.start(
+      source: source,
+      display: display,
+      loader: loader,
+      store: store,
+      onCompletion: { [weak self] completion in
         guard let self else { return }
         guard self.materializationGeneration == generation,
               self.materializationIdentity == identity else { return }
-        if let image {
+        if case .image(let image) = completion {
           self.applyImage(
             image,
             sizing: sizing,
@@ -264,23 +261,7 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
           )
         }
       }
-    case .queued(let subscribe):
-      subscription = subscribe { [weak self] image in
-        guard let self else { return }
-        guard self.materializationGeneration == generation,
-              self.materializationIdentity == identity else { return }
-        if let image {
-          self.applyImage(
-            image,
-            sizing: sizing,
-            lineFragmentWidth: self.resolvedLineFragmentWidth(),
-            generation: generation
-          )
-        }
-      }
-    case .rejected:
-      break
-    }
+    )
   }
 
   @MainActor
@@ -430,10 +411,6 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
       }
     }
     return found
-  }
-
-  deinit {
-    subscription?.cancel()
   }
 }
 

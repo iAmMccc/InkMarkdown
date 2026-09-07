@@ -24,52 +24,6 @@ private enum InkPreviewStoreLoadError: Error {
   case rejected
 }
 
-/// Bridges one Store subscription into an async task without retaining preview controller.
-@MainActor
-private final class InkPreviewStoreLoadBridge {
-  private var continuation: CheckedContinuation<UIImage, Error>?
-  private var subscription: InkImageStore.ImageLoadSubscription?
-  private var didFinish = false
-
-  func install(_ continuation: CheckedContinuation<UIImage, Error>) {
-    guard !didFinish else {
-      continuation.resume(throwing: CancellationError())
-      return
-    }
-    self.continuation = continuation
-    if Task.isCancelled {
-      finish(.failure(CancellationError()))
-    }
-  }
-
-  func setSubscription(_ subscription: InkImageStore.ImageLoadSubscription) {
-    guard !didFinish else {
-      subscription.cancel()
-      return
-    }
-    self.subscription = subscription
-  }
-
-  func finish(_ result: Result<UIImage, Error>) {
-    guard !didFinish else { return }
-    didFinish = true
-    subscription?.cancel()
-    subscription = nil
-    let continuation = self.continuation
-    self.continuation = nil
-    switch result {
-    case .success(let image):
-      continuation?.resume(returning: image)
-    case .failure(let error):
-      continuation?.resume(throwing: error)
-    }
-  }
-
-  func cancel() {
-    finish(.failure(CancellationError()))
-  }
-}
-
 // MARK: - InkImagePreviewController
 
 /// 全屏图片预览控制器。
@@ -321,33 +275,16 @@ public final class InkImagePreviewController: UIViewController {
     display: DisplayContext,
     loader: InkImageLoading
   ) async throws -> UIImage {
-    let bridge = InkPreviewStoreLoadBridge()
-    return try await withTaskCancellationHandler(operation: {
-      try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<UIImage, Error>) in
-        bridge.install(continuation)
-        let result = store.resolve(source: source, display: display, loader: loader)
-        switch result {
-        case .ready(let image):
-          bridge.finish(.success(image))
-        case .rejected:
-          bridge.finish(.failure(InkPreviewStoreLoadError.rejected))
-        case .loading(let subscribe), .queued(let subscribe):
-          let subscription = subscribe { [weak bridge] image in
-            guard let bridge else { return }
-            if let image {
-              bridge.finish(.success(image))
-            } else {
-              bridge.finish(.failure(ImageLoadError.decodeFailed))
-            }
-          }
-          bridge.setSubscription(subscription)
-        }
-      }
-    }, onCancel: {
-      Task { @MainActor in
-        bridge.cancel()
-      }
-    })
+    do {
+      return try await InkImagePresentationLoadAsync.loadImage(
+        source: source,
+        display: display,
+        loader: loader,
+        store: store
+      )
+    } catch InkImagePresentationAsyncError.rejected {
+      throw InkPreviewStoreLoadError.rejected
+    }
   }
 
   @MainActor

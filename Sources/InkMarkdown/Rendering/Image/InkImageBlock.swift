@@ -3,7 +3,7 @@ import UIKit
 /// 块级图片通道：独占成行的图片以 `UIView` 渲染，并符合 ``InkRenderableBlock``。
 ///
 /// 通过 ``configure(containerWidth:loader:)`` 绑定容器宽度后向 ``InkImageStore`` 解析；
-/// 使用 `loadToken` 丢弃过期的异步回调，避免复用或快速重配时错图。
+/// Store 观察与过期结果抑制由 ``InkImagePresentationLoad`` 负责。
 ///
 /// 须在主线程使用：内部依赖 ``InkImageStore``（``@MainActor``）。
 ///
@@ -17,8 +17,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   private let store: InkImageStore
   private let rendering: InkImageRendering
   private var lastReservedHeight: CGFloat = -1
-  private var loadToken: UUID = UUID()
-  nonisolated(unsafe) private var subscription: InkImageStore.ImageLoadSubscription?
+  private let presentationLoad = InkImagePresentationLoad()
   private var isConfigured = false
   private var configuredMaxWidth: CGFloat = 0
   private var failureContentView: UIView?
@@ -177,9 +176,6 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   @MainActor
   public func configure(containerWidth: CGFloat, loader: InkImageLoading) {
     isConfigured = true
-    subscription?.cancel()
-    let currentToken = UUID()
-    loadToken = currentToken
 
     let effectiveWidth = min(containerWidth, rendering.sizing.maxBlockImageWidth ?? containerWidth)
     configuredMaxWidth = containerWidth
@@ -190,43 +186,28 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
       contentMode: .fit
     )
 
-    let result = store.resolve(source: source, display: display, loader: loader)
-    switch result {
-    case .ready(let img):
-      showImage(img, token: currentToken, maxWidth: effectiveWidth)
-    case .loading(let subscribe):
-      showPlaceholder(maxWidth: effectiveWidth)
-      subscription = subscribe { [weak self] image in
-        Task { @MainActor in
-          guard let self else { return }
-          if let image {
-            self.showImage(image, token: currentToken, maxWidth: effectiveWidth)
-          } else if currentToken == self.loadToken {
-            self.showError()
-          }
+    presentationLoad.start(
+      source: source,
+      display: display,
+      loader: loader,
+      store: store,
+      onPending: { [weak self] in
+        self?.showPlaceholder(maxWidth: effectiveWidth)
+      },
+      onCompletion: { [weak self] completion in
+        guard let self else { return }
+        switch completion {
+        case .image(let image):
+          self.showImage(image, maxWidth: effectiveWidth)
+        case .loadFailed, .rejected:
+          self.showError()
         }
       }
-    case .queued(let subscribe):
-      showPlaceholder(maxWidth: effectiveWidth)
-      let token = loadToken
-      subscription = subscribe { [weak self] image in
-        Task { @MainActor in
-          guard let self, self.loadToken == token else { return }
-          if let image {
-            self.showImage(image, token: token, maxWidth: effectiveWidth)
-          } else {
-            self.showError()
-          }
-        }
-      }
-    case .rejected:
-      showError()
-    }
+    )
   }
 
   @MainActor
-  private func showImage(_ img: UIImage, token: UUID, maxWidth: CGFloat) {
-    guard token == loadToken else { return }
+  private func showImage(_ img: UIImage, maxWidth: CGFloat) {
     clearFailureContent()
     isShowingLoadingPlaceholder = false
     placeholderView.isHidden = true
@@ -394,19 +375,14 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   /// 取消订阅并重置为占位态，供列表复用。
   @MainActor
   public func prepareForReuse() {
-    subscription?.cancel()
+    presentationLoad.cancel()
     isConfigured = false
-    loadToken = UUID()
     configuredMaxWidth = 0
     imageView.image = nil
     imageView.isHidden = true
     clearFailureContent()
     isShowingLoadingPlaceholder = false
     placeholderView.isHidden = true
-  }
-
-  deinit {
-    subscription?.cancel()
   }
 }
 
