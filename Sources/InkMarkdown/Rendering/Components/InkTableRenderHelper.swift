@@ -36,73 +36,70 @@ import Markdown
   }
 
   static func makeRow(
-    texts: [String],
+    cells: [InkTablePreparedCell],
     isHeader: Bool,
     widthMode: ColumnWidthMode,
     alignments: [Table.ColumnAlignment?],
     config: InkAppearance.Table,
     configuration: InkConfiguration,
-    rowContainer: UIView,
-    preparedTexts: [InkPreparedMarkdownSource]? = nil
+    rowContainer: UIView
   ) {
     if isHeader {
       rowContainer.backgroundColor = config.headerBackgroundColor
     }
 
-    var cells: [UIView] = []
-    for (colIndex, text) in texts.enumerated() {
-      let preparedSource = preparedTexts.flatMap { colIndex < $0.count ? $0[colIndex] : nil }
-      let cell = makeCellView(
-        text: text,
-        preparedSource: preparedSource,
+    var cellViews: [UIView] = []
+    for (colIndex, cell) in cells.enumerated() {
+      let cellView = makeCellView(
+        cell: cell,
         isHeader: isHeader,
         columnIndex: colIndex,
         alignments: alignments,
         config: config,
         configuration: configuration
       )
-      cell.translatesAutoresizingMaskIntoConstraints = false
-      rowContainer.addSubview(cell)
-      cells.append(cell)
+      cellView.translatesAutoresizingMaskIntoConstraints = false
+      rowContainer.addSubview(cellView)
+      cellViews.append(cellView)
     }
 
-    for (colIndex, cell) in cells.enumerated() {
-      let top = cell.topAnchor.constraint(equalTo: rowContainer.topAnchor)
-      let bottom = cell.bottomAnchor.constraint(equalTo: rowContainer.bottomAnchor)
+    for (colIndex, cellView) in cellViews.enumerated() {
+      let top = cellView.topAnchor.constraint(equalTo: rowContainer.topAnchor)
+      let bottom = cellView.bottomAnchor.constraint(equalTo: rowContainer.bottomAnchor)
       bottom.priority = .defaultHigh
-      let bottomLimit = cell.bottomAnchor.constraint(lessThanOrEqualTo: rowContainer.bottomAnchor)
+      let bottomLimit = cellView.bottomAnchor.constraint(lessThanOrEqualTo: rowContainer.bottomAnchor)
       NSLayoutConstraint.activate([top, bottom, bottomLimit])
 
       if colIndex == 0 {
-        cell.leadingAnchor.constraint(equalTo: rowContainer.leadingAnchor).isActive = true
+        cellView.leadingAnchor.constraint(equalTo: rowContainer.leadingAnchor).isActive = true
       } else {
-        cell.leadingAnchor.constraint(equalTo: cells[colIndex - 1].trailingAnchor).isActive = true
+        cellView.leadingAnchor.constraint(equalTo: cellViews[colIndex - 1].trailingAnchor).isActive = true
       }
-      if colIndex == cells.count - 1 {
-        cell.trailingAnchor.constraint(equalTo: rowContainer.trailingAnchor).isActive = true
+      if colIndex == cellViews.count - 1 {
+        cellView.trailingAnchor.constraint(equalTo: rowContainer.trailingAnchor).isActive = true
       }
 
       switch widthMode {
       case .ratio(let ratios):
-        if colIndex < ratios.count && colIndex < cells.count - 1 {
-          cell.widthAnchor.constraint(equalTo: rowContainer.widthAnchor, multiplier: ratios[colIndex]).isActive = true
+        if colIndex < ratios.count && colIndex < cellViews.count - 1 {
+          cellView.widthAnchor.constraint(equalTo: rowContainer.widthAnchor, multiplier: ratios[colIndex]).isActive = true
         }
       case .fixed(let widths):
-        if colIndex < widths.count && colIndex < cells.count - 1 {
-          let wc = cell.widthAnchor.constraint(equalToConstant: widths[colIndex])
+        if colIndex < widths.count && colIndex < cellViews.count - 1 {
+          let wc = cellView.widthAnchor.constraint(equalToConstant: widths[colIndex])
           wc.priority = .required
           wc.isActive = true
         }
       }
     }
 
-    for i in 1..<cells.count {
+    for i in 1..<cellViews.count {
       let vLine = UIView()
       vLine.backgroundColor = config.separatorColor
       vLine.translatesAutoresizingMaskIntoConstraints = false
       rowContainer.addSubview(vLine)
       NSLayoutConstraint.activate([
-        vLine.leadingAnchor.constraint(equalTo: cells[i].leadingAnchor),
+        vLine.leadingAnchor.constraint(equalTo: cellViews[i].leadingAnchor),
         vLine.topAnchor.constraint(equalTo: rowContainer.topAnchor),
         vLine.bottomAnchor.constraint(equalTo: rowContainer.bottomAnchor),
         vLine.widthAnchor.constraint(equalToConstant: config.separatorThickness),
@@ -111,8 +108,7 @@ import Markdown
   }
 
   static func makeCellView(
-    text: String,
-    preparedSource: InkPreparedMarkdownSource? = nil,
+    cell: InkTablePreparedCell,
     isHeader: Bool,
     columnIndex: Int,
     alignments: [Table.ColumnAlignment?],
@@ -122,12 +118,7 @@ import Markdown
     let cellView = UIView()
 
     let baseFont = font(isHeader: isHeader, config: config, configuration: configuration)
-    let textColor: UIColor
-    if isHeader {
-      textColor = config.headerColor
-    } else {
-      textColor = config.bodyColor
-    }
+    let textColor: UIColor = isHeader ? config.headerColor : config.bodyColor
 
     let textAlignment: NSTextAlignment
     let alignment = (columnIndex < alignments.count) ? alignments[columnIndex] : nil
@@ -153,24 +144,13 @@ import Markdown
 
     let baselineOffset = (scaledLineHeight - baseFont.lineHeight) / 2
 
-    // 解析内联 Markdown（加粗/斜体/行内代码/链接 + 自定义 Directive），与正文共用 configuration
-    let inlineAttr: NSAttributedString
-    if let preparedSource {
-      inlineAttr = InkAttributedRenderer.renderInline(
-        preparedSource: preparedSource,
-        configuration: configuration,
-        baseFont: baseFont,
-        textColor: textColor,
-        fallbackText: text
-      )
-    } else {
-      inlineAttr = InkAttributedRenderer.renderInline(
-        text,
-        configuration: configuration,
-        baseFont: baseFont,
-        textColor: textColor
-      )
-    }
+    let inlineAttr = InkAttributedRenderer.renderInline(
+      preparedSource: cell.prepared,
+      configuration: configuration,
+      baseFont: baseFont,
+      textColor: textColor,
+      fallbackText: cell.original
+    )
     let attrText = NSMutableAttributedString(attributedString: inlineAttr)
     let fullRange = NSRange(location: 0, length: attrText.length)
     attrText.addAttributes([
@@ -178,21 +158,21 @@ import Markdown
       .baselineOffset: baselineOffset,
     ], range: fullRange)
 
-    let cell = InkTableCellTextView(
+    let textView = InkTableCellTextView(
       attributedText: attrText,
       linkColor: configuration.appearance.link.color,
       linkTapHandler: configuration.linkTapHandler
     )
-    cell.translatesAutoresizingMaskIntoConstraints = false
-    cell.setContentCompressionResistancePriority(.required, for: .vertical)
-    cell.setContentHuggingPriority(.required, for: .vertical)
+    textView.translatesAutoresizingMaskIntoConstraints = false
+    textView.setContentCompressionResistancePriority(.required, for: .vertical)
+    textView.setContentHuggingPriority(.required, for: .vertical)
 
-    cellView.addSubview(cell)
+    cellView.addSubview(textView)
     NSLayoutConstraint.activate([
-      cell.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: config.horizontalPadding),
-      cell.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -config.horizontalPadding),
-      cell.topAnchor.constraint(equalTo: cellView.topAnchor, constant: config.verticalPadding),
-      cell.bottomAnchor.constraint(equalTo: cellView.bottomAnchor, constant: -config.verticalPadding),
+      textView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: config.horizontalPadding),
+      textView.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -config.horizontalPadding),
+      textView.topAnchor.constraint(equalTo: cellView.topAnchor, constant: config.verticalPadding),
+      textView.bottomAnchor.constraint(equalTo: cellView.bottomAnchor, constant: -config.verticalPadding),
     ])
 
     return cellView
@@ -264,14 +244,12 @@ import Markdown
   /// 由外层 UIScrollView 提供 viewport。
   /// 使用渲染后的 attributed string 测量，自动适配所有内联样式。
   static func measureColumnContentWidths(
-    headers: [String],
-    rows: [[String]],
+    headers: [InkTablePreparedCell],
+    rows: [[InkTablePreparedCell]],
     config: InkAppearance.Table,
     configuration: InkConfiguration,
     containerWidth: CGFloat,
-    maximumColumnWidth: CGFloat? = nil,
-    preparedHeaders: [InkPreparedMarkdownSource]? = nil,
-    preparedRows: [[InkPreparedMarkdownSource]]? = nil
+    maximumColumnWidth: CGFloat? = nil
   ) -> [CGFloat] {
     let colCount = headers.count
     guard colCount > 0 else { return [] }
@@ -282,25 +260,25 @@ import Markdown
     var widths: [CGFloat] = Array(repeating: 0, count: colCount)
 
     for colIndex in 0..<colCount {
-      let headerAttr = renderInline(
-        text: headers[colIndex],
-        preparedSource: preparedHeaders.flatMap { colIndex < $0.count ? $0[colIndex] : nil },
+      let headerAttr = InkAttributedRenderer.renderInline(
+        preparedSource: headers[colIndex].prepared,
         configuration: configuration,
         baseFont: headerFont,
-        textColor: config.headerColor
+        textColor: config.headerColor,
+        fallbackText: headers[colIndex].original
       )
       let headerWidth = ceil(headerAttr.boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: .usesLineFragmentOrigin, context: nil).width)
       widths[colIndex] = headerWidth
 
-      for (rowIndex, row) in rows.enumerated() {
+      for row in rows {
         guard colIndex < row.count else { continue }
-        let preparedSource = preparedRows.flatMap { rowIndex < $0.count && colIndex < $0[rowIndex].count ? $0[rowIndex][colIndex] : nil }
-        let cellAttr = renderInline(
-          text: row[colIndex],
-          preparedSource: preparedSource,
+        let cell = row[colIndex]
+        let cellAttr = InkAttributedRenderer.renderInline(
+          preparedSource: cell.prepared,
           configuration: configuration,
           baseFont: bodyFont,
-          textColor: config.bodyColor
+          textColor: config.bodyColor,
+          fallbackText: cell.original
         )
         let cellWidth = ceil(cellAttr.boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: .usesLineFragmentOrigin, context: nil).width)
         widths[colIndex] = max(widths[colIndex], cellWidth)
@@ -308,30 +286,6 @@ import Markdown
       widths[colIndex] = min(widths[colIndex] + config.horizontalPadding * 2, maxColumnWidth)
     }
     return widths
-  }
-
-  private static func renderInline(
-    text: String,
-    preparedSource: InkPreparedMarkdownSource?,
-    configuration: InkConfiguration,
-    baseFont: UIFont,
-    textColor: UIColor
-  ) -> NSAttributedString {
-    if let preparedSource {
-      return InkAttributedRenderer.renderInline(
-        preparedSource: preparedSource,
-        configuration: configuration,
-        baseFont: baseFont,
-        textColor: textColor,
-        fallbackText: text
-      )
-    }
-    return InkAttributedRenderer.renderInline(
-      text,
-      configuration: configuration,
-      baseFont: baseFont,
-      textColor: textColor
-    )
   }
 
   /// 将内容宽度转化为比例

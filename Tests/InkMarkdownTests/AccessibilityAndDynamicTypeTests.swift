@@ -130,16 +130,20 @@ struct AccessibilityAndDynamicTypeTests {
 
     let headers = ["Column"]
     let rows = [["Dynamic Type table measurement"]]
+    let normalHeaderCells = headers.map { InkTableCellSource.raw($0).accepted(using: normal) }
+    let normalRowCells = rows.map { row in row.map { InkTableCellSource.raw($0).accepted(using: normal) } }
+    let accessibilityHeaderCells = headers.map { InkTableCellSource.raw($0).accepted(using: accessibility) }
+    let accessibilityRowCells = rows.map { row in row.map { InkTableCellSource.raw($0).accepted(using: accessibility) } }
     let normalWidths = InkTableRenderHelper.measureColumnContentWidths(
-      headers: headers,
-      rows: rows,
+      headers: normalHeaderCells,
+      rows: normalRowCells,
       config: normal.appearance.table,
       configuration: normal,
       containerWidth: 2_000
     )
     let accessibilityWidths = InkTableRenderHelper.measureColumnContentWidths(
-      headers: headers,
-      rows: rows,
+      headers: accessibilityHeaderCells,
+      rows: accessibilityRowCells,
       config: accessibility.appearance.table,
       configuration: accessibility,
       containerWidth: 2_000

@@ -20,10 +20,9 @@ public struct InkTableBlock: InkRenderableBlock, InkReusableBlock {
   /// 完整渲染配置：单元格行内内容据此复用 `inlineSyntaxes` / `linkTapHandler`。
   public var configuration: InkConfiguration
 
-  /// `InkBlockRenderer` 已经在解析前完成顶层预处理时，表格 cell 也必须沿用同一边界。
-  /// `nil` 表示来自公开 raw-string initializer，仍按 raw 输入语义渲染。
-  let preparedHeaders: [InkPreparedMarkdownSource]?
-  let preparedRows: [[InkPreparedMarkdownSource]]?
+  /// 内部单元格来源：原文与 prepared 绑定，供呈现层一次性接纳。
+  let headerSources: [InkTableCellSource]
+  let rowSources: [[InkTableCellSource]]
 
   @MainActor
   public init(
@@ -48,15 +47,15 @@ public struct InkTableBlock: InkRenderableBlock, InkReusableBlock {
     self.layoutMode = layoutMode
     self.config = configuration.appearance.table
     self.configuration = configuration
-    self.preparedHeaders = nil
-    self.preparedRows = nil
+    self.headerSources = headers.map { .raw($0) }
+    self.rowSources = rows.map { row in row.map { .raw($0) } }
   }
 
   init(
     headers: [String],
     rows: [[String]],
-    preparedHeaders: [InkPreparedMarkdownSource],
-    preparedRows: [[InkPreparedMarkdownSource]],
+    headerSources: [InkTableCellSource],
+    rowSources: [[InkTableCellSource]],
     alignments: [Table.ColumnAlignment?],
     layoutMode: InkTableLayoutMode,
     configuration: InkConfiguration
@@ -67,20 +66,18 @@ public struct InkTableBlock: InkRenderableBlock, InkReusableBlock {
     self.layoutMode = layoutMode
     self.config = configuration.appearance.table
     self.configuration = configuration
-    self.preparedHeaders = preparedHeaders
-    self.preparedRows = preparedRows
+    self.headerSources = headerSources
+    self.rowSources = rowSources
   }
 
   @MainActor public func makeView() -> UIView {
     InkTableBlockView(
-      headers: headers,
-      rows: rows,
+      headerSources: headerSources,
+      rowSources: rowSources,
       alignments: alignments,
       layoutMode: layoutMode,
       config: config,
-      configuration: configuration,
-      preparedHeaders: preparedHeaders,
-      preparedRows: preparedRows
+      configuration: configuration
     )
   }
 
@@ -88,14 +85,12 @@ public struct InkTableBlock: InkRenderableBlock, InkReusableBlock {
   public func updateExistingView(_ view: UIView) -> Bool {
     guard let tableView = view as? InkTableBlockView else { return false }
     tableView.apply(
-      headers: headers,
-      rows: rows,
+      headerSources: headerSources,
+      rowSources: rowSources,
       alignments: alignments,
       layoutMode: layoutMode,
       config: config,
-      configuration: configuration,
-      preparedHeaders: preparedHeaders,
-      preparedRows: preparedRows
+      configuration: configuration
     )
     return true
   }
@@ -108,8 +103,8 @@ public struct InkTableBlock: InkRenderableBlock, InkReusableBlock {
       && alignments == previous.alignments
       && layoutMode == previous.layoutMode
       && config == previous.config
-      && preparedHeaders == previous.preparedHeaders
-      && preparedRows == previous.preparedRows
+      && headerSources == previous.headerSources
+      && rowSources == previous.rowSources
       && configuration.isSemanticallyEqualTo(previous.configuration)
   }
 }
@@ -134,21 +129,27 @@ public extension InkTableBlock {
   ) -> InkTableBlock {
     let headCells = Array(table.head.cells)
     let headers = headCells.map { Self.cellMarkdownText($0) }
-    let preparedHeaders = headCells.map { Self.preparedCellSource($0) }
+    let headerSources: [InkTableCellSource] = headCells.map { cell in
+      let text = Self.cellMarkdownText(cell)
+      return .prepared(original: text, source: InkPreparedMarkdownSource(preparedValue: text))
+    }
 
     let bodyRows = Array(table.body.rows)
     let rows = bodyRows.map { row in
       Array(row.cells).map { Self.cellMarkdownText($0) }
     }
-    let preparedRows = bodyRows.map { row in
-      Array(row.cells).map { Self.preparedCellSource($0) }
+    let rowSources: [[InkTableCellSource]] = bodyRows.map { row in
+      Array(row.cells).map { cell in
+        let text = Self.cellMarkdownText(cell)
+        return .prepared(original: text, source: InkPreparedMarkdownSource(preparedValue: text))
+      }
     }
 
     return InkTableBlock(
       headers: headers,
       rows: rows,
-      preparedHeaders: preparedHeaders,
-      preparedRows: preparedRows,
+      headerSources: headerSources,
+      rowSources: rowSources,
       alignments: table.columnAlignments,
       layoutMode: layoutMode,
       configuration: configuration
@@ -158,9 +159,5 @@ public extension InkTableBlock {
   /// 提取 Cell 内联子节点的 Markdown 文本（保留加粗等标记）
   private static func cellMarkdownText(_ cell: Table.Cell) -> String {
     cell.children.map { $0.format() }.joined().trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-
-  private static func preparedCellSource(_ cell: Table.Cell) -> InkPreparedMarkdownSource {
-    InkPreparedMarkdownSource(preparedValue: cellMarkdownText(cell))
   }
 }

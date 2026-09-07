@@ -19,16 +19,18 @@ struct InkAuditSemanticRegressionTests {
 
     let headers = ["名称", "说明"]
     let rows = [["长标题", String(repeating: "一段足够长的内容", count: 8)]]
+    let headerCells = headers.map { InkTableCellSource.raw($0).accepted(using: configuration) }
+    let rowCells = rows.map { row in row.map { InkTableCellSource.raw($0).accepted(using: configuration) } }
     let wide = InkTableRenderHelper.measureColumnContentWidths(
-      headers: headers,
-      rows: rows,
+      headers: headerCells,
+      rows: rowCells,
       config: table,
       configuration: configuration,
       containerWidth: wideContentWidth
     )
     let narrow = InkTableRenderHelper.measureColumnContentWidths(
-      headers: headers,
-      rows: rows,
+      headers: headerCells,
+      rows: rowCells,
       config: table,
       configuration: configuration,
       containerWidth: narrowContentWidth
@@ -116,11 +118,18 @@ struct InkAuditSemanticRegressionTests {
     #expect(table.updateExistingView(view))
     #expect(filterCallCount == 1)
     #expect(textViews(in: view).contains { $0.attributedText.string.contains("@@user") })
+
+    // 尺寸重建仍消费顶层 prepared source，不能再次跑非幂等 filter。
+    _ = widthsAfterHostResize(view)
+    #expect(filterCallCount == 1)
+    #expect(textViews(in: view).contains { $0.attributedText.string.contains("@@user") })
+    #expect(!textViews(in: view).contains { $0.attributedText.string == "@user" })
   }
 
-  @Test("流式表格 raw cell 仍经过公开 inline sourceFilter 语义")
+  @Test("流式表格 raw cell 按 6 输入精确过滤且重建不重跑")
   func streamTableCells_keepRawInlineFilterSemantics() {
     var configuration = InkConfiguration.standard
+    configuration.appearance.supportsDynamicType = false
     var filterCallCount = 0
     configuration.setSourceFilter(
       { source in
@@ -130,12 +139,55 @@ struct InkAuditSemanticRegressionTests {
       semanticIdentity: "audit-stream-raw-filter"
     )
 
+    // headers=2 + reference=2 + append=2 → 接纳恰好 6 次。
     let stream = InkStreamTableView(layoutMode: .wrap, configuration: configuration)
-    stream.setHeaders(["User"], referenceRows: [["@@@user"]])
-    stream.appendRow(["@@@user"])
+    stream.setHeaders(["H@@@1", "H@@@2"], referenceRows: [["R@@@1", "R@@@2"]])
+    stream.appendRow(["B@@@1", "B@@@2"])
 
-    #expect(filterCallCount > 0)
-    #expect(textViews(in: stream).contains { $0.attributedText.string.contains("@@user") })
+    #expect(filterCallCount == 6)
+    #expect(stream.rowCount == 1)
+    #expect(textViews(in: stream).contains { $0.attributedText.string.contains("@@1") })
+    #expect(!textViews(in: stream).contains { $0.attributedText.string.contains("@@@") })
+    // reference 参与测量但不进入可见行文本。
+    #expect(!textViews(in: stream).contains { $0.attributedText.string.contains("R@@") })
+
+    let countAfterAccept = filterCallCount
+    _ = widthsAfterHostResize(stream)
+    #expect(filterCallCount == countAfterAccept)
+
+    // 第二次 setHeaders 被既有 hasRenderedHeader 守卫拒绝，不得再次过滤。
+    stream.setHeaders(["X@@@1", "X@@@2"], referenceRows: [["Y@@@1", "Y@@@2"]])
+    #expect(filterCallCount == countAfterAccept)
+    #expect(stream.rowCount == 1)
+  }
+
+  @Test("未显示 referenceRows 仍在宽窄恢复后影响首列宽")
+  func streamTable_referenceRowsAffectColumnWidthWithoutDisplay() {
+    var configuration = InkConfiguration.standard
+    configuration.appearance.supportsDynamicType = false
+    let longMarker = String(repeating: "REF长样本列内容", count: 20)
+    let shortBody = ["短", "短"]
+
+    let withReference = InkStreamTableView(layoutMode: .wrap, configuration: configuration)
+    withReference.setHeaders(["名称", "说明"], referenceRows: [[longMarker, "短"]])
+    withReference.appendRow(shortBody)
+
+    let withoutReference = InkStreamTableView(layoutMode: .wrap, configuration: configuration)
+    withoutReference.setHeaders(["名称", "说明"], referenceRows: [["短", "短"]])
+    withoutReference.appendRow(shortBody)
+
+    #expect(withReference.rowCount == 1)
+    #expect(withoutReference.rowCount == 1)
+    #expect(!textViews(in: withReference).contains { $0.attributedText.string.contains("REF长样本") })
+
+    let referenced = firstColumnWidthsAfterHostResize(withReference)
+    let control = firstColumnWidthsAfterHostResize(withoutReference)
+
+    #expect(referenced.wide > control.wide)
+    #expect(referenced.narrow < referenced.wide)
+    #expect(referenced.restored > referenced.narrow)
+    // 恢复后仍保留 reference 对首列的影响，不能退化成仅 body 短行宽度。
+    #expect(referenced.restored > control.restored)
   }
 
   @Test("Thought 富文本 fallback 为多个子块补充分隔符")
@@ -250,6 +302,36 @@ struct InkAuditSemanticRegressionTests {
     view.layoutIfNeeded()
     let restored = textViews(in: view).map(\.bounds.width).max() ?? 0
     return (wide, narrow, restored)
+  }
+
+  private func firstColumnWidthsAfterHostResize(
+    _ view: UIView
+  ) -> (wide: CGFloat, narrow: CGFloat, restored: CGFloat) {
+    view.frame = CGRect(x: 0, y: 0, width: 744, height: 1_000)
+    view.setNeedsLayout()
+    view.layoutIfNeeded()
+    let wide = firstColumnTextWidth(in: view)
+
+    view.frame.size.width = 375
+    view.setNeedsLayout()
+    view.layoutIfNeeded()
+    let narrow = firstColumnTextWidth(in: view)
+
+    view.frame.size.width = 744
+    view.setNeedsLayout()
+    view.layoutIfNeeded()
+    let restored = firstColumnTextWidth(in: view)
+    return (wide, narrow, restored)
+  }
+
+  /// 取宿主坐标系中最靠左的单元格文本宽度，作为首列几何观察点。
+  private func firstColumnTextWidth(in root: UIView) -> CGFloat {
+    let frames = textViews(in: root).map { textView -> (CGFloat, CGFloat) in
+      let frame = textView.convert(textView.bounds, to: root)
+      return (frame.minX, frame.width)
+    }
+    guard let leftmost = frames.min(by: { $0.0 < $1.0 }) else { return 0 }
+    return leftmost.1
   }
 
   private func scrollViewportAfterHostResize(_ view: UIView) -> (
