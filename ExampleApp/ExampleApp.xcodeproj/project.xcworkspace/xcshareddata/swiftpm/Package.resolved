@@ -1,5 +1,5 @@
 {
-  "originHash" : "f4245b04c10f2a20187cc26aca58cd0a60e2f682a20a022b5861dd8c8822378b",
+  "originHash" : "338d250a4b934b2eba80a5961ec076221b61f8f4b2d76a99d90b782612178a08",
   "pins" : [
     {
       "identity" : "iosmath",
@@ -8,24 +8,6 @@
       "state" : {
         "revision" : "302585fd9609f8525423f531924087fc4cfade16",
         "version" : "2.3.1"
-      }
-    },
-    {
-      "identity" : "jxpagingview",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pujiaxin33/JXPagingView.git",
-      "state" : {
-        "revision" : "a55dd07adfa9729677e2287943af5aa40f5df31f",
-        "version" : "2.1.3"
-      }
-    },
-    {
-      "identity" : "jxsegmentedview",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pujiaxin33/JXSegmentedView.git",
-      "state" : {
-        "revision" : "fbbf965d7396bd99ac1ce88a80b6c950b85313f6",
-        "version" : "1.4.1"
       }
     },
     {
