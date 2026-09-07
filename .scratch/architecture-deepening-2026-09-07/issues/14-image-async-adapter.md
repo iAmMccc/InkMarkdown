@@ -1,8 +1,8 @@
 # 14：为共享观察提供一次终结的 async adapter
 
-Status: ready-for-agent
+Status: done
 Blocked by: 11
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（10–17 批次）。
 
 ## Parent spec 与范围
 
@@ -40,12 +40,12 @@ Store 观察可由内部 async 调用者等待，取消与 continuation 终结�
 
 ## Acceptance
 
-- [ ] pre-cancel 不启动 loader，等待不会悬挂。
-- [ ] 取消与成功竞争只 resume 一次。
-- [ ] 同步 ready 正常结束，无额外 pending。
-- [ ] adapter 内不再复制 Store loading/queued 处理。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] pre-cancel 不启动 loader，等待不会悬挂。
+- [x] 取消与成功竞争只 resume 一次。
+- [x] 同步 ready 正常结束，无额外 pending。
+- [x] adapter 内不再复制 Store loading/queued 处理。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -67,4 +67,4 @@ Store 观察可由内部 async 调用者等待，取消与 continuation 终结�
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/14-image-async-adapter.md`。

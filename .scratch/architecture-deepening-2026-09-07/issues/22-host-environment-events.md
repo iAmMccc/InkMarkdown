@@ -1,8 +1,8 @@
 # 22：集中提交后环境更新与显示通知
 
-Status: ready-for-agent
+Status: done
 Blocked by: 21
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（18–26 批次）。
 
 ## Parent spec 与范围
 
@@ -41,12 +41,12 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] waiting dark 不污染 active light，接管后最新环境生效。
-- [ ] reset/cancel/session 替换后排队旧事件无副作用。
-- [ ] 环境同步回调不产生 reconcile 递归或无穷 dispatch。
-- [ ] 终态环境与尺寸更新仍生效；PublishHopper 调度实现未改变。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] waiting dark 不污染 active light，接管后最新环境生效。
+- [x] reset/cancel/session 替换后排队旧事件无副作用。
+- [x] 环境同步回调不产生 reconcile 递归或无穷 dispatch。
+- [x] 终态环境与尺寸更新仍生效；PublishHopper 调度实现未改变。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -68,4 +68,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/22-host-environment-events.md`。

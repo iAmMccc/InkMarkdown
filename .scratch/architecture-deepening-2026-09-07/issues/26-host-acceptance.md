@@ -1,8 +1,8 @@
 # 26：完成宿主接管方向验收与职责文档
 
-Status: ready-for-agent
+Status: done
 Blocked by: 25
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（18–26 批次）。
 
 ## Parent spec 与范围
 
@@ -40,11 +40,11 @@ S-01 至 S-14 的证据闭合，文档明确 Session、host 与 continuity 的�
 
 ## Acceptance
 
-- [ ] 所有 S-* 有生产路径或真实宿主证据。
-- [ ] source truth、live presentation state 和 host 资源职责清晰且无重复真相。
-- [ ] 原有语义/性能计数断言未被放宽以让重构通过。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 所有 S-* 有生产路径或真实宿主证据。
+- [x] source truth、live presentation state 和 host 资源职责清晰且无重复真相。
+- [x] 原有语义/性能计数断言未被放宽以让重构通过。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -66,4 +66,4 @@ S-01 至 S-14 的证据闭合，文档明确 Session、host 与 continuity 的�
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/26-host-acceptance.md`。

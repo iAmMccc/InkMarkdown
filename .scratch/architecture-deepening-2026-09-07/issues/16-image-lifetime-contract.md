@@ -1,8 +1,8 @@
 # 16：验证释放并删除图片旧观察路径
 
-Status: ready-for-agent
+Status: done
 Blocked by: 12, 13, 15
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（10–17 批次）。
 
 ## Parent spec 与范围
 
@@ -42,12 +42,12 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] owner weak 引用可归零，最后请求被取消，另一个订阅仍在时不误取消共享任务。
-- [ ] 三入口只有共享 module 解释 Store 观察状态。
-- [ ] 显式/default Store 预算与 generated loader isolation 测试保持。
-- [ ] 公开声明对照无变化。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] owner weak 引用可归零，最后请求被取消，另一个订阅仍在时不误取消共享任务。
+- [x] 三入口只有共享 module 解释 Store 观察状态。
+- [x] 显式/default Store 预算与 generated loader isolation 测试保持。
+- [x] 公开声明对照无变化。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -69,4 +69,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/16-image-lifetime-contract.md`。

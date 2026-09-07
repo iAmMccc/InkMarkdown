@@ -1,8 +1,8 @@
 # 19：把 Session 的 observer 与文本绑定收成一组资源
 
-Status: ready-for-agent
+Status: done
 Blocked by: 18
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（18–26 批次）。
 
 ## Parent spec 与范围
 
@@ -40,12 +40,12 @@ Session 用一个内部 binding record/grant 管理 private observer 与可选 t
 
 ## Acceptance
 
-- [ ] 文本绑定与 observer 由同一个资源记录控制。
-- [ ] 旧 grant release 无法解绑新 record；nil textView observer 可用。
-- [ ] public onDisplayUpdate 未被内部 observer 覆盖。
-- [ ] Session canonical source/state/hopper/continuity lifetime 未迁走。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 文本绑定与 observer 由同一个资源记录控制。
+- [x] 旧 grant release 无法解绑新 record；nil textView observer 可用。
+- [x] public onDisplayUpdate 未被内部 observer 覆盖。
+- [x] Session canonical source/state/hopper/continuity lifetime 未迁走。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -67,4 +67,4 @@ Session 用一个内部 binding record/grant 管理 private observer 与可选 t
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/19-session-binding-grant.md`。

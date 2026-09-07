@@ -1,8 +1,8 @@
 # 21：实现新宿主的等待、接管与有序释放
 
-Status: ready-for-agent
+Status: done
 Blocked by: 20
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（18–26 批次）。
 
 ## Parent spec 与范围
 
@@ -41,12 +41,12 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] 新 host 接管时旧 observer 已移除，不发生同步回调重入旧宿主。
-- [ ] 等待者销毁无权解绑活跃 owner。
-- [ ] 缺失 container/失败 apply 不永久卡住自己持有的 attachment。
-- [ ] 同 session remount 保留 Thought live 状态。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 新 host 接管时旧 observer 已移除，不发生同步回调重入旧宿主。
+- [x] 等待者销毁无权解绑活跃 owner。
+- [x] 缺失 container/失败 apply 不永久卡住自己持有的 attachment。
+- [x] 同 session remount 保留 Thought live 状态。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -68,4 +68,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/21-host-ownership-release.md`。

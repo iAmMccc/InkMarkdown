@@ -1,8 +1,8 @@
 # 13：迁移行内图片观察并保留宿主重绑语义
 
-Status: ready-for-agent
+Status: done
 Blocked by: 11
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（10–17 批次）。
 
 ## Parent spec 与范围
 
@@ -40,13 +40,13 @@ Attachment 复用共享加载生命周期，仍正确处理 materialization iden
 
 ## Acceptance
 
-- [ ] 同 identity 不重启；display/Store/loader 任一有效变化触发新请求。
-- [ ] 纯 render/attachmentBounds 不创建网络 task。
-- [ ] host 重绑后只有当前宿主/段落收到尺寸失效。
-- [ ] 段落缩进、对齐、min line height 等几何不退化。
-- [ ] 原有 nonisolated interface 保持，未新增不安全 Sendable 标注。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 同 identity 不重启；display/Store/loader 任一有效变化触发新请求。
+- [x] 纯 render/attachmentBounds 不创建网络 task。
+- [x] host 重绑后只有当前宿主/段落收到尺寸失效。
+- [x] 段落缩进、对齐、min line height 等几何不退化。
+- [x] 原有 nonisolated interface 保持，未新增不安全 Sendable 标注。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -68,4 +68,4 @@ Attachment 复用共享加载生命周期，仍正确处理 materialization iden
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/13-image-attachment-adapter.md`。

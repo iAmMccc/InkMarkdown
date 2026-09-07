@@ -1,8 +1,8 @@
 # 25：删除旧流式宿主接线与重复 owner 字段
 
-Status: ready-for-agent
+Status: done
 Blocked by: 24
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（18–26 批次）。
 
 ## Parent spec 与范围
 
@@ -41,12 +41,12 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] 生产代码只有新 host 实现流式接管协调。
-- [ ] Session private observer 与 renderer text binding 为一组资源记录。
-- [ ] 所有旧符号已删除或有明确静态用途；不凭 grep 同名就删除。
-- [ ] 源兼容、ADR 所有权和默认 link identity 保持。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 生产代码只有新 host 实现流式接管协调。
+- [x] Session private observer 与 renderer text binding 为一组资源记录。
+- [x] 所有旧符号已删除或有明确静态用途；不凭 grep 同名就删除。
+- [x] 源兼容、ADR 所有权和默认 link identity 保持。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -68,4 +68,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/25-host-contract-old-plumbing.md`。

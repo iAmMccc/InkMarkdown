@@ -1,8 +1,8 @@
 # 15：迁移预览 Store 分支并保持显式直载
 
-Status: ready-for-agent
+Status: done
 Blocked by: 14
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（10–17 批次）。
 
 ## Parent spec 与范围
 
@@ -40,12 +40,12 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] false 分支遵循 Store 预算/合并，true 不经 Store。
-- [ ] 关闭后旧 high-res 不应用；新一轮显示结果不被旧任务覆盖。
-- [ ] 失败不弹新错误、不清空原图。
-- [ ] private bridge 删除且无重复 continuation 接线。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] false 分支遵循 Store 预算/合并，true 不经 Store。
+- [x] 关闭后旧 high-res 不应用；新一轮显示结果不被旧任务覆盖。
+- [x] 失败不弹新错误、不清空原图。
+- [x] private bridge 删除且无重复 continuation 接线。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -67,4 +67,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/15-image-preview-adapter.md`。

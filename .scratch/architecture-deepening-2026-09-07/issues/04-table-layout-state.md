@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Blocked by: 03
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由 cursor-prompt 本批 01–09 授权覆盖；本票验收已完成。
 
 ## Parent spec 与范围
 
@@ -41,12 +41,12 @@ InkTablePresentation 能用一份测量规则处理静态输入、追加行和�
 
 ## Acceptance
 
-- [ ] 宽→窄→宽可恢复 reference 影响；scroll viewport 变化不改变自然列宽。
-- [ ] 同内容静态一次接纳与逐行接纳产生等价最终列布局。
-- [ ] 短行 append 不要求全量重建，更长行按需重建。
-- [ ] 只有一处 cell 宽度计算规则；新 module 有真实输入/输出测试。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 宽→窄→宽可恢复 reference 影响；scroll viewport 变化不改变自然列宽。
+- [x] 同内容静态一次接纳与逐行接纳产生等价最终列布局。
+- [x] 短行 append 不要求全量重建，更长行按需重建。
+- [x] 只有一处 cell 宽度计算规则；新 module 有真实输入/输出测试。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -69,3 +69,4 @@ InkTablePresentation 能用一份测量规则处理静态输入、追加行和�
 ## Comments
 
 - 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：完成。`InkTablePresentation` 集中 replace/setHeaders/appendRow/layout；8/8 相关测试通过。证据：`../evidence/04-table-layout-state.md`。

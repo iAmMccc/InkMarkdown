@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Blocked by: None
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由 cursor-prompt 本批 01–09 授权覆盖；本票验收已完成。
 
 ## Parent spec 与范围
 
@@ -44,12 +44,12 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] 证据包含 SHA、diff、toolchain、scheme、destination、依赖解析方式。
-- [ ] 每个基线组有实际通过/失败/跳过数量；未执行不写为通过。
-- [ ] 公共声明快照可用于 G-02 对照，不将临时依赖路径写入发布 manifest。
-- [ ] 原有工作树修改完整保留。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 证据包含 SHA、diff、toolchain、scheme、destination、依赖解析方式。
+- [x] 每个基线组有实际通过/失败/跳过数量；未执行不写为通过。
+- [x] 公共声明快照可用于 G-02 对照，不将临时依赖路径写入发布 manifest。
+- [x] 原有工作树修改完整保留。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -72,3 +72,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 ## Comments
 
 - 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实施完成。HEAD `f71cc29`；baseline 6 suite / 51 tests 全部通过（iPhone 17 Pro / iOS 26.5，local overlay）。证据：`../evidence/01-capture-current-baseline.md`。远程 GitHub 解析未验证；发布 manifest 已恢复 remote pin。无生产代码改动。

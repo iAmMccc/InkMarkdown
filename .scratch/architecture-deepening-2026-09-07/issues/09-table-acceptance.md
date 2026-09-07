@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Blocked by: 08
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由 cursor-prompt 本批 01–09 授权覆盖；本票验收已完成（ExampleApp 交互仍标未验证）。
 
 ## Parent spec 与范围
 
@@ -40,11 +40,11 @@ T-01 至 T-12 均有可复查证据，表格 module 职责文档与实现一致�
 
 ## Acceptance
 
-- [ ] 每个 T-* 有测试或交互证据路径与结果。
-- [ ] 表格方向没有未迁移 caller 或失效的旧 sourceFilter 语义。
-- [ ] 文档不宣称没有执行的 iOS 15/远程 CI 通过。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 每个 T-* 有测试或交互证据路径与结果。
+- [x] 表格方向没有未迁移 caller 或失效的旧 sourceFilter 语义。
+- [x] 文档不宣称没有执行的 iOS 15/远程 CI 通过。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -67,3 +67,4 @@ T-01 至 T-12 均有可复查证据，表格 module 职责文档与实现一致�
 ## Comments
 
 - 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：完成方向验收。33 tests 通过；ExampleApp 交互未验证。证据 `../evidence/09-table-acceptance.md`。

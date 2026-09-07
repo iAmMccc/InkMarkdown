@@ -1,8 +1,8 @@
 # 11：实现共享 Store 呈现订阅生命周期
 
-Status: ready-for-agent
+Status: done
 Blocked by: 10
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（10–17 批次）。
 
 ## Parent spec 与范围
 
@@ -42,13 +42,13 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] 同一次请求终结至多一次，无 hidden retry。
-- [ ] A 成功/失败晚到不外发，B 结果仍可用。
-- [ ] ready 无 pending、异步 completion 不在 Store broadcast 栈重入用户回调。
-- [ ] 最后订阅取消到底层；仍有另一个订阅则保留 load。
-- [ ] 未增加 public protocol、cache 或队列。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 同一次请求终结至多一次，无 hidden retry。
+- [x] A 成功/失败晚到不外发，B 结果仍可用。
+- [x] ready 无 pending、异步 completion 不在 Store broadcast 栈重入用户回调。
+- [x] 最后订阅取消到底层；仍有另一个订阅则保留 load。
+- [x] 未增加 public protocol、cache 或队列。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -70,4 +70,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/11-image-load-module.md`。

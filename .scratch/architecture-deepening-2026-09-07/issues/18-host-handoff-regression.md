@@ -1,8 +1,8 @@
 # 18：固化宿主交接与周期作废关键场景
 
-Status: ready-for-agent
+Status: done
 Blocked by: 01
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由用户授权执行（18–26 批次）。
 
 ## Parent spec 与范围
 
@@ -41,11 +41,11 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] 旧 owner 重复释放不影响当前 owner。
-- [ ] 排队旧环境任务遇 reset/cancel 后不能恢复旧视图。
-- [ ] 既有 handoff、waiting environment 和 publish 延迟规则有明确测试入口。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 旧 owner 重复释放不影响当前 owner。
+- [x] 排队旧环境任务遇 reset/cancel 后不能恢复旧视图。
+- [x] 既有 handoff、waiting environment 和 publish 延迟规则有明确测试入口。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -67,4 +67,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Comments
 
-- 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：实现并验证完成；证据见 `../evidence/18-host-handoff-regression.md`。

@@ -1,8 +1,8 @@
 # 27：完成三个方向的联合集成与交付证据
 
-Status: ready-for-agent
+Status: done
 Blocked by: 09, 17, 26
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已按用户指令执行（排除远程 CI / ExampleApp 手工 / iOS 15）。
 
 ## Parent spec 与范围
 
@@ -44,13 +44,13 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] 最终同一候选的测试数量、scheme、destination、xcresult/log 路径完整。
-- [ ] 四 product 独立 consumer 编译有真实输出，不能用聚合测试编译代替。
-- [ ] ExampleApp 构建、安装启动、交互与远程 CI 分栏记录。
-- [ ] 全部验收编号有责任 ticket 和证据，未验证项未被勾选。
-- [ ] public/SPI、平台和依赖无意外变化，原有无关工作树变更保留。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 最终同一候选的测试数量、scheme、destination、xcresult/log 路径完整。
+- [x] 四 product 独立 consumer 编译有真实输出，不能用聚合测试编译代替。
+- [x] ExampleApp 构建、安装启动、交互与远程 CI 分栏记录。（构建已过；安装/交互/远程 CI 按用户排除记未验证）
+- [x] 全部验收编号有责任 ticket 和证据，未验证项未被勾选。
+- [x] public/SPI、平台和依赖无意外变化，原有无关工作树变更保留。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。（仅加固等待抽干；断言不变）
 
 ## Verification
 
@@ -73,3 +73,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 ## Comments
 
 - 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：联合终检完成。证据 `../evidence/27-integrated-final-gates.md`。Package 288 通过；四 consumer + ExampleApp Debug/Release 构建通过；远程 CI / 手工交互 / iOS 15 未验证。未 commit。

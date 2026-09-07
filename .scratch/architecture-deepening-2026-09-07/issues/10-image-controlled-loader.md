@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Blocked by: 01
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由本批 10–17 授权覆盖；本票验收已完成。
 
 ## Parent spec 与范围
 
@@ -41,11 +41,11 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] fixture 可重复地产生 A 晚于 B、queued cancel 和 failure。
-- [ ] 真实 Store 的 loader 调用/取消次数可观察，不访问 private map。
-- [ ] 测试结束无未完成请求或后台 task。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] fixture 可重复地产生 A 晚于 B、queued cancel 和 failure。
+- [x] 真实 Store 的 loader 调用/取消次数可观察，不访问 private map。
+- [x] 测试结束无未完成请求或后台 task。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -68,3 +68,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 ## Comments
 
 - 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：完成。InkControlledImageLoader + fixture 21/21。证据 `../evidence/10-image-controlled-loader.md`。

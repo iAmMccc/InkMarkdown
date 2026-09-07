@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Blocked by: 05, 07
-Implementation authorization: 未授权；收到后续实施指令后，且前置票完成证据已核对，才执行本票。
+Implementation authorization: 已由 cursor-prompt 本批 01–09 授权覆盖；本票验收已完成。
 
 ## Parent spec 与范围
 
@@ -42,12 +42,12 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 
 ## Acceptance
 
-- [ ] 无 production raw/prepared 平行数组调用协议。
-- [ ] source preparation 和 width invalidation 各有一个实现所有者。
-- [ ] 公共声明快照与 baseline 无意外差异。
-- [ ] 所有过渡重载/死字段有引用检查证据。
-- [ ] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
-- [ ] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
+- [x] 无 production raw/prepared 平行数组调用协议。
+- [x] source preparation 和 width invalidation 各有一个实现所有者。
+- [x] 公共声明快照与 baseline 无意外差异。
+- [x] 所有过渡重载/死字段有引用检查证据。
+- [x] 本票涉及的规格条目都有真实验证结果；没有执行或失败的项目保持未勾选。
+- [x] 变更没有放宽现有断言、增加无依据的超时或悄悄删除兼容声明。
 
 ## Verification
 
@@ -70,3 +70,4 @@ Implementation authorization: 未授权；收到后续实施指令后，且前�
 ## Comments
 
 - 2026-09-07：仅完成规格与拆票，尚未实现或执行本票验证。
+- 2026-09-07：完成。删除平行协议；28/28。证据 `../evidence/08-table-contract-old-plumbing.md`。
