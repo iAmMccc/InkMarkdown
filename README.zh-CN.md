@@ -186,12 +186,14 @@ let attributed = InkAttributedRenderer.render(
 import InkMarkdown
 import InkMarkdownLaTeX
 import InkMarkdownMermaid
+import InkMarkdownKingfisher
 
 _ = InkMarkdownLaTeX.register()
 _ = InkMarkdownMermaid.register()
 
 var configuration = InkConfiguration.standard
 configuration.enableLaTeXRendering()
+configuration.appearance.imageRendering.backend = InkKingfisherImageBackend()
 configuration.appearance.mermaidRendering.isEnabled = true
 
 let attributed = InkAttributedRenderer.render(
@@ -256,14 +258,26 @@ InkMarkdownView(markdown)
 | 行内公式 (`$...$`) | 已支持 (Opt-in) | `InkImageAttachment` |
 | 块级公式 (`$$...$$`) | 已支持 (Opt-in) | 生成的 `InkImageBlock`（须使用 `InkBlockRenderer`） |
 | Mermaid 图表 | 已支持 (Opt-in) | 生成的 `InkImageBlock`（须使用 `InkBlockRenderer`） |
-| 图片 | 已支持 (Opt-in) | 默认文本占位（`isEnabled=false`）。开启后有效 HTTP(S) host 无需必填 allowlist；可选域名白名单、20 MiB 响应上限、重定向重校验、相对 URL 的 `baseURL`、最后订阅取消等资源边界始终生效（ADR-006）。行内为 `InkImageAttachment`，独占块为 `InkImageBlock` |
+| 图片 | 已支持 (Opt-in) | 开启并配置图片后端后加载。内置 Kingfisher 后端支持可选域名白名单、20 MiB 响应上限、重定向校验与取消。行内 attachment 与块级视图共享后端（ADR-012）。 |
 | 思考过程 (`<think>` / `<thought>`) | 已支持 | `InkBlockRenderer` 输出可折叠 `InkThoughtBlock`；支持流式前缀 |
 
 > ℹ️ **说明**：关于完整渲染行为细节与边界边缘情况，请参阅[当前项目状态](docs/current-status.md)与[渲染语义规范](docs/spec/README.md)。
 
 > 版本说明：已发布的 `0.0.1` 将 LaTeX 与 Mermaid 能力包含在单一 `InkMarkdown` product 中；尚未发布的 `0.0.2` 才需要使用上方独立 product 与注册流程。
 
-图片资源预算遵循 [ADR-011](docs/decisions/ADR-011-image-store-configuration-ownership.md)：显式注入的 Store 拥有自身配置；默认路径按完整渲染配置选择 Store。请直接配置注入的 Store，不依赖 block 覆盖共享缓存或并发上限。
+未发布版本的破坏式变更：图片渲染（包括生成图）须显式配置 `InkImageBackend`。选择可选的 `InkMarkdownKingfisher` product 使用内置实现，也可接入项目已有图片模块。核心不编译或链接 Kingfisher，但包解析仍可能下载它。缓存和并发预算属于后端，不由视图覆盖（[ADR-012](docs/decisions/ADR-012-pluggable-image-management.md)）。
+
+```swift
+import InkMarkdown
+import InkMarkdownKingfisher
+
+let backend = InkKingfisherImageBackend() // 由宿主持有并跨视图复用。
+var configuration = InkConfiguration.standard
+configuration.appearance.imageRendering.isEnabled = true
+configuration.appearance.imageRendering.backend = backend
+```
+
+未配置后端时通过 `onFailure` 报告 `ImageLoadError.backendNotConfigured` 并显示占位。切换后端取消旧呈现订阅，不清空共享缓存。详见[后端契约与迁移指南](docs/contributor-guide/12-image-backends.md)。
 
 ---
 

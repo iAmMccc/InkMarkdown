@@ -15,6 +15,7 @@
 | 排查 SwiftUI 桥接与布局问题 | [SwiftUI 排坑指南](09-swiftui-uiviewrepresentable-gotchas.md) → [SwiftUI 架构设计](08-swiftui-adapter-architecture.md) |
 | 修改 block identity、状态延续或 promotion | [Block Presentation Continuity](11-block-presentation-continuity.md) → [ADR-009](../decisions/ADR-009-block-presentation-continuity.md) |
 | 运行 SwiftUI ExampleApp | [SwiftUI ExampleApp 指南](10-swiftui-example-app.md) |
+| 配置或替换图片管理模块 | [图片后端与迁移](12-image-backends.md) → [ADR-012](../decisions/ADR-012-pluggable-image-management.md) |
 | 查找 API 或模块位置 | [模块详解](05-modules.md) → [swift-markdown API 速查](../references/swift-markdown-api-guide.md) |
 
 ## 文档结构说明
@@ -32,6 +33,7 @@
 | `09-swiftui-uiviewrepresentable-gotchas.md` | Troubleshooting | SwiftUI UIViewRepresentable 常见踩坑点与避坑指南 |
 | `10-swiftui-example-app.md` | How-to | ExampleApp 中静态、配置和流式 SwiftUI adapter 示例 |
 | `11-block-presentation-continuity.md` | Architecture | block lineage、live presentation state、reconciliation、measurement 与迁移设计 |
+| `12-image-backends.md` | How-to | Kingfisher / 自定义图片后端接口、资源责任及破坏式迁移 |
 | `../qa/example-app-walkthrough-issues.md` | Troubleshooting | ExampleApp 六类走查问题 SSOT（症状、归因、已知限制） |
 
 ## 与其他文档的边界
