@@ -2,10 +2,10 @@
 
 Engineering skills 探索本仓库时应如何消费领域文档。
 
-## Before exploring, read these
+## Read when domain decisions are involved
 
-- **`CONTEXT.md`**（仓库根目录）：跨模块复用的领域术语表；不含实现细节
-- **`docs/decisions/`**：架构决策记录（ADR）。索引见 [docs/decisions/README.md](../decisions/README.md)；动手前读与当前区域相关的 ADR
+- 涉及领域命名、模块职责或跨模块契约时，读取 **`CONTEXT.md`** 的相关术语。文案、格式和环境任务无需先读领域文档。
+- **`docs/decisions/`**：架构决策记录（ADR）。索引见 [docs/decisions/README.md](../decisions/README.md)；改变架构或契约前读与当前区域相关的 ADR
 
 若上述文件不存在，**静默继续**。不要预先建议创建；`/domain-modeling`（经 `/grill-with-docs`、`/improve-codebase-architecture`）在术语或决策落地时 lazy 创建/更新。
 
