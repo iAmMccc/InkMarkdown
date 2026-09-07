@@ -680,6 +680,5 @@ private final class SSEAssistantCell: UITableViewCell {
   override func prepareForReuse() {
     super.prepareForReuse()
     hideThinking()
-    removeHostingController()
   }
 }
