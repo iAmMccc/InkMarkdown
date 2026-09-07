@@ -138,6 +138,44 @@ struct InkImageBlockPresentationAdapterTests {
     block.handleConfiguredTap()
     #expect(tapCount == 1)
   }
+
+  @Test
+  func updateExistingView_sameSourcePreservesLoadedImage() async throws {
+    let url = URL(string: "https://example.com/preserve-image.png")!
+    let loader = InkControlledImageLoader()
+    defer { loader.finishAllPending() }
+
+    var rendering1 = InkImageRendering()
+    rendering1.isEnabled = true
+    rendering1.loader = loader
+
+    let store = InkImageStore()
+    let source = ImageSource(url: url)
+    let block1 = InkImageBlock(source: source, rendering: rendering1, store: store)
+    block1.configure(containerWidth: 300, loader: loader)
+
+    try await loader.waitUntilStarted(requestID: 1)
+    let testImage = makeSolidImage(width: 200, height: 120)
+    loader.succeed(1, image: testImage)
+    for _ in 0..<20 { await Task.yield() }
+
+    #expect(block1.sizeThatFits(CGSize(width: 300, height: CGFloat.greatestFiniteMagnitude)).height == 120)
+
+    // Same instance
+    #expect(block1.updateExistingView(block1) == true)
+
+    // Different instance, same source & store
+    var rendering2 = rendering1
+    rendering2.placeholderHeight = 200
+    let block2 = InkImageBlock(source: source, rendering: rendering2, store: store)
+    #expect(block2.updateExistingView(block1) == true)
+    // The image on block1 should be retained!
+    #expect(block1.sizeThatFits(CGSize(width: 300, height: CGFloat.greatestFiniteMagnitude)).height == 120)
+
+    // Different source
+    let block3 = InkImageBlock(source: ImageSource(url: URL(string: "https://example.com/other.png")!), rendering: rendering1, store: store)
+    #expect(block3.updateExistingView(block1) == false)
+  }
 }
 
 private func makeSolidImage(width: CGFloat, height: CGFloat) -> UIImage {

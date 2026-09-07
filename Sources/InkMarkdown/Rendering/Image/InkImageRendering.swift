@@ -97,7 +97,13 @@ public struct InkImageRendering: Sendable {
     get { storedLoader }
     set {
       storedLoader = newValue
-      loaderSemanticIdentity = newValue == nil ? nil : .unique()
+      if let identity = newValue?.semanticIdentity {
+        loaderSemanticIdentity = identity
+      } else if newValue is (any InkConfigurationSemanticsProviding) {
+        loaderSemanticIdentity = nil
+      } else {
+        loaderSemanticIdentity = newValue == nil ? nil : .unique()
+      }
     }
   }
 
@@ -110,7 +116,13 @@ public struct InkImageRendering: Sendable {
     get { storedGeneratedLoader }
     set {
       storedGeneratedLoader = newValue
-      generatedLoaderSemanticIdentity = newValue == nil ? nil : .unique()
+      if let identity = newValue?.semanticIdentity {
+        generatedLoaderSemanticIdentity = identity
+      } else if newValue is (any InkConfigurationSemanticsProviding) {
+        generatedLoaderSemanticIdentity = nil
+      } else {
+        generatedLoaderSemanticIdentity = newValue == nil ? nil : .unique()
+      }
     }
   }
 

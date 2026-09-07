@@ -10,12 +10,13 @@ import UIKit
 /// - Note: v0.0.1 起即为 ``UIView`` 子类；``makeView()`` 返回 `self` 供 adapter 挂载。
 public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   /// 图片源（URL、Bundle、generated 等）。
-  public let source: ImageSource
+  public private(set) var source: ImageSource
   /// 保留高度变化时通知宿主 adapter；由 SwiftUI/UIKit adapter 绑定，非公开渲染契约。
   public var onReservedHeightChanged: (() -> Void)?
 
-  private let store: InkImageStore
-  private let rendering: InkImageRendering
+  private var store: InkImageStore
+  private var rendering: InkImageRendering
+  private var tapGestureRecognizer: UITapGestureRecognizer?
   private var lastReservedHeight: CGFloat = -1
   private let presentationLoad = InkImagePresentationLoad()
   private var isConfigured = false
@@ -83,7 +84,32 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
 
   @MainActor
   public func updateExistingView(_ view: UIView) -> Bool {
-    false
+    guard let existing = view as? InkImageBlock else { return false }
+    if existing === self {
+      existing.setNeedsLayout()
+      return true
+    }
+    guard existing.source == self.source && existing.store === self.store else {
+      return false
+    }
+    return existing.apply(block: self)
+  }
+
+  @MainActor
+  func apply(block: InkImageBlock) -> Bool {
+    let renderingChanged = self.rendering != block.rendering
+    self.rendering = block.rendering
+    self.setupTapHandlingIfNeeded()
+
+    if renderingChanged {
+      if imageView.image != nil {
+        notifyReservedHeightChangedIfNeeded()
+      } else if bounds.width > 0 {
+        configureIfNeeded()
+      }
+    }
+    setNeedsLayout()
+    return true
   }
 
   @MainActor
@@ -107,12 +133,20 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   }
 
   private func setupTapHandlingIfNeeded() {
-    guard rendering.tapAction != .none else { return }
+    if let tap = tapGestureRecognizer {
+      removeGestureRecognizer(tap)
+      tapGestureRecognizer = nil
+    }
+    guard rendering.tapAction != .none else {
+      isUserInteractionEnabled = false
+      return
+    }
     isUserInteractionEnabled = true
     isAccessibilityElement = true
     accessibilityTraits.insert(.button)
     let tap = UITapGestureRecognizer(target: self, action: #selector(handleImageTap))
     addGestureRecognizer(tap)
+    tapGestureRecognizer = tap
   }
 
   @objc
