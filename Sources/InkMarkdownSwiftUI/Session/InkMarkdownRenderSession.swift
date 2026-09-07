@@ -343,6 +343,11 @@ public final class InkMarkdownRenderSession: ObservableObject {
     }
   }
 
+  /// 当前是否存在活跃的呈现绑定（供测试及内部诊断使用）。
+  var hasPresentationBinding: Bool {
+    presentationBinding != nil
+  }
+
   /// 绑定用于展示流式富文本的 `UITextView`。
   /// - Parameter textView: 承载流式富文本渲染的文本视图。
   /// - Note: 迁移期兼容转发；新路径请用 ``installPresentationBinding``。
@@ -520,7 +525,13 @@ public final class InkMarkdownRenderSession: ObservableObject {
     if slots.contains(.streamText) {
       streamTextPresentationRevision &+= 1
     }
-    presentationBinding?.observer?()
+    if let record = presentationBinding {
+      if record.owner == nil {
+        presentationBinding = nil
+      } else {
+        record.observer?()
+      }
+    }
     onDisplayUpdate?()
   }
 

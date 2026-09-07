@@ -55,11 +55,16 @@ final class InkStreamingPresentationHost {
   ) -> Bool {
     isReleasing = false
     let sessionChanged = self.session !== session
-    if sessionChanged {
-      if self.session != nil {
-        teardownInternal(wakeWaitingOwner: true, dismantledContainer: self.container)
+    let containerChanged = self.container != nil && self.container !== container
+    if sessionChanged || containerChanged {
+      if self.session != nil || self.container != nil {
+        teardownInternal(wakeWaitingOwner: sessionChanged, dismantledContainer: self.container)
       }
-      pendingRenderEnvironment = renderEnvironment
+      if sessionChanged {
+        pendingRenderEnvironment = renderEnvironment
+      } else if let renderEnvironment {
+        pendingRenderEnvironment = renderEnvironment
+      }
     } else if let renderEnvironment {
       pendingRenderEnvironment = renderEnvironment
     }
@@ -93,6 +98,14 @@ final class InkStreamingPresentationHost {
     )
   }
 
+  var isTornDown: Bool {
+    session == nil && ownedAttachmentToken == nil && container == nil
+  }
+
+  var currentHostGeneration: UUID {
+    hostGeneration
+  }
+
   /// 幂等释放；旧 host 再次 teardown 不得影响新 owner。
   func teardown(from dismantledContainer: InkMarkdownContainerView? = nil) {
     teardownInternal(wakeWaitingOwner: true, dismantledContainer: dismantledContainer)
@@ -102,7 +115,7 @@ final class InkStreamingPresentationHost {
     wakeWaitingOwner: Bool,
     dismantledContainer: InkMarkdownContainerView?
   ) {
-    guard !isReleasing || session != nil || ownedAttachmentToken != nil else { return }
+    guard !isReleasing, session != nil || ownedAttachmentToken != nil || container != nil else { return }
     isReleasing = true
     hostGeneration = UUID()
 
@@ -123,6 +136,7 @@ final class InkStreamingPresentationHost {
     }
 
     continuity?.removeReconcileObserver(owner: self)
+    dismantledContainer?.onContinuityLayoutEnvironmentChanged = nil
     container?.onContinuityLayoutEnvironmentChanged = nil
     releaseBindingKeepingSession()
     session = nil

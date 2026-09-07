@@ -413,4 +413,32 @@ struct InkMarkdownRenderSessionTests {
     #expect(privateHits >= 1)
     #expect(session.onDisplayUpdate != nil)
   }
+
+  @Test("owner 释放后 flushDisplayUpdateIfNeeded 清理失效 binding 并不再触发 observer")
+  func renderSession_ownerDeallocatedCleansPresentationBinding() {
+    let session = InkMarkdownRenderSession()
+    final class Owner {}
+    var owner: Owner? = Owner()
+    var hits = 0
+    _ = session.installPresentationBinding(
+      owner: owner!,
+      textView: nil,
+      observer: { hits += 1 }
+    )
+
+    session.append("第一段")
+    session.renderer.onDisplayUpdate?()
+    #expect(hits >= 1)
+    #expect(session.hasPresentationBinding)
+
+    // 释放 owner
+    owner = nil
+
+    // 此时 trigger onDisplayUpdate，binding record 的 owner 变为 nil，应被自动清理
+    session.append("第二段")
+    let hitsBefore = hits
+    session.renderer.onDisplayUpdate?()
+    #expect(hits == hitsBefore)
+    #expect(!session.hasPresentationBinding)
+  }
 }

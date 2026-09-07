@@ -125,6 +125,72 @@ struct InkStreamingPresentationHostTests {
     }
     #expect(!containerA.subviews.isEmpty)
   }
+
+  @Test("连续调用 teardown 具备幂等性且已 teardown 状态正确清理")
+  func host_repeatedTeardownIsIdempotentAndCleansState() async throws {
+    let session = InkMarkdownRenderSession()
+    session.renderer.charactersPerFrame = 200
+    let host = InkStreamingPresentationHost()
+    let container = InkMarkdownContainerView(
+      frame: CGRect(x: 0, y: 0, width: 320, height: 0)
+    )
+
+    #expect(host.update(session: session, container: container))
+    session.append("<think>\n测试步骤\n</think>\n正文")
+    await InkAsyncTestProbe.wait {
+      container.subviews.contains(where: { $0 is InkThoughtBlockView })
+    }
+    #expect(!host.isTornDown)
+
+    // 首次 teardown
+    host.teardown(from: container)
+    #expect(host.isTornDown)
+    let generationAfterFirstTeardown = host.currentHostGeneration
+
+    // 连续多次 teardown：因 guard !isReleasing, session != nil || ownedAttachmentToken != nil 短路
+    host.teardown(from: container)
+    host.teardown(from: container)
+    #expect(host.isTornDown)
+    #expect(host.currentHostGeneration == generationAfterFirstTeardown)
+  }
+
+  @Test("同一 session 传入新 container 时释放旧 container 上下文并由新 container 接管")
+  func host_replacesContainerUnderSameSession_cleansOldAndAcceptsNew() async throws {
+    let session = InkMarkdownRenderSession()
+    session.renderer.charactersPerFrame = 200
+    let host = InkStreamingPresentationHost()
+    let oldContainer = InkMarkdownContainerView(
+      frame: CGRect(x: 0, y: 0, width: 320, height: 0)
+    )
+
+    #expect(host.update(session: session, container: oldContainer))
+    session.append("第一段文字")
+    await InkAsyncTestProbe.wait {
+      oldContainer.subviews.contains(where: { $0 is UITextView })
+    }
+    #expect(oldContainer.onContinuityLayoutEnvironmentChanged != nil)
+
+    let newContainer = InkMarkdownContainerView(
+      frame: CGRect(x: 0, y: 0, width: 320, height: 0)
+    )
+    #expect(host.update(session: session, container: newContainer))
+
+    // 旧容器回调已被释放且子视图已被移除
+    #expect(oldContainer.onContinuityLayoutEnvironmentChanged == nil)
+    #expect(oldContainer.subviews.isEmpty)
+
+    // 新容器成功接管呈现
+    #expect(newContainer.onContinuityLayoutEnvironmentChanged != nil)
+    #expect(newContainer.subviews.contains(where: { $0 is UITextView }))
+
+    // 后续 append 继续在 newContainer 上呈现
+    session.append("\n第二段文字")
+    await InkAsyncTestProbe.wait {
+      (newContainer.subviews.first(where: { $0 is UITextView }) as? UITextView)?
+        .text.contains("第二段文字") == true
+    }
+    #expect(oldContainer.subviews.isEmpty)
+  }
 }
 
 @Suite("SwiftUI Stream remount", .serialized)
