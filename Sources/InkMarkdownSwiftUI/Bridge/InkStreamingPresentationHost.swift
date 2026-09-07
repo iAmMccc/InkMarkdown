@@ -36,6 +36,7 @@ final class InkStreamingPresentationHost {
   private weak var container: InkMarkdownContainerView?
   private var streamTextView: InkStreamingTextView?
   private var boundStreamTextView: UITextView?
+  private var attachedContinuity: InkBlockPresentationContinuity?
   private var ownedAttachmentToken: InkBlockPresentationAttachmentToken?
   private var sessionCycleID: InkBlockPresentationCycleID?
   private var bindingGrant: InkSessionPresentationBindingGrant?
@@ -57,7 +58,7 @@ final class InkStreamingPresentationHost {
     let sessionChanged = self.session !== session
     let containerChanged = self.container != nil && self.container !== container
     if sessionChanged || containerChanged {
-      if self.session != nil || self.container != nil {
+      if self.session != nil || self.container != nil || self.attachedContinuity != nil || self.ownedAttachmentToken != nil {
         teardownInternal(wakeWaitingOwner: sessionChanged, dismantledContainer: self.container)
       }
       if sessionChanged {
@@ -99,7 +100,7 @@ final class InkStreamingPresentationHost {
   }
 
   var isTornDown: Bool {
-    session == nil && ownedAttachmentToken == nil && container == nil
+    session == nil && attachedContinuity == nil && ownedAttachmentToken == nil && container == nil
   }
 
   var currentHostGeneration: UUID {
@@ -115,11 +116,11 @@ final class InkStreamingPresentationHost {
     wakeWaitingOwner: Bool,
     dismantledContainer: InkMarkdownContainerView?
   ) {
-    guard !isReleasing, session != nil || ownedAttachmentToken != nil || container != nil else { return }
+    guard !isReleasing, session != nil || attachedContinuity != nil || ownedAttachmentToken != nil || container != nil else { return }
     isReleasing = true
     hostGeneration = UUID()
 
-    let continuity = session?.presentationContinuity
+    let continuity = attachedContinuity ?? session?.presentationContinuity
     let token = ownedAttachmentToken
     if let continuity,
        continuity.ownsAttachment(token),
@@ -140,6 +141,7 @@ final class InkStreamingPresentationHost {
     container?.onContinuityLayoutEnvironmentChanged = nil
     releaseBindingKeepingSession()
     session = nil
+    attachedContinuity = nil
     sessionCycleID = nil
     ownedAttachmentToken = nil
     streamTextView = nil
@@ -191,6 +193,7 @@ final class InkStreamingPresentationHost {
     )
     guard container.apply(plan) else { return false }
 
+    attachedContinuity = session.presentationContinuity
     ownedAttachmentToken = plan.attachmentToken
     installSessionBinding(for: session)
     applyPendingRenderEnvironmentIfOwned(for: session)
@@ -285,6 +288,7 @@ final class InkStreamingPresentationHost {
 
   private func applyPendingRenderEnvironmentIfOwned(for session: InkMarkdownRenderSession) {
     guard let pendingRenderEnvironment,
+          attachedContinuity === session.presentationContinuity,
           let ownedAttachmentToken,
           session.presentationContinuity.ownsAttachment(ownedAttachmentToken) else {
       return
@@ -303,6 +307,7 @@ final class InkStreamingPresentationHost {
             self.session === session,
             self.sessionCycleID == cycleID,
             let container = self.container,
+            self.attachedContinuity === session.presentationContinuity,
             let token = self.ownedAttachmentToken,
             session.presentationContinuity.ownsAttachment(token) else { return }
       _ = self.update(session: session, container: container)
@@ -341,8 +346,8 @@ final class InkStreamingPresentationHost {
   }
 
   private func releaseTextViewOnly() {
-    if let session {
-      session.unbindTextView(owner: self)
+    if let grant = bindingGrant, let session {
+      session.unbindTextView(for: grant)
     }
     boundStreamTextView = nil
   }
@@ -366,6 +371,7 @@ final class InkStreamingPresentationHost {
   private func refreshStreamingImageAttachments(for textView: InkStreamingTextView) {
     guard boundStreamTextView === textView,
           let session,
+          attachedContinuity === session.presentationContinuity,
           let ownedAttachmentToken,
           session.presentationContinuity.ownsAttachment(ownedAttachmentToken) else {
       return

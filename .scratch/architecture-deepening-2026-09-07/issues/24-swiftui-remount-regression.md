@@ -69,3 +69,4 @@ Implementation authorization: 已由用户授权执行（18–26 批次）。
 ## Comments
 
 - 2026-09-07：实现并验证完成；证据见 `../evidence/24-swiftui-remount-regression.md`。
+- 2026-09-07：完善 remount 测试 harness，真实推进 make/update/dismantle 生命周期，并对 Thought 折叠 liveState 同周期保留及正文新 delta 可见性进行严格断言，已通过 iOS Simulator 测试验证。
