@@ -38,7 +38,7 @@ public struct InkImageBlockHandler: InkBlockHandler, InkConfigurationSemanticsPr
 
     guard rendering.securityPolicy.rejectionReason(
       for: source,
-      maxDataURLBytes: rendering.storeConfiguration.maxDataURLBytes
+      maxDataURLBytes: rendering.maxDataURLBytes
     ) == nil else {
       return nil
     }

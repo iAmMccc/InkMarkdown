@@ -6,8 +6,8 @@ import Foundation
 /// - **图片业务策略**（宿主可选）：``allowedHosts`` 域名白名单。空集表示
 ///   「宿主未配置业务来源限制」，默认放行所有有效 HTTP(S) host；
 ///   显式配置后，非白名单 host 被拒绝。库不把业务来源限制设为使用图片能力的前置条件。
-/// - **图片资源安全边界**（始终生效）：scheme 白名单、重定向限制、query/fragment
-///   规范化与响应大小上限。这些与业务来源无关，宿主不可关闭。
+/// - **图片资源安全边界**：核心执行来源校验；所选后端执行重定向、响应与解码限制。
+///   自定义后端须遵循该契约，核心无法检查其内部传输实现。
 public struct ImageSecurityPolicy: Sendable, Hashable {
 
   /// 允许加载的 URL scheme 集合（资源安全边界，始终生效）。
@@ -41,7 +41,7 @@ public struct ImageSecurityPolicy: Sendable, Hashable {
 
   /// 网络响应允许的最大字节数（资源安全边界，始终生效）。
   ///
-  /// 默认 20 MiB。该上限是库对所有图片加载统一执行的资源保护，不是图片业务策略：
+  /// 默认 20 MiB。该上限是后端应遵守的资源保护，不是图片业务策略：
   /// 超限响应在完整载入和解码前安全失败（优先依据 `Content-Length` 预判，
   /// 否则在累计字节数越限时取消请求），加载失败后走既有 fallback，不写入缓存。
   public var maxResponseBytes: Int = 20 * 1024 * 1024
@@ -81,9 +81,9 @@ extension ImageSecurityPolicy {
 
   /// 对规范化后的图片来源执行唯一的资源安全与 host 业务策略判定。
   ///
-  /// renderer、Block 路由和 URLSession 重定向都通过此 seam 判定，避免策略演进时
-  /// 各通道产生不同结果。`maxDataURLBytes` 由 Store 配置提供；非 Data URL 可传 `nil`。
-  func rejectionReason(
+  /// renderer、Block 路由和后端共用此入口。maxDataURLBytes 来自图片渲染配置；
+  /// 非 Data URL 可传 nil。
+  public func rejectionReason(
     for source: ImageSource,
     maxDataURLBytes: Int? = nil
   ) -> ImageRejectReason? {
@@ -113,7 +113,7 @@ extension ImageSecurityPolicy {
   ///
   /// HTTP 会话只接受 HTTP(S) 跳转。配置了非空白名单时始终复核 host；空白名单时
   /// `redirectRevalidatesHost` 仅决定是否重复执行 `.allowAll` / `.rejectAll` 规则。
-  func rejectionReason(forRedirectURL url: URL) -> ImageRejectReason? {
+  public func rejectionReason(forRedirectURL url: URL) -> ImageRejectReason? {
     let source = ImageSource(
       url: url,
       stripsQuery: stripsQuery,

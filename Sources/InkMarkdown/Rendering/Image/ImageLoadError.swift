@@ -1,5 +1,11 @@
 /// 图片加载过程中抛出的错误。
 public enum ImageLoadError: Error, Sendable {
+  /// 已启用图片，但未注入图片管理后端。
+  case backendNotConfigured
+  /// 图片来源被策略拒绝。
+  case sourceRejected
+  /// 后端等待队列已满。
+  case queueFull
   /// HTTP 响应无效（非 2xx 或无法解析）。
   case invalidResponse
   /// 响应体不是可识别的图片数据。

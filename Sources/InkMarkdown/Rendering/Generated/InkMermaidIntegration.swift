@@ -48,7 +48,7 @@ public final class InkMermaidGeneratedImageLoader: InkGeneratedImageLoading, Ink
   /// 将 Mermaid 请求交给已注册 addon，并返回生成图片。
   ///
   /// 未注册 `InkMarkdownMermaid` 或请求 owner 不匹配时抛出明确错误；缓存由外层
-  /// ``InkImageStore`` 管理。
+  /// ``InkImageBackend`` 管理。
   public func loadGeneratedImage(
     request: InkGeneratedImageRequest,
     display: DisplayContext

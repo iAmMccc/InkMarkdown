@@ -131,7 +131,7 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
   ) {
 
     self.layoutManager = layoutManager
-    self.boundStore = store ?? InkImageStore.defaultStore(for: rendering)
+    self.boundStore = store ?? boundStore ?? InkImageStore.defaultStore(for: rendering)
     self.onHeightChange = onHeightChange
 
     if let container = layoutManager.textContainers.first {

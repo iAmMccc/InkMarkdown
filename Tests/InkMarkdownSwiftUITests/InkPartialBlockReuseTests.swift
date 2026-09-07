@@ -179,12 +179,13 @@ struct InkPartialBlockReuseTests {
     #expect(updatedView.source.rawURL == URL(string: "https://b.example/image.png"))
   }
 
-  @Test("图片块注入不同 Store 时视图语义不等价")
+  @Test("图片块注入不同后端时视图语义不等价")
   func imageStore_differenceChangesImageSemantics() {
     var rendering = InkImageRendering()
     rendering.isEnabled = true
     let source = ImageSource(url: URL(string: "https://example.com/image.png")!)
     let first = InkImageBlock(source: source, rendering: rendering, store: InkImageStore())
+    rendering.backend = PartialReuseImageBackend(loader: TestDelayedImageLoader(responses: [:]))
     let second = InkImageBlock(source: source, rendering: rendering, store: InkImageStore())
 
     #expect(!second.hasEquivalentContent(to: first))
@@ -212,7 +213,7 @@ struct InkPartialBlockReuseTests {
 
     var oldRendering = InkImageRendering()
     oldRendering.isEnabled = true
-    oldRendering.setLoader(loader, semanticIdentity: "test.delayed-loader.v1")
+    oldRendering.backend = PartialReuseImageBackend(loader: loader)
     oldRendering.setLoadFinishedHandler({ _, _ in
       oldCompletionCount += 1
     }, semanticIdentity: "test.old-completion.v1")

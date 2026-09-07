@@ -90,7 +90,7 @@ public struct InkLaTeXGeneratedImageLoader: InkGeneratedImageLoading, InkConfigu
   /// 将 LaTeX 生成请求转交给已注册的 addon renderer。
   ///
   /// 未注册 `InkMarkdownLaTeX` 或请求 owner 不匹配时抛出明确错误；缓存仍由外层
-  /// ``InkImageStore`` 管理。
+  /// ``InkImageBackend`` 管理。
   public func loadGeneratedImage(
     request: InkGeneratedImageRequest,
     display: DisplayContext
