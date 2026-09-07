@@ -139,12 +139,8 @@ public final class InkMarkdownRenderSession: ObservableObject {
   /// 再次触发 Publishing changes。
   public var onDisplayUpdate: (() -> Void)?
 
-  /// SwiftUI adapter 的内部显示观察者；与宿主公开回调彼此独立。
-  private var presentationDisplayUpdateObserverOwner: ObjectIdentifier?
-  private var presentationDisplayUpdateObserver: (() -> Void)?
-
-  /// 当前 renderer text-view binding 的 adapter owner；防止旧 Coordinator 解绑定新 host。
-  private var textViewBindingOwner: ObjectIdentifier?
+  /// 成组呈现绑定：private observer + 可选 textView；旧 grant 释放不能清掉新 record。
+  private var presentationBinding: PresentationBindingRecord?
 
   /// 创建一个流式 Markdown 渲染会话。
   /// - Parameter configuration: 此会话从流式到终态均使用的 Markdown 渲染配置快照。
@@ -301,42 +297,145 @@ public final class InkMarkdownRenderSession: ObservableObject {
     }
   }
 
+  /// 成组安装呈现绑定：可选 textView + private observer。返回可匹配释放的 grant。
+  ///
+  /// 替换任意既有 binding；不拥有 continuity attachment 权限。
+  @discardableResult
+  func installPresentationBinding(
+    owner: AnyObject,
+    textView: UITextView? = nil,
+    observer: (() -> Void)? = nil
+  ) -> InkSessionPresentationBindingGrant {
+    let previous = presentationBinding
+    let grant = InkSessionPresentationBindingGrant()
+    let record = PresentationBindingRecord(
+      grant: grant,
+      owner: owner,
+      textView: textView,
+      observer: observer
+    )
+    presentationBinding = record
+    applyTextViewBinding(from: previous, to: record)
+    return grant
+  }
+
+  /// 在 grant 仍匹配当前 record 时更新 textView / observer。
+  func updatePresentationBinding(
+    _ grant: InkSessionPresentationBindingGrant,
+    textView: UITextView?,
+    observer: (() -> Void)?
+  ) {
+    guard let record = presentationBinding, record.grant == grant else { return }
+    let previousTextView = record.textView
+    record.textView = textView
+    record.observer = observer
+    if previousTextView !== textView {
+      applyTextViewBinding(from: nil, to: record, previousTextView: previousTextView)
+    }
+  }
+
+  /// 仅当 grant 仍是当前 record 时释放；旧 grant 不会清掉新绑定。
+  func releasePresentationBinding(_ grant: InkSessionPresentationBindingGrant) {
+    guard let record = presentationBinding, record.grant == grant else { return }
+    presentationBinding = nil
+    if record.textView != nil {
+      renderer.unbindTextView()
+    }
+  }
+
   /// 绑定用于展示流式富文本的 `UITextView`。
   /// - Parameter textView: 承载流式富文本渲染的文本视图。
+  /// - Note: 迁移期兼容转发；新路径请用 ``installPresentationBinding``。
   func bindTextView(_ textView: UITextView, owner: AnyObject? = nil) {
-    textViewBindingOwner = owner.map(ObjectIdentifier.init)
-    renderer.bindTextView(textView)
+    if let owner {
+      if let record = presentationBinding, record.owner === owner {
+        let previous = record.textView
+        record.textView = textView
+        if previous !== textView {
+          renderer.bindTextView(textView)
+        }
+      } else {
+        _ = installPresentationBinding(
+          owner: owner,
+          textView: textView,
+          observer: nil
+        )
+      }
+    } else if let record = presentationBinding {
+      record.textView = textView
+      renderer.bindTextView(textView)
+    } else {
+      renderer.bindTextView(textView)
+    }
   }
 
   /// 解绑当前绑定的 `UITextView` 并快进已解析内容。
+  /// - Note: 迁移期兼容转发；匹配 owner 时只清 textView，保留 observer。
   func unbindTextView(owner: AnyObject? = nil) {
     if let owner {
-      guard textViewBindingOwner == ObjectIdentifier(owner) else { return }
+      guard let record = presentationBinding, record.owner === owner else { return }
+      if record.textView != nil {
+        record.textView = nil
+        renderer.unbindTextView()
+      }
+      return
     }
-    textViewBindingOwner = nil
-    renderer.unbindTextView()
+    if let record = presentationBinding {
+      if record.textView != nil {
+        record.textView = nil
+        renderer.unbindTextView()
+      }
+    } else {
+      renderer.unbindTextView()
+    }
   }
 
   /// 安装 adapter 私有观察者，不改写宿主公开的 `onDisplayUpdate`。
+  /// - Note: 迁移期兼容转发。
   func installPresentationDisplayUpdateObserver(
     owner: AnyObject,
     observer: @escaping () -> Void
   ) {
-    presentationDisplayUpdateObserverOwner = ObjectIdentifier(owner)
-    presentationDisplayUpdateObserver = observer
+    if let record = presentationBinding, record.owner === owner {
+      record.observer = observer
+      return
+    }
+    _ = installPresentationBinding(
+      owner: owner,
+      textView: nil,
+      observer: observer
+    )
   }
 
   /// 仅允许当前 owner 移除自己的观察者，避免旧 host 清掉新 attachment。
+  /// - Note: 迁移期兼容转发。
   func removePresentationDisplayUpdateObserver(owner: AnyObject) {
-    guard presentationDisplayUpdateObserverOwner == ObjectIdentifier(owner) else { return }
-    presentationDisplayUpdateObserverOwner = nil
-    presentationDisplayUpdateObserver = nil
+    guard let record = presentationBinding, record.owner === owner else { return }
+    record.observer = nil
+    if record.textView == nil {
+      presentationBinding = nil
+    }
   }
 
   /// Continuity 中的交互状态变化已由 Coordinator 原位应用；这里只通知宿主重新测量，
   /// 不再次唤醒 adapter observer，避免 reconcile 回路。
   func notifyHostPresentationSizeChanged() {
     onDisplayUpdate?()
+  }
+
+  private func applyTextViewBinding(
+    from previous: PresentationBindingRecord?,
+    to record: PresentationBindingRecord,
+    previousTextView: UITextView? = nil
+  ) {
+    let oldView = previousTextView ?? previous?.textView
+    if let textView = record.textView {
+      if oldView !== textView {
+        renderer.bindTextView(textView)
+      }
+    } else if oldView != nil {
+      renderer.unbindTextView()
+    }
   }
 
   // MARK: - Private Helpers
@@ -421,7 +520,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
     if slots.contains(.streamText) {
       streamTextPresentationRevision &+= 1
     }
-    presentationDisplayUpdateObserver?()
+    presentationBinding?.observer?()
     onDisplayUpdate?()
   }
 
@@ -478,6 +577,35 @@ public final class InkMarkdownRenderSession: ObservableObject {
         self.isPromoted = true
       }
     }
+  }
+}
+
+/// Session 成组呈现绑定的可匹配释放令牌；不表达 continuity attachment 权限。
+struct InkSessionPresentationBindingGrant: Equatable {
+  fileprivate let id: UUID
+
+  fileprivate init(id: UUID = UUID()) {
+    self.id = id
+  }
+}
+
+@MainActor
+private final class PresentationBindingRecord {
+  let grant: InkSessionPresentationBindingGrant
+  weak var owner: AnyObject?
+  weak var textView: UITextView?
+  var observer: (() -> Void)?
+
+  init(
+    grant: InkSessionPresentationBindingGrant,
+    owner: AnyObject,
+    textView: UITextView?,
+    observer: (() -> Void)?
+  ) {
+    self.grant = grant
+    self.owner = owner
+    self.textView = textView
+    self.observer = observer
   }
 }
 

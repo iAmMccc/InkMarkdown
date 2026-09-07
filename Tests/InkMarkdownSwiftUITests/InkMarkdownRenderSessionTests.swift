@@ -88,6 +88,42 @@ struct InkMarkdownRenderSessionTests {
     #expect(!session.blocks.isEmpty)
   }
 
+  @Test("延迟 publish 前 cancel/reset 作废排队的 @Published 变更")
+  func renderSession_deferredPublishInvalidatedByCancelAndReset() async {
+    let cancelled = InkMarkdownRenderSession()
+    cancelled.append("# 将被取消的终态")
+    cancelled.finish()
+    cancelled.renderer.onFinishParse?()
+    cancelled.renderer.onFinishDisplay?()
+    #expect(cancelled.state == .displayingFinalContent)
+    #expect(cancelled.isPromoted == false)
+
+    cancelled.cancel()
+    #expect(cancelled.state == .cancelled)
+    #expect(cancelled.isPromoted == false)
+
+    // 抽干 default-mode hopper；cancel 必须作废排队的 finished/isPromoted 写入。
+    await InkAsyncTestProbe.wait(timeoutNanoseconds: 200_000_000) { false }
+    #expect(cancelled.state == .cancelled)
+    #expect(cancelled.isPromoted == false)
+
+    let resetSession = InkMarkdownRenderSession()
+    resetSession.append("# 将被 reset 的终态")
+    resetSession.finish()
+    resetSession.renderer.onFinishParse?()
+    resetSession.renderer.onFinishDisplay?()
+    #expect(resetSession.state == .displayingFinalContent)
+    #expect(resetSession.isPromoted == false)
+
+    resetSession.reset()
+    #expect(resetSession.state == .idle)
+    #expect(resetSession.isPromoted == false)
+    await InkAsyncTestProbe.wait(timeoutNanoseconds: 200_000_000) { false }
+    #expect(resetSession.state == .idle)
+    #expect(resetSession.isPromoted == false)
+    #expect(resetSession.blocks.isEmpty)
+  }
+
   @Test("未 attach 文本视图时 finish 仍会完成终态提升")
   func renderSession_headlessFinishPromotes() async {
     let session = InkMarkdownRenderSession()
@@ -310,5 +346,71 @@ struct InkMarkdownRenderSessionTests {
     textView.setNeedsLayout()
     textView.layoutIfNeeded()
     #expect(callbackCount > firstLayoutCallbackCount)
+  }
+
+  @Test("成组 binding：新 install 替换旧 grant，旧 release 无效")
+  func renderSession_presentationBindingGrantIsolation() {
+    let session = InkMarkdownRenderSession()
+    final class Owner {}
+    let ownerA = Owner()
+    let ownerB = Owner()
+    let textA = UITextView()
+    let textB = UITextView()
+
+    var hitsB = 0
+    let grantA = session.installPresentationBinding(
+      owner: ownerA,
+      textView: textA,
+      observer: { }
+    )
+    let grantB = session.installPresentationBinding(
+      owner: ownerB,
+      textView: textB,
+      observer: { hitsB += 1 }
+    )
+    #expect(grantA != grantB)
+
+    session.releasePresentationBinding(grantA)
+    session.unbindTextView(owner: ownerA)
+    session.removePresentationDisplayUpdateObserver(owner: ownerA)
+
+    session.append("绑定隔离")
+    session.renderer.onDisplayUpdate?()
+    #expect(hitsB >= 1)
+
+    // nil textView 仍可保留 observer
+    var observerOnlyHits = 0
+    session.updatePresentationBinding(
+      grantB,
+      textView: nil,
+      observer: { observerOnlyHits += 1 }
+    )
+    session.renderer.onDisplayUpdate?()
+    #expect(observerOnlyHits >= 1)
+
+    session.releasePresentationBinding(grantB)
+    let before = observerOnlyHits
+    session.renderer.onDisplayUpdate?()
+    #expect(observerOnlyHits == before)
+  }
+
+  @Test("public onDisplayUpdate 与 private observer 共存且互不覆盖")
+  func renderSession_publicAndPrivateDisplayCallbacksCoexist() {
+    let session = InkMarkdownRenderSession()
+    final class Owner {}
+    let owner = Owner()
+    var publicHits = 0
+    var privateHits = 0
+    session.onDisplayUpdate = { publicHits += 1 }
+    _ = session.installPresentationBinding(
+      owner: owner,
+      textView: nil,
+      observer: { privateHits += 1 }
+    )
+    session.append("共存回调")
+    session.renderer.onDisplayUpdate?()
+    #expect(publicHits >= 1)
+    #expect(privateHits >= 1)
+    #expect(session.onDisplayUpdate != nil)
   }
 }

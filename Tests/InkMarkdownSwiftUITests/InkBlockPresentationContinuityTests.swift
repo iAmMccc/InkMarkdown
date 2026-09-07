@@ -938,6 +938,24 @@ struct InkBlockPresentationContinuityTests {
     #expect(handedOffThought.isComplete)
     #expect(handedOffText.text.contains("新 host 正文"))
 
+    // S-05：B 已接管后旧 A 再次 teardown/release 不得解绑 B；B 继续接收正文。
+    oldCoordinator.teardown(from: oldContainer)
+    handoffSession.append("\n旧 A 二次释放后正文")
+    await InkAsyncTestProbe.wait {
+      let text = waitingContainer.subviews.first(where: { $0 is UITextView })
+        as? UITextView
+      return text?.text.contains("旧 A 二次释放后正文") == true
+    }
+    let afterStaleReleaseText = try #require(
+      waitingContainer.subviews.first(where: { $0 is UITextView })
+        as? UITextView
+    )
+    #expect(afterStaleReleaseText.text.contains("旧 A 二次释放后正文"))
+    #expect(
+      handoffSession.configuration.renderEnvironment.userInterfaceStyle == .dark,
+      "旧 A 二次 teardown 不得回滚 B 已应用的环境"
+    )
+
     // 真实 cancel/reset 边界：cancel 后不得重新建立空 remainder，下一周期不得复活旧折叠态。
     let cancelSession = InkMarkdownRenderSession(configuration: configuration)
     let cancelCoordinator = InkMarkdownCoordinator()
@@ -975,4 +993,60 @@ struct InkBlockPresentationContinuityTests {
     #expect(!resetThought.isCollapsed, "reset 后新周期不得复活 cancel 前的 live state")
   }
 
+  @Test("环境补充 reconcile 排队遇 cancel 后下一 runloop 不复活旧内容")
+  func blockContinuity_queuedEnvironmentReconcileInvalidatedByCancel() async throws {
+    var configuration = InkConfiguration.standard
+    configuration.appearance.thought.isCollapsible = true
+
+    let session = InkMarkdownRenderSession(configuration: configuration)
+    session.renderer.charactersPerFrame = 200
+    let coordinator = InkMarkdownCoordinator()
+    let container = InkMarkdownContainerView(
+      frame: CGRect(x: 0, y: 0, width: 320, height: 0)
+    )
+    coordinator.containerView = container
+    coordinator.updateStreaming(
+      session: session,
+      renderEnvironment: InkRenderEnvironment(userInterfaceStyle: .light)
+    )
+
+    session.append("<think>\n排队环境")
+    await InkAsyncTestProbe.wait {
+      container.subviews.contains(where: { $0 is InkThoughtBlockView })
+    }
+    let thought = try #require(
+      container.subviews.first(where: { $0 is InkThoughtBlockView })
+        as? InkThoughtBlockView
+    )
+    thought.handleHeaderTap()
+    #expect(thought.isCollapsed)
+
+    // 触发 applyPending → DispatchQueue.main.async 补充 reconcile。
+    coordinator.updateStreaming(
+      session: session,
+      renderEnvironment: InkRenderEnvironment(userInterfaceStyle: .dark)
+    )
+    #expect(session.configuration.renderEnvironment.userInterfaceStyle == .dark)
+
+    session.cancel()
+    #expect(session.state == .cancelled)
+
+    // 抽干下一 main async turn；旧补充 reconcile 不得把已 cancel 的内容装回。
+    await InkAsyncTestProbe.wait(timeoutNanoseconds: 200_000_000) {
+      container.subviews.isEmpty
+    }
+    #expect(container.subviews.isEmpty, "cancel 后排队环境 reconcile 不得复活旧 Thought/remainder")
+
+    session.reset()
+    #expect(container.subviews.isEmpty)
+    session.append("<think>\ncancel 后新周期")
+    await InkAsyncTestProbe.wait {
+      container.subviews.contains(where: { $0 is InkThoughtBlockView })
+    }
+    let nextThought = try #require(
+      container.subviews.first(where: { $0 is InkThoughtBlockView })
+        as? InkThoughtBlockView
+    )
+    #expect(!nextThought.isCollapsed)
+  }
 }
