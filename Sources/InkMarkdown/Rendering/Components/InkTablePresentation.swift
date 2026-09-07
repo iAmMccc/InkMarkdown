@@ -9,6 +9,16 @@ enum InkTableCellSource: Equatable, Sendable {
   case raw(String)
   /// 已由顶层 renderer / Markup 派生的 prepared 片段；不再执行 sourceFilter。
   case prepared(original: String, source: InkPreparedMarkdownSource)
+
+  /// 单元格原始文本，供分隔行判定与无副作用检查使用。
+  var original: String {
+    switch self {
+    case .raw(let text):
+      return text
+    case .prepared(let original, _):
+      return original
+    }
+  }
 }
 
 /// 已完成来源接纳、可供测量与建行反复消费的单元格值。
@@ -135,10 +145,10 @@ struct InkTablePresentation {
     contentWidth: CGFloat? = nil
   ) -> InkTableLayoutSnapshot? {
     guard hasAcceptedHeaders else { return nil }
-    let prepared = cellSources.accepted(using: configuration)
-    if prepared.allSatisfy({ Self.isSeparatorCell($0.original) }) {
+    if cellSources.allSatisfy({ Self.isSeparatorCell($0.original) }) {
       return nil
     }
+    let prepared = cellSources.accepted(using: configuration)
     let width = contentWidth ?? max(lastContentWidth, 1)
     let needsExpand = rowNeedsColumnExpand(prepared, contentWidth: width)
     rows.append(prepared)

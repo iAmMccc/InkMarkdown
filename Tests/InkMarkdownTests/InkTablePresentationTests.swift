@@ -461,4 +461,36 @@ struct InkTablePresentationLayoutTests {
     #expect(wrapSize.height > 0)
     #expect(wrapSize.height > size.height)
   }
+
+  @Test("表格追加分隔行自动忽略且不触发 sourceFilter")
+  func tablePresentation_separatorRowDoesNotTriggerSourceFilter() {
+    var configuration = InkConfiguration.standard
+    var filterCallCount = 0
+    configuration.setSourceFilter(
+      { source in
+        filterCallCount += 1
+        return source
+      },
+      semanticIdentity: "table-separator-check"
+    )
+
+    var presentation = InkTablePresentation(
+      layoutMode: .wrap,
+      config: configuration.appearance.table,
+      configuration: configuration
+    )
+
+    let headerSources: [InkTableCellSource] = [.raw("Col A"), .raw("Col B")]
+    _ = presentation.setHeaders(headerSources, contentWidth: 320)
+    let initialCount = filterCallCount
+    #expect(initialCount == 2)
+
+    // 追加分隔行
+    let separatorRow: [InkTableCellSource] = [.raw("---"), .raw(":---:")]
+    let snapshot = presentation.appendRow(separatorRow, contentWidth: 320)
+
+    #expect(snapshot == nil)
+    #expect(filterCallCount == initialCount)
+    #expect(presentation.rows.count == 0)
+  }
 }
