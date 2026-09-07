@@ -6,6 +6,22 @@
 
 `0.0.1` 已作为 UIKit-first public beta 发布。核心 UIKit 渲染管线、块级组件、流式渲染及基础测试已具备；`0.0.2` 的目标是交付正式 `InkMarkdownSwiftUI` adapter product。此前被拒绝的 SwiftUI spike 已移出仓库；当前 adapter 已按 ADR-008 / ADR-009 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 与内部 Block Presentation Continuity module）。ADR-010 已将 v0.0.2 最低平台提升为 iOS / iPadOS 15；manifest、consumer fixture、ExampleApp 与源码兼容路径均收敛为 15.0。2026-09-04 当前未提交工作树在独立 iPhone 17 Pro / iOS 26.5 上通过 `InkMarkdown-Package` 343 项测试、ExampleApp Debug/Release 构建及 1 项宿主测试。
 
+## 2026-09-07 架构深化联合终检（未 commit）
+
+表格 / 图片 / SwiftUI 宿主三方向迁移已在 `feat/swiftUI` 工作树完成联合终检（HEAD `f71cc292…` + 未提交生产改动）。本地证据：
+
+| 检查 | 结果 |
+| --- | --- |
+| `InkMarkdown-Package` 全量 | **288** 通过，0 失败，0 跳过；iPhone 17 Pro / `10F638E2-…` |
+| 四 product consumer build | Core / SwiftUI / LaTeX / Mermaid 均 **BUILD SUCCEEDED** |
+| ExampleApp Debug / Release | 均 **BUILD SUCCEEDED**（ExampleApp 三方依赖临时 local cache overlay，构建后恢复 remote `project.pbxproj`） |
+| Package.swift | 验证期 path overlay 后已恢复 remote pin；**不等于**远程可解析 |
+| ExampleApp 手工交互 | **未验证**（本轮排除） |
+| 远程 CI | **未执行**（未 push） |
+| iOS 15 runtime | **未验证** |
+
+详细命令与路径见规划目录证据 `27-integrated-final-gates.md`（`.scratch/architecture-deepening-2026-09-07/evidence/`）。本轮不构成发布授权。
+
 ## 2026-09-06 审核修复验证
 
 用户批准按 [本轮审核报告](qa/InkMarkdown-project-audit-2026-09-05.md) 修复现有能力，图片配置所有权按 [ADR-011](decisions/ADR-011-image-store-configuration-ownership.md) 实施。当前工作树在 iPhone 17 Pro / iOS 26.5 与 iPhone 16 Pro / iOS 18.5 上分别通过 `InkMarkdown-Package` **361 项，0 失败、0 跳过**。该结果由 XcodeBuildMCP 实际运行取得，使用精确 revision 的本地依赖覆盖；不是远端 CI，也不代表已发布。

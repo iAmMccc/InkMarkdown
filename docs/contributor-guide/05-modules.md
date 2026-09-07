@@ -108,10 +108,23 @@ public protocol InkRenderableBlock {
 | `InkCodeBlockView.swift` / `InkCodeBlock` | 代码块视图实现；公开 block `InkCodeBlock` 生成圆角背景与等宽字体 `UIView` |
 | `InkThematicBreakBlock` | 分割线视图 |
 | `InkTableBlock` | 解析 `Table` AST 节点生成表格结构 |
-| `InkTableBlockView` | 表格自动换行与横向滚动分流 |
-| `InkTableRenderHelper` | 表格行格测量、列宽计算、分隔线绘制及 Tab 分隔文本复制 |
+| `InkTableBlockView` | 静态表格呈现 adapter：消费 `InkTablePresentation` 快照，负责 wrap/scroll 容器与复制手势 |
+| `InkTablePresentation` | 内部表格呈现状态：单元格来源接纳、列宽测量与失效（static/stream 共用） |
+| `InkTableRenderHelper` | UIKit 建行/约束/反馈；消费已接纳的 cell 值与布局快照 |
 | `InkTableCellTextView` | 支持链接点击的只读 TextView |
-| `InkStreamTableView` | 流式逐行渲染表格，使用 `referenceRows` 预估列宽 |
+| `InkStreamTableView` | 流式逐行渲染表格 adapter：输入与布局协调委托 `InkTablePresentation`，`referenceRows` 只参与测量 |
+
+## 图片模块 (`Rendering/Image/`)
+
+| 文件 | 职责 |
+| --- | --- |
+| `InkImageStore` | 缓存、inflight 合并、排队、预算与 loader identity（见 [ADR-011](../decisions/ADR-011-image-store-configuration-ownership.md)） |
+| `InkImagePresentationLoad` | 内部呈现订阅生命周期：替换、取消、过期抑制、一次终结；async 适配为 `InkImagePresentationLoadAsync` |
+| `InkImageBlock` | 块级图片 adapter：尺寸/占位/失败 fallback/tap；观察委托 PresentationLoad |
+| `InkImageAttachment` | 行内图片 adapter：保留 MaterializationIdentity 与 TextKit 段落抬升；观察委托 PresentationLoad |
+| `InkImagePreviewController` | 全屏预览：`bypassStore=true` 直载 loader；`false` 经 PresentationLoadAsync；保留 highResGeneration |
+
+> Block / Attachment / Preview 不再各自 switch Store 的 ready/loading/queued/rejected。
 
 > 注意：`TABLE_INTEGRATION_GUIDE.md` 中的 API 已经过时，请以最新代码为准。
 
@@ -123,6 +136,16 @@ public protocol InkRenderableBlock {
 | `InkIncrementalMarkdownRenderer` | 基于稳定边界的增量解析渲染 |
 | `InkStreamingPerformanceBenchmark` | `@_spi(Performance)` 性能测试助手 |
 
+## SwiftUI 呈现宿主 (`InkMarkdownSwiftUI/Bridge/`)
+
+| 类型 | 角色 |
+| --- | --- |
+| `InkMarkdownCoordinator` | 静态/blocks 路径与模式切换；流式委托 `InkStreamingPresentationHost` |
+| `InkStreamingPresentationHost` | 流式接管：snapshot 应用、环境暂存、waiting/committed/releasing、成组 Session binding |
+| `InkMarkdownRenderSession` | canonical source/phase、PublishHopper、continuity context；成组 `InkSessionPresentationBindingGrant` |
+
+> 流式 token/observer/textView 接线不在 Coordinator 内维护第二套状态机。
+
 ## 代码修改指南
 
 | 修改目标 | 相关文件 |
@@ -131,7 +154,8 @@ public protocol InkRenderableBlock {
 | 行高计算 | `applyFixedLineHeight` / `baselineOffset` |
 | 样式传递逻辑 | `InkTextContext`（参考 03 §3.2） |
 | 自定义块或行内语法 | `InkBlockHandler` / `InkInlineSyntax` |
-| 表格渲染与布局 | `InkTableBlockView` + `InkTableRenderHelper` |
+| 表格渲染与布局 | `InkTablePresentation`（来源/列宽）+ `InkTableBlockView` / `InkStreamTableView`（UIKit 呈现）+ `InkTableRenderHelper`（建行） |
+| 图片加载与呈现生命周期 | `InkImagePresentationLoad`（共享观察）+ `InkImageBlock` / `InkImageAttachment` / `InkImagePreviewController`（呈现差异）+ `InkImageStore`（缓存/调度） |
 | 代码块外观 | `InkCodeBlock`（实现位于 `InkCodeBlockView.swift`） |
 | 引用线与代码块背景 | `InkMarkdownLayoutManager` |
 | 流式渲染逻辑 | `InkStreamRenderer`（参考 03 §3.7） |
