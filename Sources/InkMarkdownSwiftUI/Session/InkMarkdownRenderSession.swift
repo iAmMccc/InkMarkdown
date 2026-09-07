@@ -348,77 +348,12 @@ public final class InkMarkdownRenderSession: ObservableObject {
     presentationBinding != nil
   }
 
-  /// 绑定用于展示流式富文本的 `UITextView`。
-  /// - Parameter textView: 承载流式富文本渲染的文本视图。
-  /// - Note: 迁移期兼容转发；新路径请用 ``installPresentationBinding``。
-  func bindTextView(_ textView: UITextView, owner: AnyObject? = nil) {
-    if let owner {
-      if let record = presentationBinding, record.owner === owner {
-        let previous = record.textView
-        record.textView = textView
-        if previous !== textView {
-          renderer.bindTextView(textView)
-        }
-      } else {
-        _ = installPresentationBinding(
-          owner: owner,
-          textView: textView,
-          observer: nil
-        )
-      }
-    } else if let record = presentationBinding {
-      record.textView = textView
-      renderer.bindTextView(textView)
-    } else {
-      renderer.bindTextView(textView)
-    }
-  }
-
-  /// 解绑当前绑定的 `UITextView` 并快进已解析内容。
-  /// - Note: 迁移期兼容转发；匹配 owner 时只清 textView，保留 observer。
-  func unbindTextView(owner: AnyObject? = nil) {
-    if let owner {
-      guard let record = presentationBinding, record.owner === owner else { return }
-      if record.textView != nil {
-        record.textView = nil
-        renderer.unbindTextView()
-      }
-      return
-    }
-    if let record = presentationBinding {
-      if record.textView != nil {
-        record.textView = nil
-        renderer.unbindTextView()
-      }
-    } else {
+  /// 仅当 grant 仍是当前活跃绑定时解绑当前绑定的 `UITextView`，保留 observer 与 grant。
+  func unbindTextView(for grant: InkSessionPresentationBindingGrant) {
+    guard let record = presentationBinding, record.grant == grant else { return }
+    if record.textView != nil {
+      record.textView = nil
       renderer.unbindTextView()
-    }
-  }
-
-  /// 安装 adapter 私有观察者，不改写宿主公开的 `onDisplayUpdate`。
-  /// - Note: 迁移期兼容转发。
-  func installPresentationDisplayUpdateObserver(
-    owner: AnyObject,
-    observer: @escaping () -> Void
-  ) {
-    if let record = presentationBinding, record.owner === owner {
-      record.observer = observer
-      return
-    }
-    _ = installPresentationBinding(
-      owner: owner,
-      textView: nil,
-      observer: observer
-    )
-  }
-
-  /// 仅允许当前 owner 移除自己的观察者，避免旧 host 清掉新 attachment。
-  /// - Note: 迁移期兼容转发。
-  func removePresentationDisplayUpdateObserver(owner: AnyObject) {
-    guard let record = presentationBinding, record.owner === owner else { return }
-    record.observer = nil
-    if record.textView == nil {
-      presentationBinding = nil
     }
   }
 

@@ -51,7 +51,8 @@ struct InkMarkdownRenderSessionTests {
     let session = InkMarkdownRenderSession()
     session.append("正在生成的文本...")
     let textView = UITextView()
-    session.bindTextView(textView)
+    let dummyOwner = NSObject()
+    _ = session.installPresentationBinding(owner: dummyOwner, textView: textView, observer: nil)
     session.renderer.isDisplayPaused = true
 
     session.finish()
@@ -371,12 +372,16 @@ struct InkMarkdownRenderSessionTests {
     #expect(grantA != grantB)
 
     session.releasePresentationBinding(grantA)
-    session.unbindTextView(owner: ownerA)
-    session.removePresentationDisplayUpdateObserver(owner: ownerA)
 
     session.append("绑定隔离")
     session.renderer.onDisplayUpdate?()
     #expect(hitsB >= 1)
+
+    // unbindTextView(for: grant) 只清空 textView，保留 observer
+    session.unbindTextView(for: grantB)
+    session.append("解绑文本视图后")
+    session.renderer.onDisplayUpdate?()
+    #expect(hitsB >= 2)
 
     // nil textView 仍可保留 observer
     var observerOnlyHits = 0

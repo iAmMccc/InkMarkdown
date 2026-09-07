@@ -69,3 +69,4 @@ Implementation authorization: 已由用户授权执行（18–26 批次）。
 ## Comments
 
 - 2026-09-07：实现并验证完成；证据见 `../evidence/25-host-contract-old-plumbing.md`。
+- 2026-09-07：复核并彻底清理旧迁移转发接口（bindTextView/unbindTextView/installPresentationDisplayUpdateObserver/removePresentationDisplayUpdateObserver），生产 host 与测试全面收敛至成组 binding grant（unbindTextView(for:)）。
