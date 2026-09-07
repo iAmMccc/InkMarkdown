@@ -47,6 +47,9 @@ final class InkMarkdownContainerView: UIView {
   internal var onContinuityLayoutEnvironmentChanged:
     (@MainActor (CGFloat, InkBlockPresentationEnvironmentSignature) -> Bool)?
 
+  /// 容器内某个 block 的保留高度更新后通知宿主（如图片加载完成、Thought 异步展开）。
+  internal var onContinuityHeightChanged: (@MainActor () -> Void)?
+
   internal private(set) var cachedTotalHeightForTesting: CGFloat = 0
   internal private(set) var blockMeasurementInvocationCount = 0
   internal private(set) var layoutSubviewsICSInvalidateCount = 0
@@ -260,6 +263,7 @@ final class InkMarkdownContainerView: UIView {
     setNeedsLayout()
     invalidateIntrinsicContentSize()
     superview?.setNeedsLayout()
+    onContinuityHeightChanged?()
   }
 
   private func preservedContinuitySize(

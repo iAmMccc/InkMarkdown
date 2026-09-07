@@ -138,7 +138,9 @@ final class InkStreamingPresentationHost {
 
     continuity?.removeReconcileObserver(owner: self)
     dismantledContainer?.onContinuityLayoutEnvironmentChanged = nil
+    dismantledContainer?.onContinuityHeightChanged = nil
     container?.onContinuityLayoutEnvironmentChanged = nil
+    container?.onContinuityHeightChanged = nil
     releaseBindingKeepingSession()
     session = nil
     attachedContinuity = nil
@@ -334,6 +336,9 @@ final class InkStreamingPresentationHost {
         constrainedWidth: width,
         environmentSignature: signature
       )
+    }
+    container.onContinuityHeightChanged = { [weak session] in
+      session?.notifyHostPresentationSizeChanged()
     }
   }
 

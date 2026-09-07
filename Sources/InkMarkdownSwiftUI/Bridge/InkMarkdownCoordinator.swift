@@ -116,6 +116,7 @@ final class InkMarkdownCoordinator {
       detachStatic(from: container)
     }
     clearStaticContinuityCallbacks()
+    dismantledContainer?.onContinuityHeightChanged = nil
     staticContinuity.endCycle()
     lastRenderedMarkdown = nil
     lastRenderedConfiguration = nil
@@ -140,6 +141,10 @@ final class InkMarkdownCoordinator {
         environmentSignature: signature
       ) ?? false
     }
+    container.onContinuityHeightChanged = { [weak container] in
+      container?.invalidateIntrinsicContentSize()
+      container?.superview?.setNeedsLayout()
+    }
     staticContinuity.installReconcileObserver(owner: self) { [weak self] in
       _ = self?.reconcileLatestStaticPresentation()
     }
@@ -147,6 +152,7 @@ final class InkMarkdownCoordinator {
 
   private func clearStaticContinuityCallbacks() {
     containerView?.onContinuityLayoutEnvironmentChanged = nil
+    containerView?.onContinuityHeightChanged = nil
     staticContinuity.removeReconcileObserver(owner: self)
   }
 

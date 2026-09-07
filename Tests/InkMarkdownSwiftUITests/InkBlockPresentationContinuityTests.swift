@@ -1049,4 +1049,54 @@ struct InkBlockPresentationContinuityTests {
     )
     #expect(!nextThought.isCollapsed)
   }
+
+  @Test("Container 槽位高度变化触发 onContinuityHeightChanged 并通知 session")
+  func continuity_slotHeightUpdateNotifiesHostAndPreservesView() throws {
+    let configuration = InkConfiguration.standard
+    let session = InkMarkdownRenderSession(configuration: configuration)
+    let container = InkMarkdownContainerView()
+    let host = InkStreamingPresentationHost()
+
+    var displayUpdateCount = 0
+    session.onDisplayUpdate = {
+      displayUpdateCount += 1
+    }
+
+    _ = host.update(session: session, container: container)
+
+    let url = URL(string: "https://example.com/stream-img.png")!
+    var rendering = InkImageRendering()
+    rendering.isEnabled = true
+    let imageBlock = InkImageBlock(source: ImageSource(url: url), rendering: rendering)
+
+    let candidate = InkBlockPresentationCandidate(block: imageBlock, structuralSlot: 0)
+    let plan = session.presentationContinuity.reconcile(
+      InkBlockPresentationSnapshot(
+        cycleID: session.presentationCycleID,
+        candidates: [candidate],
+        configuration: configuration,
+        constrainedWidth: 320
+      )
+    )
+    #expect(container.apply(plan))
+    #expect(container.subviews.contains(where: { $0 === imageBlock }))
+
+    // Simulate height update
+    imageBlock.onReservedHeightChanged?()
+    #expect(displayUpdateCount > 0, "高度变化必须通知 session 唤醒宿主重测高度")
+
+    // Subsequent reconcile keeps same attached view
+    let plan2 = session.presentationContinuity.reconcile(
+      InkBlockPresentationSnapshot(
+        cycleID: session.presentationCycleID,
+        candidates: [candidate],
+        configuration: configuration,
+        constrainedWidth: 320
+      )
+    )
+    #expect(container.apply(plan2))
+    #expect(container.subviews.contains(where: { $0 === imageBlock }), "后续 reconcile 必须保持既有图片 view 不被卸载重建")
+
+    host.teardown(from: container)
+  }
 }
