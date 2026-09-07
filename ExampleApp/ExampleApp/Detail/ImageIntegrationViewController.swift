@@ -57,6 +57,7 @@ final class ImageIntegrationViewController: UIViewController {
 
     var appearance = InkAppearance()
     appearance.imageRendering.isEnabled = true
+    appearance.imageRendering.backend = DemoImages.backend
     appearance.imageRendering.promotesToBlock = true
     appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
     appearance.enableDemoBlockImageTap { [weak self] in self }
