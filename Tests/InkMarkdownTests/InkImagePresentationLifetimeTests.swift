@@ -59,6 +59,7 @@ struct InkImagePresentationLifetimeTests {
     attachment = nil
     for _ in 0..<40 { await Task.yield() }
     #expect(weakAttachment == nil)
+    #expect(loader.cancelledIDs.contains(1))
   }
 
   @Test
@@ -94,7 +95,8 @@ struct InkImagePresentationLifetimeTests {
 
     first.cancel()
     try? await Task.sleep(nanoseconds: 20_000_000)
-    #expect(!loader.cancelledIDs.contains(1) || secondDone == false)
+    #expect(!loader.cancelledIDs.contains(1))
+    #expect(!secondDone)
 
     loader.succeed(1)
     try? await Task.sleep(nanoseconds: 50_000_000)

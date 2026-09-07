@@ -35,7 +35,7 @@ public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
   /// 回调完成后重置为 `false`。
   public internal(set) var shouldAnimateNextHeightChange: Bool = false
   /// 在 MainActor 显示绑定 / materialize 时惰性建立；nonisolated 构造阶段不创建。
-  nonisolated(unsafe) private var presentationLoad: InkImagePresentationLoad?
+  private var presentationLoad: InkImagePresentationLoad?
   private enum LoaderIdentity: Equatable {
     case semantic(String)
     case instance(ObjectIdentifier)
