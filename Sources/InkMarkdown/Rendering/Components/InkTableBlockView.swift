@@ -29,7 +29,11 @@ final class InkTableBlockView: UIView {
     self.layoutMode = layoutMode
     self.config = config
     self.configuration = configuration
-    self.presentation = InkTablePresentation(layoutMode: layoutMode, configuration: configuration)
+    self.presentation = InkTablePresentation(
+      layoutMode: layoutMode,
+      config: config,
+      configuration: configuration
+    )
     super.init(frame: .zero)
     accept(headerSources: headerSources, rowSources: rowSources, alignments: alignments)
     setup()
@@ -51,7 +55,11 @@ final class InkTableBlockView: UIView {
     self.layoutMode = layoutMode
     self.config = config
     self.configuration = configuration
-    presentation = InkTablePresentation(layoutMode: layoutMode, configuration: configuration)
+    presentation = InkTablePresentation(
+      layoutMode: layoutMode,
+      config: config,
+      configuration: configuration
+    )
     lastMeasuredContentWidth = 0
     contentRoot?.removeFromSuperview()
     contentRoot = nil
@@ -85,11 +93,21 @@ final class InkTableBlockView: UIView {
       return CGSize(width: targetWidth, height: config.verticalInset)
     }
 
-    let fitting = stack.systemLayoutSizeFitting(
-      CGSize(width: availableWidth, height: UIView.layoutFittingCompressedSize.height),
-      withHorizontalFittingPriority: .required,
-      verticalFittingPriority: .fittingSizeLevel
-    )
+    let fitting: CGSize
+    switch layoutMode {
+    case .wrap:
+      fitting = stack.systemLayoutSizeFitting(
+        CGSize(width: availableWidth, height: UIView.layoutFittingCompressedSize.height),
+        withHorizontalFittingPriority: .required,
+        verticalFittingPriority: .fittingSizeLevel
+      )
+    case .scroll:
+      fitting = stack.systemLayoutSizeFitting(
+        CGSize(width: UIView.layoutFittingCompressedSize.width, height: UIView.layoutFittingCompressedSize.height),
+        withHorizontalFittingPriority: .fittingSizeLevel,
+        verticalFittingPriority: .fittingSizeLevel
+      )
+    }
     return CGSize(width: targetWidth, height: fitting.height + config.verticalInset)
   }
 

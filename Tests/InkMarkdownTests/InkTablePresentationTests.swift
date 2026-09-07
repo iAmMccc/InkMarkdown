@@ -317,4 +317,148 @@ struct InkTablePresentationLayoutTests {
     #expect(long?.update == .fullRebuild)
     #expect(presentation.rows.count == 2)
   }
+
+  @Test("追加列数多于表头的 ragged row 时，若已知列未超出列宽，update 保持为 appendRow")
+  func layout_raggedRowWithMoreColumnsThanHeaders_retainsAppendRowIfKnownColumnsFit() {
+    var configuration = InkConfiguration.standard
+    configuration.appearance.supportsDynamicType = false
+
+    var presentation = InkTablePresentation(layoutMode: .wrap, configuration: configuration)
+    _ = presentation.setHeaders(
+      [.raw("Col1"), .raw("Col2")],
+      referenceRows: [[.raw("基准宽度样本很长"), .raw("第二列基准样本")]],
+      contentWidth: 700
+    )
+
+    // 追加一行有 4 列的 ragged row，但前两列内容较短，未超出已知列宽；第 3、4 列为超出列
+    let raggedRow: [InkTableCellSource] = [
+      .raw("短1"),
+      .raw("短2"),
+      .raw("超出的第三列超长内容也不会影响"),
+      .raw("超出的第四列")
+    ]
+    let snapshot = presentation.appendRow(raggedRow, contentWidth: 700)
+    #expect(snapshot?.update == .appendRow)
+    #expect(presentation.rows.count == 1)
+
+    // 若已知列（如第 1 列）超出列宽，则仍应触发 fullRebuild
+    let expandingRaggedRow: [InkTableCellSource] = [
+      .raw(String(repeating: "已知第一列超长追加触发扩列", count: 12)),
+      .raw("短2"),
+      .raw("超出行")
+    ]
+    let rebuildSnapshot = presentation.appendRow(expandingRaggedRow, contentWidth: 700)
+    #expect(rebuildSnapshot?.update == .fullRebuild)
+    #expect(presentation.rows.count == 2)
+  }
+
+  @Test("自定义 Table config 生效且以传入 config 为准")
+  func layout_customTableConfigAppliesToMeasurement() {
+    var configuration = InkConfiguration.standard
+    configuration.appearance.supportsDynamicType = false
+    let standardConfig = configuration.appearance.table
+
+    var customConfig = standardConfig
+    customConfig.horizontalPadding = 48
+    customConfig.headerFontSize = 28
+    customConfig.lineHeight = 36
+
+    let headers: [InkTableCellSource] = [.raw("标题A"), .raw("标题B")]
+    let rows: [[InkTableCellSource]] = [[.raw("内容1"), .raw("内容2")]]
+
+    var defaultPresentation = InkTablePresentation(
+      layoutMode: .scroll,
+      configuration: configuration
+    )
+    let defaultSnap = defaultPresentation.replace(
+      headers: headers,
+      rows: rows,
+      contentWidth: 600
+    )
+
+    var customPresentation = InkTablePresentation(
+      layoutMode: .scroll,
+      config: customConfig,
+      configuration: configuration
+    )
+    let customSnap = customPresentation.replace(
+      headers: headers,
+      rows: rows,
+      contentWidth: 600
+    )
+
+    #expect(customSnap.columnWidths.count == defaultSnap.columnWidths.count)
+    for (customW, defaultW) in zip(customSnap.columnWidths, defaultSnap.columnWidths) {
+      // 增大 horizontalPadding 和 headerFontSize 后测量列宽应显著大于默认配置
+      #expect(customW > defaultW)
+    }
+
+    // 同时验证 InkTableBlockView 初始化与 apply 均以自定义 config 初始化 presentation
+    let blockView = InkTableBlockView(
+      headerSources: headers,
+      rowSources: rows,
+      alignments: [],
+      layoutMode: .scroll,
+      config: customConfig,
+      configuration: configuration
+    )
+    let size = blockView.sizeThatFits(CGSize(width: 600, height: CGFloat.greatestFiniteMagnitude))
+    #expect(size.width == 600)
+    #expect(size.height > customConfig.verticalInset)
+
+    let defaultBlockView = InkTableBlockView(
+      headerSources: headers,
+      rowSources: rows,
+      alignments: [],
+      layoutMode: .scroll,
+      config: standardConfig,
+      configuration: configuration
+    )
+    let defaultSize = defaultBlockView.sizeThatFits(CGSize(width: 600, height: CGFloat.greatestFiniteMagnitude))
+    #expect(size.height > defaultSize.height)
+  }
+
+  @Test("scroll 模式超宽表格调用 sizeThatFits 正常计算且列宽不被强行截断")
+  func tableBlockView_scrollModeSizeThatFitsAvoidsConstraintConflictAndWidthClipping() {
+    var configuration = InkConfiguration.standard
+    configuration.appearance.supportsDynamicType = false
+    let config = configuration.appearance.table
+
+    // 构造包含多个宽列的超宽表格
+    let headers: [InkTableCellSource] = (1...6).map { .raw("极长表格列标题 \($0)") }
+    let rows: [[InkTableCellSource]] = [
+      (1...6).map { .raw("超宽数据单元格内容描述 \($0)") }
+    ]
+
+    let blockView = InkTableBlockView(
+      headerSources: headers,
+      rowSources: rows,
+      alignments: [],
+      layoutMode: .scroll,
+      config: config,
+      configuration: configuration
+    )
+
+    // 提供较小 targetWidth（200pt），而实际各列固定宽度和远超 200pt
+    let narrowTargetWidth: CGFloat = 200
+    let size = blockView.sizeThatFits(CGSize(width: narrowTargetWidth, height: CGFloat.greatestFiniteMagnitude))
+
+    // 宿主获得有效高度，且计算无异常/无崩溃
+    #expect(size.width == narrowTargetWidth)
+    #expect(size.height > config.verticalInset)
+
+    // 对比 wrap 模式：确保 wrap 模式正常计算
+    let wrapView = InkTableBlockView(
+      headerSources: headers,
+      rowSources: rows,
+      alignments: [],
+      layoutMode: .wrap,
+      config: config,
+      configuration: configuration
+    )
+    let wrapSize = wrapView.sizeThatFits(CGSize(width: narrowTargetWidth, height: CGFloat.greatestFiniteMagnitude))
+    #expect(wrapSize.width == narrowTargetWidth)
+    #expect(wrapSize.height > 0)
+    #expect(wrapSize.height > size.height)
+  }
 }

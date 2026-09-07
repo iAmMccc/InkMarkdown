@@ -90,11 +90,12 @@ struct InkTablePresentation {
 
   init(
     layoutMode: InkTableLayoutMode,
+    config: InkAppearance.Table? = nil,
     configuration: InkConfiguration
   ) {
     self.layoutMode = layoutMode
     self.configuration = configuration
-    self.config = configuration.appearance.table
+    self.config = config ?? configuration.appearance.table
   }
 
   /// 静态一次替换全部内容（新的接纳生命周期）。
@@ -225,7 +226,7 @@ struct InkTablePresentation {
       ? CGFloat.greatestFiniteMagnitude
       : max(1, contentWidth) * config.columnMaxWidthRatio
     for (colIndex, cell) in cells.enumerated() {
-      guard colIndex < cachedColumnWidths.count else { return true }
+      guard colIndex < cachedColumnWidths.count else { break }
       let attributed = InkAttributedRenderer.renderInline(
         preparedSource: cell.prepared,
         configuration: configuration,
