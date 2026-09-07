@@ -9,6 +9,7 @@ let package = Package(
     .iOS(.v15)
   ],
   products: [
+    .library(name: "InkMarkdownKingfisher", targets: ["InkMarkdownKingfisher"]),
     // 对外暴露的库产品
     .library(
       name: "InkMarkdown",
@@ -28,6 +29,7 @@ let package = Package(
     ),
   ],
   dependencies: [
+    .package(url: "https://github.com/onevcat/Kingfisher.git", exact: "8.12.0"),
     // Apple 官方 Markdown 解析器：固定 revision，保证可重复构建（ADR-001）
     // 升级时：改 revision → 更新 Package.resolved → iOS Simulator 全量测试
     .package(
@@ -38,6 +40,12 @@ let package = Package(
     .package(url: "https://github.com/kostub/iosMath.git", exact: "2.3.1"),
   ],
   targets: [
+    .target(
+      name: "InkMarkdownKingfisher",
+      dependencies: ["InkMarkdown", .product(name: "Kingfisher", package: "Kingfisher")],
+      swiftSettings: [.swiftLanguageMode(.v5), .enableExperimentalFeature("StrictConcurrency")]
+    ),
+    .testTarget(name: "InkMarkdownKingfisherTests", dependencies: ["InkMarkdownKingfisher"]),
     .target(
       name: "InkMarkdown",
       dependencies: [
@@ -71,7 +79,7 @@ let package = Package(
     ),
     .testTarget(
       name: "InkMarkdownAddonContractTests",
-      dependencies: ["InkMarkdown", "InkMarkdownLaTeX", "InkMarkdownMermaid"],
+      dependencies: ["InkMarkdown", "InkMarkdownLaTeX", "InkMarkdownMermaid", "InkMarkdownKingfisher"],
       path: "Tests/InkMarkdownAddonContractTests"
     ),
     .testTarget(

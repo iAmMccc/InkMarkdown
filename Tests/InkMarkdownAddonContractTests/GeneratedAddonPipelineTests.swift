@@ -1,5 +1,6 @@
 import InkMarkdownLaTeX
 import InkMarkdownMermaid
+import InkMarkdownKingfisher
 import Testing
 import UIKit
 @testable import InkMarkdown
@@ -80,6 +81,7 @@ struct GeneratedAddonPipelineTests {
     expectedOwner: String
   ) async throws {
     var appearance = baseAppearance
+    appearance.imageRendering.backend = InkKingfisherImageBackend()
     var completedSource: ImageSource?
     var completedImage: UIImage?
     var didComplete = false
