@@ -1,0 +1,200 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme InkMarkdown-Package -destination "platform=iOS Simulator,id=10F638E2-84FB-42AE-9BAE-0E246F463E8D" "-only-testing:InkMarkdownTests/InkImageStoreTests" -resultBundlePath .scratch/architecture-deepening-2026-09-07/evidence/20260907-1325-ticket-13-attachment/store.xcresult CODE_SIGNING_ALLOWED=NO
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+Resolve Package Graph
+2026-09-07 12:18:46.426 xcodebuild[13380:5539804] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+
+
+Resolved source packages:
+  cmark-gfm: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/swift-cmark @ local
+  swift-markdown: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/swift-markdown @ local
+  iosMath: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/iosMath @ local
+  InkMarkdown: /Users/shizihan/DailyUse/Github/InkMarkdown
+
+Writing result bundle at path:
+	/Users/shizihan/DailyUse/Github/InkMarkdown/.scratch/architecture-deepening-2026-09-07/evidence/20260907-1325-ticket-13-attachment/store.xcresult
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:10F638E2-84FB-42AE-9BAE-0E246F463E8D, OS:26.5, name:iPhone 17 Pro }
+{ platform:iOS Simulator, arch:x86_64, id:10F638E2-84FB-42AE-9BAE-0E246F463E8D, OS:26.5, name:iPhone 17 Pro }
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (28 targets)
+    Target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown_InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSemanticCorpus' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownSwiftUITests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSemanticCorpus' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownSemanticCorpus' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownMermaidTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownLaTeXTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'InkMarkdownCoreContractTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownAddonContractTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown_InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdown_InkMarkdownMermaid' in project 'InkMarkdown' (no dependencies)
+    Target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'iosMath' in project 'iosMath'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+        ➜ Explicit dependency on target 'iosMath_iosMath' in project 'iosMath'
+    Target 'iosMath' in project 'iosMath'
+        ➜ Explicit dependency on target 'iosMath_iosMath' in project 'iosMath'
+    Target 'iosMath_iosMath' in project 'iosMath' (no dependencies)
+    Target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'CAtomic' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm-extensions' in project 'cmark-gfm'
+    Target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'CAtomic' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm-extensions' in project 'cmark-gfm'
+    Target 'cmark-gfm-extensions' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm-extensions' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+    Target 'cmark-gfm-extensions' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+    Target 'cmark-gfm' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+    Target 'cmark-gfm' in project 'cmark-gfm' (no dependencies)
+    Target 'CAtomic' in project 'swift-markdown' (no dependencies)
+    Target 'ExampleAppPolicyTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'ExampleAppChatPolicy' in project 'InkMarkdown'
+    Target 'ExampleAppChatPolicy' in project 'InkMarkdown' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk /Users/shizihan/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown/.swiftpm/xcode
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o /Users/shizihan/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-6cfe768891a92b912361537c460fe42b.sdkstatcache
+
+Resolve Package Graph
+
+Resolve Package Graph
+
+Test Suite 'Selected tests' started at 2026-09-07 12:18:52.724.
+Test Suite 'InkMarkdownTests.xctest' started at 2026-09-07 12:18:52.728.
+Test Suite 'InkMarkdownTests.xctest' passed at 2026-09-07 12:18:52.729.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-09-07 12:18:52.730.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.006) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64-apple-ios13.0-simulator
+◇ Suite InkImageStoreTests started.
+◇ Test inflightCoalescing() started.
+✔ Test inflightCoalescing() passed after 0.208 seconds.
+◇ Test concurrencyLimit() started.
+✔ Test concurrencyLimit() passed after 0.001 seconds.
+◇ Test generatedSourceWithoutLoaderFailsWithoutURLFallback() started.
+✔ Test generatedSourceWithoutLoaderFailsWithoutURLFallback() passed after 0.009 seconds.
+◇ Test pendingQueueHasBoundedCapacity() started.
+Resolve Package Graph
+
+✔ Test pendingQueueHasBoundedCapacity() passed after 0.455 seconds.
+◇ Test cancellingLastQueuedSubscriptionRemovesPendingLoad() started.
+✔ Test cancellingLastQueuedSubscriptionRemovesPendingLoad() passed after 0.001 seconds.
+◇ Test memoryWarningEviction() started.
+✔ Test memoryWarningEviction() passed after 0.539 seconds.
+◇ Test notificationObserverToken_removesRegistrationOnDeinit() started.
+✔ Test notificationObserverToken_removesRegistrationOnDeinit() passed after 0.001 seconds.
+◇ Test storeDeinit_removesMemoryWarningObserver() started.
+✔ Test storeDeinit_removesMemoryWarningObserver() passed after 0.001 seconds.
+◇ Test tailReRenderNoDuplicateDownload() started.
+✔ Test tailReRenderNoDuplicateDownload() passed after 0.010 seconds.
+◇ Test subscriptionCancelPreventsCallback() started.
+Resolve Package Graph
+✔ Test subscriptionCancelPreventsCallback() passed after 0.309 seconds.
+◇ Test inflightCancelledWhenLastSubscriberDrops() started.
+
+✔ Test inflightCancelledWhenLastSubscriberDrops() passed after 0.732 seconds.
+◇ Test loaderIdentitySeparatesCache() started.
+✔ Test loaderIdentitySeparatesCache() passed after 0.023 seconds.
+◇ Test renderingLoaderIdentitySeparatesStoreCache() started.
+✔ Test renderingLoaderIdentitySeparatesStoreCache() passed after 0.022 seconds.
+◇ Test cancelledOldGenerationCannotOverwriteNewLoad() started.
+Resolve Package Graph
+
+✔ Test cancelledOldGenerationCannotOverwriteNewLoad() passed after 0.458 seconds.
+◇ Test activeCountGuard() started.
+✔ Test activeCountGuard() passed after 0.001 seconds.
+◇ Test inflightCleanupAfterCompletion() started.
+✔ Test inflightCleanupAfterCompletion() passed after 0.010 seconds.
+◇ Test imageStore_queuedDrain() started.
+✔ Test imageStore_queuedDrain() passed after 0.212 seconds.
+✔ Suite InkImageStoreTests passed after 2.999 seconds.
+✔ Test run with 17 tests in 1 suite passed after 2.999 seconds.
+2026-09-07 12:18:56.062 xcodebuild[13380:5539804] [MT] IDETestOperationsObserverDebug: 6.953 elapsed -- Testing started completed.
+2026-09-07 12:18:56.062 xcodebuild[13380:5539804] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-07 12:18:56.062 xcodebuild[13380:5539804] [MT] IDETestOperationsObserverDebug: 6.953 sec, +6.953 sec -- end
+Resolve Package Graph
+
+
+Test session results, code coverage, and logs:
+	/Users/shizihan/DailyUse/Github/InkMarkdown/.scratch/architecture-deepening-2026-09-07/evidence/20260907-1325-ticket-13-attachment/store.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
