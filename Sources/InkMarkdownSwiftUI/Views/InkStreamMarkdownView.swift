@@ -25,6 +25,7 @@ import InkMarkdown
 ///   var body: some View {
 ///     VStack {
 ///       InkStreamMarkdownView(session: session)
+///         .preferredMeasurementWidth(bubbleContentWidth)
 ///
 ///       Button("追加分片") {
 ///         session.append("## 实时标题\n这是流式内容...")
@@ -39,30 +40,43 @@ import InkMarkdown
 public struct InkStreamMarkdownView: View {
 
   private let session: InkMarkdownRenderSession
+  private let preferredMeasurementWidth: CGFloat
   @State private var isPromoted: Bool
+  @Environment(\.inkPreferredMeasurementWidth) private var environmentPreferredMeasurementWidth
 
   /// 创建一个流式 Markdown 渲染视图。
   ///
   /// 配置由 `session` 在创建时确定，以保证流式阶段和终态 Block Promotion 使用同一份
   /// `InkConfiguration`。如需切换业务配置，请创建并绑定新的 render session。
-  /// - Parameter session: 驱动流式渲染的会话状态机对象。
-  public init(session: InkMarkdownRenderSession) {
+  /// - Parameters:
+  ///   - session: 驱动流式渲染的会话状态机对象。
+  ///   - preferredMeasurementWidth: 宿主在首轮 layout 前提供的内容宽度（pt）；`<= 0` 时读取 ``preferredMeasurementWidth(_:)`` 环境值。
+  public init(session: InkMarkdownRenderSession, preferredMeasurementWidth: CGFloat = 0) {
     self.session = session
+    self.preferredMeasurementWidth = preferredMeasurementWidth
     _isPromoted = State(initialValue: session.isPromoted)
   }
 
   /// 创建一个流式 Markdown 渲染视图（省略参数名）。
-  /// - Parameter session: 驱动流式渲染的会话状态机对象。
-  public init(_ session: InkMarkdownRenderSession) {
+  /// - Parameters:
+  ///   - session: 驱动流式渲染的会话状态机对象。
+  ///   - preferredMeasurementWidth: 宿主在首轮 layout 前提供的内容宽度（pt）；`<= 0` 时读取 ``preferredMeasurementWidth(_:)`` 环境值。
+  public init(_ session: InkMarkdownRenderSession, preferredMeasurementWidth: CGFloat = 0) {
     self.session = session
+    self.preferredMeasurementWidth = preferredMeasurementWidth
     _isPromoted = State(initialValue: session.isPromoted)
+  }
+
+  private var resolvedPreferredMeasurementWidth: CGFloat {
+    preferredMeasurementWidth > 0 ? preferredMeasurementWidth : environmentPreferredMeasurementWidth
   }
 
   public var body: some View {
     InkMarkdownRepresentable(
       mode: .streaming(session: session),
       configuration: session.configuration,
-      promotionGeneration: isPromoted
+      promotionGeneration: isPromoted,
+      preferredMeasurementWidth: resolvedPreferredMeasurementWidth
     )
     .onReceive(session.$isPromoted) { isPromoted = $0 }
   }

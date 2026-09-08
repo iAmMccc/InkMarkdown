@@ -125,4 +125,71 @@ struct InkResponsiveMeasurementContractTests {
     #expect(contentAfter == contentBefore, "宽度变化不得丢失或改写已渲染内容")
     #expect(sizeAfter.height > 0, "新宽度必须完成有效重测")
   }
+
+  /// 宿主在 bounds 仍为零时提供 preferredMeasurementWidth，首轮 intrinsic 即按终态宽测量。
+  @Test("preferredMeasurementWidth 零 bounds 首测非零，变更后失效缓存")
+  func preferredMeasurementWidth_firstPassWithoutBounds() throws {
+    let container = InkMarkdownContainerView()
+    let coordinator = InkMarkdownCoordinator()
+    coordinator.containerView = container
+    defer { coordinator.teardown(from: container) }
+
+    container.frame = .zero
+    container.preferredMeasurementWidth = 320
+    coordinator.updateStatic(markdown: markdown, configuration: .standard)
+
+    let firstIntrinsic = container.intrinsicContentSize
+    #expect(firstIntrinsic.height != UIView.noIntrinsicMetric)
+    #expect(firstIntrinsic.height > 0)
+    #expect(container.effectiveMeasureWidth == 320)
+    #expect(container.continuityMeasurementCacheCountForTesting > 0)
+
+    let cacheBefore = container.continuityMeasurementCacheCountForTesting
+    container.preferredMeasurementWidth = 480
+    #expect(container.continuityMeasurementCacheCountForTesting == 0, "preferred 宽变化须清空测量缓存")
+
+    let secondIntrinsic = container.intrinsicContentSize
+    #expect(secondIntrinsic.height > 0)
+    #expect(container.effectiveMeasureWidth == 480)
+    #expect(container.continuityMeasurementCacheCountForTesting > 0)
+    #expect(cacheBefore > 0)
+  }
+
+  /// 自身 bounds 为零时，preferred 280 优先于父视图估算宽 390；自身 bounds 就绪后接管。
+  @Test("零 bounds 时 preferred 优先于父视图估算宽，自身 bounds 就绪后接管")
+  func preferredMeasurementWidth_outranksParentEstimateWhenBoundsZero() throws {
+    let parent = UIView(frame: CGRect(x: 0, y: 0, width: 390, height: 800))
+    let container = InkMarkdownContainerView(frame: .zero)
+    parent.addSubview(container)
+
+    let coordinator = InkMarkdownCoordinator()
+    coordinator.containerView = container
+    defer { coordinator.teardown(from: container) }
+
+    let wrappingMarkdown = String(repeating: "这是一段会随列宽换行的正文内容，用于区分 280 与 390 的测量高度。", count: 8)
+    container.preferredMeasurementWidth = 280
+    coordinator.updateStatic(markdown: wrappingMarkdown, configuration: .standard)
+
+    #expect(container.bounds.width == 0)
+    #expect(container.superview?.bounds.width == 390)
+    #expect(container.effectiveMeasureWidth == 280)
+
+    let firstIntrinsic = container.intrinsicContentSize
+    let measuredAt280 = container.sizeThatFits(
+      CGSize(width: 280, height: CGFloat.greatestFiniteMagnitude)
+    )
+    #expect(firstIntrinsic.height != UIView.noIntrinsicMetric)
+    #expect(firstIntrinsic.height > 0)
+    #expect(firstIntrinsic.height == measuredAt280.height)
+
+    container.frame = CGRect(x: 0, y: 0, width: 200, height: 1)
+    #expect(container.effectiveMeasureWidth == 200)
+
+    let afterBounds = container.intrinsicContentSize
+    let measuredAt200 = container.sizeThatFits(
+      CGSize(width: 200, height: CGFloat.greatestFiniteMagnitude)
+    )
+    #expect(afterBounds.height > 0)
+    #expect(afterBounds.height == measuredAt200.height)
+  }
 }

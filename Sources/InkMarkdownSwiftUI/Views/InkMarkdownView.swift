@@ -29,22 +29,34 @@ import InkMarkdown
 ///   InkMarkdownView("### Section 2")
 /// }
 /// .inkConfiguration(customConfig)
+///
+/// // chat bubble：首轮 layout 前传入终态内容宽
+/// InkMarkdownView(markdownText)
+///   .preferredMeasurementWidth(bubbleContentWidth)
 /// ```
 public struct InkMarkdownView: View {
 
   private let markdown: String
   private let configuration: InkConfiguration?
+  private let preferredMeasurementWidth: CGFloat
 
   @Environment(\.inkConfiguration) private var environmentConfiguration
+  @Environment(\.inkPreferredMeasurementWidth) private var environmentPreferredMeasurementWidth
 
   /// 创建一个 Markdown 渲染视图。
   ///
   /// - Parameters:
   ///   - markdown: 需要渲染的 Markdown 源文本。
   ///   - configuration: 显式指定的渲染配置；若为 `nil`，将优先读取环境注入的 ``inkConfiguration(_:)``，回退至 `InkConfiguration.standard`。
-  public init(markdown: String, configuration: InkConfiguration? = nil) {
+  ///   - preferredMeasurementWidth: 宿主在首轮 layout 前提供的内容宽度（pt）；`<= 0` 时读取 ``preferredMeasurementWidth(_:)`` 环境值。
+  public init(
+    markdown: String,
+    configuration: InkConfiguration? = nil,
+    preferredMeasurementWidth: CGFloat = 0
+  ) {
     self.markdown = markdown
     self.configuration = configuration
+    self.preferredMeasurementWidth = preferredMeasurementWidth
   }
 
   /// 创建一个 Markdown 渲染视图（省略参数名）。
@@ -52,9 +64,15 @@ public struct InkMarkdownView: View {
   /// - Parameters:
   ///   - markdown: 需要渲染的 Markdown 源文本。
   ///   - configuration: 显式指定的渲染配置；若为 `nil`，将优先读取环境注入的 ``inkConfiguration(_:)``，回退至 `InkConfiguration.standard`。
-  public init(_ markdown: String, configuration: InkConfiguration? = nil) {
+  ///   - preferredMeasurementWidth: 宿主在首轮 layout 前提供的内容宽度（pt）；`<= 0` 时读取 ``preferredMeasurementWidth(_:)`` 环境值。
+  public init(
+    _ markdown: String,
+    configuration: InkConfiguration? = nil,
+    preferredMeasurementWidth: CGFloat = 0
+  ) {
     self.markdown = markdown
     self.configuration = configuration
+    self.preferredMeasurementWidth = preferredMeasurementWidth
   }
 
   /// 解析当前生效的渲染配置。
@@ -63,10 +81,15 @@ public struct InkMarkdownView: View {
     configuration ?? environmentConfiguration ?? .standard
   }
 
+  private var resolvedPreferredMeasurementWidth: CGFloat {
+    preferredMeasurementWidth > 0 ? preferredMeasurementWidth : environmentPreferredMeasurementWidth
+  }
+
   public var body: some View {
     InkMarkdownRepresentable(
       markdown: markdown,
-      configuration: resolvedConfiguration
+      configuration: resolvedConfiguration,
+      preferredMeasurementWidth: resolvedPreferredMeasurementWidth
     )
   }
 }

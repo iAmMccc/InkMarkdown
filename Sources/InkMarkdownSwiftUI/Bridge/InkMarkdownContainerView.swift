@@ -7,12 +7,17 @@
 import UIKit
 
 enum InkIntrinsicMeasurementWidthResolver {
+  /// 固有尺寸宽度顺序：自身已布局宽 → 宿主 `preferredMeasurementWidth` → 父级估算宽 → window → Scene fallback。
   static func resolve(
+    preferredWidth: CGFloat = 0,
     contentWidth: CGFloat,
+    parentWidth: CGFloat = 0,
     windowWidth: CGFloat,
     sceneFallbackWidth: CGFloat
   ) -> CGFloat {
     if contentWidth > 0 { return contentWidth }
+    if preferredWidth > 0 { return preferredWidth }
+    if parentWidth > 0 { return parentWidth }
     if windowWidth > 0 { return windowWidth }
     return max(sceneFallbackWidth, 0)
   }
@@ -42,6 +47,22 @@ final class InkMarkdownContainerView: UIView {
   private var lastMeasuredWidth: CGFloat = 0
   private var lastReportedContinuityWidth: CGFloat?
   private var lastReportedContinuityEnvironmentSignature: InkBlockPresentationEnvironmentSignature?
+
+  /// 宿主在首轮 layout 前提供的最终内容宽度（pt）。
+  ///
+  /// 大于 0 时，在自身 `bounds` 仍为零的阶段参与固有尺寸测量，避免 chat cell
+  /// 「先矮后高」二次 layout。自身已布局的 `bounds.width` 仍优先于该值；父级估算宽排在其后。
+  /// 变化超过 0.1pt 时清空测量缓存并失效固有尺寸。
+  var preferredMeasurementWidth: CGFloat = 0 {
+    didSet {
+      guard abs(oldValue - preferredMeasurementWidth) > 0.1 else { return }
+      continuityMeasurementCache.removeAll(keepingCapacity: true)
+      lastMeasuredWidth = 0
+      setNeedsLayout()
+      invalidateIntrinsicContentSize()
+      superview?.setNeedsLayout()
+    }
+  }
 
   /// 仅报告容器观察到的环境事实；Coordinator 决定是否生成新的 continuity plan。
   internal var onContinuityLayoutEnvironmentChanged:
@@ -75,7 +96,10 @@ final class InkMarkdownContainerView: UIView {
   }
 
   internal var effectiveMeasureWidth: CGFloat {
-    resolvedWidth > 0 ? resolvedWidth : lastMeasuredWidth
+    if laidOutContentWidth > 0 { return laidOutContentWidth }
+    if preferredMeasurementWidth > 0 { return preferredMeasurementWidth }
+    if parentEstimatedWidth > 0 { return parentEstimatedWidth }
+    return lastMeasuredWidth
   }
 
   private var isInsideLayoutSubviews = false
@@ -199,7 +223,7 @@ final class InkMarkdownContainerView: UIView {
 
     applyRenderEnvironmentTraits(from: plan.configuration)
 
-    let currentWidth = resolvedWidth
+    let currentWidth = laidOutContentWidth
     lastReportedContinuityWidth = currentWidth > 0 ? currentWidth : nil
     lastReportedContinuityEnvironmentSignature = resolvedEnvironmentSignature(
       for: plan.configuration
@@ -325,7 +349,7 @@ final class InkMarkdownContainerView: UIView {
 
   override func sizeThatFits(_ size: CGSize) -> CGSize {
     reportContinuityLayoutEnvironmentIfNeeded(size.width > 0 ? size.width : nil)
-    let width = size.width > 0 ? size.width : resolvedWidth
+    let width = size.width > 0 ? size.width : laidOutContentWidth
     guard width > 0 else { return .zero }
     let height = measureContent(for: width)
     return CGSize(width: width, height: height)
@@ -350,14 +374,19 @@ final class InkMarkdownContainerView: UIView {
 
   // MARK: - Private Helpers
 
-  private var resolvedWidth: CGFloat {
-    if bounds.width > 0 { return bounds.width }
-    if let superviewWidth = superview?.bounds.width, superviewWidth > 0 { return superviewWidth }
-    return 0
+  /// 自身已完成布局的内容宽；为零时不算已确认列宽。
+  private var laidOutContentWidth: CGFloat {
+    bounds.width > 0 ? bounds.width : 0
   }
 
-  /// iOS 15 的 `UIViewRepresentable` 没有 proposal-based 测量入口。宿主层级首轮宽度
-  /// 仍为零时，优先采用实际 window 宽度；仅在 iOS 15 且尚未挂入 window 时退回前台 Scene 宽度。
+  /// 父视图宽，仅作固有尺寸估算，不等于扣除 inset 后的宿主内容宽。
+  private var parentEstimatedWidth: CGFloat {
+    guard let superviewWidth = superview?.bounds.width, superviewWidth > 0 else { return 0 }
+    return superviewWidth
+  }
+
+  /// iOS 15 的 `UIViewRepresentable` 没有 proposal-based 测量入口。自身 bounds 仍为零时，
+  /// 依次采用 `preferredMeasurementWidth`、父级估算宽、window / 前台 Scene 宽度。
   private var intrinsicMeasurementWidth: CGFloat {
     let sceneFallbackWidth: CGFloat
     if #unavailable(iOS 16.0) {
@@ -366,7 +395,9 @@ final class InkMarkdownContainerView: UIView {
       sceneFallbackWidth = 0
     }
     return InkIntrinsicMeasurementWidthResolver.resolve(
-      contentWidth: resolvedWidth,
+      preferredWidth: preferredMeasurementWidth,
+      contentWidth: laidOutContentWidth,
+      parentWidth: parentEstimatedWidth,
       windowWidth: window?.bounds.width ?? 0,
       sceneFallbackWidth: sceneFallbackWidth
     )
@@ -387,7 +418,7 @@ final class InkMarkdownContainerView: UIView {
       return
     }
 
-    let width = proposedWidth.flatMap { $0 > 0 ? $0 : nil } ?? resolvedWidth
+    let width = proposedWidth.flatMap { $0 > 0 ? $0 : nil } ?? laidOutContentWidth
     guard width > 0 else { return }
 
     let signature = resolvedEnvironmentSignature(for: configuration)

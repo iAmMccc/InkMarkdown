@@ -134,6 +134,48 @@ struct InkMarkdownP0GateTests {
         sceneFallbackWidth: 375
       ) == 320
     )
+    #expect(
+      InkIntrinsicMeasurementWidthResolver.resolve(
+        preferredWidth: 280,
+        contentWidth: 0,
+        windowWidth: 360,
+        sceneFallbackWidth: 375
+      ) == 280
+    )
+    #expect(
+      InkIntrinsicMeasurementWidthResolver.resolve(
+        preferredWidth: 280,
+        contentWidth: 320,
+        windowWidth: 360,
+        sceneFallbackWidth: 375
+      ) == 320
+    )
+    #expect(
+      InkIntrinsicMeasurementWidthResolver.resolve(
+        preferredWidth: 280,
+        contentWidth: 0,
+        parentWidth: 390,
+        windowWidth: 360,
+        sceneFallbackWidth: 375
+      ) == 280
+    )
+    #expect(
+      InkIntrinsicMeasurementWidthResolver.resolve(
+        contentWidth: 0,
+        parentWidth: 390,
+        windowWidth: 360,
+        sceneFallbackWidth: 375
+      ) == 390
+    )
+    #expect(
+      InkIntrinsicMeasurementWidthResolver.resolve(
+        preferredWidth: 280,
+        contentWidth: 320,
+        parentWidth: 390,
+        windowWidth: 360,
+        sceneFallbackWidth: 375
+      ) == 320
+    )
   }
 
   @Test("流式富文本持有 InkMarkdownLayoutManager")

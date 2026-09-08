@@ -24,30 +24,46 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
   let configuration: InkConfiguration
   /// promotion 代际；仅用于在 `isPromoted` 翻转时触发 `updateUIView`，不参与渲染语义。
   var promotionGeneration: Bool = false
+  /// 宿主提供的测量宽度；`<= 0` 时读环境值。
+  var preferredMeasurementWidth: CGFloat = 0
 
   @Environment(\.sizeCategory) private var sizeCategory
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.inkPreferredMeasurementWidth) private var environmentPreferredMeasurementWidth
 
   /// 便捷静态初始化器。
-  init(markdown: String, configuration: InkConfiguration) {
+  init(
+    markdown: String,
+    configuration: InkConfiguration,
+    preferredMeasurementWidth: CGFloat = 0
+  ) {
     self.mode = .static(markdown: markdown)
     self.configuration = configuration
+    self.preferredMeasurementWidth = preferredMeasurementWidth
   }
 
   /// 指定渲染模式的初始化器。
-  init(mode: RenderMode, configuration: InkConfiguration, promotionGeneration: Bool = false) {
+  init(
+    mode: RenderMode,
+    configuration: InkConfiguration,
+    promotionGeneration: Bool = false,
+    preferredMeasurementWidth: CGFloat = 0
+  ) {
     self.mode = mode
     self.configuration = configuration
     self.promotionGeneration = promotionGeneration
+    self.preferredMeasurementWidth = preferredMeasurementWidth
   }
 
   func makeUIView(context: Context) -> InkMarkdownContainerView {
     let container = InkMarkdownContainerView()
     context.coordinator.containerView = container
+    applyPreferredMeasurementWidth(to: container)
     return container
   }
 
   func updateUIView(_ uiView: InkMarkdownContainerView, context: Context) {
+    applyPreferredMeasurementWidth(to: uiView)
     let effectiveConfig = context.coordinator.resolvedConfiguration(
       configurationWithEnvironmentSnapshot(configuration)
     )
@@ -77,6 +93,17 @@ struct InkMarkdownRepresentable: UIViewRepresentable {
 
   static func dismantleUIView(_ uiView: InkMarkdownContainerView, coordinator: InkMarkdownCoordinator) {
     coordinator.teardown(from: uiView)
+  }
+
+  private var resolvedPreferredMeasurementWidth: CGFloat {
+    preferredMeasurementWidth > 0 ? preferredMeasurementWidth : environmentPreferredMeasurementWidth
+  }
+
+  private func applyPreferredMeasurementWidth(to container: InkMarkdownContainerView) {
+    let width = resolvedPreferredMeasurementWidth
+    if abs(container.preferredMeasurementWidth - width) > 0.1 {
+      container.preferredMeasurementWidth = width
+    }
   }
 
   private func configurationWithEnvironmentSnapshot(_ base: InkConfiguration) -> InkConfiguration {
