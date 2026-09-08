@@ -579,22 +579,23 @@ private final class SSEAssistantCell: UITableViewCell {
     } else if let renderSession = message.renderSession {
       hideThinking()
       if embeddedSession === renderSession, hostingController != nil {
-        hostingController?.rootView = AnyView(InkStreamMarkdownView(session: renderSession))
+        hostingController?.rootView = AnyView(streamMarkdownView(session: renderSession))
       } else {
         embeddedSession = renderSession
-        embed(
-          InkStreamMarkdownView(session: renderSession),
-          parent: parent
-        )
+        embed(streamMarkdownView(session: renderSession), parent: parent)
       }
     } else {
       hideThinking()
       embeddedSession = nil
       if let hosting = hostingController {
-        hosting.rootView = AnyView(InkMarkdownView(message.content, configuration: configuration))
+        hosting.rootView = AnyView(
+          InkMarkdownView(message.content, configuration: configuration)
+            .preferredMeasurementWidth(preferredBubbleContentWidth)
+        )
       } else {
         embed(
-          InkMarkdownView(message.content, configuration: configuration),
+          InkMarkdownView(message.content, configuration: configuration)
+            .preferredMeasurementWidth(preferredBubbleContentWidth),
           parent: parent
         )
       }
@@ -615,7 +616,19 @@ private final class SSEAssistantCell: UITableViewCell {
     hideThinking()
     guard embeddedSession !== session || hostingController == nil else { return }
     embeddedSession = session
-    embed(InkStreamMarkdownView(session: session), parent: parent)
+    embed(streamMarkdownView(session: session), parent: parent)
+  }
+
+  /// 气泡内容宽 = contentView 宽 − 气泡左右 inset − hosting 左右 inset。
+  /// layout 前 contentView 可能仍为 0，此时不注入 preferred（回退库内宽度解析）。
+  private var preferredBubbleContentWidth: CGFloat {
+    let width = contentView.bounds.width - 16 - 40 - 28
+    return width > 0 ? width : 0
+  }
+
+  private func streamMarkdownView(session: InkMarkdownRenderSession) -> some View {
+    InkStreamMarkdownView(session: session)
+      .preferredMeasurementWidth(preferredBubbleContentWidth)
   }
 
   private func embed<V: View>(_ view: V, parent: UIViewController) {
