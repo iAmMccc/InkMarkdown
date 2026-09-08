@@ -152,6 +152,9 @@ public final class InkStreamRenderer: @unchecked Sendable {
   /// 上次记录的 textView 内容高度，用于检测高度变化
   private var lastContentHeight: CGFloat = 0
 
+  /// 双零宽时无法测量；宽度就绪后由空闲帧或 `bindTextView` 补测一次。
+  private var needsDeferredHeightMeasurement = false
+
   /// 解析版本号：每次后台解析完成递增，用于检测受影响范围是否需要刷新
   private var parseVersion: UInt64 = 0
 
@@ -272,6 +275,7 @@ public final class InkStreamRenderer: @unchecked Sendable {
     if showLength > 0 {
       bindImageAttachmentsIfNeeded()
     }
+    consumeDeferredHeightMeasurementIfNeeded()
 
     if !buffer.isEmpty || isFinished {
       startDisplayLink()
@@ -374,6 +378,7 @@ public final class InkStreamRenderer: @unchecked Sendable {
     isFinished = false
     lastAppliedParseVersion = 0
     lastContentHeight = 0
+    needsDeferredHeightMeasurement = false
 
     preloadLock.lock()
     renderGeneration += 1
@@ -591,10 +596,13 @@ public final class InkStreamRenderer: @unchecked Sendable {
   // MARK: - Display Link
 
   /// 驱动一次显示帧；仅供性能与显示一致性契约测试使用。
+  ///
+  /// 直接进入帧体、不切换 `isDisplayPaused`。测试若先置 `true` 再改回 `false`，
+  /// setter 会排队 `_flushDisplay`，把受控逐帧断言打乱。
   @_spi(Performance)
   @MainActor
   public func driveDisplayFrameForTesting() {
-    onDisplayFrame()
+    onDisplayFrame(ignorePause: true)
   }
 
   @MainActor
@@ -614,8 +622,8 @@ public final class InkStreamRenderer: @unchecked Sendable {
 
   /// CADisplayLink 每帧回调
   @MainActor
-  fileprivate func onDisplayFrame() {
-    guard !isDisplayPaused else { return }
+  fileprivate func onDisplayFrame(ignorePause: Bool = false) {
+    guard ignorePause || !isDisplayPaused else { return }
 
     let snapshot = consumePreloadSnapshot()
     let content = snapshot.content
@@ -665,6 +673,7 @@ public final class InkStreamRenderer: @unchecked Sendable {
     }
 
     guard totalLength > displayIndex else {
+      consumeDeferredHeightMeasurementIfNeeded()
       if isFinished && finalParseCompleted {
         completeFinishDisplay()
       }
@@ -733,13 +742,28 @@ public final class InkStreamRenderer: @unchecked Sendable {
 
   @MainActor
   private func notifyHeightChangeIfNeeded() {
-    let containerWidth = textView?.textContainer.size.width ?? 0
-    guard containerWidth > 0, let tv = textView else { return }
+    guard let tv = textView else { return }
+    // textContainer.size 在首轮 layout 前常为 0；回退 bounds 避免静默跳过高度门闩。
+    let containerWidth = tv.textContainer.size.width > 0
+      ? tv.textContainer.size.width
+      : tv.bounds.width
+    guard containerWidth > 0 else {
+      needsDeferredHeightMeasurement = true
+      return
+    }
+    // 宽度就绪后消费待测标记，无论本次是否跨过 1pt 门闩。
+    needsDeferredHeightMeasurement = false
     let newHeight = tv.sizeThatFits(CGSize(width: containerWidth, height: .greatestFiniteMagnitude)).height
     if abs(newHeight - lastContentHeight) > 1 {
       lastContentHeight = newHeight
       onDisplayUpdate?()
     }
+  }
+
+  @MainActor
+  private func consumeDeferredHeightMeasurementIfNeeded() {
+    guard needsDeferredHeightMeasurement else { return }
+    notifyHeightChangeIfNeeded()
   }
 
   @MainActor
