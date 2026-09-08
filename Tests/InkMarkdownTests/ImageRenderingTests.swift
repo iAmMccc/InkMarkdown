@@ -196,7 +196,7 @@ private final class ObserverTrackingNotificationCenter: NotificationCenter, @unc
 @Test @MainActor func storeConfiguration_maxDataURLBytesApplied() {
   var appearance = InkAppearance()
   appearance.imageRendering.isEnabled = true
-  appearance.imageRendering.storeConfiguration.maxDataURLBytes = 50
+  appearance.imageRendering.maxDataURLBytes = 50
   appearance.imageRendering.securityPolicy.allowedSchemes.insert(.data)
   let config = InkConfiguration(appearance: appearance)
   let dataURL = "data:image/png;base64," + String(repeating: "A", count: 100)
@@ -204,110 +204,6 @@ private final class ObserverTrackingNotificationCenter: NotificationCenter, @unc
   let result = InkAttributedRenderer.render(md, configuration: config)
   #expect(result.string.contains("\u{1F5BC}"))
 }
-
-@Test @MainActor func storeReusesDefaultLoaderPerSecurityPolicy() {
-  let store = InkImageStore()
-  var rendering = InkImageRendering()
-  rendering.isEnabled = true
-  let loader1 = store.loader(for: rendering)
-  let loader2 = store.loader(for: rendering)
-  #expect(loader1 as AnyObject === loader2 as AnyObject)
-}
-
-@Test @MainActor func storePrepareForRenderingAppliesConfiguration() {
-  let store = InkImageStore()
-  var rendering = InkImageRendering()
-  rendering.storeConfiguration.maxConcurrentLoads = 7
-  store.prepareForRendering(rendering)
-  #expect(store.configuration.maxConcurrentLoads == 7)
-}
-
-@Test @MainActor func defaultStoresIsolateCompleteRenderingConfiguration() {
-  var firstRendering = InkImageRendering()
-  firstRendering.storeConfiguration.maxConcurrentLoads = 1
-  firstRendering.storeConfiguration.maxPendingLoads = 2
-
-  var secondRendering = InkImageRendering()
-  secondRendering.storeConfiguration.maxConcurrentLoads = 2
-  secondRendering.storeConfiguration.maxPendingLoads = 4
-
-  let first = InkImageStore.defaultStore(for: firstRendering)
-  let firstAgain = InkImageStore.defaultStore(for: firstRendering)
-  let second = InkImageStore.defaultStore(for: secondRendering)
-
-  #expect(first === firstAgain)
-  #expect(first !== second)
-  #expect(first.configuration == firstRendering.storeConfiguration)
-  #expect(second.configuration == secondRendering.storeConfiguration)
-  let defaultStore = InkImageStore.defaultStore(for: InkImageRendering())
-  #expect(defaultStore.configuration == InkImageStore.Configuration())
-  #expect(defaultStore !== InkImageStore.shared)
-
-  first.updateConfiguration(secondRendering.storeConfiguration)
-  let firstAfterOwnerReconfiguration = InkImageStore.defaultStore(for: firstRendering)
-  #expect(firstAfterOwnerReconfiguration !== first)
-  #expect(firstAfterOwnerReconfiguration.configuration == firstRendering.storeConfiguration)
-}
-
-@Test @MainActor func updateConfigurationDrainsAcceptedQueueAfterConcurrencyIncrease() {
-  var configuration = InkImageStore.Configuration()
-  configuration.maxConcurrentLoads = 1
-  configuration.maxPendingLoads = 2
-  let store = InkImageStore(configuration: configuration)
-  let loader = InkImageStoreTests.MockImageLoader()
-  loader.delay = 1_000_000_000
-  let display = DisplayContext(maxPixelWidth: 300, scale: 2)
-
-  _ = store.resolve(
-    source: ImageSource(url: URL(string: "https://example.com/active.png")!),
-    display: display,
-    loader: loader
-  )
-  _ = store.resolve(
-    source: ImageSource(url: URL(string: "https://example.com/queued.png")!),
-    display: display,
-    loader: loader
-  )
-  #expect(store.currentActiveCount == 1)
-  #expect(store.pendingLoadCount == 1)
-
-  configuration.maxConcurrentLoads = 2
-  store.updateConfiguration(configuration)
-
-  #expect(store.currentActiveCount == 2)
-  #expect(store.pendingLoadCount == 0)
-}
-
-@Test @MainActor func shrinkingPendingLimitPreservesAcceptedFIFOAndRejectsNewRequests() {
-  var configuration = InkImageStore.Configuration()
-  configuration.maxConcurrentLoads = 1
-  configuration.maxPendingLoads = 3
-  let store = InkImageStore(configuration: configuration)
-  let loader = InkImageStoreTests.MockImageLoader()
-  loader.delay = 1_000_000_000
-  let display = DisplayContext(maxPixelWidth: 300, scale: 2)
-
-  let sources = (0..<4).map {
-    ImageSource(url: URL(string: "https://example.com/queued-\($0).png")!)
-  }
-  for source in sources.prefix(3) {
-    _ = store.resolve(source: source, display: display, loader: loader)
-  }
-  #expect(store.currentActiveCount == 1)
-  #expect(store.pendingLoadCount == 2)
-
-  configuration.maxPendingLoads = 1
-  store.updateConfiguration(configuration)
-
-  let rejected = store.resolve(source: sources[3], display: display, loader: loader)
-  if case .rejected(.pendingQueueFull(let limit)) = rejected {
-    #expect(limit == 1)
-  } else {
-    Issue.record("缩容后新请求应按新 pending 上限拒绝")
-  }
-  #expect(store.pendingLoadCount == 2)
-}
-
 
 @Test @MainActor func dataURL_withinLimit() {
   let small = "data:image/png;base64," + String(repeating: "A", count: 100)
@@ -402,579 +298,7 @@ struct InkImageStoreTests {
     }
   }
 
-  @MainActor
-  private func waitUntilReady(
-    store: InkImageStore,
-    source: ImageSource,
-    display: DisplayContext,
-    loader: MockImageLoader,
-    loaderForResolve: (any InkImageLoading)? = nil,
-    timeoutNanoseconds: UInt64 = 2_000_000_000
-  ) async -> Bool {
-    let resolveLoader = loaderForResolve ?? loader
-    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
-    while DispatchTime.now().uptimeNanoseconds < deadline {
-      let result = store.resolve(source: source, display: display, loader: resolveLoader)
-      if case .ready = result { return true }
-      try? await Task.sleep(nanoseconds: 10_000_000)
-    }
-    return false
-  }
-
-  @MainActor
-  private func waitUntilInflightCleared(
-    store: InkImageStore,
-    timeoutNanoseconds: UInt64 = 2_000_000_000
-  ) async -> Bool {
-    let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
-    while DispatchTime.now().uptimeNanoseconds < deadline {
-      if store.inflightCount == 0 { return true }
-      try? await Task.sleep(nanoseconds: 10_000_000)
-    }
-    return false
-  }
-
-  /// #5 inflight 合并：同 URL resolve 两次 → loader 仅调用 1 次
-  @Test @MainActor func inflightCoalescing() async {
-    let store = InkImageStore()
-    let loader = MockImageLoader()
-    loader.delay = 100_000_000 // 100ms
-
-    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    let result1 = store.resolve(source: source, display: display, loader: loader)
-    let result2 = store.resolve(source: source, display: display, loader: loader)
-
-    if case .loading = result1 {} else { Issue.record("第一次 resolve 应为 .loading") }
-    if case .loading = result2 {} else { Issue.record("第二次 resolve 应为 .loading") }
-
-    try? await Task.sleep(nanoseconds: 200_000_000)
-    #expect(loader.currentLoadCount == 1)
-  }
-
-  /// #6 并发上限：超过 maxConcurrentLoads 返回 .queued
-  @Test @MainActor func concurrencyLimit() {
-    var config = InkImageStore.Configuration()
-    config.maxConcurrentLoads = 4
-    let store = InkImageStore(configuration: config)
-    let loader = MockImageLoader()
-    loader.delay = 1_000_000_000 // 1s，保证不会在测试期间完成
-
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    var results: [InkImageStore.ResolveResult] = []
-    for i in 0..<6 {
-      let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
-      results.append(store.resolve(source: source, display: display, loader: loader))
-    }
-
-    for i in 0..<4 {
-      if case .loading = results[i] {} else { Issue.record("第 \(i) 个应为 .loading") }
-    }
-    for i in 4..<6 {
-      if case .queued = results[i] {} else { Issue.record("第 \(i) 个应为 .queued") }
-    }
-  }
-
-  @Test @MainActor func generatedSourceWithoutLoaderFailsWithoutURLFallback() async {
-    let store = InkImageStore()
-    let source = ImageSource(generated: InkGeneratedImageRequest(
-      owner: "test-renderer", rendererVersion: "v1", source: "diagram", styleIdentity: "light"
-    ))
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
-    let loader = store.loader(for: InkImageRendering(), source: source)
-
-    do {
-      _ = try await loader.loadImage(source: source, display: display)
-      Issue.record("生成 source 缺 renderer 时不应调用 URL loader")
-    } catch let error as ImageLoadError {
-      guard case .generatedLoaderUnavailable(let owner) = error else {
-        Issue.record("应返回 generated loader 缺失错误，实际为 \(error)")
-        return
-      }
-      #expect(owner == "test-renderer")
-    } catch {
-      Issue.record("应返回 ImageLoadError，实际为 \(error)")
-    }
-  }
-
-  @Test @MainActor func pendingQueueHasBoundedCapacity() async {
-    var configuration = InkImageStore.Configuration()
-    configuration.maxConcurrentLoads = 1
-    configuration.maxPendingLoads = 1
-    let store = InkImageStore(configuration: configuration)
-    let loader = MockImageLoader()
-    loader.delay = 200_000_000
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
-
-    _ = store.resolve(source: ImageSource(url: URL(string: "https://example.com/active.png")!), display: display, loader: loader)
-    let queued = store.resolve(source: ImageSource(url: URL(string: "https://example.com/queued.png")!), display: display, loader: loader)
-    let rejected = store.resolve(source: ImageSource(url: URL(string: "https://example.com/rejected.png")!), display: display, loader: loader)
-
-    if case .queued = queued {} else { Issue.record("第二项应进入等待队列") }
-    if case .rejected(.pendingQueueFull(let limit)) = rejected {
-      #expect(limit == 1)
-    } else {
-      Issue.record("等待队列满时应明确拒绝")
-    }
-    #expect(store.pendingLoadCount == 1)
-    try? await Task.sleep(nanoseconds: 450_000_000)
-  }
-
-  @Test @MainActor func cancellingLastQueuedSubscriptionRemovesPendingLoad() {
-    var configuration = InkImageStore.Configuration()
-    configuration.maxConcurrentLoads = 1
-    configuration.maxPendingLoads = 1
-    let store = InkImageStore(configuration: configuration)
-    let loader = MockImageLoader()
-    loader.delay = 1_000_000_000
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
-
-    _ = store.resolve(source: ImageSource(url: URL(string: "https://example.com/active.png")!), display: display, loader: loader)
-    let queued = store.resolve(source: ImageSource(url: URL(string: "https://example.com/queued.png")!), display: display, loader: loader)
-    if case .queued(let subscribe) = queued {
-      let subscription = subscribe { _ in }
-      #expect(store.pendingLoadCount == 1)
-      subscription.cancel()
-      #expect(store.pendingLoadCount == 0)
-    } else {
-      Issue.record("第二项应进入等待队列")
-    }
-  }
-
-  /// #7 内存驱逐：post memoryWarning → cache 不再命中
-  @Test @MainActor func memoryWarningEviction() async {
-    let store = InkImageStore()
-    let loader = MockImageLoader()
-    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    _ = store.resolve(source: source, display: display, loader: loader)
-    let ready = await waitUntilReady(store: store, source: source, display: display, loader: loader)
-    #expect(ready)
-
-    let result = store.resolve(source: source, display: display, loader: loader)
-    if case .ready = result {} else { Issue.record("应该缓存命中") }
-
-    NotificationCenter.default.post(name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
-    try? await Task.sleep(nanoseconds: 50_000_000)
-
-    let afterWarning = store.resolve(source: source, display: display, loader: loader)
-    if case .ready = afterWarning { Issue.record("内存警告后不应缓存命中") }
-  }
-
-  @Test @MainActor func notificationObserverToken_removesRegistrationOnDeinit() {
-    let center = NotificationCenter()
-    let name = Notification.Name("InkImageStore.ObserverLifetime.Test")
-    let counter = NotificationDeliveryCounter()
-    var observer: InkNotificationObserverToken?
-
-    let token = center.addObserver(forName: name, object: nil, queue: .main) { _ in
-      MainActor.assumeIsolated {
-        counter.value += 1
-      }
-    }
-    observer = InkNotificationObserverToken(center: center, token: token)
-
-    center.post(name: name, object: nil)
-    #expect(counter.value == 1)
-    #expect(observer != nil)
-
-    observer = nil
-    center.post(name: name, object: nil)
-    #expect(counter.value == 1)
-  }
-
-  @Test @MainActor func storeDeinit_removesMemoryWarningObserver() {
-    let center = ObserverTrackingNotificationCenter()
-    weak var releasedStore: InkImageStore?
-
-    do {
-      let store = InkImageStore(notificationCenter: center)
-      releasedStore = store
-      #expect(center.removalCount == 0)
-    }
-
-    #expect(releasedStore == nil)
-    #expect(center.removalCount == 1)
-  }
-
-  /// #8 Tail 重渲不重复下载
-  @Test @MainActor func tailReRenderNoDuplicateDownload() async {
-    let store = InkImageStore()
-    let loader = MockImageLoader()
-    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    _ = store.resolve(source: source, display: display, loader: loader)
-    #expect(await waitUntilReady(store: store, source: source, display: display, loader: loader))
-
-    for _ in 0..<99 {
-      _ = store.resolve(source: source, display: display, loader: loader)
-    }
-
-    #expect(loader.currentLoadCount == 1)
-  }
-
-  /// #14 订阅取消后不触发回调
-  @Test @MainActor func subscriptionCancelPreventsCallback() async {
-    let store = InkImageStore()
-    let loader = MockImageLoader()
-    loader.delay = 200_000_000
-    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    let result = store.resolve(source: source, display: display, loader: loader)
-    var callbackCalled = false
-    if case .loading(let subscribe) = result {
-      let subscription = subscribe { _ in callbackCalled = true }
-      subscription.cancel()
-    }
-
-    try? await Task.sleep(nanoseconds: 300_000_000)
-    #expect(!callbackCalled)
-  }
-
-  /// 最后订阅取消时底层 inflight 任务被取消，loader 不应完成。
-  @Test @MainActor func inflightCancelledWhenLastSubscriberDrops() async {
-    let store = InkImageStore()
-    let loader = MockImageLoader()
-    loader.delay = 500_000_000
-    let source = ImageSource(url: URL(string: "https://example.com/cancel-inflight.png")!)
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    let result = store.resolve(source: source, display: display, loader: loader)
-    if case .loading(let subscribe) = result {
-      let subscription = subscribe { _ in }
-      subscription.cancel()
-    } else {
-      Issue.record("应为 .loading")
-    }
-
-    try? await Task.sleep(nanoseconds: 100_000_000)
-    #expect(store.inflightCount == 0)
-
-    try? await Task.sleep(nanoseconds: 600_000_000)
-    #expect(loader.currentCompletedCount == 0, "取消后 loader 不应完成")
-  }
-
-  /// loader semantic identity 参与缓存键：更换 identity 后不得复用旧结果。
-  @Test @MainActor func loaderIdentitySeparatesCache() async {
-    let store = InkImageStore()
-    let innerA = MockImageLoader()
-    let innerB = MockImageLoader()
-    let loaderA = IdentifiedMockImageLoader(identity: InkSemanticIdentity("test.loader.a.v1"), inner: innerA)
-    let loaderB = IdentifiedMockImageLoader(identity: InkSemanticIdentity("test.loader.b.v1"), inner: innerB)
-
-    let source = ImageSource(url: URL(string: "https://example.com/same-identity-key.png")!)
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    _ = store.resolve(source: source, display: display, loader: loaderA)
-    let readyA = await waitUntilReady(store: store, source: source, display: display, loader: innerA, loaderForResolve: loaderA)
-    #expect(readyA)
-    #expect(innerA.currentLoadCount == 1)
-
-    let second = store.resolve(source: source, display: display, loader: loaderB)
-    if case .ready = second {
-      Issue.record("不同 loader identity 不应命中缓存")
-    }
-    let readyB = await waitUntilReady(store: store, source: source, display: display, loader: innerB, loaderForResolve: loaderB)
-    #expect(readyB)
-    #expect(innerB.currentLoadCount == 1)
-  }
-
-  /// `InkImageRendering.setLoader` 的 fallback identity 必须穿透 Store loader seam。
-  @Test @MainActor func renderingLoaderIdentitySeparatesStoreCache() async {
-    let store = InkImageStore()
-    let innerA = MockImageLoader()
-    let innerB = MockImageLoader()
-    var renderingA = InkImageRendering()
-    renderingA.setLoader(innerA, semanticIdentity: "test.rendering-loader.a.v1")
-    var renderingB = InkImageRendering()
-    renderingB.setLoader(innerB, semanticIdentity: "test.rendering-loader.b.v1")
-
-    let source = ImageSource(url: URL(string: "https://example.com/rendering-loader-key.png")!)
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
-    let loaderA = store.loader(for: renderingA, source: source)
-    let loaderB = store.loader(for: renderingB, source: source)
-
-    _ = store.resolve(source: source, display: display, loader: loaderA)
-    #expect(await waitUntilReady(
-      store: store,
-      source: source,
-      display: display,
-      loader: innerA,
-      loaderForResolve: loaderA
-    ))
-
-    if case .ready = store.resolve(source: source, display: display, loader: loaderB) {
-      Issue.record("不同 rendering loader identity 不应命中旧缓存")
-    }
-    #expect(await waitUntilReady(
-      store: store,
-      source: source,
-      display: display,
-      loader: innerB,
-      loaderForResolve: loaderB
-    ))
-    #expect(innerA.currentLoadCount == 1)
-    #expect(innerB.currentLoadCount == 1)
-  }
-
-  /// 已取消的旧 loader 即使忽略取消并返回，也不得覆盖同 key 的新 generation。
-  @Test @MainActor func cancelledOldGenerationCannotOverwriteNewLoad() async {
-    let store = InkImageStore()
-    let oldImage = makeTestImage(width: 10, height: 10)
-    let newImage = makeTestImage(width: 20, height: 20)
-    let loader = CancellationIgnoringLoader(images: [oldImage, newImage])
-    let source = ImageSource(url: URL(string: "https://example.com/generation.png")!)
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
-
-    let first = store.resolve(source: source, display: display, loader: loader)
-    var oldCallbackCalled = false
-    let oldSubscription: InkImageStore.ImageLoadSubscription
-    if case .loading(let subscribe) = first {
-      oldSubscription = subscribe { _ in oldCallbackCalled = true }
-    } else {
-      Issue.record("首次请求应为 loading")
-      return
-    }
-
-    let startDeadline = DispatchTime.now().uptimeNanoseconds + 1_000_000_000
-    while loader.currentLoadCount < 1, DispatchTime.now().uptimeNanoseconds < startDeadline {
-      try? await Task.sleep(nanoseconds: 1_000_000)
-    }
-    #expect(loader.currentLoadCount == 1)
-    oldSubscription.cancel()
-    #expect(store.inflightCount == 0)
-
-    let second = store.resolve(source: source, display: display, loader: loader)
-    var newCallbackWidth: CGFloat?
-    if case .loading(let subscribe) = second {
-      _ = subscribe { newCallbackWidth = $0?.size.width }
-    } else {
-      Issue.record("取消旧 generation 后同 key 应启动新请求")
-    }
-
-    let readyDeadline = DispatchTime.now().uptimeNanoseconds + 1_000_000_000
-    var readyWidth: CGFloat?
-    while DispatchTime.now().uptimeNanoseconds < readyDeadline {
-      if case .ready(let image) = store.resolve(source: source, display: display, loader: loader) {
-        readyWidth = image.size.width
-        break
-      }
-      try? await Task.sleep(nanoseconds: 5_000_000)
-    }
-    #expect(loader.currentLoadCount == 2)
-    #expect(readyWidth == 20)
-    #expect(newCallbackWidth == 20)
-
-    try? await Task.sleep(nanoseconds: 350_000_000)
-    if case .ready(let finalImage) = store.resolve(source: source, display: display, loader: loader) {
-      #expect(finalImage.size.width == 20, "旧 generation 返回后不得覆盖新缓存")
-    } else {
-      Issue.record("新 generation 的成功缓存不应被旧任务移除")
-    }
-    #expect(!oldCallbackCalled)
-  }
-
-  /// #16 activeCount 守卫
-  @Test @MainActor func activeCountGuard() {
-    var config = InkImageStore.Configuration()
-    config.maxConcurrentLoads = 4
-    let store = InkImageStore(configuration: config)
-    let loader = MockImageLoader()
-    loader.delay = 1_000_000_000
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    for i in 0..<6 {
-      let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
-      _ = store.resolve(source: source, display: display, loader: loader)
-    }
-
-    #expect(store.currentActiveCount == 4)
-  }
-
-  /// #17 inflight 清理
-  @Test @MainActor func inflightCleanupAfterCompletion() async {
-    let store = InkImageStore()
-    let loader = MockImageLoader()
-    let source = ImageSource(url: URL(string: "https://example.com/test.png")!)
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    _ = store.resolve(source: source, display: display, loader: loader)
-    #expect(await waitUntilReady(store: store, source: source, display: display, loader: loader))
-    #expect(await waitUntilInflightCleared(store: store))
-
-    #expect(store.inflightCount == 0)
-    let result = store.resolve(source: source, display: display, loader: loader)
-    if case .ready = result {} else { Issue.record("应该是缓存命中而非挂死") }
-  }
-
-  /// #18 queued drain
-  @Test @MainActor func imageStore_queuedDrain() async {
-    var config = InkImageStore.Configuration()
-    config.maxConcurrentLoads = 4
-    let store = InkImageStore(configuration: config)
-    let loader = MockImageLoader()
-    loader.delay = 100_000_000 // 100ms
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2, contentMode: .fit)
-
-    for i in 0..<6 {
-      let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
-      _ = store.resolve(source: source, display: display, loader: loader)
-    }
-
-    let deadline = Date().addingTimeInterval(3.0)
-    var allReady = false
-    while Date() < deadline {
-      var countReady = 0
-      for i in 0..<6 {
-        let source = ImageSource(url: URL(string: "https://example.com/img\(i).png")!)
-        if case .ready = store.resolve(source: source, display: display, loader: loader) {
-          countReady += 1
-        }
-      }
-      if countReady == 6 {
-        allReady = true
-        break
-      }
-      try? await Task.sleep(nanoseconds: 50_000_000)
-    }
-
-    #expect(allReady, "所有 6 张图片应该在队列 drain 后全部处于 ready 状态")
-  }
 }
-
-// MARK: - ImageHTTPSessionDelegate 有界加载与重定向
-
-@Test func httpSessionDelegate_rejectsOversizedContentLength() {
-  var policy = ImageSecurityPolicy()
-  policy.maxResponseBytes = 1024
-  let delegate = ImageHTTPSessionDelegate(policy: policy)
-  let session = URLSession(configuration: .ephemeral)
-  let task = session.dataTask(with: URL(string: "https://example.com/big.png")!)
-  let url = URL(string: "https://example.com/big.png")!
-  let response = HTTPURLResponse(
-    url: url,
-    statusCode: 200,
-    httpVersion: nil,
-    headerFields: ["Content-Length": "999999"]
-  )!
-
-  var disposition: URLSession.ResponseDisposition?
-  delegate.urlSession(
-    session,
-    dataTask: task,
-    didReceive: response,
-    completionHandler: { disposition = $0 }
-  )
-  #expect(disposition == .cancel)
-  task.cancel()
-}
-
-@Test func httpSessionDelegate_cancellationDuringTaskRegistrationFinishesContinuation() async {
-  let enteredRegistration = AsyncStream<Void>.makeStream()
-  let releaseRegistration = DispatchSemaphore(value: 0)
-  let delegate = ImageHTTPSessionDelegate(
-    policy: ImageSecurityPolicy(),
-    beforeTaskInstall: {
-      enteredRegistration.continuation.yield()
-      releaseRegistration.wait()
-    }
-  )
-  let session = URLSession(configuration: .ephemeral)
-  let requestTask = Task {
-    do {
-      return Result<(Data, HTTPURLResponse), Error>.success(
-        try await delegate.boundedData(
-          from: URL(string: "https://example.com/cancellation-registration.png")!,
-          session: session
-        )
-      )
-    } catch {
-      return Result<(Data, HTTPURLResponse), Error>.failure(error)
-    }
-  }
-
-  for await _ in enteredRegistration.stream {
-    break
-  }
-  requestTask.cancel()
-  releaseRegistration.signal()
-  enteredRegistration.continuation.finish()
-  let result = await requestTask.value
-  session.invalidateAndCancel()
-
-  guard case .failure(let error) = result else {
-    Issue.record("取消登记竞态不应成功完成")
-    return
-  }
-  guard let imageError = error as? ImageLoadError else {
-    Issue.record("取消登记竞态应返回 ImageLoadError，实际为 \(error)")
-    return
-  }
-  guard case .cancelled = imageError else {
-    Issue.record("取消登记竞态应返回 cancelled，实际为 \(imageError)")
-    return
-  }
-}
-
-@Test func httpSessionDelegate_blocksRedirectBeyondMaxCount() {
-  var policy = ImageSecurityPolicy()
-  policy.maxRedirects = 2
-  let delegate = ImageHTTPSessionDelegate(policy: policy)
-  let session = URLSession(configuration: .ephemeral)
-  let task = session.dataTask(with: URL(string: "https://start.example.com/a")!)
-  let redirectResponse = HTTPURLResponse(
-    url: URL(string: "https://start.example.com/a")!,
-    statusCode: 302,
-    httpVersion: nil,
-    headerFields: nil
-  )!
-  let redirectRequest = URLRequest(url: URL(string: "https://hop.example.com/b")!)
-
-  for _ in 0..<2 {
-    var allowed: URLRequest?
-    delegate.urlSession(
-      session,
-      task: task,
-      willPerformHTTPRedirection: redirectResponse,
-      newRequest: redirectRequest
-    ) { allowed = $0 }
-    #expect(allowed != nil)
-  }
-
-  var blocked: URLRequest?
-  delegate.urlSession(
-    session,
-    task: task,
-    willPerformHTTPRedirection: redirectResponse,
-    newRequest: redirectRequest
-  ) { blocked = $0 }
-  #expect(blocked == nil, "超过 maxRedirects 后应拒绝跳转")
-  task.cancel()
-}
-
-// MARK: - #9 ImageIO 降采样正确性
-
-@Test @MainActor func imageIODownsampler_respectsMaxPixel() throws {
-  let renderer = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 100))
-  let testImage = renderer.image { ctx in
-    UIColor.red.setFill()
-    ctx.fill(CGRect(x: 0, y: 0, width: 200, height: 100))
-  }
-  guard let data = testImage.pngData() else {
-    Issue.record("无法创建测试图片数据")
-    return
-  }
-  let downsampler = ImageIODownsampler()
-  let result = try downsampler.downsample(data: data, maxPixel: 50)
-  #expect(max(result.size.width, result.size.height) <= 50)
-}
-
-// MARK: - #10 fitted 函数
 
 @Test @MainActor func fitted_smallImageNoUpscale() {
   let size = CGSize(width: 100, height: 50)
@@ -1187,7 +511,7 @@ private func makeImageTextStorage(
   let loader = SizedMockImageLoader(imagesByURL: [url.absoluteString: makeTestImage(width: 100, height: 130)])
   var rendering = InkImageRendering()
   rendering.isEnabled = true
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
   let attachment = InkImageAttachment(source: ImageSource(url: url), rendering: rendering, store: store)
@@ -1215,7 +539,7 @@ private func makeImageTextStorage(
   )
   var rendering = InkImageRendering()
   rendering.isEnabled = true
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
   let attachment = InkImageAttachment(source: ImageSource(url: url), rendering: rendering, store: store)
@@ -1255,7 +579,7 @@ private func makeImageTextStorage(
   ])
   var rendering = InkImageRendering()
   rendering.isEnabled = true
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
   let attachmentA = InkImageAttachment(source: ImageSource(url: urlA), rendering: rendering, store: store)
@@ -1289,7 +613,7 @@ private func makeImageTextStorage(
   ])
   var rendering = InkImageRendering()
   rendering.isEnabled = true
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
   let attachmentA = InkImageAttachment(source: ImageSource(url: urlA), rendering: rendering, store: store)
@@ -1316,7 +640,7 @@ private func makeImageTextStorage(
   let loader = SizedMockImageLoader(imagesByURL: [url.absoluteString: makeTestImage(width: 80, height: 80)])
   var rendering = InkImageRendering()
   rendering.isEnabled = true
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
   let attachment = InkImageAttachment(source: ImageSource(url: url), rendering: rendering, store: store)
@@ -1327,7 +651,7 @@ private func makeImageTextStorage(
   let countAfterFirstBind = loader.currentCompletedCount
 
   InkImageAttachment.bindAttachments(in: storage, layoutManager: layoutManager, store: store)
-  await waitForImageLoads(count: countAfterFirstBind, loader: loader)
+  await waitForImageLoads(count: 1, loader: loader)
   for _ in 0..<5 { await Task.yield() }
 
   #expect(loader.currentLoadCount == countAfterFirstBind)
@@ -1341,7 +665,7 @@ private func makeImageTextStorage(
   )
   var rendering = InkImageRendering()
   rendering.isEnabled = true
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
   let attachment = InkImageAttachment(
@@ -1372,7 +696,7 @@ private func makeImageTextStorage(
   )
   var rendering = InkImageRendering()
   rendering.isEnabled = true
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let attachment = InkImageAttachment(
     source: ImageSource(url: url),
@@ -1449,7 +773,7 @@ private func makeImageTextStorage(
   )
   var rendering = InkImageRendering()
   rendering.isEnabled = true
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
   let block = InkImageBlock(
@@ -1495,7 +819,7 @@ private func makeImageTextStorage(
   var rendering = InkImageRendering()
   rendering.isEnabled = true
   rendering.tapAction = .callback
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
   rendering.onImageTap = { source, image in
     callCount += 1
     tappedSource = source
@@ -1553,7 +877,7 @@ private func makeImageTextStorage(
   ])
   var rendering = InkImageRendering()
   rendering.isEnabled = true
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
 
@@ -1583,7 +907,7 @@ private func makeImageTextStorage(
 
 // MARK: - 占位 / 失败态紧凑高度
 
-@Test @MainActor func imageBlock_unconfiguredIntrinsicHeightIsMinimal() {
+@Test @MainActor func imageBlock_unconfiguredIntrinsicHeightReservesPlaceholder() {
   var rendering = InkImageRendering()
   rendering.isEnabled = true
   rendering.placeholderHeight = 160
@@ -1592,7 +916,7 @@ private func makeImageTextStorage(
     rendering: rendering,
     store: InkImageStore()
   )
-  #expect(block.intrinsicContentSize.height == 0)
+  #expect(block.intrinsicContentSize.height == 160)
 }
 
 @Test @MainActor func imageBlock_failureWithoutFallbackUsesCompactHeight() async {
@@ -1603,7 +927,7 @@ private func makeImageTextStorage(
   var rendering = InkImageRendering()
   rendering.isEnabled = true
   rendering.placeholderHeight = 160
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
   let block = InkImageBlock(
@@ -1632,7 +956,7 @@ private func makeImageTextStorage(
   var rendering = InkImageRendering()
   rendering.isEnabled = true
   rendering.placeholderHeight = 160
-  rendering.loader = loader
+  rendering.backend = TestImageBackend(loader)
 
   let store = InkImageStore()
   let source = ImageSource(url: url)
@@ -1645,24 +969,11 @@ private func makeImageTextStorage(
     contentMode: .fit
   )
 
-  let didCacheImage = await withCheckedContinuation { continuation in
-    let result = store.resolve(
-      source: source,
-      display: display,
-      loader: loader,
-      onLoad: { image in
-        continuation.resume(returning: image != nil)
-      }
-    )
-    if case .ready = result {
-      continuation.resume(returning: true)
-    }
-  }
-  #expect(didCacheImage)
-
-  #expect(block.intrinsicContentSize.height == 0)
-
-  block.configure(containerWidth: containerWidth, loader: loader)
+  do {
+    _ = try await rendering.backend?.image(for: InkImageRequest(source: source, display: display))
+  } catch { Issue.record("Preloading failed: \(error)") }
+  #expect(block.intrinsicContentSize.height == 160)
+  block.configure(containerWidth: containerWidth)
 
   let measuredHeight = block.sizeThatFits(
     CGSize(width: containerWidth, height: CGFloat.greatestFiniteMagnitude)

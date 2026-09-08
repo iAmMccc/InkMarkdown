@@ -186,12 +186,14 @@ The current unreleased branch keeps these add-ons out of the core product. Link 
 import InkMarkdown
 import InkMarkdownLaTeX
 import InkMarkdownMermaid
+import InkMarkdownKingfisher
 
 _ = InkMarkdownLaTeX.register()
 _ = InkMarkdownMermaid.register()
 
 var configuration = InkConfiguration.standard
 configuration.enableLaTeXRendering()
+configuration.appearance.imageRendering.backend = InkKingfisherImageBackend()
 configuration.appearance.mermaidRendering.isEnabled = true
 
 let attributed = InkAttributedRenderer.render(
@@ -256,14 +258,26 @@ For streaming, the host app feeds received deltas to `session.append(_:)`, then 
 | Inline Math (`$...$`) | Supported (Opt-in) | `InkImageAttachment` |
 | Block Math (`$$...$$`) | Supported (Opt-in) | generated `InkImageBlock` (`InkBlockRenderer` required) |
 | Mermaid Diagrams | Supported (Opt-in) | generated `InkImageBlock` (`InkBlockRenderer` required) |
-| Images | Supported (Opt-in) | Text placeholder by default (`isEnabled=false`). When enabled, valid HTTP(S) hosts load without a required allowlist; optional host allowlist, 20 MiB response budget, redirect revalidation, relative `baseURL`, and last-subscriber cancel remain in force (ADR-006) |
+| Images | Supported (Opt-in) | Enable and configure an image backend. The built-in Kingfisher backend supports an optional host allowlist, 20 MiB response budget, redirect checks and cancellation. Inline attachments and block views share the backend (ADR-012). |
 | Thought Process (`<think>` / `<thought>`) | Supported | collapsible `InkThoughtBlock` from `InkBlockRenderer`; streaming prefix supported |
 
 > ℹ️ **Note**: For complete details on rendering behavior and edge cases, see [Current Project Status](docs/current-status.md) and [Rendering Spec](docs/spec/README.md).
 
 > Version note: in released `0.0.1`, LaTeX and Mermaid support belonged to the single `InkMarkdown` product. In unreleased `0.0.2`, they require the separate products and registration shown above.
 
-Image resource budgets follow [ADR-011](docs/decisions/ADR-011-image-store-configuration-ownership.md): an explicitly injected Store owns its configuration; the default path selects a Store by the complete rendering configuration. Configure injected Stores directly instead of relying on a block to overwrite shared cache or concurrency limits.
+Unreleased breaking change: image rendering (including generated images) requires an explicit `InkImageBackend`. Select the optional `InkMarkdownKingfisher` product for the built-in implementation, or inject your existing image module. The core does not compile or link Kingfisher; package resolution may still download it. Cache and concurrency budgets belong to the backend, not the view ([ADR-012](docs/decisions/ADR-012-pluggable-image-management.md)).
+
+```swift
+import InkMarkdown
+import InkMarkdownKingfisher
+
+let backend = InkKingfisherImageBackend() // Retain and reuse across views.
+var configuration = InkConfiguration.standard
+configuration.appearance.imageRendering.isEnabled = true
+configuration.appearance.imageRendering.backend = backend
+```
+
+Missing backends report `ImageLoadError.backendNotConfigured` through `onFailure` and display a placeholder. Backend changes cancel old presentation subscriptions without clearing shared caches. See the [backend contract and migration guide](docs/contributor-guide/12-image-backends.md).
 
 ---
 

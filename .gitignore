@@ -15,6 +15,7 @@ xcuserdata/
 .workbuddy/
 .verification-logs/
 .test-stash/
+.omx/
 
 ## Obj-C/Swift specific
 *.hmap

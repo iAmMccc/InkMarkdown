@@ -49,7 +49,6 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
   ///   - source: 图片源。
   ///   - store: 图片加载与缓存 Store。
   ///   - rendering: 图片渲染配置。
-  @available(*, deprecated, renamed: "init(source:rendering:)", message: "请改用 init(source:rendering:)；默认 Store 按 rendering.storeConfiguration 隔离。")
   @MainActor
   public convenience init(source: ImageSource, store: InkImageStore, rendering: InkImageRendering) {
     self.init(source: source, resolvedStore: store, rendering: rendering)
@@ -117,7 +116,6 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
     guard let previous = previous as? InkImageBlock else { return false }
     return source == previous.source
       && rendering == previous.rendering
-      && store === previous.store
   }
 
   private func setupViews() {
@@ -202,6 +200,12 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
     configure(containerWidth: bounds.width, loader: loader)
   }
 
+  /// 使用配置中的完整后端加载图片。
+  @MainActor
+  public func configure(containerWidth: CGFloat) {
+    configure(containerWidth: containerWidth, loader: store.loader(for: rendering, source: source))
+  }
+
   /// 按容器宽度配置尺寸并向 Store 发起解析。
   ///
   /// - Parameters:
@@ -257,6 +261,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
     let height = sizeThatFits(CGSize(width: max(width, 1), height: .greatestFiniteMagnitude)).height
     guard abs(height - lastReservedHeight) > 0.5 else { return }
     lastReservedHeight = height
+    invalidateIntrinsicContentSize()
     onReservedHeightChanged?()
   }
 
@@ -378,7 +383,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
     if isShowingLoadingPlaceholder {
       return CGSize(width: width, height: rendering.placeholderHeight)
     }
-    return CGSize(width: width, height: 0)
+    return CGSize(width: width, height: rendering.placeholderHeight)
   }
 
   public override var intrinsicContentSize: CGSize {
@@ -403,7 +408,7 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
     if isShowingLoadingPlaceholder {
       return CGSize(width: UIView.noIntrinsicMetric, height: rendering.placeholderHeight)
     }
-    return CGSize(width: UIView.noIntrinsicMetric, height: 0)
+    return CGSize(width: UIView.noIntrinsicMetric, height: rendering.placeholderHeight)
   }
 
   /// 取消订阅并重置为占位态，供列表复用。
@@ -417,6 +422,8 @@ public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
     clearFailureContent()
     isShowingLoadingPlaceholder = false
     placeholderView.isHidden = true
+    lastReservedHeight = -1
+    invalidateIntrinsicContentSize()
   }
 }
 

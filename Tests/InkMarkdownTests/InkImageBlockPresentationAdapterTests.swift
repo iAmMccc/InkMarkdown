@@ -16,7 +16,7 @@ struct InkImageBlockPresentationAdapterTests {
     var rendering = InkImageRendering()
     rendering.isEnabled = true
     rendering.placeholderHeight = 160
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
 
     let store = InkImageStore()
     let source = ImageSource(url: url)
@@ -29,7 +29,7 @@ struct InkImageBlockPresentationAdapterTests {
       contentMode: .fit
     )
 
-    let warm = store.resolve(source: source, display: display, loader: loader)
+    let warm = store.resolve(source: source, display: display, loader: store.loader(for: rendering))
     if case .loading(let subscribe) = warm {
       let sub = subscribe { _ in }
       try await loader.waitUntilStarted(requestID: 1)
@@ -43,7 +43,7 @@ struct InkImageBlockPresentationAdapterTests {
       return
     }
 
-    block.configure(containerWidth: containerWidth, loader: loader)
+    block.configure(containerWidth: containerWidth, loader: store.loader(for: rendering))
     let height = block.sizeThatFits(
       CGSize(width: containerWidth, height: CGFloat.greatestFiniteMagnitude)
     ).height
@@ -62,7 +62,7 @@ struct InkImageBlockPresentationAdapterTests {
     var rendering = InkImageRendering()
     rendering.isEnabled = true
     rendering.placeholderHeight = 120
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
 
     let store = InkImageStore()
     let blockA = InkImageBlock(
@@ -70,7 +70,7 @@ struct InkImageBlockPresentationAdapterTests {
       rendering: rendering,
       store: store
     )
-    blockA.configure(containerWidth: 240, loader: loader)
+    blockA.configure(containerWidth: 240, loader: store.loader(for: rendering))
     try await loader.waitUntilStarted(requestID: 1)
     #expect(
       blockA.sizeThatFits(CGSize(width: 240, height: CGFloat.greatestFiniteMagnitude)).height
@@ -92,7 +92,7 @@ struct InkImageBlockPresentationAdapterTests {
       rendering: rendering,
       store: store
     )
-    blockB.configure(containerWidth: 240, loader: loader)
+    blockB.configure(containerWidth: 240, loader: store.loader(for: rendering))
     try await loader.waitUntilStarted(requestID: 2)
     loader.succeed(2, image: makeSolidImage(width: 200, height: 90))
     for _ in 0..<20 { await Task.yield() }
@@ -115,7 +115,7 @@ struct InkImageBlockPresentationAdapterTests {
     rendering.isEnabled = true
     rendering.placeholderHeight = 160
     rendering.tapAction = .callback
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
     rendering.onImageTap = { _, _ in tapCount += 1 }
 
     let store = InkImageStore()
@@ -126,7 +126,7 @@ struct InkImageBlockPresentationAdapterTests {
     )
     #expect(block.gestureRecognizers?.contains { $0 is UITapGestureRecognizer } == true)
 
-    block.configure(containerWidth: 280, loader: loader)
+    block.configure(containerWidth: 280, loader: store.loader(for: rendering))
     try await loader.waitUntilStarted(requestID: 1)
     loader.fail(1)
     for _ in 0..<20 { await Task.yield() }
@@ -152,7 +152,7 @@ struct InkImageBlockPresentationAdapterTests {
     let store = InkImageStore()
     let source = ImageSource(url: url)
     let block1 = InkImageBlock(source: source, rendering: rendering1, store: store)
-    block1.configure(containerWidth: 300, loader: loader)
+    block1.configure(containerWidth: 300, loader: store.loader(for: rendering))
 
     try await loader.waitUntilStarted(requestID: 1)
     let testImage = makeSolidImage(width: 200, height: 120)

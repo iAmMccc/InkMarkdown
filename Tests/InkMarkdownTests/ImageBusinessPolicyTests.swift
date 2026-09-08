@@ -127,65 +127,15 @@ struct ImageBusinessPolicyTests {
 
   // MARK: - 重定向策略（默认放行 / 白名单重校验）
 
-  @Test("默认策略重定向放行；配置白名单时每次重定向重新校验")
-  func redirectDelegate_revalidatesWhenAllowlistConfigured() {
-    let session = URLSession(configuration: .ephemeral)
-    let task = session.dataTask(with: URL(string: "https://start.example.com/a")!)
-    let redirectResponse = HTTPURLResponse(
-      url: URL(string: "https://start.example.com/a")!,
-      statusCode: 302,
-      httpVersion: nil,
-      headerFields: nil
-    )!
-    let redirectRequest = URLRequest(url: URL(string: "https://redirect.example.org/b")!)
-
-    // 默认（空白名单 + allowAll）：允许跳转。
-    let openDelegate = ImageHTTPSessionDelegate(policy: ImageSecurityPolicy())
-    var allowedRequest: URLRequest?
-    openDelegate.urlSession(
-      session,
-      task: task,
-      willPerformHTTPRedirection: redirectResponse,
-      newRequest: redirectRequest
-    ) { allowedRequest = $0 }
-    #expect(allowedRequest != nil)
-
-    // 配置白名单：目标 host 不在白名单 → 取消跳转。
+  @Test("重定向策略复核白名单且不允许非 HTTP(S) 目标")
+  func redirectPolicy_revalidatesWhenAllowlistConfigured() {
+    let target = URL(string: "https://redirect.example.org/b")!
+    #expect(ImageSecurityPolicy().rejectionReason(forRedirectURL: target) == nil)
     var restricted = ImageSecurityPolicy()
     restricted.allowedHosts = ["start.example.com"]
-    let restrictedDelegate = ImageHTTPSessionDelegate(policy: restricted)
-    var blockedRequest: URLRequest?
-    restrictedDelegate.urlSession(
-      session,
-      task: task,
-      willPerformHTTPRedirection: redirectResponse,
-      newRequest: redirectRequest
-    ) { blockedRequest = $0 }
-    #expect(blockedRequest == nil, "配置白名单后重定向目标必须重新校验")
-
-    // 非空白名单是不可绕过的业务策略，即使兼容开关被关闭也必须复核。
     restricted.redirectRevalidatesHost = false
-    let nonBypassableDelegate = ImageHTTPSessionDelegate(policy: restricted)
-    var bypassedRequest: URLRequest?
-    nonBypassableDelegate.urlSession(
-      session,
-      task: task,
-      willPerformHTTPRedirection: redirectResponse,
-      newRequest: redirectRequest
-    ) { bypassedRequest = $0 }
-    #expect(bypassedRequest == nil, "非空 host 白名单不得被 redirectRevalidatesHost 绕过")
-
-    let unsafeRequest = URLRequest(url: URL(string: "ftp://redirect.example.org/b")!)
-    var unsafeRedirect: URLRequest?
-    openDelegate.urlSession(
-      session,
-      task: task,
-      willPerformHTTPRedirection: redirectResponse,
-      newRequest: unsafeRequest
-    ) { unsafeRedirect = $0 }
-    #expect(unsafeRedirect == nil, "重定向同样必须执行 scheme 资源安全边界")
-
-    task.cancel()
+    #expect(restricted.rejectionReason(forRedirectURL: target) != nil)
+    #expect(ImageSecurityPolicy().rejectionReason(forRedirectURL: URL(string: "ftp://example.org/b")!) != nil)
   }
 
   // MARK: - Helpers

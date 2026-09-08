@@ -3,6 +3,7 @@ import UIKit
 /// 0.0.1 的图片回调没有 `@Sendable` / actor 约束；兼容存储不改变其调用线程契约。
 private struct InkImageCallbackStorage: @unchecked Sendable {
   var imageTap: ((ImageSource, UIImage?) -> Void)?
+  var failure: ((ImageSource, Error) -> Void)?
   var loadFinished: ((ImageSource, UIImage?) -> Void)?
 }
 
@@ -80,38 +81,34 @@ enum InkImageFailureFallback: Hashable {
 
 /// 图片渲染的完整公开配置。
 ///
-/// 聚合开关、加载器、缓存、安全策略、尺寸与交互行为。
-/// 闭包与自定义 loader 通过 ``InkSemanticIdentity`` 补足可比较的值语义。
+/// 聚合开关、后端、安全策略、尺寸与交互行为。
+/// 后端按实例身份比较；生成器与闭包以语义身份补足值比较。
 public struct InkImageRendering: Sendable {
 
   /// 是否启用图片渲染。默认 `false`，保持 v1 占位行为。
   public var isEnabled: Bool = false
 
-  private var storedLoader: (any InkImageLoading)?
-  private var loaderSemanticIdentity: InkSemanticIdentity?
+  /// 完整图片管理后端。启用图片但为 nil 时报告 backendNotConfigured。
+  public var backend: (any InkImageBackend)?
+  var backendIdentity: InkSemanticIdentity? {
+    backend.map { InkSemanticIdentity(String(describing: ObjectIdentifier($0))) }
+  }
 
-  /// 自定义图片加载器。`nil` 时 Store 使用内置 `DefaultURLSessionImageLoader`。
-  /// 直接赋值会保守地生成新语义身份；反复构造等价 loader 时使用
-  /// ``setLoader(_:semanticIdentity:)``。
-  public var loader: (any InkImageLoading)? {
-    get { storedLoader }
+  /// 加载失败通知，在主 actor 调用；取消的过期请求不通知。
+  public var onFailure: ((ImageSource, Error) -> Void)? {
+    get { callbackStorage.failure }
     set {
-      storedLoader = newValue
-      if let identity = newValue?.semanticIdentity {
-        loaderSemanticIdentity = identity
-      } else if newValue is (any InkConfigurationSemanticsProviding) {
-        loaderSemanticIdentity = nil
-      } else {
-        loaderSemanticIdentity = newValue == nil ? nil : .unique()
-      }
+      callbackStorage.failure = newValue
+      failureIdentity = newValue == nil ? nil : .unique()
     }
   }
+  private var failureIdentity: InkSemanticIdentity?
 
   private var storedGeneratedLoader: (any InkImageLoading)?
   private var generatedLoaderSemanticIdentity: InkSemanticIdentity?
 
   /// 本地生成型图片的 loader。仅当 ``ImageSource/generatedRequest`` 非空时使用。
-  /// 其结果仍进入同一个 ``InkImageStore``，不会创建独立缓存。
+  /// 生成结果交给 backend，核心不创建独立缓存。
   public var generatedLoader: (any InkImageLoading)? {
     get { storedGeneratedLoader }
     set {
@@ -126,8 +123,8 @@ public struct InkImageRendering: Sendable {
     }
   }
 
-  /// 内存缓存配置。
-  public var storeConfiguration: InkImageStore.Configuration = .init()
+  /// Data URL 编码字节上限；缓存及并发预算由后端配置。
+  public var maxDataURLBytes: Int = 2 * 1024 * 1024
 
   /// 加载安全策略（scheme / host 白名单、重定向限制等）。
   public var securityPolicy: ImageSecurityPolicy = .init()
@@ -191,15 +188,6 @@ public struct InkImageRendering: Sendable {
 
   public init() {}
 
-  /// 设置自定义 loader，并显式声明其加载语义身份。
-  public mutating func setLoader(
-    _ loader: (any InkImageLoading)?,
-    semanticIdentity: InkSemanticIdentity
-  ) {
-    storedLoader = loader
-    loaderSemanticIdentity = loader == nil ? nil : semanticIdentity
-  }
-
   /// 设置生成图 loader，并显式声明其加载语义身份。
   public mutating func setGeneratedLoader(
     _ loader: (any InkImageLoading)?,
@@ -239,7 +227,7 @@ public struct InkImageRendering: Sendable {
     if source?.generatedRequest != nil {
       return generatedLoaderSemanticIdentity
     }
-    return loaderSemanticIdentity
+    return nil
   }
 }
 
@@ -250,19 +238,15 @@ extension ImageSizing: Equatable {}
 extension InkImageRendering: Equatable {
   public static func == (lhs: InkImageRendering, rhs: InkImageRendering) -> Bool {
     lhs.isEnabled == rhs.isEnabled &&
-    InkSemanticComparator.imageLoadersAreEquivalent(
-      lhs.storedLoader,
-      rhs.storedLoader,
-      lhsFallbackIdentity: lhs.loaderSemanticIdentity,
-      rhsFallbackIdentity: rhs.loaderSemanticIdentity
-    ) &&
+    lhs.backendIdentity == rhs.backendIdentity &&
+    lhs.failureIdentity == rhs.failureIdentity &&
     InkSemanticComparator.imageLoadersAreEquivalent(
       lhs.storedGeneratedLoader,
       rhs.storedGeneratedLoader,
       lhsFallbackIdentity: lhs.generatedLoaderSemanticIdentity,
       rhsFallbackIdentity: rhs.generatedLoaderSemanticIdentity
     ) &&
-    lhs.storeConfiguration == rhs.storeConfiguration &&
+    lhs.maxDataURLBytes == rhs.maxDataURLBytes &&
     lhs.securityPolicy == rhs.securityPolicy &&
     lhs.promotesToBlock == rhs.promotesToBlock &&
     lhs.placeholderHeight == rhs.placeholderHeight &&

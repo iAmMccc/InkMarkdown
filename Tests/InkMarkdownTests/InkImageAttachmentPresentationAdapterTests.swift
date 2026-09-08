@@ -14,7 +14,7 @@ struct InkImageAttachmentPresentationAdapterTests {
 
     var rendering = InkImageRendering()
     rendering.isEnabled = true
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
 
     let store = InkImageStore()
     let attachment = InkImageAttachment(
@@ -44,7 +44,7 @@ struct InkImageAttachmentPresentationAdapterTests {
 
     var rendering = InkImageRendering()
     rendering.isEnabled = true
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
 
     let store = InkImageStore()
     let attachment = InkImageAttachment(
@@ -80,7 +80,7 @@ struct InkImageAttachmentPresentationAdapterTests {
     var rendering = InkImageRendering()
     rendering.isEnabled = true
     rendering.placeholderHeight = 160
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
 
     let attachment = InkImageAttachment(
       source: ImageSource(url: URL(string: "https://example.com/attach-unbound.png")!),
@@ -105,7 +105,7 @@ struct InkImageAttachmentPresentationAdapterTests {
 
     var rendering = InkImageRendering()
     rendering.isEnabled = true
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
 
     let store = InkImageStore()
     let attachment = InkImageAttachment(

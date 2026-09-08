@@ -152,24 +152,24 @@ private struct TestSemanticImageLoader: InkImageLoading {
 
     var first = InkImageRendering()
     first.isEnabled = true
-    first.setLoader(TestSemanticImageLoader(variant: 1), semanticIdentity: "images.loader.v1")
+    first.backend = TestImageBackend(TestSemanticImageLoader(variant: 1))
     first.setImageTapHandler({ _, _ in }, semanticIdentity: "images.tap.v1")
     first.setLoadFinishedHandler({ _, _ in }, semanticIdentity: "images.finished.v1")
 
     var equivalent = InkImageRendering()
     equivalent.isEnabled = true
-    equivalent.setLoader(TestSemanticImageLoader(variant: 1), semanticIdentity: "images.loader.v1")
+    equivalent.backend = first.backend
     equivalent.setImageTapHandler({ _, _ in }, semanticIdentity: "images.tap.v1")
     equivalent.setLoadFinishedHandler({ _, _ in }, semanticIdentity: "images.finished.v1")
     #expect(first == equivalent)
 
-    equivalent.storeConfiguration.countLimit += 1
+    equivalent.maxDataURLBytes += 1
     #expect(first != equivalent)
     equivalent = first
     equivalent.securityPolicy.stripsQuery.toggle()
     #expect(first != equivalent)
     equivalent = first
-    equivalent.loader = TestSemanticImageLoader(variant: 1)
+    equivalent.backend = TestImageBackend(TestSemanticImageLoader(variant: 1))
     #expect(first != equivalent)
   }
 

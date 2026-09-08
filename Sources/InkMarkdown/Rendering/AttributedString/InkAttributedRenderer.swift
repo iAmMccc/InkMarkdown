@@ -756,7 +756,7 @@ private struct InkRenderer {
 
     if rendering.securityPolicy.rejectionReason(
       for: source,
-      maxDataURLBytes: rendering.storeConfiguration.maxDataURLBytes
+      maxDataURLBytes: rendering.maxDataURLBytes
     ) != nil {
       return renderImagePlaceholder(image, context: context)
     }

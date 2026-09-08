@@ -1,6 +1,6 @@
 # 图片 Store 配置由资源所有者决定
 
-Status: Accepted（2026-09-06）
+Status: Superseded by [ADR-012](ADR-012-pluggable-image-management.md)（2026-09-07）。下文保留历史决策，不再描述当前后端接口。
 
 图片缓存、并发和排队预算属于 Store 的资源生命周期。显式注入 Store 时，以其所有者配置为准；默认渲染路径按完整 `storeConfiguration` 选择并持有对应 Store。Block、行内 attachment 和预览不能在每次渲染时暗中重配共享 Store，也不能以“值是否等于默认值”推断调用方意图。
 

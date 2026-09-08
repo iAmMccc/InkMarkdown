@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F01200000000000000000001 /* InkMarkdownKingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = F01200000000000000000002 /* InkMarkdownKingfisher */; };
 		A7D10000000000000000000D /* InkMarkdown in Frameworks */ = {isa = PBXBuildFile; productRef = B80102C1FE644144E059F7B0 /* InkMarkdown */; };
 		A7D100000000000000000007 /* InkMarkdownMermaid in Frameworks */ = {isa = PBXBuildFile; productRef = E5F60718293A4B5C6D7E8F90 /* InkMarkdownMermaid */; };
 		138FC356DC189F0649256A42 /* SmartCodable in Frameworks */ = {isa = PBXBuildFile; productRef = 50432D2B957FD0F6D01F4059 /* SmartCodable */; };
@@ -73,6 +74,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9E2F7F4D9285150605A329D4 /* InkMarkdown in Frameworks */,
+				F01200000000000000000001 /* InkMarkdownKingfisher in Frameworks */,
 				7FE2795B44A24588AE06FC5F /* InkMarkdownSwiftUI in Frameworks */,
 				A1B2C3D4E5F60718293A4B5C /* InkMarkdownLaTeX in Frameworks */,
 				B2C3D4E5F60718293A4B5C6D /* InkMarkdownMermaid in Frameworks */,
@@ -149,6 +151,7 @@
 			packageProductDependencies = (
 				B80102C1FE644144E059F7B0 /* InkMarkdown */,
 				5EE1912A30A14D67A9100889 /* InkMarkdownSwiftUI */,
+				F01200000000000000000002 /* InkMarkdownKingfisher */,
 				D4E5F60718293A4B5C6D7E8F /* InkMarkdownLaTeX */,
 				E5F60718293A4B5C6D7E8F90 /* InkMarkdownMermaid */,
 				50432D2B957FD0F6D01F4059 /* SmartCodable */,
@@ -539,6 +542,7 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		F01200000000000000000002 /* InkMarkdownKingfisher */ = {isa = XCSwiftPackageProductDependency; productName = InkMarkdownKingfisher; };
 		2D146DF8365BC373D85A7B22 /* SnapKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D38F8A7106504E3C77F82AF7 /* XCRemoteSwiftPackageReference "SnapKit" */;

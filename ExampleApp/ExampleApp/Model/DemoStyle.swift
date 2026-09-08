@@ -1,5 +1,10 @@
 import UIKit
 import InkMarkdown
+import InkMarkdownKingfisher
+
+enum DemoImages {
+  static let backend = InkKingfisherImageBackend(cacheName: "ExampleApp")
+}
 
 /// ExampleApp 侧的「样式 tab」枚举——**演示如何用核心扩展点做业务定制**。
 ///
@@ -86,6 +91,7 @@ extension InkAppearance {
   static var demoImageEnabled: InkAppearance {
     var a = InkAppearance()
     a.imageRendering.isEnabled = true
+    a.imageRendering.backend = DemoImages.backend
     a.imageRendering.promotesToBlock = true
     a.imageRendering.tapAction = .callback
     a.imageRendering.securityPolicy.allowedHosts = [
@@ -103,6 +109,7 @@ extension InkAppearance {
   static var demoLaTeXEnabled: InkAppearance {
     var a = InkAppearance()
     a.latexRendering.isEnabled = true
+    a.imageRendering.backend = DemoImages.backend
     a.latexRendering.allowsInlineDollarDelimiter = false
     return a
   }
@@ -113,6 +120,7 @@ extension InkAppearance {
   ) -> InkAppearance {
     var a = InkAppearance()
     a.mermaidRendering.isEnabled = true
+    a.imageRendering.backend = DemoImages.backend
     a.mermaidRendering.theme = userInterfaceStyle == .dark ? .dark : .light
     return a
   }

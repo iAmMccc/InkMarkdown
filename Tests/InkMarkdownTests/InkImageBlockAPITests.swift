@@ -11,6 +11,17 @@ import UIKit
 @MainActor
 struct InkImageBlockAPITests {
 
+  @Test("Auto Layout 宿主在未加载时为图片保留高度")
+  func imageBlock_reservesInitialAutoLayoutHeight() {
+    let rendering = InkImageRendering()
+    let block = InkImageBlock(
+      source: ImageSource(url: URL(string: "https://example.com/layout.png")!),
+      rendering: rendering
+    )
+    #expect(block.intrinsicContentSize.height == rendering.placeholderHeight)
+    #expect(block.sizeThatFits(CGSize(width: 320, height: 1000)).height == rendering.placeholderHeight)
+  }
+
   @Test("InkImageBlock 是 UIView 子类")
   func imageBlock_isUIViewSubclass() {
     #expect(InkImageBlock.isSubclass(of: UIView.self))

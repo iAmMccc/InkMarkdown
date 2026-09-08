@@ -14,7 +14,7 @@ struct InkImagePresentationLifetimeTests {
 
     var rendering = InkImageRendering()
     rendering.isEnabled = true
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
 
     let store = InkImageStore()
     var block: InkImageBlock? = InkImageBlock(
@@ -40,7 +40,7 @@ struct InkImagePresentationLifetimeTests {
 
     var rendering = InkImageRendering()
     rendering.isEnabled = true
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
 
     let store = InkImageStore()
     var attachment: InkImageAttachment? = InkImageAttachment(
@@ -63,12 +63,15 @@ struct InkImagePresentationLifetimeTests {
   }
 
   @Test
-  func sharedPeerKeepsLoad_whenOnePresentationCancels() async throws {
-    let url = URL(string: "https://example.com/lifetime-shared.png")!
+  func independentPresentations_cancelOneDoesNotAffectOther() async throws {
+    let url = URL(string: "https://example.com/lifetime-independent.png")!
     let loader = InkControlledImageLoader()
     defer { loader.finishAllPending() }
 
+    var rendering = InkImageRendering()
+    rendering.backend = TestImageBackend(loader)
     let store = InkImageStore()
+    let bound = store.loader(for: rendering)
     let display = DisplayContext(maxPixelWidth: 100, scale: 2)
     let source = ImageSource(url: url)
 
@@ -79,26 +82,25 @@ struct InkImagePresentationLifetimeTests {
     first.start(
       source: source,
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
       onCompletion: { _ in }
     )
-    try await loader.waitUntilStarted(requestID: 1)
-
     second.start(
       source: source,
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
       onCompletion: { _ in secondDone = true }
     )
+    try await loader.waitUntilLoadCount(2)
 
     first.cancel()
     try? await Task.sleep(nanoseconds: 20_000_000)
-    #expect(!loader.cancelledIDs.contains(1))
+    #expect(loader.cancelledIDs.contains(1))
     #expect(!secondDone)
 
-    loader.succeed(1)
+    loader.succeed(2)
     try? await Task.sleep(nanoseconds: 50_000_000)
     #expect(secondDone)
   }

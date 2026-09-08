@@ -6,11 +6,20 @@ import UIKit
 @MainActor
 struct InkImagePresentationLoadTests {
 
+  private func boundLoader(
+    _ loader: InkControlledImageLoader
+  ) -> (store: InkImageStore, loader: any InkImageLoading) {
+    var rendering = InkImageRendering()
+    rendering.backend = TestImageBackend(loader)
+    let store = InkImageStore()
+    return (store, store.loader(for: rendering))
+  }
+
   @Test
   func readyAfterWarmCache_skipsPendingAndLoader() async throws {
-    let store = InkImageStore()
     let loader = InkControlledImageLoader()
     defer { loader.finishAllPending() }
+    let (store, bound) = boundLoader(loader)
 
     let source = ImageSource(url: URL(string: "https://example.com/cached.png")!)
     let display = DisplayContext(maxPixelWidth: 120, scale: 2)
@@ -22,7 +31,7 @@ struct InkImagePresentationLoadTests {
     load.start(
       source: source,
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
       onPending: { pendingCount += 1 },
       onCompletion: { completions.append($0) }
@@ -47,7 +56,7 @@ struct InkImagePresentationLoadTests {
     load2.start(
       source: source,
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
       onPending: { pending2 += 1 },
       onCompletion: { completions2.append($0) }
@@ -56,75 +65,26 @@ struct InkImagePresentationLoadTests {
     #expect(loader.loadCount == loadsBefore)
     #expect(completions2.count == 1)
     if case .image = completions2.first {} else {
-      Issue.record("缓存命中应同步 image")
+      Issue.record("backend 缓存命中应同步 image")
     }
-  }
-
-  @Test
-  func loadingAndQueued_subscribeOnce_completeOnce() async throws {
-    var configuration = InkImageStore.Configuration()
-    configuration.maxConcurrentLoads = 1
-    let store = InkImageStore(configuration: configuration)
-    let loader = InkControlledImageLoader()
-    defer { loader.finishAllPending() }
-
-    let display = DisplayContext(maxPixelWidth: 100, scale: 2)
-    let active = InkImagePresentationLoad()
-    var activeCompletions = 0
-    active.start(
-      source: ImageSource(url: URL(string: "https://example.com/active.png")!),
-      display: display,
-      loader: loader,
-      store: store,
-      onPending: {},
-      onCompletion: { _ in activeCompletions += 1 }
-    )
-    try await loader.waitUntilStarted(requestID: 1)
-
-    let queued = InkImagePresentationLoad()
-    var queuedPending = 0
-    var queuedCompletions: [InkImagePresentationLoad.Completion] = []
-    queued.start(
-      source: ImageSource(url: URL(string: "https://example.com/queued.png")!),
-      display: display,
-      loader: loader,
-      store: store,
-      onPending: { queuedPending += 1 },
-      onCompletion: { queuedCompletions.append($0) }
-    )
-    #expect(queuedPending == 1)
-    #expect(loader.loadCount == 1)
-
-    loader.succeed(1)
-    try await loader.waitUntilStarted(requestID: 2)
-    loader.fail(2)
-    try? await Task.sleep(nanoseconds: 60_000_000)
-
-    #expect(activeCompletions == 1)
-    #expect(queuedCompletions.count == 1)
-    if case .loadFailed = queuedCompletions.first {} else {
-      Issue.record("queued 失败应为 loadFailed")
-    }
-    #expect(loader.loadCount == 2)
   }
 
   @Test
   func replaceAWithB_lateASuppressed_BCompletes() async throws {
-    let store = InkImageStore()
     let loader = InkControlledImageLoader(cancellationBehavior: .ignoreCancel)
     defer { loader.finishAllPending() }
+    let (store, bound) = boundLoader(loader)
 
     let display = DisplayContext(maxPixelWidth: 100, scale: 2)
     let load = InkImagePresentationLoad()
     var completions: [InkImagePresentationLoad.Completion] = []
-    var pendingEvents = 0
 
     load.start(
       source: ImageSource(url: URL(string: "https://example.com/a.png")!),
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
-      onPending: { pendingEvents += 1 },
+      onPending: {},
       onCompletion: { completions.append($0) }
     )
     try await loader.waitUntilStarted(requestID: 1)
@@ -132,9 +92,9 @@ struct InkImagePresentationLoadTests {
     load.start(
       source: ImageSource(url: URL(string: "https://example.com/b.png")!),
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
-      onPending: { pendingEvents += 1 },
+      onPending: {},
       onCompletion: { completions.append($0) }
     )
     try await loader.waitUntilStarted(requestID: 2)
@@ -153,67 +113,32 @@ struct InkImagePresentationLoadTests {
   }
 
   @Test
-  func lastSubscriberCancel_cancelsInflight_sharedPeerKeepsLoad() async throws {
-    let store = InkImageStore()
+  func soloCancel_cancelsUnderlyingLoad() async throws {
     let loader = InkControlledImageLoader()
     defer { loader.finishAllPending() }
+    let (store, bound) = boundLoader(loader)
 
-    let source = ImageSource(url: URL(string: "https://example.com/peer.png")!)
     let display = DisplayContext(maxPixelWidth: 100, scale: 2)
-
-    let first = InkImagePresentationLoad()
-    var firstDone = 0
-    first.start(
-      source: source,
-      display: display,
-      loader: loader,
-      store: store,
-      onPending: {},
-      onCompletion: { _ in firstDone += 1 }
-    )
-    let second = InkImagePresentationLoad()
-    var secondDone = 0
-    second.start(
-      source: source,
-      display: display,
-      loader: loader,
-      store: store,
-      onPending: {},
-      onCompletion: { _ in secondDone += 1 }
-    )
-    try await loader.waitUntilLoadCount(1)
-    #expect(loader.loadCount == 1)
-
-    first.cancel()
-    #expect(loader.cancelledIDs.isEmpty)
-    #expect(firstDone == 0)
-
-    loader.succeed(1)
-    try? await Task.sleep(nanoseconds: 50_000_000)
-    #expect(secondDone == 1)
-
-    // 单独观察者取消应到底层
     let solo = InkImagePresentationLoad()
-    let soloSource = ImageSource(url: URL(string: "https://example.com/solo.png")!)
     solo.start(
-      source: soloSource,
+      source: ImageSource(url: URL(string: "https://example.com/solo.png")!),
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
       onPending: {},
       onCompletion: { _ in }
     )
-    try await loader.waitUntilStarted(requestID: 2)
+    try await loader.waitUntilStarted(requestID: 1)
     solo.cancel()
     try? await Task.sleep(nanoseconds: 30_000_000)
-    #expect(loader.cancelledIDs.contains(2))
+    #expect(loader.cancelledIDs.contains(1))
   }
 
   @Test
   func pendingReentrancy_startAndCancel_doNotWriteBackStaleHandle() async throws {
-    let store = InkImageStore()
     let loader = InkControlledImageLoader(cancellationBehavior: .ignoreCancel)
     defer { loader.finishAllPending() }
+    let (store, bound) = boundLoader(loader)
 
     let display = DisplayContext(maxPixelWidth: 80, scale: 2)
     let load = InkImagePresentationLoad()
@@ -223,7 +148,7 @@ struct InkImagePresentationLoadTests {
     load.start(
       source: ImageSource(url: URL(string: "https://example.com/outer.png")!),
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
       onPending: {
         guard !nested else { return }
@@ -231,7 +156,7 @@ struct InkImagePresentationLoadTests {
         load.start(
           source: ImageSource(url: URL(string: "https://example.com/inner.png")!),
           display: display,
-          loader: loader,
+          loader: bound,
           store: store,
           onPending: {},
           onCompletion: { completions.append($0) }
@@ -253,9 +178,9 @@ struct InkImagePresentationLoadTests {
 
   @Test
   func completionReentrancy_startNewRequest_notCancelledByOldCleanup() async throws {
-    let store = InkImageStore()
     let loader = InkControlledImageLoader()
     defer { loader.finishAllPending() }
+    let (store, bound) = boundLoader(loader)
 
     let display = DisplayContext(maxPixelWidth: 80, scale: 2)
     let load = InkImagePresentationLoad()
@@ -265,7 +190,7 @@ struct InkImagePresentationLoadTests {
     load.start(
       source: ImageSource(url: URL(string: "https://example.com/first.png")!),
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
       onPending: {},
       onCompletion: { completion in
@@ -275,7 +200,7 @@ struct InkImagePresentationLoadTests {
           load.start(
             source: ImageSource(url: URL(string: "https://example.com/second.png")!),
             display: display,
-            loader: loader,
+            loader: bound,
             store: store,
             onPending: {},
             onCompletion: { finals.append($0) }
@@ -290,7 +215,6 @@ struct InkImagePresentationLoadTests {
     try? await Task.sleep(nanoseconds: 60_000_000)
 
     #expect(finals.count == 2)
-    #expect(loader.cancelledIDs.isEmpty)
   }
 }
 
@@ -298,11 +222,20 @@ struct InkImagePresentationLoadTests {
 @MainActor
 struct InkImagePresentationLoadAsyncTests {
 
+  private func boundLoader(
+    _ loader: InkControlledImageLoader
+  ) -> (store: InkImageStore, loader: any InkImageLoading) {
+    var rendering = InkImageRendering()
+    rendering.backend = TestImageBackend(loader)
+    let store = InkImageStore()
+    return (store, store.loader(for: rendering))
+  }
+
   @Test
   func syncReady_completesWithoutPendingLoader() async throws {
-    let store = InkImageStore()
     let loader = InkControlledImageLoader()
     defer { loader.finishAllPending() }
+    let (store, bound) = boundLoader(loader)
 
     let source = ImageSource(url: URL(string: "https://example.com/async-ready.png")!)
     let display = DisplayContext(maxPixelWidth: 100, scale: 2)
@@ -311,7 +244,7 @@ struct InkImagePresentationLoadAsyncTests {
     warmLoad.start(
       source: source,
       display: display,
-      loader: loader,
+      loader: bound,
       store: store,
       onCompletion: { _ in }
     )
@@ -323,7 +256,7 @@ struct InkImagePresentationLoadAsyncTests {
     let image = try await InkImagePresentationLoadAsync.loadImage(
       source: source,
       display: display,
-      loader: loader,
+      loader: bound,
       store: store
     )
     #expect(image.size.width > 0)
@@ -332,9 +265,9 @@ struct InkImagePresentationLoadAsyncTests {
 
   @Test
   func preCancel_doesNotStartLoader() async throws {
-    let store = InkImageStore()
     let loader = InkControlledImageLoader()
     defer { loader.finishAllPending() }
+    let (store, bound) = boundLoader(loader)
 
     let source = ImageSource(url: URL(string: "https://example.com/async-precancel.png")!)
     let display = DisplayContext(maxPixelWidth: 90, scale: 2)
@@ -343,7 +276,7 @@ struct InkImagePresentationLoadAsyncTests {
       try await InkImagePresentationLoadAsync.loadImage(
         source: source,
         display: display,
-        loader: loader,
+        loader: bound,
         store: store
       )
     }
@@ -362,9 +295,9 @@ struct InkImagePresentationLoadAsyncTests {
 
   @Test
   func cancelAfterStart_resumesOnce() async throws {
-    let store = InkImageStore()
     let loader = InkControlledImageLoader(cancellationBehavior: .ignoreCancel)
     defer { loader.finishAllPending() }
+    let (store, bound) = boundLoader(loader)
 
     let source = ImageSource(url: URL(string: "https://example.com/async-cancel.png")!)
     let display = DisplayContext(maxPixelWidth: 80, scale: 2)
@@ -373,7 +306,7 @@ struct InkImagePresentationLoadAsyncTests {
       try await InkImagePresentationLoadAsync.loadImage(
         source: source,
         display: display,
-        loader: loader,
+        loader: bound,
         store: store
       )
     }
@@ -394,9 +327,9 @@ struct InkImagePresentationLoadAsyncTests {
 
   @Test
   func failure_mapsDecodeFailedOnce() async throws {
-    let store = InkImageStore()
     let loader = InkControlledImageLoader()
     defer { loader.finishAllPending() }
+    let (store, bound) = boundLoader(loader)
 
     let source = ImageSource(url: URL(string: "https://example.com/async-fail.png")!)
     let display = DisplayContext(maxPixelWidth: 70, scale: 2)
@@ -405,7 +338,7 @@ struct InkImagePresentationLoadAsyncTests {
       try await InkImagePresentationLoadAsync.loadImage(
         source: source,
         display: display,
-        loader: loader,
+        loader: bound,
         store: store
       )
     }

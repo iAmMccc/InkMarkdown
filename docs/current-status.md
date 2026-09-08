@@ -6,9 +6,37 @@
 
 `0.0.1` 已作为 UIKit-first public beta 发布。核心 UIKit 渲染管线、块级组件、流式渲染及基础测试已具备；`0.0.2` 的目标是交付正式 `InkMarkdownSwiftUI` adapter product。此前被拒绝的 SwiftUI spike 已移出仓库；当前 adapter 已按 ADR-008 / ADR-009 实现（提供 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration()` 与内部 Block Presentation Continuity module）。ADR-010 已将 v0.0.2 最低平台提升为 iOS / iPadOS 15；manifest、consumer fixture、ExampleApp 与源码兼容路径均收敛为 15.0。2026-09-04 当前未提交工作树在独立 iPhone 17 Pro / iOS 26.5 上通过 `InkMarkdown-Package` 343 项测试、ExampleApp Debug/Release 构建及 1 项宿主测试。
 
-## 2026-09-07 架构深化联合终检（未 commit）
+## 2026-09-07 图片后端重构
 
-表格 / 图片 / SwiftUI 宿主三方向迁移已在 `feat/swiftUI` 工作树完成联合终检（HEAD `f71cc292…` + 未提交生产改动）。本地证据：
+### 二轮审查修复：Asset Scale
+
+Asset 首次降采样固定使用 scale 1，曾将 16×8pt 的 2x/3x 图片读成 32×16pt / 48×24pt。现保留原始 scale，并把像素上限换算成 Kingfisher 点尺寸；仅为 Asset 缓存键增加版本前缀，防止旧错误条目短路解码，不主动删除旧缓存或改变其他来源的缓存键。公开 API 与依赖不变。
+
+回归采用真实 UIImage 与 Kingfisher 降采样，覆盖 1x/2x/3x、12px 降采样和 64px 不放大两档预算；另通过公开后端接口验证旧 Asset 磁盘条目不被读取、回填或删除。纯 Package runner 的主 bundle 位于 Xcode 只读目录，原主 bundle 夹具方案因权限失败而撤回；最终 scale 测试边界为资源查找后的内部降采样函数，不包含真实 `UIImage(named:)` 资源名称查找或 UI 验收。
+
+先失败再通过的证据：`/tmp/InkMarkdown-asset-scale-red-2.xcresult`（scale/点尺寸断言失败）、`/tmp/InkMarkdown-asset-cache-red-2.xcresult`（旧缓存绕过资源查找）。最终 `InkMarkdown-Package` 在独立 iPhone 17 Pro / iOS 26.3.1 上 **359 通过，0 失败、0 跳过**（参数化展开 441 次）；结果 `/tmp/InkMarkdown-asset-scale-final.xcresult`，日志 `/tmp/InkMarkdown-asset-scale-final.log`。沿用纯 Package 项目发现限制下的原生 xcodebuild 回退，destination 由 XcodeBuildMCP 核验。`git diff --check` 通过；未重跑 ExampleApp、iOS 15 或 iPad 验收。以下为前序阶段证据。
+
+### 审查修复补充
+
+两项 P2 已通过先复现、再修复的回归：磁盘缓存此前将 8pt 的 2x/3x 生成图读成 16pt/24pt，现通过 Kingfisher serializer 保存实际 scale，使用 v2 磁盘命名空间，并仅在首次生产时写盘；非 2xx 和响应超限此前统一返回 URLSession -999，现保留首个拒绝原因并传递给后端调用方及 `onFailure`，主动 Task 取消不报告失败。测试覆盖 1x/2x/3x、新实例读取、HTTP 状态、Content-Length、累计字节和主动取消。
+
+最终 `InkMarkdown-Package` 在同一独立 iPhone 17 Pro / iOS 26.3.1 上 **357 通过，0 失败、0 跳过**（参数化展开 434 次），结果：`/tmp/InkMarkdown-review-fixes-final.xcresult`，日志：`/tmp/InkMarkdown-review-fixes-final.log`。失败复现分别保留在 `/tmp/InkMarkdown-review-scale-red.xcresult`、`/tmp/InkMarkdown-review-errors-red.xcresult`。`git diff --check` 通过；本次未重跑 ExampleApp UI 或 iOS 15 / iPad 验收。以下重构阶段记录保留为历史证据。
+
+### 重构阶段验证
+
+按 [ADR-012](decisions/ADR-012-pluggable-image-management.md) 完成图片管理边界重构：核心通过 `InkImageBackend` 注入完整后端，可选 `InkMarkdownKingfisher` product 提供 Kingfisher 8.12.0 实现。旧默认 URLSession 下载、传输代理与自有解码实现已删除，InkImageStore 仅保留呈现订阅桥接。生成图和全屏预览复用所选后端。接入与破坏式迁移见 [图片后端指南](contributor-guide/12-image-backends.md)。
+
+Xcode 26.3（17C529）、独立 iPhone 17 Pro / iOS 26.3.1 上，`InkMarkdown-Package` 的 xcresult 汇总为 **354 项通过，0 失败、0 跳过**（参数化展开后 427 次通过）。证据：`/tmp/InkMarkdown-Kingfisher-final.xcresult`；终端日志 `/tmp/InkMarkdown-Kingfisher-final.log`。纯 Package 的根目录未被 MCP 项目发现识别为 project/workspace，因此仅 Package 测试使用原生 xcodebuild，destination 来自 MCP 发现的运行环境。
+
+独立消费端 `InkMarkdownCoreConsumer` 与 `InkMarkdownKingfisherConsumer` 均构建通过；Core consumer 包含 `canImport(Kingfisher)` 编译期禁止检查，验证自定义后端不需要编译 Kingfisher。SPM 仍解析并下载包级依赖，不承诺零下载。这是本地未提交工作树验证，不是远端 CI 或发布验收；iOS 15 / iPad 尚未在本轮运行。
+
+ExampleApp 使用 XcodeBuildMCP 完成 Debug 宿主测试：**8 通过，0 失败、0 跳过**。结果位于 `~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-d04b98d79ed6/result-bundles/test_sim_2026-09-07T11-41-20-673Z_pid38782_0ed8072a.xcresult`。仍有 Xcode 对 Markdown 的 dependency-scan 警告；manifest 已显式声明该依赖。混用普通 build 与 test-products 的 DerivedData 曾导致旧 swiftmodule 遮蔽新 framework，宿主测试使用独立 `/tmp/InkMarkdown-Kingfisher-Hosted-DD` 后通过。
+
+最终 Release 经 XcodeBuildMCP 构建并启动成功，日志：`~/Library/Developer/XcodeBuildMCP/workspaces/InkMarkdown-d04b98d79ed6/logs/build_run_sim_2026-09-07T11-55-31-448Z_pid38782_3550558f.log`。Simulator 实际操作确认富媒体页的行内图片、真网块级图片、失败占位、行内公式和点击全屏预览显示正常。检查期间发现并修复直接 Auto Layout 宿主的零高度启动问题：图片初始/复用高度预留 placeholderHeight，加载结果更新 intrinsic content size；最终 354 项 Package 回归已包含此修改。全屏预览截图：`/var/folders/yp/356dkv3n2bq1pqqvdr5j7y5h0000gn/T/screenshot_optimized_21e19a5b-b3c5-4d7b-983e-24f0b947686f.jpg`。本次为局部 UI 冒烟，不代表完整人工矩阵或真机验收；8 项宿主测试记录早于最终布局调整。
+
+## 2026-09-07 架构深化联合终检（历史证据）
+
+表格 / SwiftUI 宿主等架构深化工作在合并 ADR-012 图片后端之前，曾在本地工作树完成联合终检（证据 SHA `f71cc292…` 附近）。本地证据：
 
 | 检查 | 结果 |
 | --- | --- |
@@ -20,7 +48,7 @@
 | 远程 CI | **未执行**（未 push） |
 | iOS 15 runtime | **未验证** |
 
-详细命令与路径见规划目录证据 `27-integrated-final-gates.md`（`.scratch/architecture-deepening-2026-09-07/evidence/`）。本轮不构成发布授权。
+详细命令与路径见规划目录证据 `27-integrated-final-gates.md`（`.scratch/architecture-deepening-2026-09-07/evidence/`）。该记录早于 ADR-012 合并，测试数量与当前候选不可直接等同；合并后需以新一轮验证为准。本轮不构成发布授权。
 
 ## 2026-09-06 审核修复验证
 
