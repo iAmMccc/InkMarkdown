@@ -88,7 +88,7 @@ swift-markdown Markup
 | 流式渲染 | 稳定前缀 / 活跃后缀增量解析，解析与显示双缓冲 | `InkStreamRenderer` |
 | 图片（opt-in） | 默认文本占位；`InkImageRendering.isEnabled = true` 启用真图（行内 `InkImageAttachment` + 独占块 `InkImageBlock`、Store、安全策略、降采样） | `Rendering/Image/`、`ExampleApp/ExampleApp/Detail/ImageDemoViewController.swift` |
 | 示例程序 | 富文本、块渲染、SSE、流式表格、性能测试、图片与公式/图表 Demo 入口 | `ExampleApp/` |
-| SwiftUI 桥接 | Block Presentation Continuity module 统一拥有周期、lineage、Thought live state 与 attachment；container 仅执行原子 apply plan 和有界 measurement，static / streaming / promotion / remount 共用同一规则 | [ADR-008](decisions/ADR-008-swiftui-adapter-architecture.md)、[ADR-009](decisions/ADR-009-block-presentation-continuity.md)、[module 设计](contributor-guide/11-block-presentation-continuity.md) |
+| SwiftUI 桥接 | Block Presentation Continuity module 统一拥有周期、lineage、Thought live state 与 attachment；container 仅执行原子 apply plan 和有界 measurement，static / streaming / promotion / remount 共用同一规则；宿主可提供 `preferredMeasurementWidth` 做首轮终态宽测量 | [ADR-008](decisions/ADR-008-swiftui-adapter-architecture.md)、[ADR-009](decisions/ADR-009-block-presentation-continuity.md)、[module 设计](contributor-guide/11-block-presentation-continuity.md)、[布局测量契约](contributor-guide/13-layout-measurement-contract.md) |
 | 测试集 | 行高、上下文样式、流式边界、性能一致性、语义快照骨架 | `Tests/InkMarkdownTests/` |
 
 **ExampleApp「公式与图表」**（用户可见总称，见 `CONTEXT.md`）提供三条验收路径：**组件 Pager**（LaTeX / Mermaid 分开展示）、**综合 Demo**（开启/关闭对照与失败错误条）、**SSE 流式**（块级闭合即生图）。LaTeX 与 Mermaid 均为 **opt-in**（默认关闭，不改变普通围栏语义）；架构与 Image Store 复用见 [ADR-007](decisions/ADR-007-local-generated-diagrams-and-formulas.md)。
@@ -103,6 +103,7 @@ swift-markdown Markup
 | 代码高亮 | 未内置语法高亮引擎 |
 | 背景绘制 | 行内代码背景与引用竖线依赖 TextKit 1 布局管理器 / block view |
 | 超长流式输入 | `InkStreamRenderer` 与 `InkMarkdownRenderSession` initializer 可配置 `maximumSourceLength`；默认 50,000，创建时固化 snapshot，流式与终态共用 canonical source |
+| 首轮测量宽 | Chat / table 宿主应在 layout 前提供有限列宽；推荐 `preferredMeasurementWidth`。未提供时依赖 bounds / window /（容器 iOS 15）Scene fallback。块级 `sizeThatFits` 未知宽返回 `noIntrinsicMetric`，不再硬编码 320。[布局测量契约审查](qa/InkMarkdown-layout-measurement-contract-review-2026-09-08.md) F1–F3 已按建议修复（代码+契约测试）；Simulator 交互/远程 CI 仍待宿主验收。 |
 | Mermaid 离线 PNG 测试 | 无 App 宿主的 SwiftPM runner 可能挂起离屏 WebProcess；唯一真实 PNG/右缘裁切关键链路已迁入 ExampleApp app-hosted test target，Package target 只保留确定性 addon/bridge 契约。Production renderer 仍只对 `.timedOut`、页面加载失败和页面进程终止丢弃页面并重试一次 |
 | 测试覆盖率 | 最新本地工作树回归见本文“本地验证基线”；**非远端 CI**。Block continuity 保留数据/状态关键路径自动化；真网图片与核心交互矩阵已在独立 iPhone 17 Pro 验收；**iOS/iPadOS 15 runtime 实测未交付**，完整产品可访问性、iPad Split View 与真机性能基线仍为 blocker |
 | 发布工程 | 已有 `0.0.1` public beta 与 CHANGELOG；`0.0.2` 的 adapter 代码、基础契约测试和 SwiftUI ExampleApp 入口已具备，iOS/iPadOS 15 验证、可访问性、完整语义矩阵与性能基线仍是 release blocker |

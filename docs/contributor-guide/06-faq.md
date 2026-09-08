@@ -149,7 +149,8 @@ LaTeX / Mermaid 默认关闭，且是独立 product。完整 opt-in 顺序：
 **解决方案**：
 1. **重写 `sizeThatFits` 与 `intrinsicContentSize`**：所有自定义 Block View 必须提供确定性的尺寸测量（如代码块按字号行高 padding 算高、表格按 StackView fittingSize 算高、分割线按线宽留白算高）。
 2. **布局解耦**：简单容器改用 Frame 布局（`layoutSubviews`）；复杂 Auto Layout 视图内部的父子约束应将坚硬的底部 pinning 优先级设为 999（`defaultHigh`），避免与临时零尺寸 mask 产生硬冲突。
-3. 详细排坑见 [09 SwiftUI UIViewRepresentable 踩坑指南 §11](09-swiftui-uiviewrepresentable-gotchas.md)。
+3. **首轮有限宽**：chat / table 宿主在 layout 前若已知终态内容宽，设置 `preferredMeasurementWidth` / `.preferredMeasurementWidth(_:)`，避免零宽测量与二次抬高。完整契约见 [13 布局测量契约](13-layout-measurement-contract.md)。
+4. 详细排坑见 [09 SwiftUI UIViewRepresentable 踩坑指南 §11](09-swiftui-uiviewrepresentable-gotchas.md)。
 
 ## 19. 控制台噪声（Simulator / 系统）
 

@@ -22,6 +22,7 @@ SwiftUI 的布局系统依赖 UIKit 视图向外宣告自身的尺寸。在最�
 1. **更新后主动失效尺寸**：在 [`InkMarkdownContainerView.updateBlocks(_:configuration:)`](../../Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift) 替换子视图末尾，显式调用 `setNeedsLayout()` 与 `invalidateIntrinsicContentSize()`。
 2. **严禁在 `layoutSubviews()` 中循环失效尺寸**：测量与布局共用 ``InkMarkdownContainerView`` 的块高度缓存；宽度变化时在 `measureContent` 入口换 cache 键并重测一次，不在 `layoutSubviews` 调用 `invalidateIntrinsicContentSize()`。
 3. **精准尺寸计算**：在 `intrinsicContentSize` 与 `sizeThatFits(_:)` 实现中，遍历当前所有 block views，依据目标宽度通过各子视图的 `sizeThatFits` 累加高度。各 Block 自身按排版规范承担其外边距，容器不再额外盲目累加。
+4. **首轮终态宽**：宿主在 bounds 仍为零时可设置 `preferredMeasurementWidth`，使首测按最终列宽进行。宽度解析顺序、高度门闩与列表 `SelfSizingInvalidation` 建议见 [13 布局测量契约](13-layout-measurement-contract.md)。
 
 ---
 

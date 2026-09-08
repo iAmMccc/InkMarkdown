@@ -12,10 +12,11 @@
 | 构建与运行测试 | [开发指南：构建与测试](04-development.md#构建与测试) |
 | 排查 CI 或 Xcode 工具链问题 | [CI 与工具链排坑](07-ci-and-toolchain-pitfalls.md) |
 | 排查渲染显示问题 | [FAQ](06-faq.md) → [ExampleApp 走查 SSOT](../qa/example-app-walkthrough-issues.md) → [开发指南](04-development.md) |
-| 排查 SwiftUI 桥接与布局问题 | [SwiftUI 排坑指南](09-swiftui-uiviewrepresentable-gotchas.md) → [SwiftUI 架构设计](08-swiftui-adapter-architecture.md) |
+| 排查 SwiftUI 桥接与布局问题 | [SwiftUI 排坑指南](09-swiftui-uiviewrepresentable-gotchas.md) → [布局测量契约](13-layout-measurement-contract.md) → [SwiftUI 架构设计](08-swiftui-adapter-architecture.md) |
 | 修改 block identity、状态延续或 promotion | [Block Presentation Continuity](11-block-presentation-continuity.md) → [ADR-009](../decisions/ADR-009-block-presentation-continuity.md) |
 | 运行 SwiftUI ExampleApp | [SwiftUI ExampleApp 指南](10-swiftui-example-app.md) |
 | 配置或替换图片管理模块 | [图片后端与迁移](12-image-backends.md) → [ADR-012](../decisions/ADR-012-pluggable-image-management.md) |
+| 流式/气泡高度与 preferred 宽度 | [布局测量契约](13-layout-measurement-contract.md) → [FAQ §17–§18](06-faq.md) |
 | 查找 API 或模块位置 | [模块详解](05-modules.md) → [swift-markdown API 速查](../references/swift-markdown-api-guide.md) |
 
 ## 文档结构说明
@@ -34,6 +35,7 @@
 | `10-swiftui-example-app.md` | How-to | ExampleApp 中静态、配置和流式 SwiftUI adapter 示例 |
 | `11-block-presentation-continuity.md` | Architecture | block lineage、live presentation state、reconciliation、measurement 与迁移设计 |
 | `12-image-backends.md` | How-to | Kingfisher / 自定义图片后端接口、资源责任及破坏式迁移 |
+| `13-layout-measurement-contract.md` | Architecture | 宿主宽度驱动的固有尺寸增长契约、高度门闩与列表宿主指南 |
 | `../qa/example-app-walkthrough-issues.md` | Troubleshooting | ExampleApp 六类走查问题 SSOT（症状、归因、已知限制） |
 
 ## 与其他文档的边界

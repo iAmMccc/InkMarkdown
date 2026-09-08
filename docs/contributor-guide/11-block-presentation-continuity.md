@@ -274,6 +274,8 @@ v0.0.2 不把这些职责加入 `InkRenderableBlock`，也不把它们混入 `In
 
 height invalidation callback 必须携带 lineage 与 attachment generation。若 callback 来自已退休 view、旧 generation 或已结束 cycle，module 忽略它，避免旧异步结果污染新布局。
 
+运行时宽度解析、`preferredMeasurementWidth`、高度门闩与宿主禁令见 [13 布局测量契约](13-layout-measurement-contract.md)；本文只定义 continuity measurement key 与失效语义。
+
 ## 12. MainActor 与资源清理
 
 continuity module 操作 UIView、interaction callback 和 layout invalidation，因此 reconciliation 与 attachment operation 全部在 `MainActor` 上执行。Markdown parsing 是否在后台进行是 renderer 的独立决策；进入 module 的 input 必须已经是本轮不可变 snapshot。
