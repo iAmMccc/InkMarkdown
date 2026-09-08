@@ -1,6 +1,7 @@
 import Testing
 import UIKit
 @testable import InkMarkdown
+import InkMarkdownSemanticCorpus
 
 @Suite("InkImagePreview backend 加载", .serialized)
 @MainActor

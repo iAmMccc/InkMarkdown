@@ -78,14 +78,14 @@ struct InkImageBlockPresentationAdapterTests {
     )
 
     blockA.prepareForReuse()
-    #expect(blockA.intrinsicContentSize.height == 0)
+    #expect(blockA.intrinsicContentSize.height == rendering.placeholderHeight)
     #expect(
-      blockA.sizeThatFits(CGSize(width: 240, height: CGFloat.greatestFiniteMagnitude)).height == 0
+      blockA.sizeThatFits(CGSize(width: 240, height: CGFloat.greatestFiniteMagnitude)).height == rendering.placeholderHeight
     )
 
     loader.succeed(1, image: makeSolidImage(width: 200, height: 80))
     for _ in 0..<20 { await Task.yield() }
-    #expect(blockA.intrinsicContentSize.height == 0)
+    #expect(blockA.intrinsicContentSize.height == rendering.placeholderHeight)
 
     let blockB = InkImageBlock(
       source: ImageSource(url: urlB),
@@ -101,7 +101,7 @@ struct InkImageBlockPresentationAdapterTests {
       CGSize(width: 240, height: CGFloat.greatestFiniteMagnitude)
     ).height
     #expect(heightB == 90)
-    #expect(blockA.intrinsicContentSize.height == 0)
+    #expect(blockA.intrinsicContentSize.height == rendering.placeholderHeight)
   }
 
   @Test
@@ -147,12 +147,12 @@ struct InkImageBlockPresentationAdapterTests {
 
     var rendering1 = InkImageRendering()
     rendering1.isEnabled = true
-    rendering1.loader = loader
+    rendering1.backend = TestImageBackend(loader)
 
     let store = InkImageStore()
     let source = ImageSource(url: url)
     let block1 = InkImageBlock(source: source, rendering: rendering1, store: store)
-    block1.configure(containerWidth: 300, loader: store.loader(for: rendering))
+    block1.configure(containerWidth: 300, loader: store.loader(for: rendering1))
 
     try await loader.waitUntilStarted(requestID: 1)
     let testImage = makeSolidImage(width: 200, height: 120)
