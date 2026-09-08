@@ -163,6 +163,11 @@ struct AccessibilityAndDynamicTypeTests {
     let accessibilityStream = InkStreamTableView(layoutMode: .scroll, configuration: accessibility)
     accessibilityStream.setHeaders(streamHeaders, referenceRows: streamRows)
     accessibilityStream.appendRow(streamRows[0])
+    for stream in [normalStream, accessibilityStream] {
+      stream.frame = CGRect(x: 0, y: 0, width: 640, height: 200)
+      stream.setNeedsLayout()
+      stream.layoutIfNeeded()
+    }
 
     let normalCell = descendants(of: UITextView.self, in: normalStream)[0]
     let accessibilityCell = descendants(of: UITextView.self, in: accessibilityStream)[0]

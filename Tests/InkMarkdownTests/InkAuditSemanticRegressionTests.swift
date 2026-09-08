@@ -109,6 +109,8 @@ struct InkAuditSemanticRegressionTests {
     let blocks = InkBlockRenderer.render(source, configuration: configuration)
     let table = try #require(blocks.compactMap { $0 as? InkTableBlock }.first)
     let view = table.makeView()
+    view.frame = CGRect(x: 0, y: 0, width: 744, height: 400)
+    view.setNeedsLayout()
     view.layoutIfNeeded()
 
     #expect(filterCallCount == 1)
@@ -143,6 +145,9 @@ struct InkAuditSemanticRegressionTests {
     let stream = InkStreamTableView(layoutMode: .wrap, configuration: configuration)
     stream.setHeaders(["H@@@1", "H@@@2"], referenceRows: [["R@@@1", "R@@@2"]])
     stream.appendRow(["B@@@1", "B@@@2"])
+    stream.frame = CGRect(x: 0, y: 0, width: 744, height: 400)
+    stream.setNeedsLayout()
+    stream.layoutIfNeeded()
 
     #expect(filterCallCount == 6)
     #expect(stream.rowCount == 1)

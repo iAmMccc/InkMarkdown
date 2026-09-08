@@ -75,17 +75,29 @@ final class InkTableBlockView: UIView {
 
   override func layoutSubviews() {
     super.layoutSubviews()
-    // scroll 内容保持自然宽度；宿主宽度变化只应改变 UIScrollView viewport。
-    guard layoutMode == .wrap, !isRebuildingForWidth, bounds.width > 0 else { return }
+    guard !isRebuildingForWidth, bounds.width > 0 else { return }
     let contentWidth = InkTableRenderHelper.contentWidth(for: self, config: config)
-    guard abs(contentWidth - lastMeasuredContentWidth) > 0.5 else { return }
+    guard contentWidth > 0 else { return }
+    let pendingLayout = lastSnapshot?.hasColumnLayout != true
+    if layoutMode == .wrap {
+      guard pendingLayout || abs(contentWidth - lastMeasuredContentWidth) > 0.5 else { return }
+    } else if !pendingLayout {
+      return
+    }
     rebuildLayout(forContentWidth: contentWidth)
   }
 
   override func sizeThatFits(_ size: CGSize) -> CGSize {
-    let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 320)
+    let targetWidth = InkDisplayMetrics.resolvedMeasurementWidth(
+      proposal: size.width,
+      bounds: bounds.width
+    )
+    guard targetWidth > 0 else {
+      return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+    }
     let requestedContentWidth = max(1, targetWidth - config.horizontalInset * 2)
-    if layoutMode == .wrap, abs(requestedContentWidth - lastMeasuredContentWidth) > 0.5 {
+    let pendingLayout = lastSnapshot?.hasColumnLayout != true
+    if pendingLayout || (layoutMode == .wrap && abs(requestedContentWidth - lastMeasuredContentWidth) > 0.5) {
       rebuildLayout(forContentWidth: requestedContentWidth)
     }
     let availableWidth = max(0, targetWidth - config.horizontalInset * 2)
@@ -118,21 +130,26 @@ final class InkTableBlockView: UIView {
   // MARK: - Setup
 
   private func rebuildLayout(forContentWidth contentWidth: CGFloat) {
-    guard !isRebuildingForWidth else { return }
+    guard contentWidth > 0, !isRebuildingForWidth else { return }
     isRebuildingForWidth = true
     defer { isRebuildingForWidth = false }
 
     let snapshot = presentation.layout(contentWidth: contentWidth)
     lastSnapshot = snapshot
-    lastMeasuredContentWidth = snapshot.contentWidth
+    lastMeasuredContentWidth = snapshot.hasColumnLayout ? snapshot.contentWidth : 0
+    guard snapshot.hasColumnLayout else { return }
 
-    contentRoot?.removeFromSuperview()
-    contentRoot = nil
-    contentStack = nil
-    if let copyGestureRecognizer {
-      removeGestureRecognizer(copyGestureRecognizer)
-      self.copyGestureRecognizer = nil
+    if let stack = contentStack {
+      if let copyGestureRecognizer {
+        removeGestureRecognizer(copyGestureRecognizer)
+        self.copyGestureRecognizer = nil
+      }
+      stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+      populateStack(stack, snapshot: snapshot)
+      stack.layoutIfNeeded()
+      return
     }
+
     layoutContentWidthOverride = contentWidth
     defer { layoutContentWidthOverride = nil }
     setup(using: snapshot)
@@ -151,15 +168,20 @@ final class InkTableBlockView: UIView {
       alignments: alignments,
       contentWidth: contentWidth
     )
-    lastMeasuredContentWidth = lastSnapshot?.contentWidth ?? contentWidth
+    lastMeasuredContentWidth = lastSnapshot?.hasColumnLayout == true
+      ? (lastSnapshot?.contentWidth ?? 0)
+      : 0
   }
 
   private func setup() {
     let contentWidth = layoutContentWidthOverride
       ?? InkTableRenderHelper.contentWidth(for: self, config: config)
+    if lastSnapshot?.hasColumnLayout != true, contentWidth > 0 {
+      lastSnapshot = presentation.layout(contentWidth: contentWidth)
+    }
     let snapshot = lastSnapshot ?? presentation.layout(contentWidth: contentWidth)
     lastSnapshot = snapshot
-    lastMeasuredContentWidth = snapshot.contentWidth
+    lastMeasuredContentWidth = snapshot.hasColumnLayout ? snapshot.contentWidth : 0
     setup(using: snapshot)
   }
 
@@ -257,6 +279,7 @@ final class InkTableBlockView: UIView {
   // MARK: - 填充行
 
   private func populateStack(_ stack: UIStackView, snapshot: InkTableLayoutSnapshot) {
+    guard snapshot.hasColumnLayout else { return }
     if !snapshot.headers.isEmpty {
       let headerRow = UIView()
       InkTableRenderHelper.makeRow(

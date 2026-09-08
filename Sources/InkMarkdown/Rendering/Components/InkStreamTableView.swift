@@ -46,30 +46,54 @@ public final class InkStreamTableView: UIView {
 
   public override func layoutSubviews() {
     super.layoutSubviews()
-    // scroll 内容保持自然宽度；宿主宽度变化只应改变 UIScrollView viewport。
-    guard layoutMode == .wrap, !isRebuildingForWidth, lastSnapshot != nil, bounds.width > 0 else { return }
+    guard !isRebuildingForWidth, lastSnapshot != nil, bounds.width > 0 else { return }
     let contentWidth = InkTableRenderHelper.contentWidth(for: self, config: config)
-    guard abs(contentWidth - (lastSnapshot?.contentWidth ?? 0)) > 0.5 else { return }
+    guard contentWidth > 0 else { return }
+
+    let pendingLayout = lastSnapshot?.hasColumnLayout != true
+    if layoutMode == .wrap {
+      // wrap：首轮正宽或宽度变化才重建。scroll 内容保持自然宽度，仅补做未知宽后的首次布局。
+      guard pendingLayout || abs(contentWidth - (lastSnapshot?.contentWidth ?? 0)) > 0.5 else { return }
+    } else if !pendingLayout {
+      return
+    }
 
     // 宽度变化只重算列布局；不调用 onHeightChange，避免在布局栈中递归触发宿主尺寸失效。
     isRebuildingForWidth = true
     defer { isRebuildingForWidth = false }
     let snapshot = presentation.layout(contentWidth: contentWidth)
     lastSnapshot = snapshot
-    if snapshot.update == .fullRebuild {
+    if snapshot.update == .fullRebuild || pendingLayout {
       rebuildAllRows(from: snapshot)
     }
   }
 
   // MARK: - Public API
 
-  /// 设置表头（仅调用一次，后续调用会忽略）
+  /// 设置表头（仅调用一次，后续调用会忽略）。
+  ///
+  /// 宿主内容宽未知时只接纳表头与参考行，不建列、不触发 `onHeightChange`；
+  /// 真实宽到达后再布局。第二次调用仍忽略，避免丢失已接纳内容。
   /// - Parameters:
   ///   - headers: 表头文字
   ///   - alignments: 列对齐方式
   ///   - referenceRows: 用于列宽计算的参考数据（不会渲染），传入全部行数据可获得最优列宽
   public func setHeaders(_ headers: [String], alignments: [Table.ColumnAlignment?] = [], referenceRows: [[String]] = []) {
-    let contentWidth = InkTableRenderHelper.contentWidth(for: self, config: config)
+    setHeaders(
+      headers,
+      alignments: alignments,
+      referenceRows: referenceRows,
+      contentWidth: InkTableRenderHelper.contentWidth(for: self, config: config)
+    )
+  }
+
+  /// 按指定内容宽接纳表头。`contentWidth <= 0` 时只保存数据。
+  func setHeaders(
+    _ headers: [String],
+    alignments: [Table.ColumnAlignment?] = [],
+    referenceRows: [[String]] = [],
+    contentWidth: CGFloat
+  ) {
     guard let snapshot = presentation.setHeaders(
       headers.map { .raw($0) },
       referenceRows: referenceRows.map { row in row.map { .raw($0) } },
@@ -79,6 +103,7 @@ public final class InkStreamTableView: UIView {
       return
     }
     lastSnapshot = snapshot
+    guard snapshot.hasColumnLayout else { return }
     let headerRow = UIView()
     InkTableRenderHelper.makeRow(
       cells: snapshot.headers,
@@ -95,9 +120,14 @@ public final class InkStreamTableView: UIView {
 
   /// 追加一行数据（SSE 每吐出一行时调用）
   /// 自动忽略 Markdown 分隔行（如 `---`、`:---`、`---:`、`:---:`）
+  ///
+  /// 未知宽时只接纳行数据，不建列、不触发 `onHeightChange`。
   public func appendRow(_ cells: [String]) {
-    let contentWidth = lastSnapshot?.contentWidth
-      ?? InkTableRenderHelper.contentWidth(for: self, config: config)
+    appendRow(cells, contentWidth: currentLayoutContentWidth)
+  }
+
+  /// 按指定内容宽追加行。`contentWidth <= 0` 时只保存数据。
+  func appendRow(_ cells: [String], contentWidth: CGFloat) {
     guard let snapshot = presentation.appendRow(
       cells.map { .raw($0) },
       contentWidth: contentWidth
@@ -105,6 +135,7 @@ public final class InkStreamTableView: UIView {
       return
     }
     lastSnapshot = snapshot
+    guard snapshot.hasColumnLayout else { return }
 
     switch snapshot.update {
     case .fullRebuild:
@@ -131,6 +162,18 @@ public final class InkStreamTableView: UIView {
 
   /// 当前已渲染的行数
   public var rowCount: Int { presentation.rows.count }
+
+  /// 已按已知内容宽完成列布局。未知宽接纳阶段为 `false`。
+  var hasColumnLayout: Bool { lastSnapshot?.hasColumnLayout ?? false }
+
+  var layoutSnapshot: InkTableLayoutSnapshot? { lastSnapshot }
+
+  private var currentLayoutContentWidth: CGFloat {
+    if let snapshot = lastSnapshot, snapshot.hasColumnLayout {
+      return snapshot.contentWidth
+    }
+    return InkTableRenderHelper.contentWidth(for: self, config: config)
+  }
 
   // MARK: - Setup
 

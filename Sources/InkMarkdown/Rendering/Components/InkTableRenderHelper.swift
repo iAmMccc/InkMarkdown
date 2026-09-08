@@ -31,8 +31,11 @@ import Markdown
 
   /// 返回表格内容区宽度。列宽上限、测量和实际 row 约束必须使用同一输入，
   /// 因此这里扣除表格两侧 inset，而不是回退到全局 screen 宽度。
+  /// 宿主宽未知时返回 0，禁止用假宽度重建列布局。
   static func contentWidth(for view: UIView, config: InkAppearance.Table) -> CGFloat {
-    max(1, InkDisplayMetrics.availableWidth(for: view) - config.horizontalInset * 2)
+    let available = InkDisplayMetrics.availableWidth(for: view)
+    guard available > 0 else { return 0 }
+    return max(1, available - config.horizontalInset * 2)
   }
 
   static func makeRow(
@@ -252,7 +255,8 @@ import Markdown
     maximumColumnWidth: CGFloat? = nil
   ) -> [CGFloat] {
     let colCount = headers.count
-    guard colCount > 0 else { return [] }
+    // 未知容器宽不夹到 1pt 再产出等分比例；正宽到达后再测。
+    guard colCount > 0, containerWidth > 0 else { return [] }
 
     let headerFont = font(isHeader: true, config: config, configuration: configuration)
     let bodyFont = font(isHeader: false, config: config, configuration: configuration)

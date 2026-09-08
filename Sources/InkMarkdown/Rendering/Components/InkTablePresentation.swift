@@ -82,6 +82,9 @@ struct InkTableLayoutSnapshot {
 
   var originalHeaders: [String] { headers.map(\.original) }
   var originalRows: [[String]] { rows.map { $0.map(\.original) } }
+
+  /// 已按已知内容宽算出列布局。未知宽接纳只带表头/行，此值为 `false`。
+  var hasColumnLayout: Bool { contentWidth > 0 && !columnWidths.isEmpty }
 }
 
 /// 表格呈现状态：集中来源接纳、测量与列宽失效。静态/流式只选输入操作。
@@ -120,7 +123,7 @@ struct InkTablePresentation {
     self.referenceRows = []
     self.alignments = alignments
     hasAcceptedHeaders = !self.headers.isEmpty
-    return recomputeLayout(contentWidth: contentWidth, update: .fullRebuild)
+    return layoutIfWidthKnown(contentWidth: contentWidth, update: .fullRebuild)
   }
 
   /// 流式首次接纳表头与测量参考行。已接纳后返回 `nil`（保持既有第二次 setHeaders 忽略契约）。
@@ -136,7 +139,7 @@ struct InkTablePresentation {
     rows = []
     self.alignments = alignments
     hasAcceptedHeaders = true
-    return recomputeLayout(contentWidth: contentWidth, update: .fullRebuild)
+    return layoutIfWidthKnown(contentWidth: contentWidth, update: .fullRebuild)
   }
 
   /// 追加一行。短行可仅标记 append；需扩列时要求全量重建。分隔行返回 `nil`。
@@ -149,9 +152,12 @@ struct InkTablePresentation {
       return nil
     }
     let prepared = cellSources.accepted(using: configuration)
-    let width = contentWidth ?? max(lastContentWidth, 1)
-    let needsExpand = rowNeedsColumnExpand(prepared, contentWidth: width)
     rows.append(prepared)
+    let width = contentWidth ?? lastContentWidth
+    guard width > 0 else {
+      return makeDeferredSnapshot()
+    }
+    let needsExpand = cachedColumnWidths.isEmpty || rowNeedsColumnExpand(prepared, contentWidth: width)
     if needsExpand || abs(width - lastContentWidth) > 0.5 {
       return recomputeLayout(contentWidth: width, update: .fullRebuild)
     }
@@ -163,9 +169,12 @@ struct InkTablePresentation {
     guard hasAcceptedHeaders else {
       return makeSnapshot(update: .none, contentWidth: contentWidth, columnWidths: [])
     }
+    guard contentWidth > 0 else {
+      return makeDeferredSnapshot()
+    }
     switch layoutMode {
     case .wrap:
-      if abs(contentWidth - lastContentWidth) <= 0.5 {
+      if !cachedColumnWidths.isEmpty, abs(contentWidth - lastContentWidth) <= 0.5 {
         return makeSnapshot(update: .none, contentWidth: lastContentWidth, columnWidths: cachedColumnWidths)
       }
       return recomputeLayout(contentWidth: contentWidth, update: .fullRebuild)
@@ -179,10 +188,26 @@ struct InkTablePresentation {
     }
   }
 
+  /// 未知宽只保留已接纳内容，不算列宽、不缓存假布局。
+  private mutating func layoutIfWidthKnown(
+    contentWidth: CGFloat,
+    update: InkTableLayoutSnapshot.Update
+  ) -> InkTableLayoutSnapshot {
+    guard contentWidth > 0 else {
+      lastContentWidth = 0
+      cachedColumnWidths = []
+      return makeDeferredSnapshot()
+    }
+    return recomputeLayout(contentWidth: contentWidth, update: update)
+  }
+
   private mutating func recomputeLayout(
     contentWidth: CGFloat,
     update: InkTableLayoutSnapshot.Update
   ) -> InkTableLayoutSnapshot {
+    guard contentWidth > 0 else {
+      return makeDeferredSnapshot()
+    }
     let measureRows = referenceRows + rows
     let maximumColumnWidth: CGFloat? = layoutMode == .scroll ? .greatestFiniteMagnitude : nil
     let widths = InkTableRenderHelper.measureColumnContentWidths(
@@ -215,6 +240,19 @@ struct InkTablePresentation {
       contentWidth: contentWidth,
       columnWidths: columnWidths,
       widthMode: widthMode,
+      headers: headers,
+      rows: rows,
+      alignments: alignments,
+      layoutMode: layoutMode
+    )
+  }
+
+  private func makeDeferredSnapshot() -> InkTableLayoutSnapshot {
+    InkTableLayoutSnapshot(
+      update: .none,
+      contentWidth: 0,
+      columnWidths: [],
+      widthMode: layoutMode == .wrap ? .ratio([]) : .fixed([]),
       headers: headers,
       rows: rows,
       alignments: alignments,

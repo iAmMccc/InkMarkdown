@@ -493,4 +493,143 @@ struct InkTablePresentationLayoutTests {
     #expect(filterCallCount == initialCount)
     #expect(presentation.rows.count == 0)
   }
+
+  @Test("零宽接纳只保存内容且保持单次 setHeaders；正宽恢复后与直接该宽初始化列宽一致")
+  func layout_zeroWidthAccept_recoversConsistentWithDirectInit() {
+    var configuration = InkConfiguration.standard
+    configuration.appearance.supportsDynamicType = false
+    let headers: [InkTableCellSource] = [.raw("名称"), .raw("说明")]
+    let reference: [[InkTableCellSource]] = [[.raw(String(repeating: "参考列长样本", count: 8)), .raw("短")]]
+    let body: [InkTableCellSource] = [.raw("短"), .raw("行内容")]
+    let recoveredWidth: CGFloat = 640
+
+    var deferred = InkTablePresentation(layoutMode: .wrap, configuration: configuration)
+    let pendingHeaders = deferred.setHeaders(
+      headers,
+      referenceRows: reference,
+      contentWidth: 0
+    )
+    #expect(pendingHeaders != nil)
+    #expect(pendingHeaders?.hasColumnLayout == false)
+    #expect(pendingHeaders?.columnWidths.isEmpty == true)
+    #expect(pendingHeaders?.contentWidth == 0)
+    #expect(pendingHeaders?.originalHeaders == ["名称", "说明"])
+    #expect(deferred.setHeaders(headers, referenceRows: reference, contentWidth: recoveredWidth) == nil)
+
+    let pendingRow = deferred.appendRow(body, contentWidth: 0)
+    #expect(pendingRow?.hasColumnLayout == false)
+    #expect(pendingRow?.columnWidths.isEmpty == true)
+    #expect(deferred.rows.count == 1)
+    #expect(deferred.rows[0].map(\.original) == ["短", "行内容"])
+
+    let recovered = deferred.layout(contentWidth: recoveredWidth)
+    #expect(recovered.hasColumnLayout)
+    #expect(recovered.update == .fullRebuild)
+    #expect(recovered.contentWidth == recoveredWidth)
+
+    var direct = InkTablePresentation(layoutMode: .wrap, configuration: configuration)
+    _ = direct.setHeaders(headers, referenceRows: reference, contentWidth: recoveredWidth)
+    _ = direct.appendRow(body, contentWidth: recoveredWidth)
+    let directSnap = direct.layout(contentWidth: recoveredWidth)
+
+    #expect(recovered.columnWidths.count == directSnap.columnWidths.count)
+    for (lhs, rhs) in zip(recovered.columnWidths, directSnap.columnWidths) {
+      #expect(abs(lhs - rhs) < 0.5)
+    }
+    #expect(InkTableRenderHelper.widthsToRatios(recovered.columnWidths) != [])
+    #expect(recovered.originalHeaders == directSnap.originalHeaders)
+    #expect(recovered.originalRows == directSnap.originalRows)
+
+    var deferredStatic = InkTablePresentation(layoutMode: .wrap, configuration: configuration)
+    let pendingStatic = deferredStatic.replace(
+      headers: headers,
+      rows: [body],
+      contentWidth: 0
+    )
+    #expect(pendingStatic.hasColumnLayout == false)
+    let recoveredStatic = deferredStatic.layout(contentWidth: recoveredWidth)
+    var directStatic = InkTablePresentation(layoutMode: .wrap, configuration: configuration)
+    let directStaticSnap = directStatic.replace(
+      headers: headers,
+      rows: [body],
+      contentWidth: recoveredWidth
+    )
+    #expect(recoveredStatic.columnWidths.count == directStaticSnap.columnWidths.count)
+    for (lhs, rhs) in zip(recoveredStatic.columnWidths, directStaticSnap.columnWidths) {
+      #expect(abs(lhs - rhs) < 0.5)
+    }
+  }
+
+  @Test("未知宽接纳与追加不触发 onHeightChange，恢复后高度与直接该宽初始化一致")
+  func streamTable_unknownWidthDoesNotNotifyHeight() {
+    var configuration = InkConfiguration.standard
+    configuration.appearance.supportsDynamicType = false
+    let recoveredWidth: CGFloat = 640
+
+    let deferred = InkStreamTableView(layoutMode: .wrap, configuration: configuration)
+    var deferredHeightNotifications = 0
+    deferred.onHeightChange = { deferredHeightNotifications += 1 }
+    deferred.setHeaders(
+      ["名称", "说明"],
+      referenceRows: [[String(repeating: "参考列长样本", count: 8), "短"]],
+      contentWidth: 0
+    )
+    deferred.appendRow(["短", "行内容"], contentWidth: 0)
+    #expect(deferredHeightNotifications == 0)
+    #expect(deferred.hasColumnLayout == false)
+    #expect(deferred.layoutSnapshot?.columnWidths.isEmpty == true)
+    #expect(deferred.rowCount == 1)
+    #expect(textViews(in: deferred).isEmpty)
+
+    deferred.frame = CGRect(x: 0, y: 0, width: recoveredWidth, height: 10)
+    deferred.setNeedsLayout()
+    deferred.layoutIfNeeded()
+    #expect(deferredHeightNotifications == 0)
+    #expect(deferred.hasColumnLayout)
+    #expect(deferred.layoutSnapshot?.contentWidth ?? 0 > 0)
+
+    let direct = InkStreamTableView(layoutMode: .wrap, configuration: configuration)
+    var directHeightNotifications = 0
+    direct.onHeightChange = { directHeightNotifications += 1 }
+    direct.frame = CGRect(x: 0, y: 0, width: recoveredWidth, height: 10)
+    direct.setNeedsLayout()
+    direct.layoutIfNeeded()
+    direct.setHeaders(
+      ["名称", "说明"],
+      referenceRows: [[String(repeating: "参考列长样本", count: 8), "短"]],
+      contentWidth: InkTableRenderHelper.contentWidth(for: direct, config: configuration.appearance.table)
+    )
+    direct.appendRow(
+      ["短", "行内容"],
+      contentWidth: InkTableRenderHelper.contentWidth(for: direct, config: configuration.appearance.table)
+    )
+    #expect(directHeightNotifications == 2)
+    #expect(direct.hasColumnLayout)
+
+    let recoveredWidths = deferred.layoutSnapshot?.columnWidths ?? []
+    let directWidths = direct.layoutSnapshot?.columnWidths ?? []
+    #expect(recoveredWidths.count == directWidths.count)
+    for (lhs, rhs) in zip(recoveredWidths, directWidths) {
+      #expect(abs(lhs - rhs) < 0.5)
+    }
+
+    let recoveredHeight = deferred.systemLayoutSizeFitting(
+      CGSize(width: recoveredWidth, height: UIView.layoutFittingCompressedSize.height),
+      withHorizontalFittingPriority: .required,
+      verticalFittingPriority: .fittingSizeLevel
+    ).height
+    let directHeight = direct.systemLayoutSizeFitting(
+      CGSize(width: recoveredWidth, height: UIView.layoutFittingCompressedSize.height),
+      withHorizontalFittingPriority: .required,
+      verticalFittingPriority: .fittingSizeLevel
+    ).height
+    #expect(abs(recoveredHeight - directHeight) < 1)
+  }
+
+  private func textViews(in root: UIView) -> [UITextView] {
+    root.subviews.flatMap { child -> [UITextView] in
+      let matches = child is UITextView ? [child as! UITextView] : []
+      return matches + textViews(in: child)
+    }
+  }
 }
