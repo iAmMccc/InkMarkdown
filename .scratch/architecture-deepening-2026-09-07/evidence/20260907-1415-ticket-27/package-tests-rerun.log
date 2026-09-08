@@ -1,0 +1,1296 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -scheme InkMarkdown-Package -destination "platform=iOS Simulator,id=10F638E2-84FB-42AE-9BAE-0E246F463E8D" -resultBundlePath /Users/shizihan/DailyUse/Github/InkMarkdown/.scratch/architecture-deepening-2026-09-07/evidence/20260907-1415-ticket-27/package-tests-rerun.xcresult
+
+Resolve Package Graph
+2026-09-07 14:33:28.373 xcodebuild[70300:6023635] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+
+
+Resolved source packages:
+  InkMarkdown: /Users/shizihan/DailyUse/Github/InkMarkdown
+  swift-markdown: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/swift-markdown @ local
+  cmark-gfm: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/swift-cmark @ local
+  iosMath: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/iosMath @ local
+
+Writing result bundle at path:
+	/Users/shizihan/DailyUse/Github/InkMarkdown/.scratch/architecture-deepening-2026-09-07/evidence/20260907-1415-ticket-27/package-tests-rerun.xcresult
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:10F638E2-84FB-42AE-9BAE-0E246F463E8D, OS:26.5, name:iPhone 17 Pro }
+{ platform:iOS Simulator, arch:x86_64, id:10F638E2-84FB-42AE-9BAE-0E246F463E8D, OS:26.5, name:iPhone 17 Pro }
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (28 targets)
+    Target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown_InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSemanticCorpus' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownSwiftUITests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSemanticCorpus' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownSemanticCorpus' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownMermaidTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownLaTeXTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'InkMarkdownCoreContractTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownAddonContractTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown_InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdown_InkMarkdownMermaid' in project 'InkMarkdown' (no dependencies)
+    Target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'iosMath' in project 'iosMath'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+        ➜ Explicit dependency on target 'iosMath_iosMath' in project 'iosMath'
+    Target 'iosMath' in project 'iosMath'
+        ➜ Explicit dependency on target 'iosMath_iosMath' in project 'iosMath'
+    Target 'iosMath_iosMath' in project 'iosMath' (no dependencies)
+    Target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'CAtomic' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm-extensions' in project 'cmark-gfm'
+    Target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'CAtomic' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm-extensions' in project 'cmark-gfm'
+    Target 'cmark-gfm-extensions' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm-extensions' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+    Target 'cmark-gfm-extensions' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+    Target 'cmark-gfm' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+    Target 'cmark-gfm' in project 'cmark-gfm' (no dependencies)
+    Target 'CAtomic' in project 'swift-markdown' (no dependencies)
+    Target 'ExampleAppPolicyTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'ExampleAppChatPolicy' in project 'InkMarkdown'
+    Target 'ExampleAppChatPolicy' in project 'InkMarkdown' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk /Users/shizihan/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown/.swiftpm/xcode
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o /Users/shizihan/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-6cfe768891a92b912361537c460fe42b.sdkstatcache
+
+Copy /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/InkMarkdown_InkMarkdownMermaid.bundle /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdown_InkMarkdownMermaid.bundle (in target 'InkMarkdownAddonContractTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdown_InkMarkdownMermaid.bundle /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest
+
+Copy /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/iosMath_iosMath.bundle /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/iosMath_iosMath.bundle (in target 'InkMarkdownAddonContractTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/iosMath_iosMath.bundle /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownAddonContractTests.build/empty-InkMarkdownAddonContractTests.plist (in target 'InkMarkdownAddonContractTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownAddonContractTests.build/empty-InkMarkdownAddonContractTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/InkMarkdown_InkMarkdownMermaid.bundle -scanforprivacyfile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/iosMath_iosMath.bundle -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/Info.plist
+
+Copy /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/iosMath_iosMath.bundle /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/iosMath_iosMath.bundle (in target 'InkMarkdownLaTeXTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/iosMath_iosMath.bundle /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownLaTeXTests.build/empty-InkMarkdownLaTeXTests.plist (in target 'InkMarkdownLaTeXTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownLaTeXTests.build/empty-InkMarkdownLaTeXTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/iosMath_iosMath.bundle -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/Info.plist
+
+Copy /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownMermaidTests.xctest/InkMarkdown_InkMarkdownMermaid.bundle /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdown_InkMarkdownMermaid.bundle (in target 'InkMarkdownMermaidTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdown_InkMarkdownMermaid.bundle /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownMermaidTests.xctest
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownMermaidTests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownMermaidTests.build/empty-InkMarkdownMermaidTests.plist (in target 'InkMarkdownMermaidTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownMermaidTests.build/empty-InkMarkdownMermaidTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownMermaidTests.xctest/InkMarkdown_InkMarkdownMermaid.bundle -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownMermaidTests.xctest/Info.plist
+
+Resolve Package Graph
+
+Resolve Package Graph
+
+Test Suite 'All tests' started at 2026-09-07 14:34:30.933.
+Test Suite 'All tests' passed at 2026-09-07 14:34:30.997.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.064) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64-apple-ios13.0-simulator
+◇ Suite "ChatScrollPolicy 滚动与吐字暂停策略" started.
+◇ Test "上滑超出 120pt 阈值后不再自动滚动" started.
+◇ Test "粘底且内容增长时应自动滚动" started.
+◇ Test "新消息发送重置粘底" started.
+◇ Test "shouldPauseDisplay 仅在拖拽/减速期间为 true" started.
+◇ Test "offsetChanged 在非拖拽时刷新粘底 latch" started.
+✔ Test "shouldPauseDisplay 仅在拖拽/减速期间为 true" passed after 0.001 seconds.
+✔ Test "新消息发送重置粘底" passed after 0.001 seconds.
+✔ Test "上滑超出 120pt 阈值后不再自动滚动" passed after 0.001 seconds.
+✔ Test "offsetChanged 在非拖拽时刷新粘底 latch" passed after 0.001 seconds.
+✔ Test "粘底且内容增长时应自动滚动" passed after 0.001 seconds.
+✔ Suite "ChatScrollPolicy 滚动与吐字暂停策略" passed after 0.041 seconds.
+✔ Test run with 5 tests in 1 suite passed after 0.042 seconds.
+Resolve Package Graph
+
+Test Suite 'All tests' started at 2026-09-07 14:35:36.858.
+Test Suite 'All tests' passed at 2026-09-07 14:35:36.899.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.041) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64-apple-ios13.0-simulator
+◇ Suite "生成型 addon 完整渲染链路" started.
+◇ Test "LaTeX 注册后经 BlockRenderer-ImageBlock-Store 产出图片" started.
+✔ Test "LaTeX 注册后经 BlockRenderer-ImageBlock-Store 产出图片" passed after 10.438 seconds.
+◇ Test "Mermaid 注册后经 BlockRenderer-ImageBlock-Store 产出图片" started.
+✔ Test "Mermaid 注册后经 BlockRenderer-ImageBlock-Store 产出图片" passed after 0.957 seconds.
+✔ Suite "生成型 addon 完整渲染链路" passed after 11.411 seconds.
+✔ Test run with 2 tests in 1 suite passed after 11.413 seconds.
+Resolve Package Graph
+
+Resolve Package Graph
+
+Test Suite 'All tests' started at 2026-09-07 14:36:44.543.
+Test Suite 'All tests' passed at 2026-09-07 14:36:44.561.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.018) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64-apple-ios13.0-simulator
+◇ Suite "核心库 addon 注册边界" started.
+◇ Test "仅链接 InkMarkdown 时已知 addon owner 不得隐式注册" started.
+✔ Test "仅链接 InkMarkdown 时已知 addon owner 不得隐式注册" passed after 0.011 seconds.
+◇ Test "LaTeX 未注册时完整 block-store 链路明确失败" started.
+Resolve Package Graph
+
+✔ Test "LaTeX 未注册时完整 block-store 链路明确失败" passed after 4.014 seconds.
+◇ Test "Mermaid 未注册时完整 block-store 链路明确失败" started.
+✔ Test "Mermaid 未注册时完整 block-store 链路明确失败" passed after 0.082 seconds.
+✔ Suite "核心库 addon 注册边界" passed after 4.129 seconds.
+✔ Test run with 3 tests in 1 suite passed after 4.130 seconds.
+Resolve Package Graph
+
+Resolve Package Graph
+
+Test Suite 'All tests' started at 2026-09-07 14:37:02.802.
+Test Suite 'InkMarkdownLaTeXTests.xctest' started at 2026-09-07 14:37:02.898.
+Test Suite 'InkLaTeXImageRendererTests' started at 2026-09-07 14:37:02.898.
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testDisplayContextNormalizesSubunitAndNonFiniteScalesBeforeRendering]' started.
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testDisplayContextNormalizesSubunitAndNonFiniteScalesBeforeRendering]' passed (0.027 seconds).
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testRendererAcceptsUIKitDisplayScales]' started.
+Resolve Package Graph
+
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testRendererAcceptsUIKitDisplayScales]' passed (9.536 seconds).
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testRendererRejectsOversizedAndUnbalancedInputBeforeUIWork]' started.
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testRendererRejectsOversizedAndUnbalancedInputBeforeUIWork]' passed (0.057 seconds).
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testRendererRejectsScaleAboveLaTeXLimitBeforeUIWork]' started.
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testRendererRejectsScaleAboveLaTeXLimitBeforeUIWork]' passed (0.007 seconds).
+Resolve Package Graph
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testRendererScalesCompleteFormulaToPixelWidthAndHeightBudgets]' started.
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testRendererScalesCompleteFormulaToPixelWidthAndHeightBudgets]' passed (0.087 seconds).
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testStableIDChangesWithContentDisplayAndStyle]' started.
+Test Case '-[InkMarkdownLaTeXTests.InkLaTeXImageRendererTests testStableIDChangesWithContentDisplayAndStyle]' passed (0.007 seconds).
+Test Suite 'InkLaTeXImageRendererTests' passed at 2026-09-07 14:37:12.630.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 9.720 (9.732) seconds
+Test Suite 'InkMarkdownLaTeXTests.xctest' passed at 2026-09-07 14:37:12.662.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 9.720 (9.764) seconds
+Test Suite 'All tests' passed at 2026-09-07 14:37:12.781.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 9.720 (9.979) seconds
+
+Resolve Package Graph
+
+Resolve Package Graph
+
+Test Suite 'All tests' started at 2026-09-07 14:37:29.672.
+Test Suite 'All tests' passed at 2026-09-07 14:37:29.677.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.005) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64-apple-ios13.0-simulator
+◇ Suite InkMermaidBridgeResourceTests started.
+◇ Suite InkMermaidRendererTests started.
+◇ Test mermaidBridge_usesStrictCSPAndOrderedExternalScripts() started.
+◇ Test onlyExactMermaidFenceLanguageIsAccepted() started.
+✔ Test onlyExactMermaidFenceLanguageIsAccepted() passed after 0.003 seconds.
+◇ Test cacheIdentityIsStableAndIncludesRenderContext() started.
+✔ Test cacheIdentityIsStableAndIncludesRenderContext() passed after 0.005 seconds.
+◇ Test mermaidRenderer_inputLimitsFailBeforeWebKitLoads() started.
+✔ Test mermaidBridge_usesStrictCSPAndOrderedExternalScripts() passed after 0.015 seconds.
+✔ Suite InkMermaidBridgeResourceTests passed after 0.017 seconds.
+✔ Test mermaidRenderer_inputLimitsFailBeforeWebKitLoads() passed after 0.031 seconds.
+◇ Test bridgeEncodingKeepsUserTextQuoted() started.
+✔ Test bridgeEncodingKeepsUserTextQuoted() passed after 0.002 seconds.
+◇ Test mermaidRenderer_nonPositiveTimeoutIsClassifiedAsInvalidLimits() started.
+✔ Test mermaidRenderer_nonPositiveTimeoutIsClassifiedAsInvalidLimits() passed after 0.001 seconds.
+◇ Test mermaidRenderer_subUIKitScaleIsRejectedBeforeWebKitLoads() started.
+✔ Test mermaidRenderer_subUIKitScaleIsRejectedBeforeWebKitLoads() passed after 0.001 seconds.
+◇ Test mermaidBridge_pollIgnoresStaleRequestID() started.
+✔ Test mermaidBridge_pollIgnoresStaleRequestID() passed after 0.002 seconds.
+✔ Suite InkMermaidRendererTests passed after 0.049 seconds.
+✔ Test run with 8 tests in 2 suites passed after 0.081 seconds.
+Resolve Package Graph
+
+Test Suite 'All tests' started at 2026-09-07 14:37:35.251.
+Test Suite 'All tests' passed at 2026-09-07 14:37:35.259.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.008) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64-apple-ios13.0-simulator
+◇ Suite "SwiftUI Adapter 工作负载回归闸门" started.
+◇ Suite "InkConfigurationModifier 契约测试" started.
+◇ Suite "块级视图局部复用" started.
+◇ Suite "SwiftUI Stream remount" started.
+◇ Suite "linkTapHandler 统一交互契约" started.
+◇ Suite "InkMarkdownRenderSession 契约测试" started.
+◇ Suite "SwiftUI Adapter 可访问性契约" started.
+◇ Suite "InkMarkdownContainerView 单次测量契约" started.
+◇ Suite "SwiftUI Adapter P0 闸门" started.
+◇ Suite "InkMarkdown SwiftUI 混编防死循环与尺寸测量测试" started.
+◇ Suite "InkMarkdownRenderSession source limit 契约测试" started.
+◇ Suite "Canonical Corpus SwiftUI 集成通道" started.
+◇ Suite "SwiftUI Adapter 性能基线回归" started.
+◇ Suite "InkMarkdownView 静态视图契约与集成测试" started.
+◇ Suite "Block Presentation Continuity 静态 Thought 关键链" started.
+◇ Suite "InkStreamingPresentationHost" started.
+◇ Test "手动设置 EnvironmentValues.inkConfiguration 可读写" started.
+◇ Suite "零宽度到 Split View 响应式测量契约" started.
+◇ Test "Environment key 默认值为 nil" started.
+◇ Test "富文本 attachment source 变化会更新 text view 内容" started.
+◇ Test "图片 source 变化后显示新 source" started.
+◇ Test "图片 source 替换后取消旧订阅并只展示新请求结果" started.
+◇ Test "嵌套视图使用 inkConfiguration 修饰符可链式构建" started.
+◇ Test "图片块注入不同 Store 时视图语义不等价" started.
+◇ Test "富文本后缀、样式或链接变化会更新完整 attributed 语义" started.
+◇ Test "InkCodeBlock 三参数 initializer 保留自定义样式" started.
+◇ Test "configuration 更新后新 handler 生效" started.
+◇ Test "静态长文首测块数有界且同宽二次测量为 0" started.
+◇ Test "streaming 未完成阶段立即连接 handler" started.
+◇ Test "finish→promotion 时长有界且终态 Thought 可交互" started.
+◇ Test "promotion 后终态块沿用同一 handler" started.
+◇ Test "handler 返回 false 保留系统默认行为" started.
+◇ Test "会话与底层 renderer 使用相同的输入长度上限" started.
+◇ Test "初始状态验证：idle、空文本、空块列表、未提升" started.
+◇ Test "成组 binding：新 install 替换旧 grant，旧 release 无效" started.
+◇ Test "未 attach 文本视图时 finish 仍会完成终态提升" started.
+◇ Test "View.inkConfiguration 修饰符可正确调用并返回 View" started.
+◇ Test "第三方 InkReusableBlock 内容变化后显示最新内容" started.
+◇ Test "流式百片 append 显示追上有界且仅测量当前 remainder slot" started.
+◇ Test "promoted 后 updateRenderEnvironment 重渲染 semantic blocks" started.
+◇ Test "LaTeX 与 Mermaid generated source 变化后均显示新 source" started.
+◇ Test "append 状态转移：idle -> streaming，连续 append 保持 streaming" started.
+◇ Test "UIHostingController 移除再插入后同一 Session 可继续显示" started.
+◇ Test "reset 可在全部状态复用，并重新安装终态回调" started.
+◇ Test "public onDisplayUpdate 与 private observer 共存且互不覆盖" started.
+◇ Test "终态与取消状态会拒绝后续输入" started.
+◇ Test "finish 清除 isDisplayPaused，避免 promotion 后仍暂停" started.
+◇ Test "流式 textView 在真实宽度变化后发出图片重绑定信号" started.
+XCTestOutput◇ Test "表格 alignment 与 layout mode 变化后更新可见层级" started.
+◇ Test "cancel 可终止接收、解析或最终显示阶段" started.
+◇ Test "闭合思考后 remainder 进入 renderer；finish 后 blocks 含 InkThoughtBlock" started.
+Barrier◇ Test "Dynamic Type 下思考块 header 字号严格随 category 放大" started.
+◇ Test "finish 区分输入结束、最终解析完成、显示完成与终态提升" started.
+◇ Test "SwiftUI Dynamic Type 映射覆盖普通与辅助功能档位" started.
+◇ Test "Dynamic Type 环境写入 renderEnvironment 并影响思考块测量高度" started.
+◇ Test "流式 append 不触发 isPromoted" started.
+◇ Test "流式进行中 updateRenderEnvironment 同步更新 streamingThought 配置" started.
+◇ Test "固有尺寸宽度解析保留 iOS 15 detached fallback" started.
+XCTe◇ Test "finish 回调在同 runloop 触发时不在回调栈内同步 publish，下一 runloop 仍完成 promotion" started.
+stOutputBarrier◇ Test "配置与 trait 快照由会话集中管理" started.
+◇ Test "宽度变化仅在前缀 measure 入口重测一次" started.
+◇ Test "延迟 publish 前 cancel/reset 作废排队的 @Published 变更" started.
+◇ Test "静态长文 sizeThatFits 次数不超过块数且 layout 不再 sizeThatFits" started.
+◇ Test "思考块折叠控件具备 VoiceOver 可访问性标签" started.
+◇ Test "Coordinator updateStatic 在配置发生语义变化时更新可见语义" started.
+◇ Test "PREFIX 未闭合思考 append：streamingThought 未完成且 remainder 无标签" started.
+◇ Test "Coordinator updateStatic 在相同输入与配置下保持幂等且不重复测量" started.
+◇ Test "InkConfiguration.isSemanticallyEqualTo 准确识别字号、间距与环境变化" started.
+◇ Test "各 Block View 在 sizeThatFits 下返回有效正数高度且无约束冲突" started.
+◇ Test "Coordinator 依据稳定语义身份保持或更新链接回调" started.
+◇ Test "finish 与 promotion 只消费 canonical source" started.
+◇ Test "流式富文本持有 InkMarkdownLayoutManager" started.
+◇ Test "Trait 变化触发一次前缀重测" started.
+◇ Test "session 与 renderer 在创建时共享同一个不可变上限 snapshot" started.
+◇ Test "非法 session 上限回退默认值" started.
+◇ Test "小于、等于、超过上限时 currentText 只保留 canonical source" started.
+◇ Test "零宽容器从 window 建立固有尺寸测量基准" started.
+◇ Test "InkAttributedRenderer 能够在流式富文本阶段格式化输出表格内容" started.
+◇ Test "宽度变化时在 measure 入口重测且 layout 复用高度数组" started.
+◇ Test "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test "同一宽度连续 sizeThatFits 子视图测量次数不超过块数" started.
+◇ Test "InkMarkdownView 适配 iPhone 窄屏与 iPad 宽屏视口尺寸" started.
+◇ Test "InkMarkdownView 组合 .inkConfiguration 修饰符由环境注入配置" started.
+◇ Test "InkMarkdownView 在深色模式环境下正确解析为 dark style" started.
+◇ Test "InkMarkdownView 接受显式 configuration 并正确生效" started.
+◇ Test "环境补充 reconcile 排队遇 cancel 后下一 runloop 不复活旧内容" started.
+◇ Test "InkMarkdownView 在 UIHostingController 中完成全链路静态渲染" started.
+◇ Test "initial → user mutation → content/environment update → caller override → promotion" started.
+◇ Test "detach → same-session reattach → stale callbacks ignored → affected Thought slot revision +1" started.
+◇ Test "严格证据 → 歧义降级 → 新周期重置 → custom block 安全重建" started.
+◇ Test "Dynamic Type 档位变化触发 Coordinator 重测" started.
+◇ Test "流式 append 不触发 SwiftUI body 级 blocks 切换" started.
+◇ Test "同宽复用缓存，宽度变化重测且不残留旧条目" started.
+◇ Test "宽度变化后保留渲染内容并完成有效重测" started.
+◇ Test "layoutSubviews 内不触发 invalidateIntrinsicContentSize" started.
+◇ Test "InkMarkdownCoordinator 保持相同输入语义并支持幂等清理" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-inline", title: "标准 inline 链接", markdown: "前置 [文案](https://example.com/guide) 后置", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "文案", destination: Optional("https://example.com/guide"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-reference", title: "引用链接（reference link）", markdown: "开头 [引用文案][ref] 与 [缩写][short]。\n\n[ref]: https://example.com/ref-target\n[short]: https://example.com/short-target", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "引用文案", destination: Optional("https://example.com/ref-target")), InkMarkdownSemanticCorpus.InkLinkExpectation(text: "缩写", destination: Optional("https://example.com/short-target"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test "零宽度不布局不缓存，首次有效宽度完成 reconcile" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-loose-continuation", title: "loose list 续段继承列表几何", markdown: "- 首段落在列表项内\n\n  续段仍属于同一列表项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "续段仍属于", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(28.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "gfm-bare-url", title: "GFM 裸 URL 保守回退", markdown: "纯文本 https://example.org/path 结束", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.org/path", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["GFM bare URL autolink 未纳入支持矩阵：pinned swift-markdown 转换器未启用 autolink 扩展。"]) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-blockquote", title: "列表内引用归属列表项", markdown: "- 列表项开头\n\n  > 引用仍在列表项内", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "引用仍在列表项内", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(24.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-task-markers", title: "任务列表标记保持既有行为", markdown: "- [ ] 待办事项\n- [x] 已完成事项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["marker 形态（☐/☑）由既有 InkMarkdownTests 任务列表测试钉住；corpus 只覆盖归属与几何。"]) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-rich-cell", title: "复杂表格单元格 inline 语义", markdown: "| 名称 | 状态 | 备注 |\n| :--- | :---: | ---: |\n| **加粗** | `status` | [详情](https://example.com/cell) |\n| *斜体* | ***粗斜*** | 普通 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "详情", destination: Optional("https://example.com/cell"))], expectedInlineTraits: [InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "加粗", isBold: Optional(true), isItalic: nil, isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "status", isBold: nil, isItalic: nil, isMonospace: Optional(true), hasInlineCodeBackground: Optional(true)), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "斜体", isBold: nil, isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "粗斜", isBold: Optional(true), isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil)], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["名称", "状态", "备注"], rows: [["**加粗**", "`status`", "[详情](https://example.com/cell)"], ["*斜体*", "***粗斜***", "普通"]], alignments: [Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.left), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.center), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.right)])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-escaped-pipe", title: "转义竖线保留在单元格内", markdown: "| 表达式 | 含义 |\n| --- | --- |\n| a \\| b | 或运算 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(2), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["表达式", "含义"], rows: [["a | b", "或运算"]], alignments: [nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。"]) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-empty-ragged", title: "空单元格与不齐行稳定呈现", markdown: "| A | B | C |\n| --- | --- | --- |\n| 1 |  |\n| 2 | 3 | 4 | 5 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.lines, expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["A", "B", "C"], rows: [["1", "", ""], ["2", "3", "4"]], alignments: [nil, nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-mixed-nesting", title: "有序/无序混合嵌套累计缩进", markdown: "- 无序外层\n  1. 有序内层\n     - 无序深层", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序外层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "有序内层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序深层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil)], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-autolink", title: "标准自动链接", markdown: "访问 <https://example.com/auto> 了解", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.com/auto", destination: Optional("https://example.com/auto"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-relative", title: "相对链接", markdown: "参见 [相对文档](docs/guide.md)", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "相对文档", destination: Optional("docs/guide.md"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-inline", title: "标准 inline 链接", markdown: "前置 [文案](https://example.com/guide) 后置", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "文案", destination: Optional("https://example.com/guide"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-reference", title: "引用链接（reference link）", markdown: "开头 [引用文案][ref] 与 [缩写][short]。\n\n[ref]: https://example.com/ref-target\n[short]: https://example.com/short-target", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "引用文案", destination: Optional("https://example.com/ref-target")), InkMarkdownSemanticCorpus.InkLinkExpectation(text: "缩写", destination: Optional("https://example.com/short-target"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-autolink", title: "标准自动链接", markdown: "访问 <https://example.com/auto> 了解", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.com/auto", destination: Optional("https://example.com/auto"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-unsafe-scheme", title: "危险 scheme fallback", markdown: "点击 [危险](javascript:alert(1)) 文本", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "危险", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["javascript: 等非白名单 scheme 不渲染为链接；链接色也不应用（既有 0.0.1 契约）。"]) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test "单 host append→finish 保留 Thought 与终态正文" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-mixed-nesting", title: "有序/无序混合嵌套累计缩进", markdown: "- 无序外层\n  1. 有序内层\n     - 无序深层", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序外层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "有序内层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序深层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil)], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-unsafe-scheme", title: "危险 scheme fallback", markdown: "点击 [危险](javascript:alert(1)) 文本", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "危险", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["javascript: 等非白名单 scheme 不渲染为链接；链接色也不应用（既有 0.0.1 契约）。"]) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-loose-continuation", title: "loose list 续段继承列表几何", markdown: "- 首段落在列表项内\n\n  续段仍属于同一列表项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "续段仍属于", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(28.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-rich-cell", title: "复杂表格单元格 inline 语义", markdown: "| 名称 | 状态 | 备注 |\n| :--- | :---: | ---: |\n| **加粗** | `status` | [详情](https://example.com/cell) |\n| *斜体* | ***粗斜*** | 普通 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "详情", destination: Optional("https://example.com/cell"))], expectedInlineTraits: [InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "加粗", isBold: Optional(true), isItalic: nil, isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "status", isBold: nil, isItalic: nil, isMonospace: Optional(true), hasInlineCodeBackground: Optional(true)), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "斜体", isBold: nil, isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "粗斜", isBold: Optional(true), isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil)], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["名称", "状态", "备注"], rows: [["**加粗**", "`status`", "[详情](https://example.com/cell)"], ["*斜体*", "***粗斜***", "普通"]], alignments: [Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.left), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.center), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.right)])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-relative", title: "相对链接", markdown: "参见 [相对文档](docs/guide.md)", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "相对文档", destination: Optional("docs/guide.md"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-task-markers", title: "任务列表标记保持既有行为", markdown: "- [ ] 待办事项\n- [x] 已完成事项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["marker 形态（☐/☑）由既有 InkMarkdownTests 任务列表测试钉住；corpus 只覆盖归属与几何。"]) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-blockquote", title: "列表内引用归属列表项", markdown: "- 列表项开头\n\n  > 引用仍在列表项内", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "引用仍在列表项内", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(24.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-empty-ragged", title: "空单元格与不齐行稳定呈现", markdown: "| A | B | C |\n| --- | --- | --- |\n| 1 |  |\n| 2 | 3 | 4 | 5 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.lines, expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["A", "B", "C"], rows: [["1", "", ""], ["2", "3", "4"]], alignments: [nil, nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-escaped-pipe", title: "转义竖线保留在单元格内", markdown: "| 表达式 | 含义 |\n| --- | --- |\n| a \\| b | 或运算 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(2), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["表达式", "含义"], rows: [["a | b", "或运算"]], alignments: [nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。"]) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "gfm-bare-url", title: "GFM 裸 URL 保守回退", markdown: "纯文本 https://example.org/path 结束", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.org/path", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["GFM bare URL autolink 未纳入支持矩阵：pinned swift-markdown 转换器未启用 autolink 扩展。"]) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+✔ Test "UIHostingController 移除再插入后同一 Session 可继续显示" passed after 0.732 seconds.
+✔ Suite "SwiftUI Stream remount" passed after 0.913 seconds.
+✔ Test "环境补充 reconcile 排队遇 cancel 后下一 runloop 不复活旧内容" passed after 0.865 seconds.
+✔ Test "Environment key 默认值为 nil" passed after 17.144 seconds.
+✔ Test "富文本 attachment source 变化会更新 text view 内容" passed after 17.148 seconds.
+✔ Test "图片 source 变化后显示新 source" passed after 17.148 seconds.
+2026-09-07 14:37:52.657082+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: promotion evidence conflicts with a stable identity claim
+2026-09-07 14:37:52.715174+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: structural slot changed cardinality, repeated, or moved
+2026-09-07 14:37:52.721120+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: structural slot changed cardinality, repeated, or moved
+2026-09-07 14:37:52.721278+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 1: structural slot changed cardinality, repeated, or moved
+2026-09-07 14:37:52.726418+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 2: custom strong evidence violates strict structural compatibility
+2026-09-07 14:37:52.728760+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: non-reusable custom block has no continuity strategy
+2026-09-07 14:37:52.729156+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: non-reusable custom block has no continuity strategy
+2026-09-07 14:37:53.106064+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+✔ Test "嵌套视图使用 inkConfiguration 修饰符可链式构建" passed after 17.722 seconds.
+✔ Test "富文本后缀、样式或链接变化会更新完整 attributed 语义" passed after 17.722 seconds.
+✔ Test "InkCodeBlock 三参数 initializer 保留自定义样式" passed after 17.719 seconds.
+✔ Test "图片块注入不同 Store 时视图语义不等价" passed after 17.722 seconds.
+✔ Test "configuration 更新后新 handler 生效" passed after 17.719 seconds.
+2026-09-07 14:37:53.164382+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 1: repeated structural identity
+✔ Test "finish→promotion 时长有界且终态 Thought 可交互" passed after 17.734 seconds.
+✔ Test "streaming 未完成阶段立即连接 handler" passed after 17.731 seconds.
+✔ Test "handler 返回 false 保留系统默认行为" passed after 17.731 seconds.
+✔ Test "初始状态验证：idle、空文本、空块列表、未提升" passed after 17.732 seconds.
+✔ Test "成组 binding：新 install 替换旧 grant，旧 release 无效" passed after 17.732 seconds.
+✔ Test "会话与底层 renderer 使用相同的输入长度上限" passed after 17.732 seconds.
+✔ Test "View.inkConfiguration 修饰符可正确调用并返回 View" passed after 17.735 seconds.
+✔ Test "流式百片 append 显示追上有界且仅测量当前 remainder slot" passed after 17.720 seconds.
+✔ Test "promotion 后终态块沿用同一 handler" passed after 17.732 seconds.
+✔ Test "终态与取消状态会拒绝后续输入" passed after 17.728 seconds.
+✔ Test "静态长文首测块数有界且同宽二次测量为 0" passed after 17.743 seconds.
+✔ Test "闭合思考后 remainder 进入 renderer；finish 后 blocks 含 InkThoughtBlock" passed after 17.728 seconds.
+✔ Test "finish 清除 isDisplayPaused，避免 promotion 后仍暂停" passed after 17.728 seconds.
+✔ Test "表格 alignment 与 layout mode 变化后更新可见层级" passed after 17.740 seconds.
+✔ Test "promoted 后 updateRenderEnvironment 重渲染 semantic blocks" passed after 17.728 seconds.
+✔ Test "cancel 可终止接收、解析或最终显示阶段" passed after 17.728 seconds.
+✔ Test "public onDisplayUpdate 与 private observer 共存且互不覆盖" passed after 17.728 seconds.
+✔ Suite "SwiftUI Adapter 工作负载回归闸门" passed after 17.909 seconds.
+✔ Test "第三方 InkReusableBlock 内容变化后显示最新内容" passed after 17.728 seconds.
+✔ Test "LaTeX 与 Mermaid generated source 变化后均显示新 source" passed after 17.728 seconds.
+✔ Test "append 状态转移：idle -> streaming，连续 append 保持 streaming" passed after 17.728 seconds.
+✔ Suite "linkTapHandler 统一交互契约" passed after 17.909 seconds.
+✔ Test "finish 区分输入结束、最终解析完成、显示完成与终态提升" passed after 17.729 seconds.
+✔ Test "SwiftUI Dynamic Type 映射覆盖普通与辅助功能档位" passed after 17.729 seconds.
+✔ Test "流式进行中 updateRenderEnvironment 同步更新 streamingThought 配置" passed after 17.730 seconds.
+✔ Test "Dynamic Type 环境写入 renderEnvironment 并影响思考块测量高度" passed after 17.730 seconds.
+✔ Test "静态长文 sizeThatFits 次数不超过块数且 layout 不再 sizeThatFits" passed after 17.730 seconds.
+✔ Test "Coordinator updateStatic 在相同输入与配置下保持幂等且不重复测量" passed after 17.730 seconds.
+✔ Test "流式 append 不触发 isPromoted" passed after 17.730 seconds.
+✔ Test "宽度变化仅在前缀 measure 入口重测一次" passed after 17.730 seconds.
+✔ Test "PREFIX 未闭合思考 append：streamingThought 未完成且 remainder 无标签" passed after 17.731 seconds.
+✔ Test "finish 回调在同 runloop 触发时不在回调栈内同步 publish，下一 runloop 仍完成 promotion" passed after 17.730 seconds.
+2026-09-07 14:37:53.189818+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​​​​​​​​​​​✔ Test "流式 textView 在真实宽度变化后发出图片重绑定信号" passed after 17.850 seconds.
+​✔ Test "Coordinator 依据稳定语义身份保持或更新链接回调" passed after 17.838 seconds.
+✔ Test "思考块折叠控件具备 VoiceOver 可访问性标签" passed after 17.838 seconds.
+✔ Test "Dynamic Type 下思考块 header 字号严格随 category 放大" passed after 17.838 seconds.
+X✔ Test "小于、等于、超过上限时 currentText 只保留 canonical source" passed after 17.837 seconds.
+CTestOutputBarrier✔ Test "固有尺寸宽度解析保留 iOS 15 detached fallback" passed after 17.838 seconds.
+✔ Test "零宽容器从 window 建立固有尺寸测量基准" passed after 17.837 seconds.
+✔ Test "InkConfiguration.isSemanticallyEqualTo 准确识别字号、间距与环境变化" passed after 17.838 seconds.
+✔ Test "手动设置 EnvironmentValues.inkConfiguration 可读写" passed after 17.854 seconds.
+✔ Test "InkMarkdownView 适配 iPhone 窄屏与 iPad 宽屏视口尺寸" passed after 17.836 seconds.
+✔ Test "同一宽度连续 sizeThatFits 子视图测量次数不超过块数" passed after 17.836 seconds.
+✔ Test "InkMarkdownView 组合 .inkConfiguration 修饰符由环境注入配置" passed after 17.836 seconds.
+XCTest✔ Test "InkMarkdownView 接受显式 configuration 并正确生效" passed after 17.836 seconds.
+OutputBarrier✔ Test "配置与 trait 快照由会话集中管理" passed after 17.838 seconds.
+✔ Test "session 与 renderer 在创建时共享同一个不可变上限 snapshot" passed after 17.837 seconds.
+✔ Test "Coordinator updateStatic 在配置发生语义变化时更新可见语义" passed after 17.838 seconds.
+✔ Test "InkMarkdownView 在 UIHostingController 中完成全链路静态渲染" passed after 17.836 seconds.
+✔ Test "Dynamic Type 档位变化触发 Coordinator 重测" passed after 17.835 seconds.
+✔ Test "InkMarkdownView 在深色模式环境下正确解析为 dark style" passed after 17.836 seconds.
+✔ Test "InkAttributedRenderer 能够在流式富文本阶段格式化输出表格内容" passed after 17.837 seconds.
+✔ Test "layoutSubviews 内不触发 invalidateIntrinsicContentSize" passed after 17.836 seconds.
+✔ Test "宽度变化后保留渲染内容并完成有效重测" passed after 17.835 seconds.
+✔ Test "严格证据 → 歧义降级 → 新周期重置 → custom block 安全重建" passed after 17.836 seconds.
+✔ Test "Trait 变化触发一次前缀重测" passed after 17.838 seconds.
+✔ Test "finish 与 promotion 只消费 canonical source" passed after 17.838 seconds.
+✔ Test "零宽度不布局不缓存，首次有效宽度完成 reconcile" passed after 17.836 seconds.
+✔ Test "各 Block View 在 sizeThatFits 下返回有效正数高度且无约束冲突" passed after 17.838 seconds.
+✔ Test "流式富文本持有 InkMarkdownLayoutManager" passed after 17.839 seconds.
+✔ Suite "SwiftUI Adapter 可访问性契约" passed after 18.020 seconds.
+✔ Suite "InkConfigurationModifier 契约测试" passed after 18.022 seconds.
+✔ Suite "InkMarkdown SwiftUI 混编防死循环与尺寸测量测试" passed after 18.020 seconds.
+✔ Test "InkMarkdownCoordinator 保持相同输入语义并支持幂等清理" passed after 17.836 seconds.
+✔ Suite "InkMarkdownView 静态视图契约与集成测试" passed after 17.855 seconds.
+✔ Suite "SwiftUI Adapter P0 闸门" passed after 18.020 seconds.
+​2026-09-07 14:37:53.309101+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 14:37:53.322298+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​✔ Test "宽度变化时在 measure 入口重测且 layout 复用高度数组" passed after 17.876 seconds.
+✔ Test "同宽复用缓存，宽度变化重测且不残留旧条目" passed after 17.873 seconds.
+✔ Suite "InkMarkdownContainerView 单次测量契约" passed after 18.058 seconds.
+✔ Suite "零宽度到 Split View 响应式测量契约" passed after 17.893 seconds.
+2026-09-07 14:37:53.333691+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​​2026-09-07 14:37:53.344699+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+✔ Test "SwiftUI 静态集成满足 corpus 语义" with 13 test cases passed after 17.886 seconds.
+​2026-09-07 14:37:53.358668+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​✔ Test "流式 append 不触发 SwiftUI body 级 blocks 切换" passed after 17.928 seconds.
+✔ Suite "SwiftUI Adapter 性能基线回归" passed after 18.112 seconds.
+2026-09-07 14:37:53.388188+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 14:37:53.399491+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​✔ Test "initial → user mutation → content/environment update → caller override → promotion" passed after 17.949 seconds.
+2026-09-07 14:37:53.408660+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 1: repeated structural identity
+✔ Test "非法 session 上限回退默认值" passed after 17.951 seconds.
+✔ Suite "InkMarkdownRenderSession source limit 契约测试" passed after 18.139 seconds.
+2026-09-07 14:37:53.418963+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 14:37:53.431458+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+✔ Test "单 host append→finish 保留 Thought 与终态正文" passed after 17.983 seconds.
+◇ Test "双 host：等待环境不污染活跃 host，接管后应用最新环境" started.
+​2026-09-07 14:37:53.484341+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 14:37:53.522908+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 14:37:53.527718+0800 xctest[81512:6051675] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​✔ Test "SwiftUI streaming promotion 满足完整 corpus 语义" with 13 test cases passed after 18.084 seconds.
+✔ Suite "Canonical Corpus SwiftUI 集成通道" passed after 18.287 seconds.
+✔ Test "reset 可在全部状态复用，并重新安装终态回调" passed after 18.208 seconds.
+✔ Test "图片 source 替换后取消旧订阅并只展示新请求结果" passed after 18.224 seconds.
+✔ Suite "块级视图局部复用" passed after 18.389 seconds.
+✔ Test "未 attach 文本视图时 finish 仍会完成终态提升" passed after 18.221 seconds.
+✔ Test "detach → same-session reattach → stale callbacks ignored → affected Thought slot revision +1" passed after 18.214 seconds.
+✔ Suite "Block Presentation Continuity 静态 Thought 关键链" passed after 18.233 seconds.
+✔ Test "双 host：等待环境不污染活跃 host，接管后应用最新环境" passed after 0.255 seconds.
+◇ Test "等待者先 teardown 不解绑活跃 owner" started.
+✔ Test "等待者先 teardown 不解绑活跃 owner" passed after 0.007 seconds.
+✔ Suite "InkStreamingPresentationHost" passed after 18.266 seconds.
+✔ Test "延迟 publish 前 cancel/reset 作废排队的 @Published 变更" passed after 18.676 seconds.
+✔ Suite "InkMarkdownRenderSession 契约测试" passed after 18.859 seconds.
+✔ Test run with 84 tests in 17 suites passed after 18.859 seconds.
+Resolve Package Graph
+
+Resolve Package Graph
+
+Test Suite 'All tests' started at 2026-09-07 14:38:14.469.
+Test Suite 'InkMarkdownTests.xctest' started at 2026-09-07 14:38:14.503.
+Test Suite 'InkLaTeXSyntaxTests' started at 2026-09-07 14:38:14.503.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testBlockBracketsRequiresExclusiveParagraphContent]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testBlockBracketsRequiresExclusiveParagraphContent]' passed (0.014 seconds).
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testExpressionRangeIncludesDelimiters]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testExpressionRangeIncludesDelimiters]' passed (0.004 seconds).
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testMarkupParseOptionsIgnoreBackslashBracketDelimiters]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testMarkupParseOptionsIgnoreBackslashBracketDelimiters]' passed (0.005 seconds).
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testParseIgnoresEscapedDelimiters]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testParseIgnoresEscapedDelimiters]' passed (0.001 seconds).
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testParseIgnoresInlineDollarWithoutOptIn]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testParseIgnoresInlineDollarWithoutOptIn]' passed (0.001 seconds).
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testParseRecognizesInlineAndBlockDelimitersWithDollarOptIn]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testParseRecognizesInlineAndBlockDelimitersWithDollarOptIn]' passed (0.001 seconds).
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testParseRejectsUnclosedAndEmptyExpressions]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testParseRejectsUnclosedAndEmptyExpressions]' passed (0.002 seconds).
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testRestoreBracketDelimitersReversesPlaceholders]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testRestoreBracketDelimitersReversesPlaceholders]' passed (0.003 seconds).
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testSourcePreservationSkipsEscapedAndCodeDelimiters]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testSourcePreservationSkipsEscapedAndCodeDelimiters]' passed (0.001 seconds).
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testSourcePreservationSurvivesMarkdownParser]' started.
+Test Case '-[InkMarkdownTests.InkLaTeXSyntaxTests testSourcePreservationSurvivesMarkdownParser]' passed (0.009 seconds).
+Test Suite 'InkLaTeXSyntaxTests' passed at 2026-09-07 14:38:14.637.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.040 (0.133) seconds
+Test Suite 'InkMarkdownTests.xctest' passed at 2026-09-07 14:38:14.637.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.040 (0.134) seconds
+Test Suite 'All tests' passed at 2026-09-07 14:38:14.637.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.040 (0.168) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64-apple-ios13.0-simulator
+◇ Suite InkMermaidRenderSchedulerTests started.
+◇ Test inlineAttachment_unloadedBoundsHeightIsCompact() started.
+◇ Test applyImage_preservesExistingParagraphGeometry() started.
+◇ Suite "InkTablePresentation 单元格来源契约" started.
+◇ Suite "公开自定义块契约" started.
+◇ Suite StreamingPerformanceTests started.
+◇ Suite "InkImageAttachment PresentationLoad adapter" started.
+◇ Test latex_defaultLeavesDollarDelimitedTextUntouched() started.
+◇ Test displayFrame_consumesPrefixRewriteAndLaterTailTogether() started.
+◇ Test streamRenderer_releasesCompleteBlockBracketsInSingleChunk() started.
+◇ Suite "Canonical Corpus 表格 Tracer" started.
+◇ Test lineHeight_noImageKeepsLocked() started.
+◇ Suite "图片业务策略与相对 URL 契约" started.
+◇ Test fixedLineHeight_plainParagraph() started.
+◇ Suite "InkImageBlock 公开 API 兼容" started.
+◇ Suite "InkTablePresentation 布局状态契约" started.
+◇ Suite InkMermaidPageLoadRouterTests started.
+◇ Test latexBlockHandlerPromotesBracketBlockParagraph() started.
+◇ Suite "InkImageBlock PresentationLoad adapter" started.
+◇ Suite "InkMarkdown 可访问性 (VoiceOver) 与 Dynamic Type 测试矩阵" started.
+◇ Test imageSource_requestURLMatchesCanonicalID() started.
+◇ Test imageSource_unknownScheme() started.
+◇ Suite "Canonical Corpus 链接 Tracer（核心通道）" started.
+◇ Suite "InkImagePresentationLoadAsync 一次终结" started.
+◇ Test listItem_spacing() started.
+◇ Suite "InkStreamRenderer source limit 契约测试" started.
+◇ Suite "图片呈现释放与旧路径清理" started.
+◇ Test generatedImageSource_usesSHA256Identity() started.
+◇ Suite "InkImagePreview Store 分支" started.
+◇ Suite InkMermaidRasterPlanTests started.
+◇ Test streamRenderer_doesNotFreezeListBeforeIndentedContinuation() started.
+◇ Test displayContext_sanitizesNonFiniteAndNonPositiveInputs() started.
+◇ Test fixedLineHeight_paragraphWithBold() started.
+◇ Suite "项目审核 F04-F09 关键路径回归" started.
+◇ Test fitted_respectsMaxHeight() started.
+◇ Suite "InkControlledImageLoader fixture 对接" started.
+◇ Suite "InkConfiguration 语义等价与渲染环境注入测试" started.
+◇ Suite InkMermaidRenderRequestStateTests started.
+◇ Suite "Canonical Corpus 列表 Tracer" started.
+◇ Test securityPolicy_defaultPreservesQueryInRequestURL() started.
+◇ Test streamRenderer_finishDegradesIncompleteParenthesesLatexToText() started.
+◇ Suite InkMermaidFailureFallbackTests started.
+◇ Suite SnapshotScaffoldTests started.
+◇ Suite "InkThoughtBlockHandler 核心解析契约" started.
+◇ Test latexEnableUsesCurrentAppearanceAtRenderTime() started.
+◇ Suite "InkImagePresentationLoad 订阅生命周期" started.
+◇ Test generatedImageSource_hasBoundedStableIdentity() started.
+◇ Suite InkImageStoreTests started.
+◇ Test streamRenderer_finishDegradesIncompleteInlineLatexToText() started.
+◇ Test table_attributedFallbackRendersCleanText() started.
+◇ Suite "CommonMark/GFM 渲染语义矩阵" started.
+◇ Test promote_singleImage() started.
+◇ Test inlineAttachmentMaterializationIdentityIncludesDisplayContext() started.
+◇ Test backgroundRender_withImagesEnabled_doesNotCrash() started.
+◇ Test refreshTextStorage_fullRewriteOnPrefixChange() started.
+◇ Test imageBlock_cachedReadySkipsLoadingPlaceholderHeight() started.
+◇ Test promote_imageWithSurroundingWhitespace() started.
+◇ Test errorDegradation_disabledShowsPlaceholder() started.
+◇ Test latexBlockHandler_promotesSingleLineDollarBlock() started.
+◇ Test imageSource_httpScheme() started.
+◇ Test sourceFilterStream_displayChainMatchesFullRender() started.
+◇ Test refreshTextStorage_appendsTailOnly() started.
+◇ Test latexBlockHandler_promotesMultiParagraphDollarBlock() started.
+◇ Test lineBreak_hardLineBreakProducesNewline() started.
+◇ Test imageBlock_callbackTapActionInvokesOnImageTap() started.
+◇ Test securityPolicy_emptyHostsRejectsAll() started.
+◇ Test defaultStoresIsolateCompleteRenderingConfiguration() started.
+◇ Test imageBlockHandler_respectsSecurityPolicy() started.
+◇ Test latexBlockHandler_promotesMultiParagraphBracketBlock() started.
+◇ Test displayContext_preservesNormalInputsAndExistingDisplayKey() started.
+◇ Test bindAttachments_skipsAlreadyMaterializedAttachments() started.
+◇ Test streamRenderer_ignoresAppendAfterFinish() started.
+◇ Test blockRenderer_sourceFilterRunsOnceAcrossThoughtSuffix() started.
+◇ Test fixedLineHeight_h2() started.
+◇ Test latex_explicitColorOverridesContextInStableIdentity() started.
+◇ Test streamRenderer_replaceSourceSeedsFutureAppend() started.
+◇ Test imageParagraphStyle_elevatesOnlyMaximumLineHeight() started.
+◇ Test appearance_defaultValues() started.
+◇ Test streamRenderer_reparsesOnlyActiveSuffixAfterStableBlock() started.
+◇ Test updateConfigurationDrainsAcceptedQueueAfterConcurrencyIncrease() started.
+◇ Test displayContext_clampsOverlargeInputsBeforeDisplayKeyConversion() started.
+◇ Test latex_escapedParenthesesAreNotPromotedThroughMarkupPath() started.
+◇ Test imageBlockHandler_doesNotPromoteMixedInlineImage() started.
+◇ Test imageBlock_unconfiguredIntrinsicHeightIsMinimal() started.
+◇ Test linkSecurityPolicy_filtersDangerousSchemes() started.
+◇ Test latex_explicitColorOverridesDynamicLabelInStableIdentity() started.
+◇ Test streamRenderer_incrementalBenchmarkMatchesFinalFullRender() started.
+◇ Test imageBlock_configureLoadsImageAndUpdatesSize() started.
+◇ Test fixedLineHeight_codeBlock() started.
+◇ Test displayFrame_nonpositiveSpeedStillMakesProgress(speed:) started.
+◇ Test storeConfiguration_maxDataURLBytesApplied() started.
+◇ Test blockquoteLink_bothColorsCoexist() started.
+◇ Test fixedLineHeight_h1() started.
+◇ Test fitted_upscalesWhenEnabled() started.
+◇ Test baselineOffset_imageAttachmentIsZero() started.
+◇ Test fitted_smallImageNoUpscale() started.
+◇ Test headingInlineCode_keepsMonospaceAtHeadingSize() started.
+◇ Test applyImage_doesNotRegressParagraphElevation() started.
+◇ Test imageBlock_openURLTapActionAlsoInvokesOnImageTap() started.
+◇ Test httpSessionDelegate_cancellationDuringTaskRegistrationFinishesContinuation() started.
+◇ Test imageIODownsampler_respectsMaxPixel() started.
+◇ Test imageBlock_noneTapActionDoesNotInstallGesture() started.
+◇ Test latexBlockHandler_doesNotPromoteWhenDisabled() started.
+◇ Test streamRenderer_keepsUnclosedCodeFenceInActiveSuffix() started.
+◇ Test latex_inlineStyleIdentityFollowsDarkContextColor() started.
+◇ Test streamRenderer_sourceFilterReparsesWholeBufferPerAppend() started.
+◇ Test latex_parenthesesAndBareDollarDoNotCrossContaminate() started.
+◇ Test streamRenderer_buffersUnclosedInlineDollarUntilPaired() started.
+◇ Test streamRenderer_doesNotBufferBareDollarWithoutOptIn() started.
+◇ Test promote_mixedTextAndImage() started.
+◇ Test displayKey_exactMultiple() started.
+◇ Test streamRenderer_keepsUnclosedTildeFenceInActiveSuffix() started.
+◇ Test listInlineCode_keepsBackgroundAndMonospace() started.
+◇ Test baselineOffset_neverNegative() started.
+◇ Test applyImage_sameParagraphMultipleImagesUsesMaxHeight() started.
+◇ Test httpSessionDelegate_blocksRedirectBeyondMaxCount() started.
+◇ Test applyImage_elevatesEntireParagraphForInlineImage() started.
+◇ Test strikethrough_appliesUnderlineStyle() started.
+◇ Test streamRenderer_releasesCompleteBlockDollarInSingleChunk() started.
+◇ Test latex_plainParenthesesAreNotPromotedThroughMarkupPath() started.
+◇ Test storePrepareForRenderingAppliesConfiguration() started.
+◇ Test fixedLineHeight_paragraphWithInlineCode() started.
+◇ Test displayMetrics_prefersContextualViewBounds() started.
+◇ Test latexBlockHandlerDoesNotPromoteMixedBracketParagraph() started.
+◇ Test fixedLineHeight_orderedList() started.
+◇ Test securityPolicy_stripsQueryWhenEnabled() started.
+◇ Test storeReusesDefaultLoaderPerSecurityPolicy() started.
+◇ Test strongInlineCode_codeStaysRegularWeight() started.
+◇ Test shrinkingPendingLimitPreservesAcceptedFIFOAndRejectsNewRequests() started.
+◇ Test dataURL_withinLimit() started.
+◇ Test paragraphSpacing_values() started.
+◇ Test mixedInlineStyles_uniformLineHeight() started.
+◇ Test imageBlock_failureWithoutFallbackUsesCompactHeight() started.
+◇ Test displayKey_distinguishesContentMode() started.
+◇ Test displayKey_bucketQuantization() started.
+◇ Test thematicBreak_height() started.
+◇ Test streamRenderer_buffersUnclosedInlineParenthesesAndHonorsEscapesAndCode() started.
+◇ Test imageSource_fileScheme() started.
+◇ Test streamRenderer_buffersUnclosedBlockBracketsWhenLaTeXEnabled() started.
+◇ Test fixedLineHeight_unorderedList() started.
+◇ Test imageBlockHandler_promotesStandaloneImageParagraph() started.
+◇ Test securityPolicy_stripsQueryDefaultIsFalse() started.
+◇ Test headingLink_linkColorCoexistsWithHeadingColor() started.
+◇ Test latex_dollarOptInRendersAttachment() started.
+◇ Test applyImage_setsShouldAnimateNextHeightChangeWhenDeltaExceedsThreshold() started.
+◇ Test refreshTextStorage_skipsWhenChangeOutsideVisibleRange() started.
+◇ Test httpSessionDelegate_rejectsOversizedContentLength() started.
+◇ Test latex_appearanceFlagEnablesInlineSyntaxWithoutRegistration() started.
+◇ Test imageSource_dataScheme() started.
+◇ Test textViewBindingHelperRematerializesAfterHostWidthChange() started.
+◇ Test latex_labelColorDiffersBetweenLightAndDarkSnapshots() started.
+◇ Test latexBlockHandler_doesNotPromoteMixedParagraph() started.
+◇ Test refreshTextStorage_truncatesShrunkContent() started.
+◇ Test cancelledWaiterDoesNotConsumePermitOnRelease() started.
+◇ Test fitted_largeImageScalesDown() started.
+◇ Test moreThanEightQueuedWaitersDoNotFailEarly() started.
+◇ Test cancellationRemovesQueuedRenderWithoutLeakingPermit() started.
+◇ Test activeCountNeverExceedsOneDuringSerialExecution() started.
+◇ Test largeDocument_blockRenderThroughput() started.
+◇ Test "顶层 renderer prepared 表格 cell 不增加 filter 计数" started.
+◇ Test appearance_initDoesNotRecursivelyTrap() started.
+◇ Test incremental_renderIsFasterThanFullRender() started.
+◇ Test "流式 2+2+2 cell 精确计数 6，重建不增加" started.
+◇ Test "raw 接纳一次后测量与建行不重复 filter" started.
+◇ Test "显式新 replace 可重新接纳 raw；不按字符串跨生命周期去重" started.
+◇ Test "普通 import 可实现 InkRenderableBlock 并通过自定义 handler 渲染" started.
+◇ Test "raw static 每 replace 每 cell 一次，resize 不增；显式 apply 可重新接纳" started.
+◇ Test "复杂单元格保留 inline 语义" started.
+◇ Test incremental_renderOutputMatchesFullRender() started.
+◇ Test "prepared Markup 派生 cell 接纳计数为零且保留原文 fallback" started.
+◇ Test "空 host 白名单默认允许所有有效 HTTP(S) host" started.
+◇ Test "空单元格与不齐行稳定构造块视图" started.
+◇ Test "未提供 baseURL 时相对图片 source 返回明确失败（占位），不猜测来源" started.
+◇ Test "提供 baseURL 时相对图片 source 解析为确定请求 URL" started.
+◇ Test "query 默认保留、fragment 默认剥离，且请求与缓存身份一致" started.
+◇ Test "表格单元格链接走正文相同 handler 契约" started.
+◇ Test "默认策略重定向放行；配置白名单时每次重定向重新校验" started.
+◇ Test "非 HTTP(S) 危险 scheme 仍被资源安全边界拒绝" started.
+◇ Test "表格结构按 parser 产出稳定传递" started.
+◇ Test "deprecated init(source:store:rendering:) 可编译并创建视图" started.
+◇ Test "InkImageBlockView 为 InkImageBlock 兼容别名" started.
+◇ Test "显式 allowlist 时非允许 host 继续被拒绝" started.
+◇ Test "短行 append 不要求全量重建，更长行按需重建" started.
+◇ Test "开启 stripsQuery 后请求与缓存身份同步剥离" started.
+◇ Test "同内容静态一次接纳与逐行接纳列宽等价" started.
+◇ Test "图片真图渲染默认关闭：占位且不产生附件" started.
+◇ Test staleViewFinishCannotCompleteNewRequestRoute() started.
+◇ Test failureCompletionClearsRouteSoLaterPolicyIsCancelled() started.
+◇ Test "block 通道链接语义满足 corpus 预期" started.
+◇ Test "makeView 返回原 InkImageBlock 实例" started.
+◇ Test "wrap 宽窄恢复保留 reference 对首列影响；scroll 自然宽稳定" started.
+◇ Test clearedOldRouteCannotAuthorizePolicyForNewRequest() started.
+◇ Test "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument speed → 0 to displayFrame_nonpositiveSpeedStillMakesProgress(speed:) started.
+◇ Test case passing 1 argument speed → -1 to displayFrame_nonpositiveSpeedStillMakesProgress(speed:) started.
+◇ Test case passing 1 argument speed → -9223372036854775808 to displayFrame_nonpositiveSpeedStillMakesProgress(speed:) started.
+◇ Test "表格列宽测量、流式 cell 字体与行高使用同一 Dynamic Type trait" started.
+◇ Test "InkImageBlock 是 UIView 子类" started.
+◇ Test "streaming finish 通道与静态语义投影等价" started.
+◇ Test "InkThoughtBlockView 折叠与展开状态下提供精准的 VoiceOver 语义与提示" started.
+◇ Test "InkCodeBlockView 提供代码语言与代码内容的无障碍辅助描述" started.
+◇ Test "InkThematicBreakView 提供分割线无障碍标签" started.
+◇ Test "大字号 Dynamic Type 配置下正文与标题行高正确缩放且不截断" started.
+◇ Test "不可折叠思考卡片 (isCollapsible == false) 的 VoiceOver 特征降级为 .header" started.
+◇ Test "reset 与 finish 均只使用已接受 canonical source" started.
+◇ Test "自定义上限覆盖小于、等于与超过三种输入" started.
+◇ Test "默认上限保持 50_000，并在 renderer 创建时固化" started.
+◇ Test "非法上限回退默认值且不取消长度保护" started.
+◇ Test releasingBlock_cancelsLastSubscription() started.
+◇ Test bypassStoreTrue_loadsViaLoaderWithoutStoreCache() started.
+◇ Test invalidHeightIsRejected(height:) started.
+◇ Test scaleThreeUsesSamePixelBudgetWithoutDoubleScaling() started.
+◇ Test scaleBelowUIKitMinimumIsRejected(scale:) started.
+◇ Test invalidWidthIsRejected(width:) started.
+◇ Test scaleTwoUsesPointLayoutButKeepsPixelBudget() started.
+◇ Test sameIdentity_doesNotRestartLoad() started.
+◇ Test scaleOneKeepsPointsAndPixelsEqual() started.
+◇ Test "流式表格 raw cell 按 6 输入精确过滤且重建不重跑" started.
+◇ Test "Thought 富文本 fallback 为多个子块补充分隔符" started.
+◇ Test "未显示 referenceRows 仍在宽窄恢复后影响首列宽" started.
+◇ Test "表格宽度契约区分 wrap 收缩与 scroll viewport" started.
+◇ Test "表格 cell 沿用顶层 prepared source，非幂等 filter 只执行一次" started.
+◇ Test cachedReady_skipsLoadingPlaceholderHeight() started.
+◇ Test "图片占位与附件都保留外层链接 context" started.
+◇ Test "表格列宽测量使用真实内容区宽度" started.
+◇ Test "列表项中的首个非 Paragraph 子块不改写后续源顺序" started.
+◇ Test "loose list 续段继承累计缩进、内容列对齐与固定行高" started.
+◇ Test "列表 fixture 段落几何跨通道一致" started.
+◇ Test sharedInflight_twoSubscribersOneLoad_lastCancelDoesNotDropOther() started.
+◇ Test "有序/无序混合嵌套按层级累计缩进且归属正确" started.
+◇ Test "列表项内引用缩进叠加列表内容起点且保留竖线标记" started.
+◇ Test imageBlock_prepareForReuseRemovesFailureFallback() started.
+◇ Test mermaidBlock_rejectedShowsSourceCodeImmediately() started.
+◇ Test "列表 marker 继承引用 context 的字体与颜色" started.
+◇ Test imageBlock_reuseClearsFailureFallbackAfterSuccess() started.
+◇ Test timeoutCompletesBeforeLateCallbackAndLateResultIsIgnored() started.
+◇ Test "任务列表 marker 与嵌套行为保持既有契约" started.
+◇ Test imageBlock_failureWithoutFallbackShowsCompactLabel() started.
+◇ Test "isSemanticallyEqualTo 严格识别 appearance、renderEnvironment 与 closure 注入差异" started.
+◇ Test "内置块的复用比较包含样式与完整渲染配置" started.
+◇ Test mermaidBlockHandler_injectsSourceCodeFallback() started.
+◇ Test "withResolvedRenderEnvironmentIfNeeded 仅补全 unspecified 字段，不覆盖已注入 category" started.
+◇ Test "isSemanticallyEqualTo 按内容比较语法与处理器，而非仅数量" started.
+◇ Test "内置生成图 loader 以值状态比较而非实例身份" started.
+◇ Test scaffold_rendersAndExtractsPlainText() started.
+◇ Test "capturingRenderEnvironmentForBackgroundParse 保留已注入环境，仅未注入时自动捕获" started.
+◇ Test noRun_confirmsNoLinkInPlainParagraph() started.
+◇ Test colorKey_identifiesLinkColor() started.
+◇ Test allRunsLockLineHeight_paragraph() started.
+◇ Test "表格复用语义包含 alignment、行边界与 layout mode" started.
+◇ Test "非法思考标签安全降级，不进入递归 Block 路由" started.
+◇ Test "Thought suffix 的空行与缩进继续按标准 Markdown 路由" started.
+◇ Test "不透明闭包默认保守刷新，显式语义身份可安全复用" started.
+◇ Test someRun_findsMonospaceRun() started.
+◇ Test readyAfterWarmCache_skipsPendingAndLoader() started.
+◇ Test "表格回调与图片加载配置参与完整语义比较" started.
+◇ Test "inline syntax 返回 nil 时回落到标准文本" started.
+◇ Test "行内代码中的闭标签不提前结束 Thought" started.
+◇ Test "强调中的行内代码重置斜体并保留等宽背景" started.
+◇ Test "转义标点保持字面文本且不触发 Markdown 样式" started.
+◇ Test "内置代码块、表格与分割线按顺序路由，正文保留富文本块" started.
+◇ Test "开闭思考标签必须同名，错误别名不能提前闭合" started.
+◇ Test "多级列表的悬挂缩进递进增加" started.
+◇ Test "InlineHTML br 转换为换行，自闭合未知标签保守丢弃" started.
+◇ Test "SoftBreak 转换为单个空格" started.
+◇ Test inflightCoalescing() started.
+◇ Test "反斜杠硬换行转换为真实换行符" started.
+◇ Test "未闭合 Thought PREFIX 保持流式未完成状态" started.
+◇ Test "嵌套引用保持竖线标记并递进缩进" started.
+◇ Test "块 handler 返回 nil 时保守回落到富文本" started.
+◇ Test "有序列表保留 Markdown 起始序号" started.
+◇ Test "H3-H6 使用标题色、加粗与对应固定行高" started.
+◇ Test "GFM 裸 URL 当前保守回退为普通文本" started.
+◇ Test "链接内的加粗与行内代码继承链接属性" started.
+◇ Test "已知限制：自定义 inline syntax 命中时不继承删除线" started.
+◇ Test "有序任务列表同时保留序号与 checkbox" started.
+◇ Test "GFM 表格解析保留列对齐、单元格 Markdown 与块路由" started.
+◇ Test "嵌套强调、加粗与删除线组合保留独立样式语义" started.
+◇ Test "任务列表显示 checked 与 unchecked 标记" started.
+◇ Test "Thought 富文本回落保留行内代码背景并隔离闭标签后正文" started.
+◇ Test "标准自动链接产出 Link 属性" started.
+◇ Test syncReady_completesWithoutPendingLoader() started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-rich-cell", title: "复杂表格单元格 inline 语义", markdown: "| 名称 | 状态 | 备注 |\n| :--- | :---: | ---: |\n| **加粗** | `status` | [详情](https://example.com/cell) |\n| *斜体* | ***粗斜*** | 普通 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "详情", destination: Optional("https://example.com/cell"))], expectedInlineTraits: [InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "加粗", isBold: Optional(true), isItalic: nil, isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "status", isBold: nil, isItalic: nil, isMonospace: Optional(true), hasInlineCodeBackground: Optional(true)), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "斜体", isBold: nil, isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "粗斜", isBold: Optional(true), isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil)], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["名称", "状态", "备注"], rows: [["**加粗**", "`status`", "[详情](https://example.com/cell)"], ["*斜体*", "***粗斜***", "普通"]], alignments: [Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.left), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.center), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.right)])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "表格结构按 parser 产出稳定传递" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-escaped-pipe", title: "转义竖线保留在单元格内", markdown: "| 表达式 | 含义 |\n| --- | --- |\n| a \\| b | 或运算 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(2), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["表达式", "含义"], rows: [["a | b", "或运算"]], alignments: [nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。"]) to "表格结构按 parser 产出稳定传递" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-inline", title: "标准 inline 链接", markdown: "前置 [文案](https://example.com/guide) 后置", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "文案", destination: Optional("https://example.com/guide"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-autolink", title: "标准自动链接", markdown: "访问 <https://example.com/auto> 了解", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.com/auto", destination: Optional("https://example.com/auto"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-unsafe-scheme", title: "危险 scheme fallback", markdown: "点击 [危险](javascript:alert(1)) 文本", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "危险", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["javascript: 等非白名单 scheme 不渲染为链接；链接色也不应用（既有 0.0.1 契约）。"]) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "gfm-bare-url", title: "GFM 裸 URL 保守回退", markdown: "纯文本 https://example.org/path 结束", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.org/path", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["GFM bare URL autolink 未纳入支持矩阵：pinned swift-markdown 转换器未启用 autolink 扩展。"]) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-relative", title: "相对链接", markdown: "参见 [相对文档](docs/guide.md)", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "相对文档", destination: Optional("docs/guide.md"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-empty-ragged", title: "空单元格与不齐行稳定呈现", markdown: "| A | B | C |\n| --- | --- | --- |\n| 1 |  |\n| 2 | 3 | 4 | 5 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.lines, expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["A", "B", "C"], rows: [["1", "", ""], ["2", "3", "4"]], alignments: [nil, nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "表格结构按 parser 产出稳定传递" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-mixed-nesting", title: "有序/无序混合嵌套累计缩进", markdown: "- 无序外层\n  1. 有序内层\n     - 无序深层", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序外层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "有序内层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序深层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil)], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-loose-continuation", title: "loose list 续段继承列表几何", markdown: "- 首段落在列表项内\n\n  续段仍属于同一列表项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "续段仍属于", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(28.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-reference", title: "引用链接（reference link）", markdown: "开头 [引用文案][ref] 与 [缩写][short]。\n\n[ref]: https://example.com/ref-target\n[short]: https://example.com/short-target", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "引用文案", destination: Optional("https://example.com/ref-target")), InkMarkdownSemanticCorpus.InkLinkExpectation(text: "缩写", destination: Optional("https://example.com/short-target"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-blockquote", title: "列表内引用归属列表项", markdown: "- 列表项开头\n\n  > 引用仍在列表项内", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "引用仍在列表项内", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(24.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-rich-cell", title: "复杂表格单元格 inline 语义", markdown: "| 名称 | 状态 | 备注 |\n| :--- | :---: | ---: |\n| **加粗** | `status` | [详情](https://example.com/cell) |\n| *斜体* | ***粗斜*** | 普通 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "详情", destination: Optional("https://example.com/cell"))], expectedInlineTraits: [InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "加粗", isBold: Optional(true), isItalic: nil, isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "status", isBold: nil, isItalic: nil, isMonospace: Optional(true), hasInlineCodeBackground: Optional(true)), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "斜体", isBold: nil, isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "粗斜", isBold: Optional(true), isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil)], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["名称", "状态", "备注"], rows: [["**加粗**", "`status`", "[详情](https://example.com/cell)"], ["*斜体*", "***粗斜***", "普通"]], alignments: [Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.left), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.center), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.right)])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-empty-ragged", title: "空单元格与不齐行稳定呈现", markdown: "| A | B | C |\n| --- | --- | --- |\n| 1 |  |\n| 2 | 3 | 4 | 5 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.lines, expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["A", "B", "C"], rows: [["1", "", ""], ["2", "3", "4"]], alignments: [nil, nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-inline", title: "标准 inline 链接", markdown: "前置 [文案](https://example.com/guide) 后置", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "文案", destination: Optional("https://example.com/guide"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-escaped-pipe", title: "转义竖线保留在单元格内", markdown: "| 表达式 | 含义 |\n| --- | --- |\n| a \\| b | 或运算 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(2), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["表达式", "含义"], rows: [["a | b", "或运算"]], alignments: [nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。"]) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-task-markers", title: "任务列表标记保持既有行为", markdown: "- [ ] 待办事项\n- [x] 已完成事项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["marker 形态（☐/☑）由既有 InkMarkdownTests 任务列表测试钉住；corpus 只覆盖归属与几何。"]) to "block 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-autolink", title: "标准自动链接", markdown: "访问 <https://example.com/auto> 了解", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.com/auto", destination: Optional("https://example.com/auto"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-reference", title: "引用链接（reference link）", markdown: "开头 [引用文案][ref] 与 [缩写][short]。\n\n[ref]: https://example.com/ref-target\n[short]: https://example.com/short-target", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "引用文案", destination: Optional("https://example.com/ref-target")), InkMarkdownSemanticCorpus.InkLinkExpectation(text: "缩写", destination: Optional("https://example.com/short-target"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "gfm-bare-url", title: "GFM 裸 URL 保守回退", markdown: "纯文本 https://example.org/path 结束", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.org/path", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["GFM bare URL autolink 未纳入支持矩阵：pinned swift-markdown 转换器未启用 autolink 扩展。"]) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-relative", title: "相对链接", markdown: "参见 [相对文档](docs/guide.md)", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "相对文档", destination: Optional("docs/guide.md"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-inline", title: "标准 inline 链接", markdown: "前置 [文案](https://example.com/guide) 后置", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "文案", destination: Optional("https://example.com/guide"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-unsafe-scheme", title: "危险 scheme fallback", markdown: "点击 [危险](javascript:alert(1)) 文本", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "危险", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["javascript: 等非白名单 scheme 不渲染为链接；链接色也不应用（既有 0.0.1 契约）。"]) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-loose-continuation", title: "loose list 续段继承列表几何", markdown: "- 首段落在列表项内\n\n  续段仍属于同一列表项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "续段仍属于", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(28.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-reference", title: "引用链接（reference link）", markdown: "开头 [引用文案][ref] 与 [缩写][short]。\n\n[ref]: https://example.com/ref-target\n[short]: https://example.com/short-target", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "引用文案", destination: Optional("https://example.com/ref-target")), InkMarkdownSemanticCorpus.InkLinkExpectation(text: "缩写", destination: Optional("https://example.com/short-target"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-unsafe-scheme", title: "危险 scheme fallback", markdown: "点击 [危险](javascript:alert(1)) 文本", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "危险", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["javascript: 等非白名单 scheme 不渲染为链接；链接色也不应用（既有 0.0.1 契约）。"]) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-blockquote", title: "列表内引用归属列表项", markdown: "- 列表项开头\n\n  > 引用仍在列表项内", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "引用仍在列表项内", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(24.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-task-markers", title: "任务列表标记保持既有行为", markdown: "- [ ] 待办事项\n- [x] 已完成事项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["marker 形态（☐/☑）由既有 InkMarkdownTests 任务列表测试钉住；corpus 只覆盖归属与几何。"]) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-relative", title: "相对链接", markdown: "参见 [相对文档](docs/guide.md)", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "相对文档", destination: Optional("docs/guide.md"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-autolink", title: "标准自动链接", markdown: "访问 <https://example.com/auto> 了解", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.com/auto", destination: Optional("https://example.com/auto"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-rich-cell", title: "复杂表格单元格 inline 语义", markdown: "| 名称 | 状态 | 备注 |\n| :--- | :---: | ---: |\n| **加粗** | `status` | [详情](https://example.com/cell) |\n| *斜体* | ***粗斜*** | 普通 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "详情", destination: Optional("https://example.com/cell"))], expectedInlineTraits: [InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "加粗", isBold: Optional(true), isItalic: nil, isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "status", isBold: nil, isItalic: nil, isMonospace: Optional(true), hasInlineCodeBackground: Optional(true)), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "斜体", isBold: nil, isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "粗斜", isBold: Optional(true), isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil)], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["名称", "状态", "备注"], rows: [["**加粗**", "`status`", "[详情](https://example.com/cell)"], ["*斜体*", "***粗斜***", "普通"]], alignments: [Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.left), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.center), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.right)])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-escaped-pipe", title: "转义竖线保留在单元格内", markdown: "| 表达式 | 含义 |\n| --- | --- |\n| a \\| b | 或运算 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(2), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["表达式", "含义"], rows: [["a | b", "或运算"]], alignments: [nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。"]) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "gfm-bare-url", title: "GFM 裸 URL 保守回退", markdown: "纯文本 https://example.org/path 结束", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.org/path", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["GFM bare URL autolink 未纳入支持矩阵：pinned swift-markdown 转换器未启用 autolink 扩展。"]) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-loose-continuation", title: "loose list 续段继承列表几何", markdown: "- 首段落在列表项内\n\n  续段仍属于同一列表项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "续段仍属于", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(28.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-blockquote", title: "列表内引用归属列表项", markdown: "- 列表项开头\n\n  > 引用仍在列表项内", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "引用仍在列表项内", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(24.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-empty-ragged", title: "空单元格与不齐行稳定呈现", markdown: "| A | B | C |\n| --- | --- | --- |\n| 1 |  |\n| 2 | 3 | 4 | 5 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.lines, expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["A", "B", "C"], rows: [["1", "", ""], ["2", "3", "4"]], alignments: [nil, nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-mixed-nesting", title: "有序/无序混合嵌套累计缩进", markdown: "- 无序外层\n  1. 有序内层\n     - 无序深层", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序外层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "有序内层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序深层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil)], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-mixed-nesting", title: "有序/无序混合嵌套累计缩进", markdown: "- 无序外层\n  1. 有序内层\n     - 无序深层", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序外层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "有序内层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序深层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil)], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "attributed 通道链接语义满足 corpus 预期" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-task-markers", title: "任务列表标记保持既有行为", markdown: "- [ ] 待办事项\n- [x] 已完成事项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["marker 形态（☐/☑）由既有 InkMarkdownTests 任务列表测试钉住；corpus 只覆盖归属与几何。"]) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-rich-cell", title: "复杂表格单元格 inline 语义", markdown: "| 名称 | 状态 | 备注 |\n| :--- | :---: | ---: |\n| **加粗** | `status` | [详情](https://example.com/cell) |\n| *斜体* | ***粗斜*** | 普通 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "详情", destination: Optional("https://example.com/cell"))], expectedInlineTraits: [InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "加粗", isBold: Optional(true), isItalic: nil, isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "status", isBold: nil, isItalic: nil, isMonospace: Optional(true), hasInlineCodeBackground: Optional(true)), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "斜体", isBold: nil, isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "粗斜", isBold: Optional(true), isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil)], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["名称", "状态", "备注"], rows: [["**加粗**", "`status`", "[详情](https://example.com/cell)"], ["*斜体*", "***粗斜***", "普通"]], alignments: [Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.left), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.center), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.right)])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-empty-ragged", title: "空单元格与不齐行稳定呈现", markdown: "| A | B | C |\n| --- | --- | --- |\n| 1 |  |\n| 2 | 3 | 4 | 5 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.lines, expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["A", "B", "C"], rows: [["1", "", ""], ["2", "3", "4"]], alignments: [nil, nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-escaped-pipe", title: "转义竖线保留在单元格内", markdown: "| 表达式 | 含义 |\n| --- | --- |\n| a \\| b | 或运算 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(2), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["表达式", "含义"], rows: [["a | b", "或运算"]], alignments: [nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。"]) to "streaming finish 通道与静态语义投影等价" started.
+◇ Test case passing 1 argument height → 0.0 to invalidHeightIsRejected(height:) started.
+◇ Test case passing 1 argument scale → 0.0 to scaleBelowUIKitMinimumIsRejected(scale:) started.
+◇ Test case passing 1 argument scale → nan to scaleBelowUIKitMinimumIsRejected(scale:) started.
+◇ Test case passing 1 argument scale → 0.5 to scaleBelowUIKitMinimumIsRejected(scale:) started.
+◇ Test case passing 1 argument height → nan to invalidHeightIsRejected(height:) started.
+◇ Test case passing 1 argument width → 0.0 to invalidWidthIsRejected(width:) started.
+◇ Test case passing 1 argument width → nan to invalidWidthIsRejected(width:) started.
+​​​​​​◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-loose-continuation", title: "loose list 续段继承列表几何", markdown: "- 首段落在列表项内\n\n  续段仍属于同一列表项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "续段仍属于", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(28.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "列表 fixture 段落几何跨通道一致" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-mixed-nesting", title: "有序/无序混合嵌套累计缩进", markdown: "- 无序外层\n  1. 有序内层\n     - 无序深层", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序外层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "有序内层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序深层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil)], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "列表 fixture 段落几何跨通道一致" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-blockquote", title: "列表内引用归属列表项", markdown: "- 列表项开头\n\n  > 引用仍在列表项内", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "引用仍在列表项内", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(24.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "列表 fixture 段落几何跨通道一致" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-task-markers", title: "任务列表标记保持既有行为", markdown: "- [ ] 待办事项\n- [x] 已完成事项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["marker 形态（☐/☑）由既有 InkMarkdownTests 任务列表测试钉住；corpus 只覆盖归属与几何。"]) to "列表 fixture 段落几何跨通道一致" started.
+​✔ Test scaleThreeUsesSamePixelBudgetWithoutDoubleScaling() passed after 0.096 seconds.
+✔ Test scaleTwoUsesPointLayoutButKeepsPixelBudget() passed after 0.096 seconds.
+✔ Test scaleOneKeepsPointsAndPixelsEqual() passed after 0.096 seconds.
+✔ Test invalidHeightIsRejected(height:) with 2 test cases passed after 0.096 seconds.
+✔ Test scaleBelowUIKitMinimumIsRejected(scale:) with 3 test cases passed after 0.096 seconds.
+✔ Test invalidWidthIsRejected(width:) with 2 test cases passed after 0.096 seconds.
+✔ Suite InkMermaidRasterPlanTests passed after 0.117 seconds.
+✔ Test httpSessionDelegate_cancellationDuringTaskRegistrationFinishesContinuation() passed after 0.123 seconds.
+✔ Test httpSessionDelegate_blocksRedirectBeyondMaxCount() passed after 0.122 seconds.
+✔ Test httpSessionDelegate_rejectsOversizedContentLength() passed after 0.120 seconds.
+✔ Test "开闭思考标签必须同名，错误别名不能提前闭合" passed after 0.068 seconds.
+✔ Test inlineAttachment_unloadedBoundsHeightIsCompact() passed after 0.140 seconds.
+Resolve Package Graph
+
+✔ Test lineHeight_noImageKeepsLocked() passed after 2.252 seconds.
+Resolve Package Graph
+
+✔ Test streamRenderer_releasesCompleteBlockBracketsInSingleChunk() passed after 2.726 seconds.
+✔ Test fixedLineHeight_plainParagraph() passed after 2.726 seconds.
+✔ Test latex_defaultLeavesDollarDelimitedTextUntouched() passed after 2.727 seconds.
+✔ Test imageSource_requestURLMatchesCanonicalID() passed after 2.726 seconds.
+✔ Test imageSource_unknownScheme() passed after 2.726 seconds.
+✔ Test latexBlockHandlerPromotesBracketBlockParagraph() passed after 2.734 seconds.
+✔ Test listItem_spacing() passed after 2.738 seconds.
+✔ Test displayContext_sanitizesNonFiniteAndNonPositiveInputs() passed after 2.740 seconds.
+✔ Test fixedLineHeight_paragraphWithBold() passed after 2.741 seconds.
+✔ Test streamRenderer_doesNotFreezeListBeforeIndentedContinuation() passed after 2.742 seconds.
+✔ Test securityPolicy_defaultPreservesQueryInRequestURL() passed after 2.743 seconds.
+✔ Test fitted_respectsMaxHeight() passed after 2.743 seconds.
+✔ Test promote_singleImage() passed after 2.743 seconds.
+✔ Test refreshTextStorage_fullRewriteOnPrefixChange() passed after 2.743 seconds.
+✔ Test table_attributedFallbackRendersCleanText() passed after 2.743 seconds.
+✔ Test promote_imageWithSurroundingWhitespace() passed after 2.743 seconds.
+✔ Test generatedImageSource_hasBoundedStableIdentity() passed after 2.743 seconds.
+✔ Test errorDegradation_disabledShowsPlaceholder() passed after 2.743 seconds.
+✔ Test latexBlockHandler_promotesSingleLineDollarBlock() passed after 2.743 seconds.
+✔ Test refreshTextStorage_appendsTailOnly() passed after 2.743 seconds.
+✔ Test imageSource_httpScheme() passed after 2.743 seconds.
+✔ Test latexEnableUsesCurrentAppearanceAtRenderTime() passed after 2.744 seconds.
+✔ Test latexBlockHandler_promotesMultiParagraphDollarBlock() passed after 2.749 seconds.
+✔ Test lineBreak_hardLineBreakProducesNewline() passed after 2.750 seconds.
+✔ Test securityPolicy_emptyHostsRejectsAll() passed after 2.749 seconds.
+✔ Test defaultStoresIsolateCompleteRenderingConfiguration() passed after 2.749 seconds.
+✔ Test generatedImageSource_usesSHA256Identity() passed after 2.743 seconds.
+✔ Test imageBlockHandler_respectsSecurityPolicy() passed after 2.751 seconds.
+✔ Test displayContext_preservesNormalInputsAndExistingDisplayKey() passed after 2.754 seconds.
+✔ Test fixedLineHeight_h2() passed after 2.754 seconds.
+✔ Test streamRenderer_replaceSourceSeedsFutureAppend() passed after 2.754 seconds.
+✔ Test latex_explicitColorOverridesContextInStableIdentity() passed after 2.754 seconds.
+✔ Test latexBlockHandler_promotesMultiParagraphBracketBlock() passed after 2.758 seconds.
+✔ Test blockRenderer_sourceFilterRunsOnceAcrossThoughtSuffix() passed after 2.861 seconds.
+✔ Test streamRenderer_reparsesOnlyActiveSuffixAfterStableBlock() passed after 2.867 seconds.
+✔ Test appearance_defaultValues() passed after 2.867 seconds.
+✔ Test imageParagraphStyle_elevatesOnlyMaximumLineHeight() passed after 2.869 seconds.
+✔ Test latex_explicitColorOverridesDynamicLabelInStableIdentity() passed after 2.868 seconds.
+✔ Test displayContext_clampsOverlargeInputsBeforeDisplayKeyConversion() passed after 2.869 seconds.
+✔ Test updateConfigurationDrainsAcceptedQueueAfterConcurrencyIncrease() passed after 2.872 seconds.
+✔ Test linkSecurityPolicy_filtersDangerousSchemes() passed after 2.875 seconds.
+✔ Test imageBlockHandler_doesNotPromoteMixedInlineImage() passed after 2.877 seconds.
+✔ Test fixedLineHeight_codeBlock() passed after 2.880 seconds.
+Resolve Package Graph
+
+✔ Test streamRenderer_incrementalBenchmarkMatchesFinalFullRender() passed after 3.554 seconds.
+✔ Test latex_escapedParenthesesAreNotPromotedThroughMarkupPath() passed after 3.564 seconds.
+✔ Test imageBlock_unconfiguredIntrinsicHeightIsMinimal() passed after 3.566 seconds.
+✔ Test storeConfiguration_maxDataURLBytesApplied() passed after 3.568 seconds.
+✔ Test fixedLineHeight_h1() passed after 3.568 seconds.
+✔ Test fitted_smallImageNoUpscale() passed after 3.568 seconds.
+✔ Test baselineOffset_imageAttachmentIsZero() passed after 3.571 seconds.
+✔ Test fitted_upscalesWhenEnabled() passed after 3.571 seconds.
+✔ Test blockquoteLink_bothColorsCoexist() passed after 3.571 seconds.
+✔ Test imageBlock_openURLTapActionAlsoInvokesOnImageTap() passed after 3.570 seconds.
+✔ Test headingInlineCode_keepsMonospaceAtHeadingSize() passed after 3.572 seconds.
+✔ Test imageBlock_noneTapActionDoesNotInstallGesture() passed after 3.571 seconds.
+✔ Test latex_parenthesesAndBareDollarDoNotCrossContaminate() passed after 3.571 seconds.
+✔ Test streamRenderer_keepsUnclosedCodeFenceInActiveSuffix() passed after 3.572 seconds.
+✔ Test streamRenderer_buffersUnclosedInlineDollarUntilPaired() passed after 3.572 seconds.
+✔ Test imageIODownsampler_respectsMaxPixel() passed after 3.885 seconds.
+✔ Test streamRenderer_keepsUnclosedTildeFenceInActiveSuffix() passed after 3.892 seconds.
+✔ Test displayKey_exactMultiple() passed after 3.891 seconds.
+✔ Test latexBlockHandler_doesNotPromoteWhenDisabled() passed after 3.901 seconds.
+✔ Test baselineOffset_neverNegative() passed after 3.905 seconds.
+✔ Test streamRenderer_doesNotBufferBareDollarWithoutOptIn() passed after 3.905 seconds.
+✔ Test listInlineCode_keepsBackgroundAndMonospace() passed after 3.939 seconds.
+✔ Test promote_mixedTextAndImage() passed after 3.939 seconds.
+✔ Test streamRenderer_releasesCompleteBlockDollarInSingleChunk() passed after 3.939 seconds.
+✔ Test latex_inlineStyleIdentityFollowsDarkContextColor() passed after 3.942 seconds.
+✔ Test strikethrough_appliesUnderlineStyle() passed after 3.942 seconds.
+✔ Test latex_plainParenthesesAreNotPromotedThroughMarkupPath() passed after 3.942 seconds.
+✔ Test storePrepareForRenderingAppliesConfiguration() passed after 3.942 seconds.
+✔ Test fixedLineHeight_paragraphWithInlineCode() passed after 3.942 seconds.
+✔ Test displayMetrics_prefersContextualViewBounds() passed after 3.942 seconds.
+✔ Test fixedLineHeight_orderedList() passed after 3.941 seconds.
+✔ Test strongInlineCode_codeStaysRegularWeight() passed after 3.942 seconds.
+✔ Test shrinkingPendingLimitPreservesAcceptedFIFOAndRejectsNewRequests() passed after 3.942 seconds.
+✔ Test dataURL_withinLimit() passed after 3.940 seconds.
+✔ Test paragraphSpacing_values() passed after 3.940 seconds.
+✔ Test mixedInlineStyles_uniformLineHeight() passed after 3.944 seconds.
+✔ Test storeReusesDefaultLoaderPerSecurityPolicy() passed after 3.946 seconds.
+✔ Test securityPolicy_stripsQueryWhenEnabled() passed after 3.946 seconds.
+✔ Test latexBlockHandlerDoesNotPromoteMixedBracketParagraph() passed after 3.947 seconds.
+✔ Test displayKey_distinguishesContentMode() passed after 3.945 seconds.
+✔ Test imageSource_fileScheme() passed after 3.945 seconds.
+✔ Test streamRenderer_buffersUnclosedInlineParenthesesAndHonorsEscapesAndCode() passed after 3.945 seconds.
+✔ Test thematicBreak_height() passed after 3.946 seconds.
+✔ Test streamRenderer_buffersUnclosedBlockBracketsWhenLaTeXEnabled() passed after 3.946 seconds.
+✔ Test displayKey_bucketQuantization() passed after 3.946 seconds.
+2026-09-07 14:38:18.642025+0800 xctest[82250:6054478] [Text] UITextView 0x17eff7000 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+✔ Test imageBlockHandler_promotesStandaloneImageParagraph() passed after 3.946 seconds.
+✔ Test securityPolicy_stripsQueryDefaultIsFalse() passed after 3.947 seconds.
+✔ Test headingLink_linkColorCoexistsWithHeadingColor() passed after 3.947 seconds.
+✔ Test fixedLineHeight_unorderedList() passed after 3.947 seconds.
+✔ Test latex_dollarOptInRendersAttachment() passed after 3.947 seconds.
+✔ Test refreshTextStorage_skipsWhenChangeOutsideVisibleRange() passed after 3.947 seconds.
+✔ Test latex_appearanceFlagEnablesInlineSyntaxWithoutRegistration() passed after 3.947 seconds.
+✔ Test fitted_largeImageScalesDown() passed after 3.969 seconds.
+✔ Test appearance_initDoesNotRecursivelyTrap() passed after 3.969 seconds.
+✔ Test latexBlockHandler_doesNotPromoteMixedParagraph() passed after 3.970 seconds.
+✔ Test refreshTextStorage_truncatesShrunkContent() passed after 3.970 seconds.
+✔ Test latex_labelColorDiffersBetweenLightAndDarkSnapshots() passed after 3.969 seconds.
+✔ Test imageSource_dataScheme() passed after 3.970 seconds.
+✔ Test "行内代码中的闭标签不提前结束 Thought" passed after 3.984 seconds.
+✔ Test "Thought suffix 的空行与缩进继续按标准 Markdown 路由" passed after 3.996 seconds.
+✔ Test "未闭合 Thought PREFIX 保持流式未完成状态" passed after 3.993 seconds.
+✔ Test "非法思考标签安全降级，不进入递归 Block 路由" passed after 3.998 seconds.
+✔ Test "withResolvedRenderEnvironmentIfNeeded 仅补全 unspecified 字段，不覆盖已注入 category" passed after 4.011 seconds.
+✔ Test "capturingRenderEnvironmentForBackgroundParse 保留已注入环境，仅未注入时自动捕获" passed after 4.004 seconds.
+✔ Test backgroundRender_withImagesEnabled_doesNotCrash() passed after 4.071 seconds.
+✔ Test streamRenderer_finishDegradesIncompleteParenthesesLatexToText() passed after 4.074 seconds.
+✔ Test streamRenderer_finishDegradesIncompleteInlineLatexToText() passed after 4.089 seconds.
+✔ Suite "InkThoughtBlockHandler 核心解析契约" passed after 4.105 seconds.
+Resolve Package Graph
+
+2026-09-07 14:38:21.756750+0800 xctest[82250:6054478] [Text] UITextView 0x17eff4000 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+2026-09-07 14:38:21.763817+0800 xctest[82250:6054478] [Text] UITextView 0x17eff4c00 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+​✔ Test imageBlock_cachedReadySkipsLoadingPlaceholderHeight() passed after 7.073 seconds.
+✔ Test applyImage_preservesExistingParagraphGeometry() passed after 7.075 seconds.
+2026-09-07 14:38:21.785199+0800 xctest[82250:6054478] [Text] UITextView 0x17eff5800 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+✔ Test sourceFilterStream_displayChainMatchesFullRender() passed after 7.093 seconds.
+​2026-09-07 14:38:21.786645+0800 xctest[82250:6054478] [Text] UITextView 0x17eff6400 is switching to TextKit 1 compatibility mode because its layoutManager was accessed. Break on void _UITextViewEnablingCompatibilityMode(UITextView *__strong, BOOL) to debug.
+​✔ Test applyImage_doesNotRegressParagraphElevation() passed after 7.096 seconds.
+✔ Test displayFrame_nonpositiveSpeedStillMakesProgress(speed:) with 3 test cases passed after 7.094 seconds.
+✔ Test textViewBindingHelperRematerializesAfterHostWidthChange() passed after 7.117 seconds.
+​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​✔ Test streamRenderer_sourceFilterReparsesWholeBufferPerAppend() passed after 7.124 seconds.
+✔ Test "streaming finish 通道与静态语义投影等价" with 13 test cases passed after 7.108 seconds.
+✔ Test inflightCoalescing() passed after 7.067 seconds.
+​✔ Test incremental_renderIsFasterThanFullRender() passed after 7.119 seconds.
+​✔ Test "raw 接纳一次后测量与建行不重复 filter" passed after 7.117 seconds.
+✔ Test "普通 import 可实现 InkRenderableBlock 并通过自定义 handler 渲染" passed after 7.117 seconds.
+✔ Test incremental_renderOutputMatchesFullRender() passed after 7.117 seconds.
+✔ Test "raw static 每 replace 每 cell 一次，resize 不增；显式 apply 可重新接纳" passed after 7.117 seconds.
+✔ Test "未提供 baseURL 时相对图片 source 返回明确失败（占位），不猜测来源" passed after 7.117 seconds.
+✔ Test "空单元格与不齐行稳定构造块视图" passed after 7.118 seconds.
+✔ Test "提供 baseURL 时相对图片 source 解析为确定请求 URL" passed after 7.117 seconds.
+✔ Test "query 默认保留、fragment 默认剥离，且请求与缓存身份一致" passed after 7.117 seconds.
+✔ Test "默认策略重定向放行；配置白名单时每次重定向重新校验" passed after 7.117 seconds.
+✔ Test largeDocument_blockRenderThroughput() passed after 7.123 seconds.
+✔ Test "显式新 replace 可重新接纳 raw；不按字符串跨生命周期去重" passed after 7.120 seconds.
+✔ Test "deprecated init(source:store:rendering:) 可编译并创建视图" passed after 7.118 seconds.
+✔ Test "InkImageBlockView 为 InkImageBlock 兼容别名" passed after 7.121 seconds.
+✔ Test "表格结构按 parser 产出稳定传递" with 3 test cases passed after 7.121 seconds.
+✔ Test "流式 2+2+2 cell 精确计数 6，重建不增加" passed after 7.124 seconds.
+✔ Test "空 host 白名单默认允许所有有效 HTTP(S) host" passed after 7.121 seconds.
+✔ Test "短行 append 不要求全量重建，更长行按需重建" passed after 7.121 seconds.
+✔ Test "开启 stripsQuery 后请求与缓存身份同步剥离" passed after 7.121 seconds.
+✔ Test "复杂单元格保留 inline 语义" passed after 7.122 seconds.
+✔ Test "表格单元格链接走正文相同 handler 契约" passed after 7.121 seconds.
+✔ Test "非 HTTP(S) 危险 scheme 仍被资源安全边界拒绝" passed after 7.118 seconds.
+✔ Test "prepared Markup 派生 cell 接纳计数为零且保留原文 fallback" passed after 7.117 seconds.
+✔ Test "顶层 renderer prepared 表格 cell 不增加 filter 计数" passed after 7.121 seconds.
+✔ Test "makeView 返回原 InkImageBlock 实例" passed after 7.173 seconds.
+✔ Test "图片真图渲染默认关闭：占位且不产生附件" passed after 7.173 seconds.
+✔ Test "显式 allowlist 时非允许 host 继续被拒绝" passed after 7.174 seconds.
+✔ Test "同内容静态一次接纳与逐行接纳列宽等价" passed after 7.174 seconds.
+✔ Test "block 通道链接语义满足 corpus 预期" with 13 test cases passed after 7.175 seconds.
+✔ Test "wrap 宽窄恢复保留 reference 对首列影响；scroll 自然宽稳定" passed after 7.176 seconds.
+✔ Test "InkImageBlock 是 UIView 子类" passed after 7.168 seconds.
+✔ Test "表格列宽测量、流式 cell 字体与行高使用同一 Dynamic Type trait" passed after 7.168 seconds.
+✔ Test "InkThoughtBlockView 折叠与展开状态下提供精准的 VoiceOver 语义与提示" passed after 7.168 seconds.
+✔ Test clearedOldRouteCannotAuthorizePolicyForNewRequest() passed after 7.176 seconds.
+✔ Test staleViewFinishCannotCompleteNewRequestRoute() passed after 7.176 seconds.
+✔ Test "InkThematicBreakView 提供分割线无障碍标签" passed after 7.168 seconds.
+✔ Test "InkCodeBlockView 提供代码语言与代码内容的无障碍辅助描述" passed after 7.168 seconds.
+✔ Test "大字号 Dynamic Type 配置下正文与标题行高正确缩放且不截断" passed after 7.254 seconds.
+✔ Test failureCompletionClearsRouteSoLaterPolicyIsCancelled() passed after 7.176 seconds.
+✔ Test "attributed 通道链接语义满足 corpus 预期" with 13 test cases passed after 7.172 seconds.
+✔ Test "非法上限回退默认值且不取消长度保护" passed after 7.254 seconds.
+✔ Test "不可折叠思考卡片 (isCollapsible == false) 的 VoiceOver 特征降级为 .header" passed after 7.195 seconds.
+✔ Test "默认上限保持 50_000，并在 renderer 创建时固化" passed after 7.254 seconds.
+✔ Test "自定义上限覆盖小于、等于与超过三种输入" passed after 7.254 seconds.
+✔ Test "reset 与 finish 均只使用已接受 canonical source" passed after 7.254 seconds.
+✔ Test "流式表格 raw cell 按 6 输入精确过滤且重建不重跑" passed after 7.253 seconds.
+✔ Test "Thought 富文本 fallback 为多个子块补充分隔符" passed after 7.253 seconds.
+✔ Test "表格列宽测量使用真实内容区宽度" passed after 7.253 seconds.
+✔ Test "图片占位与附件都保留外层链接 context" passed after 7.253 seconds.
+✔ Test "有序/无序混合嵌套按层级累计缩进且归属正确" passed after 7.217 seconds.
+✔ Test "loose list 续段继承累计缩进、内容列对齐与固定行高" passed after 7.217 seconds.
+✔ Test "未显示 referenceRows 仍在宽窄恢复后影响首列宽" passed after 7.253 seconds.
+✔ Test "列表项中的首个非 Paragraph 子块不改写后续源顺序" passed after 7.217 seconds.
+✔ Test "列表 marker 继承引用 context 的字体与颜色" passed after 7.257 seconds.
+✔ Test "isSemanticallyEqualTo 严格识别 appearance、renderEnvironment 与 closure 注入差异" passed after 7.255 seconds.
+✔ Test "内置块的复用比较包含样式与完整渲染配置" passed after 7.255 seconds.
+✔ Test "表格宽度契约区分 wrap 收缩与 scroll viewport" passed after 7.293 seconds.
+✔ Test "表格 cell 沿用顶层 prepared source，非幂等 filter 只执行一次" passed after 7.293 seconds.
+✔ Test "列表 fixture 段落几何跨通道一致" with 4 test cases passed after 7.217 seconds.
+✔ Test sharedInflight_twoSubscribersOneLoad_lastCancelDoesNotDropOther() passed after 7.217 seconds.
+✔ Test mermaidBlock_rejectedShowsSourceCodeImmediately() passed after 7.216 seconds.
+✔ Test "isSemanticallyEqualTo 按内容比较语法与处理器，而非仅数量" passed after 7.256 seconds.
+✔ Test scaffold_rendersAndExtractsPlainText() passed after 7.255 seconds.
+✔ Test noRun_confirmsNoLinkInPlainParagraph() passed after 7.255 seconds.
+✔ Test "列表项内引用缩进叠加列表内容起点且保留竖线标记" passed after 7.257 seconds.
+✔ Test colorKey_identifiesLinkColor() passed after 7.255 seconds.
+✔ Test "内置生成图 loader 以值状态比较而非实例身份" passed after 7.255 seconds.
+✔ Test "任务列表 marker 与嵌套行为保持既有契约" passed after 7.257 seconds.
+✔ Test someRun_findsMonospaceRun() passed after 7.256 seconds.
+✔ Test "InlineHTML br 转换为换行，自闭合未知标签保守丢弃" passed after 7.255 seconds.
+✔ Test "表格回调与图片加载配置参与完整语义比较" passed after 7.256 seconds.
+✔ Test "SoftBreak 转换为单个空格" passed after 7.255 seconds.
+✔ Test "inline syntax 返回 nil 时回落到标准文本" passed after 7.255 seconds.
+✔ Test "内置代码块、表格与分割线按顺序路由，正文保留富文本块" passed after 7.255 seconds.
+✔ Test allRunsLockLineHeight_paragraph() passed after 7.255 seconds.
+✔ Test "多级列表的悬挂缩进递进增加" passed after 7.255 seconds.
+✔ Test "强调中的行内代码重置斜体并保留等宽背景" passed after 7.255 seconds.
+✔ Test "转义标点保持字面文本且不触发 Markdown 样式" passed after 7.255 seconds.
+✔ Test "H3-H6 使用标题色、加粗与对应固定行高" passed after 7.228 seconds.
+✔ Test "GFM 裸 URL 当前保守回退为普通文本" passed after 7.229 seconds.
+✔ Test "链接内的加粗与行内代码继承链接属性" passed after 7.228 seconds.
+✔ Test "嵌套强调、加粗与删除线组合保留独立样式语义" passed after 7.228 seconds.
+✔ Test "块 handler 返回 nil 时保守回落到富文本" passed after 7.228 seconds.
+✔ Test "嵌套引用保持竖线标记并递进缩进" passed after 7.229 seconds.
+✔ Test "标准自动链接产出 Link 属性" passed after 7.228 seconds.
+✔ Test "任务列表显示 checked 与 unchecked 标记" passed after 7.228 seconds.
+✔ Test "Thought 富文本回落保留行内代码背景并隔离闭标签后正文" passed after 7.229 seconds.
+✔ Test "已知限制：自定义 inline syntax 命中时不继承删除线" passed after 7.229 seconds.
+✔ Test "反斜杠硬换行转换为真实换行符" passed after 7.256 seconds.
+✔ Test "有序任务列表同时保留序号与 checkbox" passed after 7.229 seconds.
+✔ Test "有序列表保留 Markdown 起始序号" passed after 7.229 seconds.
+✔ Suite "Canonical Corpus 链接 Tracer（核心通道）" passed after 7.316 seconds.
+✔ Suite StreamingPerformanceTests passed after 7.317 seconds.
+✔ Suite "InkTablePresentation 单元格来源契约" passed after 7.317 seconds.
+✔ Suite "公开自定义块契约" passed after 7.318 seconds.
+✔ Test "表格复用语义包含 alignment、行边界与 layout mode" passed after 7.255 seconds.
+✔ Suite "InkImageBlock 公开 API 兼容" passed after 7.317 seconds.
+✔ Suite "InkTablePresentation 布局状态契约" passed after 7.317 seconds.
+✔ Suite "图片业务策略与相对 URL 契约" passed after 7.317 seconds.
+✔ Test syncReady_completesWithoutPendingLoader() passed after 7.228 seconds.
+✔ Test "不透明闭包默认保守刷新，显式语义身份可安全复用" passed after 7.257 seconds.
+✔ Suite "InkMarkdown 可访问性 (VoiceOver) 与 Dynamic Type 测试矩阵" passed after 7.317 seconds.
+✔ Suite InkMermaidPageLoadRouterTests passed after 7.317 seconds.
+✔ Test timeoutCompletesBeforeLateCallbackAndLateResultIsIgnored() passed after 7.258 seconds.
+✔ Suite "Canonical Corpus 表格 Tracer" passed after 7.317 seconds.
+✔ Suite "InkStreamRenderer source limit 契约测试" passed after 7.317 seconds.
+✔ Suite "项目审核 F04-F09 关键路径回归" passed after 7.316 seconds.
+✔ Suite SnapshotScaffoldTests passed after 7.316 seconds.
+✔ Test "GFM 表格解析保留列对齐、单元格 Markdown 与块路由" passed after 7.229 seconds.
+◇ Test concurrencyLimit() started.
+✔ Suite "Canonical Corpus 列表 Tracer" passed after 7.317 seconds.
+✔ Test displayFrame_consumesPrefixRewriteAndLaterTailTogether() passed after 7.319 seconds.
+✔ Suite "InkConfiguration 语义等价与渲染环境注入测试" passed after 7.318 seconds.
+✔ Test applyImage_sameParagraphMultipleImagesUsesMaxHeight() passed after 7.315 seconds.
+◇ Test preCancel_doesNotStartLoader() started.
+◇ Test queuedCancel_neverStartsLoader() started.
+◇ Test cancellationResumesExactlyOnce() started.
+✔ Test applyImage_elevatesEntireParagraphForInlineImage() passed after 7.315 seconds.
+✔ Test applyImage_setsShouldAnimateNextHeightChangeWhenDeltaExceedsThreshold() passed after 7.312 seconds.
+✔ Suite "CommonMark/GFM 渲染语义矩阵" passed after 7.319 seconds.
+✔ Test activeCountNeverExceedsOneDuringSerialExecution() passed after 7.328 seconds.
+✔ Test concurrencyLimit() passed after 0.018 seconds.
+✔ Test readyAfterWarmCache_skipsPendingAndLoader() passed after 7.276 seconds.
+◇ Test loadingAndQueued_subscribeOnce_completeOnce() started.
+◇ Test generatedSourceWithoutLoaderFailsWithoutURLFallback() started.
+✔ Test cancellationRemovesQueuedRenderWithoutLeakingPermit() passed after 7.332 seconds.
+✔ Test generatedSourceWithoutLoaderFailsWithoutURLFallback() passed after 0.003 seconds.
+◇ Test pendingQueueHasBoundedCapacity() started.
+✔ Test bindAttachments_skipsAlreadyMaterializedAttachments() passed after 7.353 seconds.
+✔ Test cancelledWaiterDoesNotConsumePermitOnRelease() passed after 7.347 seconds.
+✔ Test inlineAttachmentMaterializationIdentityIncludesDisplayContext() passed after 7.354 seconds.
+✔ Test cancellationResumesExactlyOnce() passed after 0.035 seconds.
+✔ Test imageBlock_configureLoadsImageAndUpdatesSize() passed after 7.436 seconds.
+✔ Test imageBlock_failureWithoutFallbackUsesCompactHeight() passed after 7.434 seconds.
+✔ Test imageBlock_failureWithoutFallbackShowsCompactLabel() passed after 7.379 seconds.
+✔ Test imageBlock_callbackTapActionInvokesOnImageTap() passed after 7.437 seconds.
+✔ Test imageBlock_prepareForReuseRemovesFailureFallback() passed after 7.380 seconds.
+✔ Test mermaidBlockHandler_injectsSourceCodeFallback() passed after 7.379 seconds.
+◇ Test pollSleepEndsPromptlyAfterInvalidation() started.
+✔ Test streamRenderer_ignoresAppendAfterFinish() passed after 7.437 seconds.
+✔ Test moreThanEightQueuedWaitersDoNotFailEarly() passed after 7.430 seconds.
+Resolve Package Graph
+✔ Test cachedReady_skipsLoadingPlaceholderHeight() passed after 7.417 seconds.
+✔ Test preCancel_doesNotStartLoader() passed after 0.120 seconds.
+◇ Test cancelAfterStart_resumesOnce() started.
+✔ Test queuedCancel_neverStartsLoader() passed after 0.119 seconds.
+✔ Suite InkMermaidRenderSchedulerTests passed after 7.440 seconds.
+◇ Test prepareForReuse_suppressesLateA_thenBCompletes() started.
+✔ Test sameIdentity_doesNotRestartLoad() passed after 7.418 seconds.
+◇ Test replaceAWithB_lateAIgnored_BCompletes() started.
+✔ Test bypassStoreTrue_loadsViaLoaderWithoutStoreCache() passed after 7.419 seconds.
+✔ Test loadingAndQueued_subscribeOnce_completeOnce() passed after 0.102 seconds.
+◇ Test displayChange_restartsLoad() started.
+◇ Test bypassStoreFalse_usesInjectedStore() started.
+◇ Test replaceAWithB_lateASuppressed_BCompletes() started.
+
+Resolve Package Graph
+✔ Test pollSleepEndsPromptlyAfterInvalidation() passed after 0.095 seconds.
+✔ Test imageBlock_reuseClearsFailureFallbackAfterSuccess() passed after 7.475 seconds.
+✔ Suite InkMermaidFailureFallbackTests passed after 7.536 seconds.
+✔ Suite InkMermaidRenderRequestStateTests passed after 7.535 seconds.
+✔ Test releasingBlock_cancelsLastSubscription() passed after 7.520 seconds.
+◇ Test releasingAttachment_doesNotRetainAfterCancel() started.
+✔ Test bypassStoreFalse_usesInjectedStore() passed after 0.106 seconds.
+◇ Test dismissCancelsHighRes_lateResultIgnored() started.
+✔ Test displayChange_restartsLoad() passed after 0.109 seconds.
+◇ Test constructWithoutBind_doesNotStartLoader() started.
+✔ Test prepareForReuse_suppressesLateA_thenBCompletes() passed after 0.110 seconds.
+✔ Test constructWithoutBind_doesNotStartLoader() passed after 0.001 seconds.
+◇ Test failureFallback_and_tapCallbackRemain() started.
+◇ Test lateAAfterRematerializeB_doesNotApply() started.
+✔ Test releasingAttachment_doesNotRetainAfterCancel() passed after 0.008 seconds.
+◇ Test sharedPeerKeepsLoad_whenOnePresentationCancels() started.
+✔ Test failureFallback_and_tapCallbackRemain() passed after 0.003 seconds.
+✔ Suite "InkImageBlock PresentationLoad adapter" passed after 7.555 seconds.
+✔ Test lateAAfterRematerializeB_doesNotApply() passed after 0.005 seconds.
+✔ Suite "InkImageAttachment PresentationLoad adapter" passed after 7.557 seconds.
+✔ Test dismissCancelsHighRes_lateResultIgnored() passed after 0.010 seconds.
+✔ Suite "InkImagePreview Store 分支" passed after 7.556 seconds.
+✔ Test cancelAfterStart_resumesOnce() passed after 0.139 seconds.
+◇ Test failure_mapsDecodeFailedOnce() started.
+✔ Test replaceAWithB_lateAIgnored_BCompletes() passed after 0.139 seconds.
+◇ Test failureCompletesOnce_withoutRetry() started.
+✔ Test failure_mapsDecodeFailedOnce() passed after 0.009 seconds.
+✔ Suite "InkImagePresentationLoadAsync 一次终结" passed after 7.591 seconds.
+✔ Test replaceAWithB_lateASuppressed_BCompletes() passed after 0.159 seconds.
+◇ Test lastSubscriberCancel_cancelsInflight_sharedPeerKeepsLoad() started.
+
+✔ Test sharedPeerKeepsLoad_whenOnePresentationCancels() passed after 0.082 seconds.
+✔ Test failureCompletesOnce_withoutRetry() passed after 0.052 seconds.
+✔ Suite "InkControlledImageLoader fixture 对接" passed after 7.635 seconds.
+✔ Suite "图片呈现释放与旧路径清理" passed after 7.635 seconds.
+✔ Test lastSubscriberCancel_cancelsInflight_sharedPeerKeepsLoad() passed after 0.085 seconds.
+◇ Test pendingReentrancy_startAndCancel_doNotWriteBackStaleHandle() started.
+✔ Test pendingReentrancy_startAndCancel_doNotWriteBackStaleHandle() passed after 0.111 seconds.
+◇ Test completionReentrancy_startNewRequest_notCancelledByOldCleanup() started.
+✔ Test pendingQueueHasBoundedCapacity() passed after 0.464 seconds.
+◇ Test cancellingLastQueuedSubscriptionRemovesPendingLoad() started.
+✔ Test cancellingLastQueuedSubscriptionRemovesPendingLoad() passed after 0.001 seconds.
+◇ Test memoryWarningEviction() started.
+✔ Test completionReentrancy_startNewRequest_notCancelledByOldCleanup() passed after 0.070 seconds.
+✔ Suite "InkImagePresentationLoad 订阅生命周期" passed after 7.868 seconds.
+✔ Test memoryWarningEviction() passed after 0.068 seconds.
+◇ Test notificationObserverToken_removesRegistrationOnDeinit() started.
+✔ Test notificationObserverToken_removesRegistrationOnDeinit() passed after 0.001 seconds.
+◇ Test storeDeinit_removesMemoryWarningObserver() started.
+✔ Test storeDeinit_removesMemoryWarningObserver() passed after 0.001 seconds.
+◇ Test tailReRenderNoDuplicateDownload() started.
+✔ Test tailReRenderNoDuplicateDownload() passed after 0.011 seconds.
+◇ Test subscriptionCancelPreventsCallback() started.
+✔ Test subscriptionCancelPreventsCallback() passed after 0.306 seconds.
+◇ Test inflightCancelledWhenLastSubscriberDrops() started.
+Resolve Package Graph
+
+✔ Test inflightCancelledWhenLastSubscriberDrops() passed after 0.730 seconds.
+◇ Test loaderIdentitySeparatesCache() started.
+✔ Test loaderIdentitySeparatesCache() passed after 0.026 seconds.
+◇ Test renderingLoaderIdentitySeparatesStoreCache() started.
+✔ Test renderingLoaderIdentitySeparatesStoreCache() passed after 0.024 seconds.
+◇ Test cancelledOldGenerationCannotOverwriteNewLoad() started.
+✔ Test cancelledOldGenerationCannotOverwriteNewLoad() passed after 0.386 seconds.
+Resolve Package Graph
+◇ Test activeCountGuard() started.
+✔ Test activeCountGuard() passed after 0.001 seconds.
+◇ Test inflightCleanupAfterCompletion() started.
+✔ Test inflightCleanupAfterCompletion() passed after 0.012 seconds.
+◇ Test imageStore_queuedDrain() started.
+
+✔ Test imageStore_queuedDrain() passed after 0.220 seconds.
+✔ Suite InkImageStoreTests passed after 9.597 seconds.
+✔ Test run with 288 tests in 29 suites passed after 9.601 seconds.
+2026-09-07 14:38:25.017 xcodebuild[70300:6023635] [MT] IDETestOperationsObserverDebug: 289.396 elapsed -- Testing started completed.
+2026-09-07 14:38:25.019 xcodebuild[70300:6023635] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-07 14:38:25.019 xcodebuild[70300:6023635] [MT] IDETestOperationsObserverDebug: 289.396 sec, +289.396 sec -- end
+Resolve Package Graph
+
+
+Test session results, code coverage, and logs:
+	/Users/shizihan/DailyUse/Github/InkMarkdown/.scratch/architecture-deepening-2026-09-07/evidence/20260907-1415-ticket-27/package-tests-rerun.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started

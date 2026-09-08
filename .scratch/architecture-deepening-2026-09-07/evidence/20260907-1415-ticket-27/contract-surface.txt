@@ -1,0 +1,28 @@
+=== SwiftUI importing UIKit product reverse? ===
+none (good)
+=== new products in Package.swift? ===
+11:  products: [
+13:    .library(
+17:    .library(
+21:    .library(
+25:    .library(
+=== iOS deployment ===
+.github/fixtures/consumer-smoke/Package.swift:8:    .iOS(.v15),
+Package.swift:9:    .iOS(.v15)
+=== transitional leftovers ===
+Sources/InkMarkdown/Rendering/InkStreamRenderer.swift:68:/// renderer.bindTextView(textView)
+Sources/InkMarkdown/Rendering/InkStreamRenderer.swift:262:  public func bindTextView(_ tv: UITextView) {
+Sources/InkMarkdown/Rendering/InkStreamRenderer.swift:284:  public func unbindTextView() {
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:342:      renderer.unbindTextView()
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:349:  func bindTextView(_ textView: UITextView, owner: AnyObject? = nil) {
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:355:          renderer.bindTextView(textView)
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:366:      renderer.bindTextView(textView)
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:368:      renderer.bindTextView(textView)
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:374:  func unbindTextView(owner: AnyObject? = nil) {
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:379:        renderer.unbindTextView()
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:386:        renderer.unbindTextView()
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:389:      renderer.unbindTextView()
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:395:  func installPresentationDisplayUpdateObserver(
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:434:        renderer.bindTextView(textView)
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:437:      renderer.unbindTextView()
+Sources/InkMarkdownSwiftUI/Bridge/InkStreamingPresentationHost.swift:331:      session.unbindTextView(owner: self)
