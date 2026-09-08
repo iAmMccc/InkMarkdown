@@ -185,7 +185,13 @@ final class InkCodeBlockViewImpl: UIView {
   }
 
   override func sizeThatFits(_ size: CGSize) -> CGSize {
-    let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 320)
+    let targetWidth = InkDisplayMetrics.resolvedMeasurementWidth(
+      proposal: size.width,
+      bounds: bounds.width
+    )
+    guard targetWidth > 0 else {
+      return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+    }
     let contentWidth = max(0, targetWidth - config.horizontalPadding * 2)
     let labelSize = label.sizeThatFits(CGSize(width: contentWidth, height: .greatestFiniteMagnitude))
     let totalHeight = labelSize.height + config.verticalPadding * 2 + config.spacingToText

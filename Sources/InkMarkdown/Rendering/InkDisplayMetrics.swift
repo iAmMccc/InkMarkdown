@@ -23,12 +23,23 @@ struct InkDisplayMetrics {
     return InkDisplayMetrics(bounds: bounds, scale: scale)
   }
 
+  /// 解析视图可用宽度：bounds → window → 前台 Scene；均未知时返回 `fallback`（默认 0，禁止猜 320）。
   @MainActor
-  static func availableWidth(for view: UIView, fallback: CGFloat = 320) -> CGFloat {
+  static func availableWidth(for view: UIView, fallback: CGFloat = 0) -> CGFloat {
     if view.bounds.width > 0 { return view.bounds.width }
     if let windowWidth = view.window?.bounds.width, windowWidth > 0 { return windowWidth }
     let sceneWidth = contextualScreen(for: view)?.bounds.width ?? 0
     return sceneWidth > 0 ? sceneWidth : fallback
+  }
+
+  /// `sizeThatFits` 宽度解析：proposal → bounds；均未知返回 0。
+  ///
+  /// 调用方在得到 0 时应返回 `UIView.noIntrinsicMetric`，不得用屏幕宽或硬编码 320 冒充宿主列宽。
+  /// 宿主终态宽由容器 `preferredMeasurementWidth` / 正宽度 `sizeThatFits` 下传。
+  static func resolvedMeasurementWidth(proposal: CGFloat, bounds: CGFloat) -> CGFloat {
+    if proposal > 0 { return proposal }
+    if bounds > 0 { return bounds }
+    return 0
   }
 
   @MainActor

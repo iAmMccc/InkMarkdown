@@ -130,8 +130,14 @@ final class InkAttributedBlockTextView: UITextView, UITextViewDelegate {
   }
 
   override func sizeThatFits(_ size: CGSize) -> CGSize {
-    let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 320)
+    let targetWidth = InkDisplayMetrics.resolvedMeasurementWidth(
+      proposal: size.width,
+      bounds: bounds.width
+    )
     guard targetWidth > 0, let layoutManager = textContainer.layoutManager else {
+      if targetWidth <= 0 {
+        return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+      }
       return super.sizeThatFits(size)
     }
     let contentWidth = max(0, targetWidth - textContainerInset.left - textContainerInset.right)

@@ -452,7 +452,10 @@ public final class InkThoughtBlockView: UIView {
   }
 
   public override func sizeThatFits(_ size: CGSize) -> CGSize {
-    let targetWidth = size.width > 0 ? size.width : (bounds.width > 0 ? bounds.width : 0)
+    let targetWidth = InkDisplayMetrics.resolvedMeasurementWidth(
+      proposal: size.width,
+      bounds: bounds.width
+    )
     guard targetWidth > 0 else {
       return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
     }
