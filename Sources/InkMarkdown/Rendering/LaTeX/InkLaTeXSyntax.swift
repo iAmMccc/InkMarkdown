@@ -66,21 +66,22 @@ public enum InkLaTeXError: Error, Equatable, Sendable {
 
 extension InkLaTeXError: LocalizedError {
   public var errorDescription: String? {
+    let msgs = InkLaTeXRendering.ErrorMessages()
     switch self {
     case .emptyExpression:
-      return "LaTeX 表达式为空。"
+      return msgs.emptyExpression
     case .contentTooLong(let limit):
-      return "LaTeX 表达式超过 \(limit) 个字符的上限。"
+      return String(format: msgs.contentTooLongFormat, limit)
     case .unclosedDelimiter(let delimiter):
-      return "LaTeX 分隔符未闭合：\(delimiter.rawValue)。"
+      return String(format: msgs.unclosedDelimiterFormat, delimiter.rawValue)
     case .unbalancedBraces:
-      return "LaTeX 花括号未配对。"
+      return msgs.unbalancedBraces
     case .invalidDisplayContext:
-      return "LaTeX 显示上下文无效。"
+      return msgs.invalidDisplayContext
     case .imageTooLarge:
-      return "LaTeX 渲染结果超过允许的图片尺寸。"
+      return msgs.imageTooLarge
     case .renderingFailed(let message):
-      return "LaTeX 渲染失败：\(message)"
+      return String(format: msgs.renderingFailedFormat, message)
     }
   }
 }

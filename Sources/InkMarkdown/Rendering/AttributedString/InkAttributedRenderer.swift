@@ -19,42 +19,63 @@ import Markdown
 /// // 避免在整个递归调用链中反复传递配置对象。
 public struct InkAttributedRenderer {
 
+  /// 一把渲染完整文本（使用默认配置）。
+  @MainActor
+  public static func render(_ source: String) -> NSAttributedString {
+    render(source, configuration: .standard)
+  }
+
   /// 一把渲染完整文本。
   public static func render(
     _ source: String,
-    configuration: InkConfiguration = .standard
+    configuration: InkConfiguration
   ) -> NSAttributedString {
     let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
-    let filtered = effectiveConfiguration.sourcePreparedForParsing(source)
-    let document = InkParser.parse(filtered)
+    let preparedSource = effectiveConfiguration.sourcePreparedForParsing(source)
+    return render(preparedSource: preparedSource, configuration: effectiveConfiguration)
+  }
+
+  /// 渲染已完成顶层预处理的内部源码，不再次执行 `sourceFilter`。
+  static func render(
+    preparedSource: InkPreparedMarkdownSource,
+    configuration: InkConfiguration
+  ) -> NSAttributedString {
+    let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
+    let document = InkParser.parse(preparedSource.value)
     let renderer = InkRenderer(configuration: effectiveConfiguration)
     return renderer.renderDocument(document)
+  }
+
+  /// 渲染已解析的 Document（使用默认配置）。
+  @MainActor
+  public static func render(document: Document) -> NSAttributedString {
+    render(document: document, configuration: .standard)
   }
 
   /// 渲染已解析的 Document（避免重复解析）。
   public static func render(
     document: Document,
-    configuration: InkConfiguration = .standard
+    configuration: InkConfiguration
   ) -> NSAttributedString {
     let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
     let renderer = InkRenderer(configuration: effectiveConfiguration)
     return renderer.renderDocument(document)
   }
 
+  /// 渲染多个已解析的 Markup 节点（使用默认配置）。
+  @MainActor
+  public static func render(markups: [Markup]) -> NSAttributedString {
+    render(markups: markups, configuration: .standard)
+  }
+
   /// 渲染多个已解析的 Markup 节点（InkBlockRenderer 内部使用，消除 AST→String→AST 迂回）。
   public static func render(
     markups: [Markup],
-    configuration: InkConfiguration = .standard
+    configuration: InkConfiguration
   ) -> NSAttributedString {
     let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
     let renderer = InkRenderer(configuration: effectiveConfiguration)
-    let result = NSMutableAttributedString()
-    for (index, markup) in markups.enumerated() {
-      result.append(renderer.renderBlock(markup, context: renderer.bodyContext))
-      if index < markups.count - 1 {
-        result.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
-      }
-    }
+    let result = renderer.renderBlockSequence(markups, context: renderer.bodyContext)
 
     if !markups.isEmpty {
       // // 为什么 需要尾部哨兵段落：
@@ -62,6 +83,7 @@ public struct InkAttributedRenderer {
       // TextKit 需要有一个后续段落作为参照物才能把这段间距渲染出来。
       // 因此在结尾追加一个几乎不可见（高度 0.1pt）的占位段落，专门用来兑现最后一块的底部间距。
       let trailingPara = NSMutableParagraphStyle()
+      trailingPara.baseWritingDirection = .natural
       trailingPara.minimumLineHeight = 0.1
       trailingPara.maximumLineHeight = 0.1
       trailingPara.lineSpacing = 0
@@ -76,19 +98,50 @@ public struct InkAttributedRenderer {
     return result
   }
 
+  /// 只渲染行内元素（使用默认配置）。
+  @MainActor
+  public static func renderInline(
+    _ text: String,
+    baseFont: UIFont,
+    textColor: UIColor
+  ) -> NSAttributedString {
+    renderInline(text, configuration: .standard, baseFont: baseFont, textColor: textColor)
+  }
+
   /// 只渲染行内元素（加粗、斜体、行内代码、链接、自定义语法等）。
   /// 不设置段落属性，由调用方自行控制行高/对齐/间距。
   public static func renderInline(
     _ text: String,
-    configuration: InkConfiguration = .standard,
+    configuration: InkConfiguration,
     baseFont: UIFont,
     textColor: UIColor
   ) -> NSAttributedString {
     let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
     let prepared = effectiveConfiguration.sourcePreparedForParsing(text)
-    let document = InkParser.parse(prepared)
+    return renderInline(
+      preparedSource: prepared,
+      configuration: effectiveConfiguration,
+      baseFont: baseFont,
+      textColor: textColor,
+      fallbackText: text
+    )
+  }
+
+  /// 渲染已经完成顶层预处理的 cell/inline 源码。
+  ///
+  /// 表格由 `InkBlockRenderer` 从同一份 prepared AST 构造；该 overload 让测量与显示
+  /// 都保留 prepared 边界，同时不改变公开 raw-string API 的 `sourceFilter` 语义。
+  static func renderInline(
+    preparedSource: InkPreparedMarkdownSource,
+    configuration: InkConfiguration,
+    baseFont: UIFont,
+    textColor: UIColor,
+    fallbackText: String = ""
+  ) -> NSAttributedString {
+    let effectiveConfiguration = configuration.withResolvedRenderEnvironmentIfNeeded()
+    let document = InkParser.parse(preparedSource.value)
     guard let paragraph = document.children.first(where: { $0 is Paragraph }) as? Paragraph else {
-      return NSAttributedString(string: text, attributes: [
+      return NSAttributedString(string: fallbackText.isEmpty ? preparedSource.value : fallbackText, attributes: [
         .font: baseFont,
         .foregroundColor: textColor,
       ])
@@ -122,10 +175,22 @@ private struct InkRenderer {
 
   private var appearance: InkAppearance { configuration.appearance }
 
+  private var scalingTraits: UITraitCollection {
+    configuration.renderEnvironment.traitCollection
+  }
+
+  private func scaledFont(_ font: UIFont, textStyle: UIFont.TextStyle = .body) -> UIFont {
+    appearance.scaledFont(font, textStyle: textStyle, compatibleWith: scalingTraits)
+  }
+
+  private func scaledValue(_ value: CGFloat, textStyle: UIFont.TextStyle = .body) -> CGFloat {
+    appearance.scaledValue(value, textStyle: textStyle, compatibleWith: scalingTraits)
+  }
+
   /// 正文基准上下文：正文字号系统字体 + 正文色。块级递归的起点。
   var bodyContext: InkTextContext {
     InkTextContext(
-      font: UIFont.systemFont(ofSize: appearance.text.fontSize),
+      font: scaledFont(UIFont.systemFont(ofSize: appearance.text.fontSize), textStyle: .body),
       foregroundColor: appearance.text.color,
       appearance: appearance,
       renderEnvironment: configuration.renderEnvironment
@@ -134,16 +199,22 @@ private struct InkRenderer {
 
   // MARK: - Document
 
-  func renderDocument(_ document: Document) -> NSAttributedString {
+  /// 按源块顺序渲染，并在相邻块之间使用唯一的 block separator。
+  /// Thought fallback、suffix 与普通 Document 都经过这里，避免各递归入口自行决定
+  /// 是否补换行而产生粘连或顺序漂移。
+  func renderBlockSequence(_ blocks: [Markup], context: InkTextContext) -> NSMutableAttributedString {
     let result = NSMutableAttributedString()
-    let blocks = Array(document.children)
     for (index, block) in blocks.enumerated() {
-      result.append(renderBlock(block, context: bodyContext))
+      result.append(renderBlock(block, context: context))
       if index < blocks.count - 1 {
         result.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
       }
     }
     return result
+  }
+
+  func renderDocument(_ document: Document) -> NSAttributedString {
+    renderBlockSequence(Array(document.children), context: bodyContext)
   }
 
   // MARK: - Block dispatch
@@ -167,6 +238,10 @@ private struct InkRenderer {
       return renderCodeBlock(cb)
     case is Markdown.ThematicBreak:
       return renderThematicBreak()
+    case let t as Markdown.Table:
+      return renderTable(t, context: context)
+    case let html as Markdown.HTMLBlock:
+      return renderHTMLBlock(html, context: context)
     default:
       // 未知块：退化为拼接子块，保持 context。
       let result = NSMutableAttributedString()
@@ -218,14 +293,22 @@ private struct InkRenderer {
 
   private func renderHeading(_ h: Markdown.Heading, context: InkTextContext) -> NSAttributedString {
     let level = h.level
+    let textStyle: UIFont.TextStyle = {
+      switch level {
+      case 1: return .title1
+      case 2: return .title2
+      case 3: return .title3
+      default: return .body
+      }
+    }()
     let size = appearance.heading.fontSize(forLevel: level)
-    let lh = appearance.heading.lineHeight(forLevel: level)
-    let spacing = appearance.heading.spacingAfter(forLevel: level)
+    let lh = scaledValue(appearance.heading.lineHeight(forLevel: level), textStyle: textStyle)
+    let spacing = scaledValue(appearance.heading.spacingAfter(forLevel: level), textStyle: textStyle)
 
     // 标题派生：bold + 标题字号 + 标题色。行内子节点在此基础上再派生
     // （inlineCode 会 monospaced() 重置回等宽、link 会 coloring() 改色），互不覆盖。
     let headingContext = InkTextContext(
-      font: UIFont.systemFont(ofSize: size, weight: .bold),
+      font: scaledFont(UIFont.systemFont(ofSize: size, weight: .bold), textStyle: textStyle),
       foregroundColor: appearance.heading.color,
       appearance: appearance,
       renderEnvironment: configuration.renderEnvironment
@@ -241,8 +324,8 @@ private struct InkRenderer {
     let mutable = NSMutableAttributedString(attributedString: renderInlineChildren(of: paragraph, context: context))
     applyFixedLineHeight(
       to: mutable,
-      lineHeight: appearance.text.lineHeight,
-      spacingAfter: appearance.text.paragraphSpacing
+      lineHeight: scaledValue(appearance.text.lineHeight, textStyle: .body),
+      spacingAfter: scaledValue(appearance.text.paragraphSpacing, textStyle: .body)
     )
     return mutable
   }
@@ -255,19 +338,22 @@ private struct InkRenderer {
 
     // 引用派生：引用字号 + 引用色。行内 link 仍会 coloring() 覆盖回链接色（两者共存），
     // inlineCode 仍 monospaced()——因为是 context 下传而非事后回写，样式不再互踩。
-    let quoteFont = UIFont.systemFont(ofSize: appearance.blockquote.fontSize)
+    let quoteFont = scaledFont(UIFont.systemFont(ofSize: appearance.blockquote.fontSize), textStyle: .body)
     let quoteContext = context.withFont(quoteFont).coloring(appearance.blockquote.color)
-    let indent = appearance.blockquote.barWidth + appearance.blockquote.leftPadding
+    // 列表项内的引用：缩进必须叠加列表内容起点，否则引用会脱离所属列表项的层级
+    //（归属正确性由 AST 结构保证，缩进由这里兑现）。
+    let indent = scaledValue(appearance.blockquote.barWidth + appearance.blockquote.leftPadding, textStyle: .body)
+      + context.listIndent
 
     for (index, child) in children.enumerated() {
       let isLast = index == children.count - 1
-      let spacingAfter: CGFloat = isLast ? appearance.blockquote.spacingAfter : appearance.blockquote.innerSpacing
+      let spacingAfter: CGFloat = scaledValue(isLast ? appearance.blockquote.spacingAfter : appearance.blockquote.innerSpacing, textStyle: .body)
 
       let part: NSMutableAttributedString
       if let paragraph = child as? Paragraph {
         // 段落：施加引用块行高 + 缩进（引用块的标准排版）。
         part = NSMutableAttributedString(attributedString: renderInlineChildren(of: paragraph, context: quoteContext))
-        applyFixedLineHeight(to: part, lineHeight: appearance.blockquote.lineHeight, spacingAfter: spacingAfter) { para in
+        applyFixedLineHeight(to: part, lineHeight: scaledValue(appearance.blockquote.lineHeight, textStyle: .body), spacingAfter: spacingAfter) { para in
           para.firstLineHeadIndent = indent
           para.headIndent = indent
         }
@@ -305,91 +391,117 @@ private struct InkRenderer {
 
   private func renderList(items: [ListItem], ordered: Bool, start: Int, context: InkTextContext) -> NSAttributedString {
     let result = NSMutableAttributedString()
-    let bodyFont = UIFont.systemFont(ofSize: appearance.text.fontSize)
 
-    // 序号/圆点用正文字重（不加粗）。
-    let maxMarkerWidth: CGFloat
-    if ordered {
-      let maxNumber = start + items.count - 1
-      let sampleMarker = "\(maxNumber). " as NSString
-      maxMarkerWidth = ceil(sampleMarker.size(withAttributes: [.font: bodyFont]).width)
-    } else {
-      let bullet = "\u{2022} " as NSString
-      maxMarkerWidth = ceil(bullet.size(withAttributes: [.font: bodyFont]).width)
+    // Marker 继承当前 block context。引用或 Thought 中的列表因此不会跳回全局正文
+    // 字体/颜色，测量与显示也使用同一份派生 context。
+    let markerFont = context.font
+    let markers = items.enumerated().map { index, item in
+      if ordered {
+        if let checkbox = item.checkbox {
+          let box = checkbox == .checked ? "\u{2611} " : "\u{2610} "
+          return "\(start + index). \(box)"
+        }
+        return "\(start + index). "
+      }
+      if let checkbox = item.checkbox {
+        return checkbox == .checked ? "\u{2611} " : "\u{2610} "
+      }
+      return "\u{2022} "
     }
+    let markerWidth = markers
+      .map { marker in
+        ceil((marker as NSString).size(withAttributes: [.font: markerFont]).width)
+      }
+      .max() ?? 0
+    let listIndent = context.listIndent
+    let nestedListContext = context.withListIndent(listIndent + markerWidth)
 
     for (index, item) in items.enumerated() {
-      let marker: String
-      let markerFont: UIFont = bodyFont
-      if ordered {
-        marker = "\(start + index). "
-      } else if let checkbox = item.checkbox {
-        marker = checkbox == .checked ? "\u{2611} " : "\u{2610} "
-      } else {
-        marker = "\u{2022} "
-      }
-
+      let marker = markers[index]
       let markerAttr = NSAttributedString(
         string: marker,
         attributes: [
           .font: markerFont,
-          .foregroundColor: appearance.text.color,
+          .foregroundColor: context.foregroundColor,
         ]
       )
 
       let children = Array(item.children)
-      var firstParagraphInline: NSAttributedString?
-      var nestedBlocks: [(index: Int, content: NSAttributedString)] = []
+      let firstChildParagraph = children.first as? Paragraph
+      var nestedBlocks: [NSAttributedString] = []
 
-      for (i, child) in children.enumerated() {
-        if let paragraph = child as? Paragraph, firstParagraphInline == nil {
-          firstParagraphInline = renderInlineChildren(of: paragraph, context: context)
-        } else if child is OrderedList || child is UnorderedList {
-          nestedBlocks.append((i, renderBlock(child, context: context)))
+      // 只有源序列中的第一个 Paragraph 与 marker 同行；其余 child 严格保持原序。
+      for (childIndex, child) in children.enumerated() {
+        if childIndex == 0, firstChildParagraph != nil {
+          continue
+        }
+
+        if child is OrderedList || child is UnorderedList {
+          nestedBlocks.append(renderBlock(child, context: nestedListContext))
         } else if let paragraph = child as? Paragraph {
-          nestedBlocks.append((i, renderInlineChildren(of: paragraph, context: context)))
+          // loose list 的续段复用列表内容列起点，避免脱离所属列表项。
+          let continuation = NSMutableAttributedString(
+            attributedString: renderInlineChildren(of: paragraph, context: context)
+          )
+          applyFixedLineHeight(
+            to: continuation,
+            lineHeight: scaledValue(appearance.text.lineHeight, textStyle: .body),
+            spacingAfter: 0
+          ) { para in
+            para.firstLineHeadIndent = listIndent + markerWidth
+            para.headIndent = listIndent + markerWidth
+          }
+          nestedBlocks.append(continuation)
         } else {
-          nestedBlocks.append((i, renderBlock(child, context: context)))
+          nestedBlocks.append(renderBlock(child, context: nestedListContext))
         }
       }
 
       let line = NSMutableAttributedString()
       line.append(markerAttr)
-      if let inline = firstParagraphInline {
-        line.append(inline)
+      if let firstChildParagraph {
+        line.append(renderInlineChildren(of: firstChildParagraph, context: context))
       }
 
       let hasNested = !nestedBlocks.isEmpty
-      let itemSpacing: CGFloat = hasNested ? 0 : ((index < items.count - 1) ? appearance.list.itemSpacing : appearance.list.spacingAfter)
-
-      applyFixedLineHeight(to: line, lineHeight: appearance.text.lineHeight, spacingAfter: itemSpacing) { para in
-        para.firstLineHeadIndent = 0
-        para.headIndent = maxMarkerWidth
+      let itemSpacing: CGFloat = scaledValue(
+        hasNested
+          ? 0
+          : ((index < items.count - 1) ? appearance.list.itemSpacing : appearance.list.spacingAfter),
+        textStyle: .body
+      )
+      applyFixedLineHeight(
+        to: line,
+        lineHeight: scaledValue(appearance.text.lineHeight, textStyle: .body),
+        spacingAfter: itemSpacing
+      ) { para in
+        para.firstLineHeadIndent = listIndent
+        para.headIndent = listIndent + markerWidth
       }
-
       result.append(line)
 
-      if hasNested {
-        for (blockIdx, block) in nestedBlocks.enumerated() {
-          result.append(NSAttributedString(string: "\n"))
-          let nested = NSMutableAttributedString(attributedString: block.content)
-          if blockIdx == nestedBlocks.count - 1 {
-            let nestedSpacing: CGFloat = (index < items.count - 1) ? appearance.list.itemSpacing : appearance.list.spacingAfter
-            let fullRange = NSRange(location: 0, length: nested.length)
-            nested.enumerateAttribute(.paragraphStyle, in: fullRange, options: [.reverse]) { value, range, stop in
-              if let para = (value as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle {
-                para.paragraphSpacing = nestedSpacing
-                nested.addAttribute(.paragraphStyle, value: para, range: range)
-                stop.pointee = true
-              }
+      for (blockIndex, block) in nestedBlocks.enumerated() {
+        result.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
+        let nested = NSMutableAttributedString(attributedString: block)
+        if blockIndex == nestedBlocks.count - 1 {
+          let nestedSpacing: CGFloat = scaledValue(
+            (index < items.count - 1) ? appearance.list.itemSpacing : appearance.list.spacingAfter,
+            textStyle: .body
+          )
+          let fullRange = NSRange(location: 0, length: nested.length)
+          nested.enumerateAttribute(.paragraphStyle, in: fullRange, options: [.reverse]) { value, range, stop in
+            if let para = (value as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle {
+              para.paragraphSpacing = nestedSpacing
+              nested.addAttribute(.paragraphStyle, value: para, range: range)
+              stop.pointee = true
             }
           }
-          result.append(nested)
         }
+        result.append(nested)
       }
 
       if index < items.count - 1 {
-        result.append(NSAttributedString(string: "\n"))
+        result.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
       }
     }
     return result
@@ -398,9 +510,11 @@ private struct InkRenderer {
   // MARK: - ThematicBreak（保持现状：富文本通道的占位实现；view 版走 InkThematicBreakBlock）
 
   private func renderThematicBreak() -> NSAttributedString {
+    let thickness = scaledValue(appearance.thematicBreak.lineThickness, textStyle: .body)
     let para = NSMutableParagraphStyle()
-    para.minimumLineHeight = appearance.thematicBreak.lineThickness
-    para.maximumLineHeight = appearance.thematicBreak.lineThickness
+    para.baseWritingDirection = .natural
+    para.minimumLineHeight = thickness
+    para.maximumLineHeight = thickness
     para.lineSpacing = 0
     para.paragraphSpacingBefore = 0
     para.paragraphSpacing = 0
@@ -430,15 +544,17 @@ private struct InkRenderer {
       .map { " \($0) " }
       .joined(separator: "\n")
 
-    let font = UIFont.monospacedSystemFont(ofSize: codeAppearance.fontSize, weight: .regular)
+    let font = scaledFont(UIFont.monospacedSystemFont(ofSize: codeAppearance.fontSize, weight: .regular), textStyle: .body)
+    let lh = scaledValue(codeAppearance.lineHeight, textStyle: .body)
+    let spacing = scaledValue(codeAppearance.spacingToText, textStyle: .body)
 
     let para = lockedParagraphStyle(
-      lineHeight: codeAppearance.lineHeight,
-      spacingBefore: codeAppearance.spacingToText,
-      spacingAfter: codeAppearance.spacingToText
+      lineHeight: lh,
+      spacingBefore: spacing,
+      spacingAfter: spacing
     )
 
-    let offset = baselineOffset(for: font, in: codeAppearance.lineHeight)
+    let offset = baselineOffset(for: font, in: lh)
 
     return NSAttributedString(
       string: padded,
@@ -450,6 +566,56 @@ private struct InkRenderer {
         .baselineOffset: offset,
       ]
     )
+  }
+
+  // MARK: - Table（富文本与流式展示 fallback）
+
+  private func renderTable(_ table: Markdown.Table, context: InkTextContext) -> NSAttributedString {
+    let result = NSMutableAttributedString()
+    let tableConfig = configuration.appearance.table
+    let separatorColor = tableConfig.separatorColor
+    let separatorFont = context.font
+
+    // 富文本 fallback 用粗体保留表头层级，并用文本分隔符维持可读列边界。
+    let head = table.head
+    let headCells = Array(head.cells)
+    if !headCells.isEmpty {
+      let headerStr = NSMutableAttributedString()
+      for (i, cell) in headCells.enumerated() {
+        let cellText = renderInlineChildren(of: cell, context: context.addingTrait(.traitBold))
+        headerStr.append(cellText)
+        if i < headCells.count - 1 {
+          headerStr.append(NSAttributedString(string: "  │  ", attributes: [
+            .font: separatorFont,
+            .foregroundColor: separatorColor,
+          ]))
+        }
+      }
+      result.append(headerStr)
+      result.append(NSAttributedString(string: "\n"))
+    }
+
+    let rows = Array(table.body.rows)
+    for (rowIndex, row) in rows.enumerated() {
+      let rowCells = Array(row.cells)
+      let rowStr = NSMutableAttributedString()
+      for (cellIndex, cell) in rowCells.enumerated() {
+        let cellText = renderInlineChildren(of: cell, context: context)
+        rowStr.append(cellText)
+        if cellIndex < rowCells.count - 1 {
+          rowStr.append(NSAttributedString(string: "  │  ", attributes: [
+            .font: separatorFont,
+            .foregroundColor: separatorColor,
+          ]))
+        }
+      }
+      result.append(rowStr)
+      if rowIndex < rows.count - 1 {
+        result.append(NSAttributedString(string: "\n"))
+      }
+    }
+
+    return result
   }
 
   // MARK: - Inline Elements
@@ -481,7 +647,7 @@ private struct InkRenderer {
       .kern: appearance.inlineCode.margin,
     ]
 
-    if context.isStrikethrogh {
+    if context.isStrikethrough {
       codeAttrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
       marginAttrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
     }
@@ -523,9 +689,10 @@ private struct InkRenderer {
         return rendered
       }
     }
-    let plainText = configuration.appearance.latexRendering.isEnabled
+    var plainText = configuration.appearance.latexRendering.isEnabled
       ? InkLaTeXSourcePreservation.restoreBracketDelimiters(in: textNode.string)
       : textNode.string
+    plainText = InkThoughtScanner.stripThoughtTags(from: plainText)
     var attrs: [NSAttributedString.Key: Any] = [
       .font: context.font,
       .foregroundColor: context.foregroundColor,
@@ -534,62 +701,67 @@ private struct InkRenderer {
       attrs[.link] = url
     }
 
-    if context.isStrikethrogh {
+    if context.isStrikethrough {
       attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
     }
 
     // 斜体兜底：字体无 italic 变体时以人工倾斜模拟（emphasis 内的普通字体）。
-    if context.obliqueness != 0 {
-      attrs[.obliqueness] = context.obliqueness
+    let resolvedObliqueness = context.resolvedObliqueness(for: plainText)
+    if resolvedObliqueness != 0 {
+      attrs[.obliqueness] = resolvedObliqueness
     }
     return NSAttributedString(string: plainText, attributes: attrs)
   }
 
   private func renderLink(_ link: Markdown.Link, context: InkTextContext) -> NSAttributedString {
-    // 派生：改为链接色 + 置入链接目标，下传给所有子节点的叶子。
-    var linkContext = context.coloring(appearance.link.color)
     if let destination = link.destination, let url = URL(string: destination) {
-      linkContext = linkContext.linking(url)
+      // TODO: v0.0.2 或以后考虑在 InkConfiguration 中引入 LinkSecurityPolicy，与 ImageSecurityPolicy 保持设计一致性。
+      // 当前采用最小实现，硬编码允许的协议白名单，过滤 javascript: 等危险协议以防范 XSS 风险。
+      let allowedSchemes: Set<String> = ["http", "https", "mailto", "tel"]
+      let isSafe: Bool
+      if let scheme = url.scheme?.lowercased() {
+        isSafe = allowedSchemes.contains(scheme)
+      } else {
+        isSafe = true // 相对路径无 scheme，视为安全
+      }
+
+      if isSafe {
+        // 派生：改为链接色 + 置入链接目标，下传给所有子节点的叶子。
+        let linkContext = context.coloring(appearance.link.color).linking(url)
+        return renderInlineChildren(of: link, context: linkContext)
+      }
     }
-    return renderInlineChildren(of: link, context: linkContext)
+
+    // 不安全的协议或无法解析的 URL，作为纯文本渲染，不附加 .link 属性，不改变颜色。
+    return renderInlineChildren(of: link, context: context)
   }
 
   private func renderImage(_ image: Markdown.Image, context: InkTextContext) -> NSAttributedString {
     let rendering = appearance.imageRendering
 
+    // 统一 source 解析：相对 URL 提供 baseURL 时解析为绝对地址，未提供时按
+    // no-base-URL 契约回落占位（库不猜测来源）。
     guard rendering.isEnabled,
-          let urlString = image.source,
-          let url = URL(string: urlString) else {
-      let display = image.plainText.isEmpty ? (image.source ?? "image") : image.plainText
-      var attrs: [NSAttributedString.Key: Any] = [
-        .font: UIFont.systemFont(ofSize: context.font.pointSize),
-        .foregroundColor: appearance.text.secondaryColor,
-      ]
-      if let url = context.linkURL {
-        attrs[.link] = url
-      }
-      return NSAttributedString(string: "[\u{1F5BC} \(display)]", attributes: attrs)
+          let urlString = image.source else {
+      return renderImagePlaceholder(image, context: context)
     }
 
-    let source = ImageSource(
-      url: url,
-      stripsQuery: rendering.securityPolicy.stripsQuery,
-      stripsFragment: rendering.securityPolicy.stripsFragment
-    )
+    let source: ImageSource
+    switch InkImageSourceResolution.resolve(from: urlString, rendering: rendering) {
+    case .resolved(let resolved):
+      source = resolved
+    case .rejected:
+      return renderImagePlaceholder(image, context: context)
+    }
 
-    if checkSecurityPolicy(source: source, rendering: rendering) != nil {
-      let display = image.plainText.isEmpty ? (image.source ?? "image") : image.plainText
-      return NSAttributedString(
-        string: "[\u{1F5BC} \(display)]",
-        attributes: [
-          .font: UIFont.systemFont(ofSize: context.font.pointSize),
-          .foregroundColor: appearance.text.secondaryColor,
-        ]
-      )
+    if rendering.securityPolicy.rejectionReason(
+      for: source,
+      maxDataURLBytes: rendering.maxDataURLBytes
+    ) != nil {
+      return renderImagePlaceholder(image, context: context)
     }
 
     let attachment = InkImageAttachment(source: source, rendering: rendering, store: nil)
-
     let result = NSMutableAttributedString(attachment: attachment)
     result.addAttribute(.baselineOffset, value: 0, range: NSRange(location: 0, length: result.length))
 
@@ -600,44 +772,98 @@ private struct InkRenderer {
     return result
   }
 
-  private func checkSecurityPolicy(source: ImageSource, rendering: InkImageRendering) -> ImageRejectReason? {
-    let policy = rendering.securityPolicy
+  private func renderImagePlaceholder(_ image: Markdown.Image, context: InkTextContext) -> NSAttributedString {
+    let display = image.plainText.isEmpty ? (image.source ?? "image") : image.plainText
+    var attributes: [NSAttributedString.Key: Any] = [
+      // 占位符跟随外层 block 的字号；拒绝来源时仍保持既有 secondary 色策略。
+      .font: context.font,
+      .foregroundColor: appearance.text.secondaryColor,
+    ]
+    if let linkURL = context.linkURL {
+      attributes[.link] = linkURL
+    }
+    return NSAttributedString(string: "[\u{1F5BC} \(display)]", attributes: attributes)
+  }
 
-    guard policy.allowedSchemes.contains(source.scheme) else {
-      return .schemeNotAllowed(String(describing: source.scheme))
+  private func renderHTMLBlock(_ html: Markdown.HTMLBlock, context: InkTextContext) -> NSAttributedString {
+    let raw = html.rawHTML
+    guard let scanResult = InkThoughtScanner.scan(from: raw) else {
+      return NSAttributedString()
     }
 
-    if source.scheme == .http || source.scheme == .https {
-      if let host = source.rawURL.host {
-        if policy.allowedHosts.isEmpty {
-          switch policy.emptyHostPolicy {
-          case .rejectAll:
-            return .hostNotAllowed(host)
-          case .allowAll:
-            break
-          }
-        } else if !policy.allowedHosts.contains(host) {
-          return .hostNotAllowed(host)
-        }
+    let thoughtConfig = appearance.thought
+    let result = NSMutableAttributedString()
+
+    if !scanResult.thoughtBody.isEmpty || !scanResult.isComplete {
+      let headerFont = scaledFont(UIFont.systemFont(ofSize: thoughtConfig.headerFontSize, weight: .medium), textStyle: .body)
+      let titleText = scanResult.isComplete ? thoughtConfig.completedTitle : thoughtConfig.title
+      let headerText = scanResult.thoughtBody.isEmpty ? "💭 \(titleText)..." : "💭 \(titleText)\n"
+      let headerAttr = NSAttributedString(
+        string: headerText,
+        attributes: [
+          .font: headerFont,
+          .foregroundColor: thoughtConfig.headerColor,
+        ]
+      )
+      result.append(headerAttr)
+
+      if !scanResult.thoughtBody.isEmpty {
+        let bodyFont = scaledFont(UIFont.systemFont(ofSize: thoughtConfig.fontSize), textStyle: .body)
+        let thoughtContext = context.withFont(bodyFont).coloring(thoughtConfig.textColor)
+        let innerDoc = InkParser.parse(scanResult.thoughtBody)
+        result.append(renderBlockSequence(Array(innerDoc.children), context: thoughtContext))
+      }
+
+      applyFixedLineHeight(
+        to: result,
+        lineHeight: scaledValue(thoughtConfig.lineHeight, textStyle: .body),
+        spacingAfter: scaledValue(thoughtConfig.spacingAfter, textStyle: .body)
+      )
+
+      applyBackgroundColorIfAbsent(thoughtConfig.backgroundColor, to: result)
+    }
+
+    // 尾随正文保全（Suffix Preservation）：将闭合标签后的正文以当前上下文续接渲染
+    if let suffix = scanResult.suffixContent, !suffix.isEmpty {
+      if result.length > 0 {
+        result.append(NSAttributedString(string: InkRenderConstants.blockSeparator))
+      }
+      let suffixDoc = InkParser.parse(suffix)
+      result.append(renderBlockSequence(Array(suffixDoc.children), context: context))
+    }
+
+    return result
+  }
+
+  private func applyBackgroundColorIfAbsent(
+    _ color: UIColor,
+    to attributedString: NSMutableAttributedString
+  ) {
+    guard attributedString.length > 0 else { return }
+
+    // Thought 提供容器底色；inline code、代码块及自定义语法已决定的子级背景必须保留。
+    var rangesWithoutBackground: [NSRange] = []
+    let fullRange = NSRange(location: 0, length: attributedString.length)
+    attributedString.enumerateAttribute(.backgroundColor, in: fullRange) { value, range, _ in
+      if value == nil {
+        rangesWithoutBackground.append(range)
       }
     }
-
-    if source.scheme == .data {
-      let dataSize = source.rawURL.absoluteString.count
-      if dataSize > rendering.storeConfiguration.maxDataURLBytes {
-        return .payloadTooLarge(dataSize)
-      }
+    for range in rangesWithoutBackground {
+      attributedString.addAttribute(.backgroundColor, value: color, range: range)
     }
-
-    return nil
   }
 
   private func renderInlineHTML(_ inlineHTML: InlineHTML) -> NSAttributedString {
     let html = inlineHTML.rawHTML
+    if InkThoughtScanner.startsWithThoughtTag(html) || InkThoughtScanner.isClosingThoughtTag(html) {
+      return NSAttributedString()
+    }
     if Self.isCustomEmptyTag(html) {
       return NSAttributedString()
     }
-    if html.lowercased().hasPrefix("<br") {
+    let lower = html.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    if lower.hasPrefix("<br") {
       return NSAttributedString(string: "\n")
     }
     return NSAttributedString()
@@ -666,6 +892,7 @@ private struct InkRenderer {
     spacingAfter: CGFloat = 0
   ) -> NSMutableParagraphStyle {
     let para = NSMutableParagraphStyle()
+    para.baseWritingDirection = .natural
     para.minimumLineHeight = lineHeight
     para.maximumLineHeight = lineHeight
     para.lineSpacing = 0
@@ -704,7 +931,7 @@ private struct InkRenderer {
       }
       if skipForImageAttachment { return }
 
-      let font = (value as? UIFont) ?? UIFont.systemFont(ofSize: appearance.text.fontSize)
+      let font = (value as? UIFont) ?? scaledFont(UIFont.systemFont(ofSize: appearance.text.fontSize), textStyle: .body)
       let offset = baselineOffset(for: font, in: lineHeight)
       mutable.addAttribute(.baselineOffset, value: offset, range: range)
     }
@@ -713,10 +940,13 @@ private struct InkRenderer {
       guard let imgAttachment = value as? InkImageAttachment else { return }
       mutable.addAttribute(.baselineOffset, value: CGFloat(0), range: range)
       if imgAttachment.bounds.height > lineHeight {
-        let para = NSMutableParagraphStyle()
-        para.minimumLineHeight = lineHeight
-        para.maximumLineHeight = max(lineHeight, imgAttachment.bounds.height)
-        mutable.addAttribute(.paragraphStyle, value: para, range: range)
+        let paraRange = (mutable.string as NSString).paragraphRange(for: range)
+        let currentPara = mutable.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as? NSParagraphStyle
+        let updatedPara = InkImageParagraphStyle.elevating(
+          currentPara,
+          toAtLeast: max(lineHeight, imgAttachment.bounds.height)
+        )
+        mutable.addAttribute(.paragraphStyle, value: updatedPara, range: paraRange)
       }
     }
   }
@@ -725,21 +955,42 @@ private struct InkRenderer {
 extension InkConfiguration {
   /// 主线程同步渲染时，若尚未注入 trait 快照则自动捕获当前环境。
   func withResolvedRenderEnvironmentIfNeeded() -> InkConfiguration {
-    guard renderEnvironment.userInterfaceStyle == .unspecified else { return self }
     guard Thread.isMainThread else { return self }
+    var env = renderEnvironment
+    var changed = false
+    if env.userInterfaceStyle == .unspecified {
+      env.userInterfaceStyle = MainActor.assumeIsolated { UITraitCollection.current.userInterfaceStyle }
+      changed = true
+    }
+    if env.contentSizeCategory == .unspecified {
+      env.contentSizeCategory = MainActor.assumeIsolated { UITraitCollection.current.preferredContentSizeCategory }
+      changed = true
+    }
+    guard changed else { return self }
     var copy = self
-    copy.renderEnvironment = InkRenderEnvironment(
-      userInterfaceStyle: UITraitCollection.current.userInterfaceStyle
-    )
+    copy.renderEnvironment = env
     return copy
   }
 
   /// 流式渲染在主线程调用，显式捕获 trait 快照供后台 parse 使用。
+  ///
+  /// 仅当 ``InkConfiguration/renderEnvironment`` 中对应字段为 `.unspecified` 时才补全；
+  /// 已注入的 `userInterfaceStyle` / `contentSizeCategory` 必须原样保留。
   func capturingRenderEnvironmentForBackgroundParse() -> InkConfiguration {
+    guard Thread.isMainThread else { return self }
+    var env = renderEnvironment
+    var changed = false
+    if env.userInterfaceStyle == .unspecified {
+      env.userInterfaceStyle = MainActor.assumeIsolated { UITraitCollection.current.userInterfaceStyle }
+      changed = true
+    }
+    if env.contentSizeCategory == .unspecified {
+      env.contentSizeCategory = MainActor.assumeIsolated { UITraitCollection.current.preferredContentSizeCategory }
+      changed = true
+    }
+    guard changed else { return self }
     var copy = self
-    copy.renderEnvironment = InkRenderEnvironment(
-      userInterfaceStyle: UITraitCollection.current.userInterfaceStyle
-    )
+    copy.renderEnvironment = env
     return copy
   }
 }

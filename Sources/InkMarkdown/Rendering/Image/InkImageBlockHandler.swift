@@ -6,72 +6,45 @@ import Markdown
 /// 仅当段落可提升（见 ``isPromotableImageParagraph(_:)``）且
 /// ``InkImageRendering/isEnabled`` / ``InkImageRendering/promotesToBlock`` 均为真时产出块。
 /// 应在 ``InkBlockRenderer`` 路由链中优先于其他 handler 注册（集成阶段处理）。
-public struct InkImageBlockHandler: InkBlockHandler {
+public struct InkImageBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
 
   public init() {}
+
+  public func isSemanticallyEquivalent(to other: any InkConfigurationSemanticsProviding) -> Bool {
+    other is InkImageBlockHandler
+  }
 
   public func canHandle(_ markup: Markup) -> Bool {
     isPromotableImageParagraph(markup)
   }
 
+  @MainActor
   public func makeBlock(from markup: Markup, configuration: InkConfiguration) -> InkRenderableBlock? {
     guard let paragraph = markup as? Paragraph else { return nil }
     let imageNode = paragraph.children.compactMap { $0 as? Markdown.Image }.first
-    guard let imageNode else { return nil }
-    guard let urlString = imageNode.source, let url = URL(string: urlString) else { return nil }
+    guard let imageNode, let urlString = imageNode.source else { return nil }
 
     let rendering = configuration.appearance.imageRendering
     guard rendering.isEnabled, rendering.promotesToBlock else { return nil }
 
-    let policy = rendering.securityPolicy
-    let source = ImageSource(
-      url: url,
-      stripsQuery: policy.stripsQuery,
-      stripsFragment: policy.stripsFragment
-    )
-
-    guard isSecurityAllowed(source: source, rendering: rendering) else {
+    // 与行内通道一致的统一 source 解析：相对 URL 提供 baseURL 时解析为绝对地址，
+    // 未提供时返回明确 no-base-URL 结果（回落富文本占位，不猜测来源）。
+    guard case .resolved(let source) = InkImageSourceResolution.resolve(
+      from: urlString,
+      rendering: rendering
+    ) else {
       return nil
     }
 
-    // Block 路由在 UIKit 主线程调用；Store 为 @MainActor。
-    return MainActor.assumeIsolated {
-      InkImageBlock(source: source, store: .shared, rendering: rendering)
+    guard rendering.securityPolicy.rejectionReason(
+      for: source,
+      maxDataURLBytes: rendering.maxDataURLBytes
+    ) == nil else {
+      return nil
     }
+
+    return InkImageBlock(source: source, rendering: rendering)
   }
-}
-
-/// 与行内通道 ``InkAttributedRenderer`` 一致的安全策略校验。
-private func isSecurityAllowed(source: ImageSource, rendering: InkImageRendering) -> Bool {
-  let policy = rendering.securityPolicy
-
-  guard policy.allowedSchemes.contains(source.scheme) else {
-    return false
-  }
-
-  if source.scheme == .http || source.scheme == .https {
-    if let host = source.rawURL.host {
-      if policy.allowedHosts.isEmpty {
-        switch policy.emptyHostPolicy {
-        case .rejectAll:
-          return false
-        case .allowAll:
-          break
-        }
-      } else if !policy.allowedHosts.contains(host) {
-        return false
-      }
-    }
-  }
-
-  if source.scheme == .data {
-    let dataSize = source.rawURL.absoluteString.count
-    if dataSize > rendering.storeConfiguration.maxDataURLBytes {
-      return false
-    }
-  }
-
-  return true
 }
 
 /// 判定段落是否为可提升的独占图段落。

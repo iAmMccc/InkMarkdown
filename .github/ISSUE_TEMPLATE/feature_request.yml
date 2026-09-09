@@ -1,0 +1,50 @@
+name: Feature request
+description: Propose a focused improvement to InkMarkdown.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe one focused project need. Check the README, current status, and rendering specification first.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product or area
+      options:
+        - InkMarkdown core
+        - InkMarkdownSwiftUI (unreleased 0.0.2)
+        - InkMarkdownLaTeX (unreleased 0.0.2)
+        - InkMarkdownMermaid (unreleased 0.0.2)
+        - ExampleApp
+        - Documentation or tooling
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem would this solve, and who needs it?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest behavior or API change that would address the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Explain existing workarounds or approaches you considered.
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and validation considerations
+      description: Note UIKit/SwiftUI scope, iOS/iPadOS versions, rendering semantics, and any ExampleApp or automated validation you expect.

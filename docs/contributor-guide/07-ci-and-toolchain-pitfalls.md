@@ -21,7 +21,7 @@ CI 不会使用：
 - 本机 `DerivedData`、`.build`、`Packages/Caches`
 - 本机已安装的模拟器列表
 
-项目需符合：`swift-tools-version: 6.2`、UIKit、`iOS 14+`。PR 合并门禁以 CI 固定的环境为准。
+项目需符合：`swift-tools-version: 6.2`、UIKit、`iOS 15+`。PR 合并门禁以 CI 固定的环境为准。
 
 ## 2. 本地与 CI 环境差异
 
@@ -93,6 +93,7 @@ CI 不会使用：
 | 性能断言失败（incremental/full ≥ 0.30） | Runner 运行变慢或代码有性能回归 | 排查代码逻辑，确认无回归后重新测算基线 |
 | 语义测试失败 | 代码修改导致回归，或依赖版本变更 | 在同大版本的 Xcode 环境中复现调试 |
 | 仅在 CI 上测试失败 | 本地与 CI 的 Xcode 版本不同，或本地启用了 Caches path 覆盖 | 参考第 2 节，在对应 Xcode 环境下排查 |
+| Mermaid PNG 在 CI 两次超时，日志出现无 `UIApplication` / WebContent unresponsive | 真实 WKWebView 被放进无 App 生命周期的 SwiftPM runner；增加 timeout 不能恢复被冻结的 event loop | 保留 Package 内确定性 addon/bridge 测试；真实 PNG 只放在 `ExampleAppMermaidIntegrationTests`，显式 boot Simulator 后用 ExampleApp scheme 运行 |
 
 ### E. 流程与权限
 
@@ -109,7 +110,7 @@ CI 不会使用：
 
    ```bash
    sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer  # 切换到对应路径
-   xcodebuild test -scheme InkMarkdown \
+   xcodebuild test -scheme InkMarkdown-Package \
      -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
    ```
 
@@ -126,7 +127,35 @@ CI 不会使用：
 
 遇到“本地测试通过但 CI 失败”的问题时，优先使用 CI 固定的 Xcode 版本在本地复现测试。
 
-## 8. 相关链接
+## 8. ExampleAppPolicyTests（SPM testTarget）
+
+`Tests/ExampleAppPolicyTests` 是 **Swift Package 测试 target**，不是 Xcode `ExampleApp.xcodeproj` 内的 test target：
+
+| 项 | 说明 |
+| --- | --- |
+| 被测代码 | `ExampleAppChatPolicy` **target**（仅 `ChatScrollPolicy.swift`） |
+| 公开 product | **无** — `ExampleAppChatPolicy` 不是 SPM library product，避免双根编译 / 发布泄漏 |
+| ExampleApp 编译 | `ChatScrollPolicy.swift` 直接编入 ExampleApp app target |
+| 运行方式 | `xcodebuild -scheme InkMarkdown-Package -destination 'platform=iOS Simulator,...' test`，或 Xcode 选择 `InkMarkdown-Package` scheme 跑全量测试 |
+
+本地只开 ExampleApp Xcode 工程**不会**自动运行 `ChatScrollPolicyTests`；需在 Package scheme 下执行。
+
+## 9. Mermaid 真实 PNG（app-hosted test target）
+
+`Tests/InkMarkdownMermaidTests` 只承载 fence、cache、limits、bridge resource 等确定性契约。唯一真实 WebKit → PNG 与右缘裁切用例位于 `ExampleApp/ExampleAppMermaidIntegrationTests`，原因是 WKWebView 需要真实 `UIApplication`、window 与 WebContent 生命周期。
+
+```bash
+xcrun simctl bootstatus <SIMULATOR_UDID> -b
+xcodebuild test \
+  -project ExampleApp/ExampleApp.xcodeproj \
+  -scheme ExampleApp \
+  -destination 'platform=iOS Simulator,id=<SIMULATOR_UDID>' \
+  -only-testing:ExampleAppMermaidIntegrationTests
+```
+
+不得用增大 timeout、额外 sleep 或删除宽图用例掩盖 hostless runner 问题。CI 的 app-hosted job 先显式 boot 并等待 Simulator ready，再执行该 target。
+
+## 10. 相关链接
 
 - CI 配置文件：`.github/workflows/ci.yml`  
 - 依赖策略：[ADR-001](../decisions/ADR-001-swift-markdown-dependency-pinning.md)  

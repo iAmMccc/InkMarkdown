@@ -1,6 +1,5 @@
 import UIKit
-import InkMarkdown
-import Markdown
+@_spi(InkMarkdown) import InkMarkdown
 
 /// 表格片段视图：SSE 吐字场景下逐行渲染表格。
 ///
@@ -19,7 +18,8 @@ final class SSETableSegmentView: UIView, SSETypewriterSegment {
   /// 每行占用的逻辑字符数（用于统一吐字进度）
   private let charsPerRow: Int = 10
 
-  init(headers: [String], rows: [[String]], alignments: [Table.ColumnAlignment?], layoutMode: InkTableLayoutMode = .wrap, configuration: InkConfiguration = .standard) {
+  @MainActor
+  init(headers: [String], rows: [[String]], alignments: [Table.ColumnAlignment?], layoutMode: InkTableLayoutMode = .wrap, configuration: InkConfiguration) {
     self.headers = headers
     self.rows = rows
     self.alignments = alignments
@@ -60,12 +60,22 @@ final class SSETableSegmentView: UIView, SSETypewriterSegment {
       displayedRowCount += 1
     }
   }
+
+  func apply(headers: [String], rows: [[String]], alignments: [Table.ColumnAlignment?]) {
+    streamTable.setHeaders(headers, alignments: alignments, referenceRows: rows)
+    headerDisplayed = true
+    displayedRowCount = rows.count
+    for row in rows {
+      streamTable.appendRow(row)
+    }
+    setNeedsLayout()
+  }
 }
 
 // MARK: - Block 路由桥接
 
 /// 表格 Block 的 SSE 桥接：让 InkBlockRenderer 路由到此，makeView 返回 SSETableSegmentView。
-struct SSETableBlock: InkRenderableBlock {
+struct SSETableBlock: InkRenderableBlock, InkReusableBlock {
   let headers: [String]
   let rows: [[String]]
   let alignments: [Table.ColumnAlignment?]
@@ -74,5 +84,17 @@ struct SSETableBlock: InkRenderableBlock {
 
   func makeView() -> UIView {
     SSETableSegmentView(headers: headers, rows: rows, alignments: alignments, layoutMode: layoutMode, configuration: configuration)
+  }
+
+  func updateExistingView(_ view: UIView) -> Bool {
+    false
+  }
+
+  func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? SSETableBlock else { return false }
+    return headers == previous.headers
+      && rows == previous.rows
+      && alignments == previous.alignments
+      && layoutMode == previous.layoutMode
   }
 }

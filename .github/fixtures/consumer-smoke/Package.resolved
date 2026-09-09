@@ -1,0 +1,41 @@
+{
+  "originHash" : "2d8023f0f100f5781cefdf73b2516d6148fb1460ac9ab061beccccbe3b4d95cf",
+  "pins" : [
+    {
+      "identity" : "iosmath",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kostub/iosMath.git",
+      "state" : {
+        "revision" : "302585fd9609f8525423f531924087fc4cfade16",
+        "version" : "2.3.1"
+      }
+    },
+    {
+      "identity" : "kingfisher",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/onevcat/Kingfisher.git",
+      "state" : {
+        "revision" : "be0d257b9bd47a4e6e1265fc8c237411825f107a",
+        "version" : "8.12.0"
+      }
+    },
+    {
+      "identity" : "swift-cmark",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-cmark.git",
+      "state" : {
+        "branch" : "gfm",
+        "revision" : "7898f1b3e4befeecee56cb4a3bc8eebd2cb63219"
+      }
+    },
+    {
+      "identity" : "swift-markdown",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-markdown.git",
+      "state" : {
+        "revision" : "07ebc9c071b22a5d021031b798c3a84b76281213"
+      }
+    }
+  ],
+  "version" : 3
+}

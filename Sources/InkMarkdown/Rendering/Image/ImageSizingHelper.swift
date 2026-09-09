@@ -1,4 +1,10 @@
 import CoreGraphics
+import UIKit
+
+/// 行内 attachment 在图片未就绪时的占位高度（约一行，与块级加载骨架无关）。
+func inlineUnresolvedAttachmentHeight() -> CGFloat {
+  max(20, UIFont.systemFont(ofSize: UIFont.labelFontSize).lineHeight)
+}
 
 /// 根据最大宽度与高度策略计算图片的最终显示尺寸。
 ///

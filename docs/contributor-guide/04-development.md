@@ -8,7 +8,7 @@
 | --- | --- |
 | macOS + Xcode | 提供 Swift 6.2 工具链；以 `swift --version` 输出为准 |
 | Swift | 6.2+ |
-| 目标平台 | iOS 14+（见 `Package.swift`） |
+| 目标平台 | 历史 `0.0.1` manifest：iOS 14+；当前 v0.0.2 分支：iOS / iPadOS 15+（最低版本运行验证待完成） |
 | iOS 模拟器 | 安装至少一个可用模拟器 |
 | 网络/缓存 | 首次解析远程依赖需联网；离线缓存脚本见后文 |
 
@@ -33,7 +33,7 @@ xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 
 测试命令：
 
 ```bash
-xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' test
+xcodebuild -scheme InkMarkdown-Package -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' test
 ```
 
 如果本机没有 `iPhone 17 Pro` 模拟器，将 `name=` 替换为 `xcrun simctl list devices available` 中列出的任意设备名称。
@@ -47,7 +47,7 @@ xcodebuild -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 
 步骤如下：
 
 1. 查看当前 session 配置。
-2. 查找并选择 `InkMarkdown` scheme 与可用的 iOS 模拟器。
+2. 测试选择 `InkMarkdown-Package` scheme 与可用的 iOS 模拟器；`InkMarkdown` scheme 仅用于 build。
 3. 运行模拟器测试。
 4. 检查测试数量与结果。
 
@@ -65,15 +65,17 @@ xcodebuildmcp --version
 - 若找不到二进制文件：按 [XcodeBuildMCP 官网](https://www.xcodebuildmcp.com/) 说明安装与注册服务。
 - 若二进制文件存在：检查是否通过 `xcodebuildmcp mcp` 启动服务，然后重载客户端。
 
-### 最近验证记录
+### 当前验证记录
 
 | 项目 | 结果 |
 | --- | --- |
-| 日期 | 2026-07-13 |
-| Scheme | `InkMarkdown` |
-| Destination | iPhone 17 Pro / iOS 26.5 Simulator |
-| 测试结果 | 32 项通过，0 项失败，0 项跳过 |
-| 运行方式 | XcodeBuildMCP 自动发现；回退原生 `xcodebuild` 验证 |
+| 日期 | 2026-09-04 |
+| Package scheme | `InkMarkdown-Package` |
+| App-hosted scheme | `ExampleApp` / `ExampleAppMermaidIntegrationTests` |
+| Destination | 独立 iPhone 17 Pro / iOS 26.5 Simulator |
+| Package 测试结果 | 验证范围与未验收项见 [当前状态](../current-status.md) |
+| App-hosted 测试结果 | Mermaid PNG/右缘裁切关键链路 1 项通过 |
+| 运行方式 | XcodeBuildMCP 2.6.2；Package 测试复用已解析的 SourcePackages checkout |
 
 测试文件分布：
 
@@ -82,6 +84,8 @@ xcodebuildmcp --version
 | `InkMarkdownTests.swift` | 固定行高、context 样式、流式边界、appearance 默认值 |
 | `Snapshots/` | 语义属性快照基建（`RenderSnapshot`） |
 | `StreamingPerformanceTests.swift` | 增量耗时 ≤ 全量耗时 30% 性能闸门及输出一致性 |
+| `../InkMarkdownSwiftUITests/` | 静态配置刷新、stream session 状态机、headless finish、重置和 configuration snapshot |
+| `ExampleApp/ExampleAppMermaidIntegrationTests/` | 由真实 App 生命周期承载唯一 Mermaid WebKit → PNG → 右缘像素关键链路 |
 
 ### 清理构建产物
 
@@ -104,8 +108,9 @@ open ExampleApp/ExampleApp.xcodeproj
 | `SSE/` | 模拟流式输出与流式表格 |
 | `BlockRendering/` | 块级扩展 Demo |
 | `ServerMarkdownViewController` | 完整渲染 Demo |
+| `SwiftUI/` | SwiftUI adapter 的静态、配置与流式示例，详见 [SwiftUI ExampleApp 指南](10-swiftui-example-app.md) |
 
-宿主仅需 `import InkMarkdown`。
+UIKit 宿主仅需 `import InkMarkdown`；SwiftUI 示例使用 `import InkMarkdownSwiftUI`，并在 Xcode 工程中链接 `InkMarkdownSwiftUI` product。
 
 ## 准备 swift-markdown 依赖
 
@@ -193,7 +198,7 @@ let blocks = InkBlockRenderer.render(source, configuration: config)
 
 ### sourceFilter 与 linkTapHandler
 
-- `sourceFilter`：在解析前处理源文本字符串
+- `sourceFilter`：每次顶层 renderer 调用在解析前执行一次；Thought 正文与 suffix 等派生片段复用 prepared source，不重复执行，因此非幂等 filter 也必须得到稳定结果
 - `linkTapHandler`：拦截并响应 `.link` 点击事件
 
 ## 开发校验清单
@@ -208,7 +213,7 @@ let blocks = InkBlockRenderer.render(source, configuration: config)
 
 | 现象 | 排查位置 |
 | --- | --- |
-| 流式渲染卡顿 | 检查 `charactersPerFrame`、`isDisplayPaused`、`maxParseLength` |
+| 流式渲染卡顿 | 检查 `charactersPerFrame`、`isDisplayPaused`、`maximumSourceLength` |
 | 样式覆盖或异常 | 检查 `attributes(at:effectiveRange:)`，改为 context 传递模式 |
 | 表格列宽错乱 | 排查 `measureColumnContentWidths` 与 `columnMaxWidthRatio` |
 

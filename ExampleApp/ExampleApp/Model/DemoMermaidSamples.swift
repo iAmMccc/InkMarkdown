@@ -18,6 +18,34 @@ enum DemoMermaidSamples {
     }.joined(separator: "\n\n")
   }
 
+  /// 宽图裁切手工验收样例：最右侧 `Act` 区域必须完整可见。
+  static let wideJourney = Section(title: "6. 用户旅程图 journey", source: """
+  journey
+      title Sample User Journey
+      section Discover
+        Open App: 5: User
+        Enter keyword: 4: User
+      section Understand
+        View overview: 5: User
+        Expand details: 3: User
+      section Act
+        Save item: 4: User
+        Export report: 3: User
+  """)
+
+  /// UIKit / SwiftUI 组件页共用的宽图手工验收 Markdown。
+  static var wideJourneyAcceptanceMarkdown: String {
+    """
+    ## 5. Mermaid 宽图裁切验收
+
+    最右侧 `Act` 区域与 `Export report` 必须完整可见，不得被 400pt 内容区域裁切。
+
+    ```mermaid
+    \(wideJourney.source)
+    ```
+    """
+  }
+
   /// 分类型场景（综合 Demo 逐条展示）。
   static let sections: [Section] = [
     Section(title: "1. 流程图 flowchart", source: """
@@ -93,19 +121,7 @@ enum DemoMermaidSamples {
             string desc
         }
     """),
-    Section(title: "6. 用户旅程图 journey", source: """
-    journey
-        title Sample User Journey
-        section Discover
-          Open App: 5: User
-          Enter keyword: 4: User
-        section Understand
-          View overview: 5: User
-          Expand details: 3: User
-        section Act
-          Save item: 4: User
-          Export report: 3: User
-    """),
+    wideJourney,
     Section(title: "7. 甘特图 gantt", source: """
     gantt
         title Project Plan

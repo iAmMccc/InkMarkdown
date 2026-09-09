@@ -1,5 +1,10 @@
 import UIKit
 
+/// 0.0.1 的复制反馈闭包允许捕获普通 UIKit/service 引用。
+private struct InkCopyFeedbackStorage: @unchecked Sendable {
+  var handler: ((UIView) -> Void)?
+}
+
 /// InkMarkdown 统一样式配置，按 Markdown 语法元素分类。
 ///
 /// 支持两种用法：
@@ -19,10 +24,36 @@ import UIKit
 /// custom.heading.h1FontSize = 32
 /// let attr = InkAttributedRenderer.render(source, configuration: InkConfiguration(appearance: custom))
 /// ```
-public struct InkAppearance {
+public struct InkAppearance: Sendable {
+
+  private final class SharedStorage: @unchecked Sendable {
+    let lock = NSLock()
+    var value: InkAppearance?
+  }
+
+  private static let sharedStorage = SharedStorage()
 
   /// 全局默认样式（可变单例）。App 启动时配置一次，后续渲染自动读取。
-  public static var shared = InkAppearance()
+  ///
+  /// 使用惰性锁存储保留 0.0.1 的非隔离调用方式，同时避免测试发现或模块加载线程
+  /// 提前构造 UIKit 颜色值。宿主仍应在 App 启动主线程完成全局配置。
+  public static var shared: InkAppearance {
+    get {
+      sharedStorage.lock.lock()
+      defer { sharedStorage.lock.unlock() }
+      if let value = sharedStorage.value {
+        return value
+      }
+      let value = InkAppearance()
+      sharedStorage.value = value
+      return value
+    }
+    set {
+      sharedStorage.lock.lock()
+      sharedStorage.value = newValue
+      sharedStorage.lock.unlock()
+    }
+  }
 
   // MARK: - 子配置
 
@@ -50,7 +81,14 @@ public struct InkAppearance {
   public var mermaidRendering: InkMermaidRendering = .init()
   /// LaTeX 行内/块级公式配置；默认关闭以保持原始文本降级。
   public var latexRendering: InkLaTeXRendering = .init()
+  /// 思考过程块样式（<think>...</think> 或 <thought>...</thought>）。
+  public var thought: Thought = .init()
 
+  /// 是否支持系统动态字号（Dynamic Type）。默认为 `true`。
+  /// 开启时，所有基于基础磅值的字号/行高均会根据当前系统的 `UIContentSizeCategory` 自动缩放。
+  public var supportsDynamicType: Bool = true
+
+  /// 创建全部语法元素的默认样式。
   public init() {}
 }
 
@@ -58,7 +96,7 @@ public struct InkAppearance {
 
 public extension InkAppearance {
 
-  struct Text {
+  struct Text: Sendable {
     /// 正文字号。
     public var fontSize: CGFloat = 17
     /// 正文行高（min=max 双向锁死）。
@@ -75,6 +113,7 @@ public extension InkAppearance {
     /// 接入方可覆盖此值为自己想要的内容内边距。
     public var blockInsets: UIEdgeInsets = .zero
 
+    /// 创建默认正文样式。
     public init() {}
   }
 }
@@ -83,7 +122,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct Heading {
+  struct Heading: Sendable {
     /// H1 字号。
     public var h1FontSize: CGFloat = 19
     /// H2~H5 统一字号。
@@ -99,6 +138,7 @@ public extension InkAppearance {
     /// 标题颜色。
     public var color: UIColor = .label
 
+    /// 创建默认标题样式。
     public init() {}
 
     /// 取指定标题级别的字号。
@@ -125,7 +165,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct Blockquote {
+  struct Blockquote: Sendable {
     /// 引用块文字字号。
     public var fontSize: CGFloat = 15
     /// 引用块行高。
@@ -143,6 +183,7 @@ public extension InkAppearance {
     /// 左侧竖线颜色。
     public var barColor: UIColor = UIColor(red: 0x66/255.0, green: 0x66/255.0, blue: 0x66/255.0, alpha: 0.1)
 
+    /// 创建默认引用块样式。
     public init() {}
   }
 }
@@ -151,12 +192,13 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct List {
+  struct List: Sendable {
     /// 列表条目之间间距。
     public var itemSpacing: CGFloat = 12
     /// 列表结束后距下方内容间距。
     public var spacingAfter: CGFloat = 24
 
+    /// 创建默认列表样式。
     public init() {}
   }
 }
@@ -165,7 +207,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct CodeBlock {
+  struct CodeBlock: Sendable {
     /// 代码字号。
     public var fontSize: CGFloat = 14
     /// 代码行高。
@@ -183,6 +225,12 @@ public extension InkAppearance {
     /// 代码块背景色。
     public var backgroundColor: UIColor = .secondarySystemFill
 
+    /// 已知代码语言时的 VoiceOver 标签格式；`%@` 会替换为语言名称。
+    public var accessibilityLabelFormat: String = "%@ code block"
+    /// 未指定代码语言时使用的 VoiceOver 标签。
+    public var defaultAccessibilityLabel: String = "Code block"
+
+    /// 创建默认围栏代码块样式。
     public init() {}
   }
 }
@@ -191,7 +239,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct InlineCode {
+  struct InlineCode: Sendable {
     /// 行内代码字号。
     public var fontSize: CGFloat = 14
     /// 背景圆角。
@@ -209,6 +257,7 @@ public extension InkAppearance {
     /// 背景色。
     public var backgroundColor: UIColor = .secondarySystemFill
 
+    /// 创建默认行内代码样式。
     public init() {}
   }
 }
@@ -217,7 +266,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct Table {
+  struct Table: Sendable {
     /// 表头字号。
     public var headerFontSize: CGFloat = 14
     /// 数据行字号。
@@ -250,11 +299,31 @@ public extension InkAppearance {
     public var columnMaxWidthRatio: CGFloat = 0.5
     /// 是否支持长按复制。
     public var enableLongPressCopy: Bool = false
-    /// 复制成功后的 UI 反馈回调。传入触发复制的 view，由调用方决定如何展示 toast。
-    /// 为 nil 时使用内置默认 toast。
-    public var onCopyFeedback: ((UIView) -> Void)?
+    private var copyFeedbackStorage = InkCopyFeedbackStorage()
+    private var copyFeedbackSemanticIdentity: InkSemanticIdentity?
 
+    /// 复制成功后的 UI 反馈回调。传入触发复制的 view，由调用方决定如何展示 toast。
+    /// 为 nil 时使用内置默认 toast。直接赋值会保守地生成新语义身份；
+    /// SwiftUI 反复构造等价回调时使用 ``setCopyFeedback(_:semanticIdentity:)``。
+    public var onCopyFeedback: ((UIView) -> Void)? {
+      get { copyFeedbackStorage.handler }
+      set {
+        copyFeedbackStorage.handler = newValue
+        copyFeedbackSemanticIdentity = newValue == nil ? nil : .unique()
+      }
+    }
+
+    /// 创建默认表格样式。
     public init() {}
+
+    /// 设置复制反馈回调，并显式声明其交互语义身份。
+    public mutating func setCopyFeedback(
+      _ feedback: ((UIView) -> Void)?,
+      semanticIdentity: InkSemanticIdentity
+    ) {
+      copyFeedbackStorage.handler = feedback
+      copyFeedbackSemanticIdentity = feedback == nil ? nil : semanticIdentity
+    }
   }
 }
 
@@ -262,7 +331,7 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct ThematicBreak {
+  struct ThematicBreak: Sendable {
     /// 分割线粗细。
     public var lineThickness: CGFloat = 1
     /// 分割线颜色。
@@ -270,6 +339,7 @@ public extension InkAppearance {
     /// 分割线下方间距。
     public var spacingAfter: CGFloat = 24
 
+    /// 创建默认分割线样式。
     public init() {}
   }
 }
@@ -278,10 +348,117 @@ public extension InkAppearance {
 
 public extension InkAppearance {
 
-  struct Link {
+  struct Link: Sendable {
     /// 链接颜色。
     public var color: UIColor = .link
 
+    /// 创建默认链接样式。
     public init() {}
+  }
+}
+
+// MARK: - Thought（思考过程块）
+
+public extension InkAppearance {
+
+  /// Thought 卡片的文字、容器、折叠能力与间距配置。
+  struct Thought: Sendable {
+    /// 思考中状态标题。
+    public var title: String = "思考过程"
+    /// 思考完成状态标题。
+    public var completedTitle: String = "已深度思考"
+    /// 思考正文字号。
+    public var fontSize: CGFloat = 14
+    /// 思考正文行高。
+    public var lineHeight: CGFloat = 22
+    /// 思考正文颜色。
+    public var textColor: UIColor = .secondaryLabel
+    /// 头部标题字号。
+    public var headerFontSize: CGFloat = 13
+    /// 头部标题颜色。
+    public var headerColor: UIColor = .secondaryLabel
+    /// 卡片背景色。
+    public var backgroundColor: UIColor = .secondarySystemFill
+    /// 卡片圆角。
+    public var cornerRadius: CGFloat = 8
+    /// 内边距（整个卡片内部与四周的间距）。
+    public var insets: UIEdgeInsets = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+    /// 头部高度。
+    public var headerHeight: CGFloat = 28
+    /// 是否支持点击折叠/展开。
+    public var isCollapsible: Bool = true
+    /// 初始状态是否折叠。
+    public var isInitiallyCollapsed: Bool = false
+    /// 卡片下方间距。
+    public var spacingAfter: CGFloat = 12
+
+    /// 创建默认可折叠、初始展开的 Thought 样式。
+    public init() {}
+  }
+}
+
+// MARK: - Equatable
+
+extension InkAppearance.Text: Equatable {}
+extension InkAppearance.Heading: Equatable {}
+extension InkAppearance.Blockquote: Equatable {}
+extension InkAppearance.List: Equatable {}
+extension InkAppearance.CodeBlock: Equatable {}
+extension InkAppearance.InlineCode: Equatable {}
+extension InkAppearance.Thought: Equatable {}
+
+extension InkAppearance.Table: Equatable {
+  /// 比较表格视觉、交互回调存在性与稳定语义身份。
+  public static func == (lhs: InkAppearance.Table, rhs: InkAppearance.Table) -> Bool {
+    lhs.headerFontSize == rhs.headerFontSize &&
+    lhs.bodyFontSize == rhs.bodyFontSize &&
+    lhs.headerColor == rhs.headerColor &&
+    lhs.bodyColor == rhs.bodyColor &&
+    lhs.separatorColor == rhs.separatorColor &&
+    lhs.headerBackgroundColor == rhs.headerBackgroundColor &&
+    lhs.horizontalPadding == rhs.horizontalPadding &&
+    lhs.verticalPadding == rhs.verticalPadding &&
+    lhs.lineHeight == rhs.lineHeight &&
+    lhs.horizontalInset == rhs.horizontalInset &&
+    lhs.verticalInset == rhs.verticalInset &&
+    lhs.cornerRadius == rhs.cornerRadius &&
+    lhs.borderWidth == rhs.borderWidth &&
+    lhs.separatorThickness == rhs.separatorThickness &&
+    lhs.columnMaxWidthRatio == rhs.columnMaxWidthRatio &&
+    lhs.enableLongPressCopy == rhs.enableLongPressCopy &&
+    InkSemanticComparator.opaqueValuesAreEquivalent(
+      lhsIsPresent: lhs.onCopyFeedback != nil,
+      rhsIsPresent: rhs.onCopyFeedback != nil,
+      lhsIdentity: lhs.copyFeedbackSemanticIdentity,
+      rhsIdentity: rhs.copyFeedbackSemanticIdentity
+    )
+  }
+}
+
+extension InkAppearance.ThematicBreak: Equatable {}
+extension InkAppearance.Link: Equatable {}
+extension InkAppearance: Equatable {}
+
+// MARK: - Dynamic Type Helpers
+
+public extension InkAppearance {
+  /// 根据给定的文本样式和原始字体，返回经过 Dynamic Type 缩放的字体（若开启了支持）。
+  func scaledFont(
+    _ font: UIFont,
+    textStyle: UIFont.TextStyle = .body,
+    compatibleWith traitCollection: UITraitCollection? = nil
+  ) -> UIFont {
+    guard supportsDynamicType else { return font }
+    return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: font, compatibleWith: traitCollection)
+  }
+
+  /// 根据给定的文本样式和原始标量，返回经过 Dynamic Type 缩放的标量值（若开启了支持）。
+  func scaledValue(
+    _ value: CGFloat,
+    textStyle: UIFont.TextStyle = .body,
+    compatibleWith traitCollection: UITraitCollection? = nil
+  ) -> CGFloat {
+    guard supportsDynamicType else { return value }
+    return UIFontMetrics(forTextStyle: textStyle).scaledValue(for: value, compatibleWith: traitCollection)
   }
 }

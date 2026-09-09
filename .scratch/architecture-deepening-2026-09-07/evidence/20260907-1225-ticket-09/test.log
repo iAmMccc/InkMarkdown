@@ -1,0 +1,374 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme InkMarkdown-Package -destination "platform=iOS Simulator,id=10F638E2-84FB-42AE-9BAE-0E246F463E8D" "-only-testing:InkMarkdownTests/InkTablePresentationTests" "-only-testing:InkMarkdownTests/InkTablePresentationLayoutTests" "-only-testing:InkMarkdownTests/InkAuditSemanticRegressionTests" "-only-testing:InkMarkdownTests/InkCorpusTableTracerTests" "-only-testing:InkMarkdownTests/AccessibilityAndDynamicTypeTests" "-only-testing:InkMarkdownSwiftUITests/InkCorpusSwiftUIIntegrationTests" "-only-testing:InkMarkdownSwiftUITests/InkMarkdownMeasurementTests" -resultBundlePath .scratch/architecture-deepening-2026-09-07/evidence/20260907-1225-ticket-09/tests.xcresult CODE_SIGNING_ALLOWED=NO
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+Resolve Package Graph
+2026-09-07 12:01:55.045 xcodebuild[93487:5476729] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+
+
+Resolved source packages:
+  InkMarkdown: /Users/shizihan/DailyUse/Github/InkMarkdown
+  iosMath: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/iosMath @ local
+  swift-markdown: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/swift-markdown @ local
+  cmark-gfm: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/swift-cmark @ local
+
+Writing result bundle at path:
+	/Users/shizihan/DailyUse/Github/InkMarkdown/.scratch/architecture-deepening-2026-09-07/evidence/20260907-1225-ticket-09/tests.xcresult
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:10F638E2-84FB-42AE-9BAE-0E246F463E8D, OS:26.5, name:iPhone 17 Pro }
+{ platform:iOS Simulator, arch:x86_64, id:10F638E2-84FB-42AE-9BAE-0E246F463E8D, OS:26.5, name:iPhone 17 Pro }
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (28 targets)
+    Target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown_InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSemanticCorpus' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownSwiftUITests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownSemanticCorpus' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownSemanticCorpus' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownSwiftUI' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownMermaidTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownLaTeXTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'InkMarkdownCoreContractTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdownAddonContractTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown_InkMarkdownMermaid' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'InkMarkdown_InkMarkdownMermaid' in project 'InkMarkdown' (no dependencies)
+    Target 'InkMarkdownLaTeX' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+    Target 'iosMath' in project 'iosMath'
+        ➜ Explicit dependency on target 'iosMath' in project 'iosMath'
+        ➜ Explicit dependency on target 'iosMath_iosMath' in project 'iosMath'
+    Target 'iosMath' in project 'iosMath'
+        ➜ Explicit dependency on target 'iosMath_iosMath' in project 'iosMath'
+    Target 'iosMath_iosMath' in project 'iosMath' (no dependencies)
+    Target 'InkMarkdown' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+    Target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'CAtomic' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm-extensions' in project 'cmark-gfm'
+    Target 'Markdown' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'CAtomic' in project 'swift-markdown'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm-extensions' in project 'cmark-gfm'
+    Target 'cmark-gfm-extensions' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm-extensions' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+    Target 'cmark-gfm-extensions' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+    Target 'cmark-gfm' in project 'cmark-gfm'
+        ➜ Explicit dependency on target 'cmark-gfm' in project 'cmark-gfm'
+    Target 'cmark-gfm' in project 'cmark-gfm' (no dependencies)
+    Target 'CAtomic' in project 'swift-markdown' (no dependencies)
+    Target 'ExampleAppPolicyTests' in project 'InkMarkdown'
+        ➜ Explicit dependency on target 'ExampleAppChatPolicy' in project 'InkMarkdown'
+    Target 'ExampleAppChatPolicy' in project 'InkMarkdown' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x objective-c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: 8b27c7f31b9bd9d1b52179e00409c2a2
+Build description path: /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/XCBuildData/8b27c7f31b9bd9d1b52179e00409c2a2.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk /Users/shizihan/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-6cfe768891a92b912361537c460fe42b.sdkstatcache
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown/.swiftpm/xcode
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o /Users/shizihan/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-6cfe768891a92b912361537c460fe42b.sdkstatcache
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/ExampleAppPolicyTests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/ExampleAppPolicyTests.build/empty-ExampleAppPolicyTests.plist (in target 'ExampleAppPolicyTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/ExampleAppPolicyTests.build/empty-ExampleAppPolicyTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/ExampleAppPolicyTests.xctest/Info.plist
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownTests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownTests.build/empty-InkMarkdownTests.plist (in target 'InkMarkdownTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownTests.build/empty-InkMarkdownTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownTests.xctest/Info.plist
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/iosMath_iosMath.bundle/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/iosMath.build/Debug-iphonesimulator/iosMath_iosMath.build/empty-iosMath_iosMath.plist (in target 'iosMath_iosMath' from project 'iosMath')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/iosMath
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/iosMath.build/Debug-iphonesimulator/iosMath_iosMath.build/empty-iosMath_iosMath.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/iosMath_iosMath.bundle/Info.plist
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownCoreContractTests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownCoreContractTests.build/empty-InkMarkdownCoreContractTests.plist (in target 'InkMarkdownCoreContractTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownCoreContractTests.build/empty-InkMarkdownCoreContractTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownCoreContractTests.xctest/Info.plist
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdown_InkMarkdownMermaid.bundle/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdown_InkMarkdownMermaid.build/empty-InkMarkdown_InkMarkdownMermaid.plist (in target 'InkMarkdown_InkMarkdownMermaid' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdown_InkMarkdownMermaid.build/empty-InkMarkdown_InkMarkdownMermaid.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphonesimulator -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdown_InkMarkdownMermaid.bundle/Info.plist
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownSwiftUITests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownSwiftUITests.build/empty-InkMarkdownSwiftUITests.plist (in target 'InkMarkdownSwiftUITests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownSwiftUITests.build/empty-InkMarkdownSwiftUITests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownSwiftUITests.xctest/Info.plist
+
+CopySwiftLibs /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownSwiftUITests.xctest (in target 'InkMarkdownSwiftUITests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownSwiftUITests.xctest/InkMarkdownSwiftUITests --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownSwiftUITests.xctest/Frameworks --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownSwiftUITests.xctest/PlugIns --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownSwiftUITests.xctest/SystemExtensions --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownSwiftUITests.xctest/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownSwiftUITests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownSwiftUITests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+CopySwiftLibs /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownCoreContractTests.xctest (in target 'InkMarkdownCoreContractTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownCoreContractTests.xctest/InkMarkdownCoreContractTests --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownCoreContractTests.xctest/Frameworks --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownCoreContractTests.xctest/PlugIns --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownCoreContractTests.xctest/SystemExtensions --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownCoreContractTests.xctest/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownCoreContractTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownCoreContractTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownLaTeXTests.build/empty-InkMarkdownLaTeXTests.plist (in target 'InkMarkdownLaTeXTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownLaTeXTests.build/empty-InkMarkdownLaTeXTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/iosMath_iosMath.bundle -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/Info.plist
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownMermaidTests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownMermaidTests.build/empty-InkMarkdownMermaidTests.plist (in target 'InkMarkdownMermaidTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownMermaidTests.build/empty-InkMarkdownMermaidTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownMermaidTests.xctest/InkMarkdown_InkMarkdownMermaid.bundle -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownMermaidTests.xctest/Info.plist
+
+ProcessInfoPlistFile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/Info.plist /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownAddonContractTests.build/empty-InkMarkdownAddonContractTests.plist (in target 'InkMarkdownAddonContractTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-infoPlistUtility /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownAddonContractTests.build/empty-InkMarkdownAddonContractTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -scanforprivacyfile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/InkMarkdown_InkMarkdownMermaid.bundle -scanforprivacyfile /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/iosMath_iosMath.bundle -o /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/Info.plist
+
+CopySwiftLibs /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/ExampleAppPolicyTests.xctest (in target 'ExampleAppPolicyTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/ExampleAppPolicyTests.xctest/ExampleAppPolicyTests --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/ExampleAppPolicyTests.xctest/Frameworks --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/ExampleAppPolicyTests.xctest/PlugIns --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/ExampleAppPolicyTests.xctest/SystemExtensions --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/ExampleAppPolicyTests.xctest/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/ExampleAppPolicyTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/ExampleAppPolicyTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+CopySwiftLibs /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest (in target 'InkMarkdownLaTeXTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/InkMarkdownLaTeXTests --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/Frameworks --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/PlugIns --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/SystemExtensions --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownLaTeXTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownLaTeXTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+CopySwiftLibs /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest (in target 'InkMarkdownAddonContractTests' from project 'InkMarkdown')
+    cd /Users/shizihan/DailyUse/Github/InkMarkdown
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/InkMarkdownAddonContractTests --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/Frameworks --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/PlugIns --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/SystemExtensions --scan-folder /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Products/Debug-iphonesimulator/InkMarkdownAddonContractTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/shizihan/Library/Developer/Xcode/DerivedData/InkMarkdown-fegkjzhxkpkatfgscsnwljoxebbz/Build/Intermediates.noindex/InkMarkdown.build/Debug-iphonesimulator/InkMarkdownAddonContractTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+Resolve Package Graph
+
+Resolve Package Graph
+
+Test Suite 'Selected tests' started at 2026-09-07 12:02:01.932.
+Test Suite 'InkMarkdownSwiftUITests.xctest' started at 2026-09-07 12:02:01.934.
+Test Suite 'InkMarkdownSwiftUITests.xctest' passed at 2026-09-07 12:02:01.934.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-09-07 12:02:01.934.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.002) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64-apple-ios13.0-simulator
+◇ Suite "InkMarkdownContainerView 单次测量契约" started.
+◇ Suite "Canonical Corpus SwiftUI 集成通道" started.
+◇ Test "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test "layoutSubviews 内不触发 invalidateIntrinsicContentSize" started.
+◇ Test "宽度变化时在 measure 入口重测且 layout 复用高度数组" started.
+◇ Test "同一宽度连续 sizeThatFits 子视图测量次数不超过块数" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-inline", title: "标准 inline 链接", markdown: "前置 [文案](https://example.com/guide) 后置", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "文案", destination: Optional("https://example.com/guide"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-reference", title: "引用链接（reference link）", markdown: "开头 [引用文案][ref] 与 [缩写][short]。\n\n[ref]: https://example.com/ref-target\n[short]: https://example.com/short-target", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "引用文案", destination: Optional("https://example.com/ref-target")), InkMarkdownSemanticCorpus.InkLinkExpectation(text: "缩写", destination: Optional("https://example.com/short-target"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-autolink", title: "标准自动链接", markdown: "访问 <https://example.com/auto> 了解", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.com/auto", destination: Optional("https://example.com/auto"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-relative", title: "相对链接", markdown: "参见 [相对文档](docs/guide.md)", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "相对文档", destination: Optional("docs/guide.md"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-reference", title: "引用链接（reference link）", markdown: "开头 [引用文案][ref] 与 [缩写][short]。\n\n[ref]: https://example.com/ref-target\n[short]: https://example.com/short-target", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "引用文案", destination: Optional("https://example.com/ref-target")), InkMarkdownSemanticCorpus.InkLinkExpectation(text: "缩写", destination: Optional("https://example.com/short-target"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-unsafe-scheme", title: "危险 scheme fallback", markdown: "点击 [危险](javascript:alert(1)) 文本", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "危险", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["javascript: 等非白名单 scheme 不渲染为链接；链接色也不应用（既有 0.0.1 契约）。"]) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-loose-continuation", title: "loose list 续段继承列表几何", markdown: "- 首段落在列表项内\n\n  续段仍属于同一列表项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "续段仍属于", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(28.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-autolink", title: "标准自动链接", markdown: "访问 <https://example.com/auto> 了解", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.com/auto", destination: Optional("https://example.com/auto"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-inline", title: "标准 inline 链接", markdown: "前置 [文案](https://example.com/guide) 后置", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "文案", destination: Optional("https://example.com/guide"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-loose-continuation", title: "loose list 续段继承列表几何", markdown: "- 首段落在列表项内\n\n  续段仍属于同一列表项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "续段仍属于", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(28.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "gfm-bare-url", title: "GFM 裸 URL 保守回退", markdown: "纯文本 https://example.org/path 结束", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.org/path", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["GFM bare URL autolink 未纳入支持矩阵：pinned swift-markdown 转换器未启用 autolink 扩展。"]) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-mixed-nesting", title: "有序/无序混合嵌套累计缩进", markdown: "- 无序外层\n  1. 有序内层\n     - 无序深层", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序外层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "有序内层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序深层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil)], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-relative", title: "相对链接", markdown: "参见 [相对文档](docs/guide.md)", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "相对文档", destination: Optional("docs/guide.md"))], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "link-unsafe-scheme", title: "危险 scheme fallback", markdown: "点击 [危险](javascript:alert(1)) 文本", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "危险", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["javascript: 等非白名单 scheme 不渲染为链接；链接色也不应用（既有 0.0.1 契约）。"]) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-mixed-nesting", title: "有序/无序混合嵌套累计缩进", markdown: "- 无序外层\n  1. 有序内层\n     - 无序深层", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序外层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "有序内层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil), InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "无序深层", headIndent: nil, firstLineHeadIndent: nil, lineHeight: nil)], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "gfm-bare-url", title: "GFM 裸 URL 保守回退", markdown: "纯文本 https://example.org/path 结束", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "https://example.org/path", destination: nil)], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["GFM bare URL autolink 未纳入支持矩阵：pinned swift-markdown 转换器未启用 autolink 扩展。"]) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-blockquote", title: "列表内引用归属列表项", markdown: "- 列表项开头\n\n  > 引用仍在列表项内", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "引用仍在列表项内", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(24.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-task-markers", title: "任务列表标记保持既有行为", markdown: "- [ ] 待办事项\n- [x] 已完成事项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["marker 形态（☐/☑）由既有 InkMarkdownTests 任务列表测试钉住；corpus 只覆盖归属与几何。"]) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-rich-cell", title: "复杂表格单元格 inline 语义", markdown: "| 名称 | 状态 | 备注 |\n| :--- | :---: | ---: |\n| **加粗** | `status` | [详情](https://example.com/cell) |\n| *斜体* | ***粗斜*** | 普通 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "详情", destination: Optional("https://example.com/cell"))], expectedInlineTraits: [InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "加粗", isBold: Optional(true), isItalic: nil, isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "status", isBold: nil, isItalic: nil, isMonospace: Optional(true), hasInlineCodeBackground: Optional(true)), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "斜体", isBold: nil, isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "粗斜", isBold: Optional(true), isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil)], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["名称", "状态", "备注"], rows: [["**加粗**", "`status`", "[详情](https://example.com/cell)"], ["*斜体*", "***粗斜***", "普通"]], alignments: [Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.left), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.center), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.right)])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-task-markers", title: "任务列表标记保持既有行为", markdown: "- [ ] 待办事项\n- [x] 已完成事项", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["marker 形态（☐/☑）由既有 InkMarkdownTests 任务列表测试钉住；corpus 只覆盖归属与几何。"]) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-escaped-pipe", title: "转义竖线保留在单元格内", markdown: "| 表达式 | 含义 |\n| --- | --- |\n| a \\| b | 或运算 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(2), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["表达式", "含义"], rows: [["a | b", "或运算"]], alignments: [nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。"]) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "list-blockquote", title: "列表内引用归属列表项", markdown: "- 列表项开头\n\n  > 引用仍在列表项内", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [InkMarkdownSemanticCorpus.InkParagraphExpectation(anchor: "引用仍在列表项内", headIndent: nil, firstLineHeadIndent: nil, lineHeight: Optional(24.0))], expectedTables: [], expectedBlockTypes: [], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-empty-ragged", title: "空单元格与不齐行稳定呈现", markdown: "| A | B | C |\n| --- | --- | --- |\n| 1 |  |\n| 2 | 3 | 4 | 5 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.lines, expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["A", "B", "C"], rows: [["1", "", ""], ["2", "3", "4"]], alignments: [nil, nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-escaped-pipe", title: "转义竖线保留在单元格内", markdown: "| 表达式 | 含义 |\n| --- | --- |\n| a \\| b | 或运算 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(2), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["表达式", "含义"], rows: [["a | b", "或运算"]], alignments: [nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。"]) to "SwiftUI streaming promotion 满足完整 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-empty-ragged", title: "空单元格与不齐行稳定呈现", markdown: "| A | B | C |\n| --- | --- | --- |\n| 1 |  |\n| 2 | 3 | 4 | 5 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.lines, expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["A", "B", "C"], rows: [["1", "", ""], ["2", "3", "4"]], alignments: [nil, nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-rich-cell", title: "复杂表格单元格 inline 语义", markdown: "| 名称 | 状态 | 备注 |\n| :--- | :---: | ---: |\n| **加粗** | `status` | [详情](https://example.com/cell) |\n| *斜体* | ***粗斜*** | 普通 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "详情", destination: Optional("https://example.com/cell"))], expectedInlineTraits: [InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "加粗", isBold: Optional(true), isItalic: nil, isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "status", isBold: nil, isItalic: nil, isMonospace: Optional(true), hasInlineCodeBackground: Optional(true)), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "斜体", isBold: nil, isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "粗斜", isBold: Optional(true), isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil)], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["名称", "状态", "备注"], rows: [["**加粗**", "`status`", "[详情](https://example.com/cell)"], ["*斜体*", "***粗斜***", "普通"]], alignments: [Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.left), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.center), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.right)])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "SwiftUI 静态集成满足 corpus 语义" started.
+✔ Test "layoutSubviews 内不触发 invalidateIntrinsicContentSize" passed after 1.271 seconds.
+​​​​2026-09-07 12:02:03.273169+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​​​​2026-09-07 12:02:03.280101+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.283339+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​​​​​​​✔ Test "同一宽度连续 sizeThatFits 子视图测量次数不超过块数" passed after 1.345 seconds.
+✔ Test "宽度变化时在 measure 入口重测且 layout 复用高度数组" passed after 1.345 seconds.
+✔ Suite "InkMarkdownContainerView 单次测量契约" passed after 1.346 seconds.
+✔ Test "SwiftUI 静态集成满足 corpus 语义" with 13 test cases passed after 1.345 seconds.
+Resolve Package Graph
+
+2026-09-07 12:02:03.362763+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.370878+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.375135+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.384430+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.389387+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.394809+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.475923+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.480956+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.531218+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​2026-09-07 12:02:03.681477+0800 xctest[93740:5477725] [BlockPresentationContinuity] local fallback at structural slot 0: repeated structural identity
+​✔ Test "SwiftUI streaming promotion 满足完整 corpus 语义" with 13 test cases passed after 1.794 seconds.
+✔ Suite "Canonical Corpus SwiftUI 集成通道" passed after 1.795 seconds.
+✔ Test run with 5 tests in 2 suites passed after 1.795 seconds.
+Resolve Package Graph
+
+Resolve Package Graph
+
+Test Suite 'Selected tests' started at 2026-09-07 12:02:05.139.
+Test Suite 'InkMarkdownTests.xctest' started at 2026-09-07 12:02:05.140.
+Test Suite 'InkMarkdownTests.xctest' passed at 2026-09-07 12:02:05.140.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-09-07 12:02:05.141.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64-apple-ios13.0-simulator
+◇ Suite "InkMarkdown 可访问性 (VoiceOver) 与 Dynamic Type 测试矩阵" started.
+◇ Suite "Canonical Corpus 表格 Tracer" started.
+◇ Suite "InkTablePresentation 布局状态契约" started.
+◇ Suite "项目审核 F04-F09 关键路径回归" started.
+◇ Test "不可折叠思考卡片 (isCollapsible == false) 的 VoiceOver 特征降级为 .header" started.
+◇ Suite "InkTablePresentation 单元格来源契约" started.
+◇ Test "InkThematicBreakView 提供分割线无障碍标签" started.
+◇ Test "InkThoughtBlockView 折叠与展开状态下提供精准的 VoiceOver 语义与提示" started.
+◇ Test "表格列宽测量、流式 cell 字体与行高使用同一 Dynamic Type trait" started.
+◇ Test "大字号 Dynamic Type 配置下正文与标题行高正确缩放且不截断" started.
+◇ Test "空单元格与不齐行稳定构造块视图" started.
+◇ Test "表格单元格链接走正文相同 handler 契约" started.
+◇ Test "InkCodeBlockView 提供代码语言与代码内容的无障碍辅助描述" started.
+◇ Test "复杂单元格保留 inline 语义" started.
+◇ Test "表格 cell 沿用顶层 prepared source，非幂等 filter 只执行一次" started.
+◇ Test "表格列宽测量使用真实内容区宽度" started.
+◇ Test "表格结构按 parser 产出稳定传递" started.
+◇ Test "列表项中的首个非 Paragraph 子块不改写后续源顺序" started.
+◇ Test "Thought 富文本 fallback 为多个子块补充分隔符" started.
+◇ Test "未显示 referenceRows 仍在宽窄恢复后影响首列宽" started.
+◇ Test "列表 marker 继承引用 context 的字体与颜色" started.
+◇ Test "表格宽度契约区分 wrap 收缩与 scroll viewport" started.
+◇ Test "流式表格 raw cell 按 6 输入精确过滤且重建不重跑" started.
+◇ Test "raw 接纳一次后测量与建行不重复 filter" started.
+◇ Test "prepared Markup 派生 cell 接纳计数为零且保留原文 fallback" started.
+◇ Test "图片占位与附件都保留外层链接 context" started.
+◇ Test "流式 2+2+2 cell 精确计数 6，重建不增加" started.
+◇ Test "wrap 宽窄恢复保留 reference 对首列影响；scroll 自然宽稳定" started.
+◇ Test "短行 append 不要求全量重建，更长行按需重建" started.
+◇ Test "同内容静态一次接纳与逐行接纳列宽等价" started.
+◇ Test "顶层 renderer prepared 表格 cell 不增加 filter 计数" started.
+◇ Test "raw static 每 replace 每 cell 一次，resize 不增；显式 apply 可重新接纳" started.
+◇ Test "显式新 replace 可重新接纳 raw；不按字符串跨生命周期去重" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-empty-ragged", title: "空单元格与不齐行稳定呈现", markdown: "| A | B | C |\n| --- | --- | --- |\n| 1 |  |\n| 2 | 3 | 4 | 5 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.lines, expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["A", "B", "C"], rows: [["1", "", ""], ["2", "3", "4"]], alignments: [nil, nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "表格结构按 parser 产出稳定传递" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-rich-cell", title: "复杂表格单元格 inline 语义", markdown: "| 名称 | 状态 | 备注 |\n| :--- | :---: | ---: |\n| **加粗** | `status` | [详情](https://example.com/cell) |\n| *斜体* | ***粗斜*** | 普通 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(3), expectedLinks: [InkMarkdownSemanticCorpus.InkLinkExpectation(text: "详情", destination: Optional("https://example.com/cell"))], expectedInlineTraits: [InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "加粗", isBold: Optional(true), isItalic: nil, isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "status", isBold: nil, isItalic: nil, isMonospace: Optional(true), hasInlineCodeBackground: Optional(true)), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "斜体", isBold: nil, isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil), InkMarkdownSemanticCorpus.InkInlineTraitExpectation(text: "粗斜", isBold: Optional(true), isItalic: Optional(true), isMonospace: nil, hasInlineCodeBackground: nil)], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["名称", "状态", "备注"], rows: [["**加粗**", "`status`", "[详情](https://example.com/cell)"], ["*斜体*", "***粗斜***", "普通"]], alignments: [Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.left), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.center), Optional(InkMarkdownSemanticCorpus.InkTableExpectation.Alignment.right)])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 14), unsupportedNotes: []) to "表格结构按 parser 产出稳定传递" started.
+◇ Test case passing 1 argument fixture → InkSemanticCorpusFixture(id: "table-escaped-pipe", title: "转义竖线保留在单元格内", markdown: "| 表达式 | 含义 |\n| --- | --- |\n| a \\| b | 或运算 |", streamingSplit: InkMarkdownSemanticCorpus.InkSemanticCorpusFixture.StreamingSplit.everyCharacters(2), expectedLinks: [], expectedInlineTraits: [], expectedParagraphs: [], expectedTables: [InkMarkdownSemanticCorpus.InkTableExpectation(headers: ["表达式", "含义"], rows: [["a | b", "或运算"]], alignments: [nil, nil])], expectedBlockTypes: [InkMarkdownSemanticCorpus.InkBlockTypeExpectation(typeName: "InkTableBlock", count: Optional(1))], channels: InkMarkdownSemanticCorpus.InkPresentationChannel(rawValue: 15), unsupportedNotes: ["escaped pipe 保留为单元格字面内容；format() 不再转义输出（pinned swift-markdown 实测）。"]) to "表格结构按 parser 产出稳定传递" started.
+✔ Test "InkThoughtBlockView 折叠与展开状态下提供精准的 VoiceOver 语义与提示" passed after 0.233 seconds.
+✔ Test "表格列宽测量、流式 cell 字体与行高使用同一 Dynamic Type trait" passed after 0.291 seconds.
+✔ Test "大字号 Dynamic Type 配置下正文与标题行高正确缩放且不截断" passed after 0.291 seconds.
+✔ Test "不可折叠思考卡片 (isCollapsible == false) 的 VoiceOver 特征降级为 .header" passed after 0.309 seconds.
+Resolve Package Graph
+
+✔ Test "表格列宽测量使用真实内容区宽度" passed after 0.469 seconds.
+✔ Test "表格 cell 沿用顶层 prepared source，非幂等 filter 只执行一次" passed after 0.469 seconds.
+✔ Test "InkThematicBreakView 提供分割线无障碍标签" passed after 0.469 seconds.
+✔ Test "InkCodeBlockView 提供代码语言与代码内容的无障碍辅助描述" passed after 0.469 seconds.
+✔ Test "空单元格与不齐行稳定构造块视图" passed after 0.469 seconds.
+✔ Test "表格单元格链接走正文相同 handler 契约" passed after 0.469 seconds.
+✔ Suite "InkMarkdown 可访问性 (VoiceOver) 与 Dynamic Type 测试矩阵" passed after 0.470 seconds.
+​​​✔ Test "图片占位与附件都保留外层链接 context" passed after 0.471 seconds.
+✔ Test "复杂单元格保留 inline 语义" passed after 0.471 seconds.
+✔ Test "流式表格 raw cell 按 6 输入精确过滤且重建不重跑" passed after 0.471 seconds.
+✔ Test "列表项中的首个非 Paragraph 子块不改写后续源顺序" passed after 0.471 seconds.
+✔ Test "短行 append 不要求全量重建，更长行按需重建" passed after 0.471 seconds.
+✔ Test "wrap 宽窄恢复保留 reference 对首列影响；scroll 自然宽稳定" passed after 0.471 seconds.
+✔ Test "表格宽度契约区分 wrap 收缩与 scroll viewport" passed after 0.471 seconds.
+✔ Test "顶层 renderer prepared 表格 cell 不增加 filter 计数" passed after 0.471 seconds.
+✔ Test "流式 2+2+2 cell 精确计数 6，重建不增加" passed after 0.471 seconds.
+✔ Test "prepared Markup 派生 cell 接纳计数为零且保留原文 fallback" passed after 0.471 seconds.
+✔ Test "未显示 referenceRows 仍在宽窄恢复后影响首列宽" passed after 0.471 seconds.
+✔ Test "同内容静态一次接纳与逐行接纳列宽等价" passed after 0.471 seconds.
+✔ Test "Thought 富文本 fallback 为多个子块补充分隔符" passed after 0.472 seconds.
+✔ Test "列表 marker 继承引用 context 的字体与颜色" passed after 0.471 seconds.
+✔ Test "raw 接纳一次后测量与建行不重复 filter" passed after 0.471 seconds.
+✔ Test "显式新 replace 可重新接纳 raw；不按字符串跨生命周期去重" passed after 0.471 seconds.
+✔ Test "raw static 每 replace 每 cell 一次，resize 不增；显式 apply 可重新接纳" passed after 0.471 seconds.
+✔ Suite "InkTablePresentation 布局状态契约" passed after 0.472 seconds.
+✔ Suite "InkTablePresentation 单元格来源契约" passed after 0.472 seconds.
+✔ Suite "项目审核 F04-F09 关键路径回归" passed after 0.472 seconds.
+✔ Test "表格结构按 parser 产出稳定传递" with 3 test cases passed after 0.472 seconds.
+✔ Suite "Canonical Corpus 表格 Tracer" passed after 0.474 seconds.
+✔ Test run with 28 tests in 5 suites passed after 0.475 seconds.
+2026-09-07 12:02:05.949 xcodebuild[93487:5476729] [MT] IDETestOperationsObserverDebug: 7.569 elapsed -- Testing started completed.
+2026-09-07 12:02:05.949 xcodebuild[93487:5476729] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-07 12:02:05.949 xcodebuild[93487:5476729] [MT] IDETestOperationsObserverDebug: 7.569 sec, +7.569 sec -- end
+Resolve Package Graph
+
+Resolve Package Graph
+
+Test session results, code coverage, and logs:
+	/Users/shizihan/DailyUse/Github/InkMarkdown/.scratch/architecture-deepening-2026-09-07/evidence/20260907-1225-ticket-09/tests.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started

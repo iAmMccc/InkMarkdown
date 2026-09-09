@@ -3,83 +3,148 @@ import UIKit
 /// 块级图片通道：独占成行的图片以 `UIView` 渲染，并符合 ``InkRenderableBlock``。
 ///
 /// 通过 ``configure(containerWidth:loader:)`` 绑定容器宽度后向 ``InkImageStore`` 解析；
-/// 使用 `loadToken` 丢弃过期的异步回调，避免复用或快速重配时错图。
+/// Store 观察与过期结果抑制由 ``InkImagePresentationLoad`` 负责。
 ///
 /// 须在主线程使用：内部依赖 ``InkImageStore``（``@MainActor``）。
-public final class InkImageBlock: UIView, InkRenderableBlock {
+///
+/// - Note: v0.0.1 起即为 ``UIView`` 子类；``makeView()`` 返回 `self` 供 adapter 挂载。
+public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
+  /// 图片源（URL、Bundle、generated 等）。
+  public private(set) var source: ImageSource
+  /// 保留高度变化时通知宿主 adapter；由 SwiftUI/UIKit adapter 绑定，非公开渲染契约。
+  public var onReservedHeightChanged: (() -> Void)?
 
-  /// 规范化后的图片来源。
-  public let source: ImageSource
-
-  private let store: InkImageStore
-  private let rendering: InkImageRendering
-  private var loadToken: UUID = UUID()
-  private var subscription: InkImageStore.ImageLoadSubscription?
+  private var store: InkImageStore
+  private var rendering: InkImageRendering
+  private var tapGestureRecognizer: UITapGestureRecognizer?
+  private var lastReservedHeight: CGFloat = -1
+  private let presentationLoad = InkImagePresentationLoad()
   private var isConfigured = false
   private var configuredMaxWidth: CGFloat = 0
   private var failureContentView: UIView?
   private var cachedFailureContentHeight: CGFloat = 0
+  private var isShowingLoadingPlaceholder = false
 
-  private let imageView: UIImageView = {
-    let iv = UIImageView()
-    iv.contentMode = .scaleAspectFit
-    iv.clipsToBounds = true
-    return iv
-  }()
+  private let imageView: UIImageView
+  private let placeholderView: UIView
 
-  private let placeholderView: UIView = {
-    let v = UIView()
-    v.backgroundColor = UIColor.systemGray5
-    v.layer.cornerRadius = 8
-    return v
-  }()
-
+  /// 创建块级图片视图（块 handler 与默认 ``makeView()`` 路径）。
+  ///
   /// - Parameters:
-  ///   - source: 图片来源。
-  ///   - store: 图片状态管理器（可由外部注入，或传入 ``InkImageStore/shared``）。
+  ///   - source: 图片源。
+  ///   - rendering: 图片渲染配置；须已按需开启 ``InkImageRendering/isEnabled``。
+  /// - Note: Block 路由在 UIKit 主线程调用；须在主线程构造。
+  @MainActor
+  public convenience init(source: ImageSource, rendering: InkImageRendering) {
+    self.init(
+      source: source,
+      resolvedStore: InkImageStore.defaultStore(for: rendering),
+      rendering: rendering
+    )
+  }
+
+  /// 0.0.1 兼容初始化器：显式注入 ``InkImageStore``。
+  ///
+  /// - Parameters:
+  ///   - source: 图片源。
+  ///   - store: 图片加载与缓存 Store。
   ///   - rendering: 图片渲染配置。
-  public init(
-    source: ImageSource,
-    store: InkImageStore,
-    rendering: InkImageRendering
-  ) {
+  @MainActor
+  public convenience init(source: ImageSource, store: InkImageStore, rendering: InkImageRendering) {
+    self.init(source: source, resolvedStore: store, rendering: rendering)
+  }
+
+  /// 模块内部的显式 Store 注入 seam；用于确定性测试与内部集成。
+  @MainActor
+  convenience init(source: ImageSource, rendering: InkImageRendering, store: InkImageStore) {
+    self.init(source: source, resolvedStore: store, rendering: rendering)
+  }
+
+  @MainActor
+  private init(source: ImageSource, resolvedStore store: InkImageStore, rendering: InkImageRendering) {
     self.source = source
     self.store = store
     self.rendering = rendering
+    self.imageView = UIImageView()
+    self.placeholderView = UIView()
     super.init(frame: .zero)
     setupViews()
-  }
-
-  /// 使用共享 Store 创建（须在主线程调用）。
-  @MainActor
-  public convenience init(source: ImageSource, rendering: InkImageRendering) {
-    self.init(source: source, store: .shared, rendering: rendering)
   }
 
   public required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 
+  @MainActor
+  public func makeView() -> UIView {
+    setNeedsLayout()
+    return self
+  }
+
+  @MainActor
+  public func updateExistingView(_ view: UIView) -> Bool {
+    guard let existing = view as? InkImageBlock else { return false }
+    if existing === self {
+      existing.setNeedsLayout()
+      return true
+    }
+    guard existing.source == self.source && existing.store === self.store else {
+      return false
+    }
+    return existing.apply(block: self)
+  }
+
+  @MainActor
+  func apply(block: InkImageBlock) -> Bool {
+    let renderingChanged = self.rendering != block.rendering
+    self.rendering = block.rendering
+    self.setupTapHandlingIfNeeded()
+
+    if renderingChanged {
+      if imageView.image != nil {
+        notifyReservedHeightChangedIfNeeded()
+      } else if bounds.width > 0 {
+        configureIfNeeded()
+      }
+    }
+    setNeedsLayout()
+    return true
+  }
+
+  @MainActor
+  public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? InkImageBlock else { return false }
+    return source == previous.source
+      && rendering == previous.rendering
+  }
+
   private func setupViews() {
+    imageView.contentMode = .scaleAspectFit
+    imageView.clipsToBounds = true
+    placeholderView.backgroundColor = UIColor.systemGray5
+    placeholderView.layer.cornerRadius = 8
     addSubview(placeholderView)
     addSubview(imageView)
     imageView.isHidden = true
-    placeholderView.frame = CGRect(
-      x: 0,
-      y: 0,
-      width: bounds.width,
-      height: rendering.placeholderHeight
-    )
+    placeholderView.isHidden = true
     setupTapHandlingIfNeeded()
   }
 
   private func setupTapHandlingIfNeeded() {
-    guard rendering.tapAction != .none else { return }
+    if let tap = tapGestureRecognizer {
+      removeGestureRecognizer(tap)
+      tapGestureRecognizer = nil
+    }
+    guard rendering.tapAction != .none else {
+      isUserInteractionEnabled = false
+      return
+    }
     isUserInteractionEnabled = true
     isAccessibilityElement = true
     accessibilityTraits.insert(.button)
     let tap = UITapGestureRecognizer(target: self, action: #selector(handleImageTap))
     addGestureRecognizer(tap)
+    tapGestureRecognizer = tap
   }
 
   @objc
@@ -114,12 +179,12 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   public override func layoutSubviews() {
     super.layoutSubviews()
     guard bounds.width > 0 else { return }
-    
+
     imageView.frame = bounds
     if let failure = failureContentView {
       failure.frame = bounds
     }
-    
+
     // D3：SSE 复用宿主时容器宽度会变；错宽下栅格化的位图被拉伸会糊化，允许按新宽度重配。
     if isConfigured, abs(bounds.width - configuredMaxWidth) > 1 {
       isConfigured = false
@@ -131,9 +196,14 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
 
   @MainActor
   private func configureIfNeeded() {
-    store.prepareForRendering(rendering)
     let loader = store.loader(for: rendering, source: source)
     configure(containerWidth: bounds.width, loader: loader)
+  }
+
+  /// 使用配置中的完整后端加载图片。
+  @MainActor
+  public func configure(containerWidth: CGFloat) {
+    configure(containerWidth: containerWidth, loader: store.loader(for: rendering, source: source))
   }
 
   /// 按容器宽度配置尺寸并向 Store 发起解析。
@@ -144,77 +214,69 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
   @MainActor
   public func configure(containerWidth: CGFloat, loader: InkImageLoading) {
     isConfigured = true
-    subscription?.cancel()
-    store.prepareForRendering(rendering)
-    let currentToken = UUID()
-    loadToken = currentToken
 
     let effectiveWidth = min(containerWidth, rendering.sizing.maxBlockImageWidth ?? containerWidth)
     configuredMaxWidth = containerWidth
-    let scale = UIScreen.main.scale
+    let scale = InkDisplayMetrics.resolve(for: self).scale
     let display = DisplayContext(
       maxPixelWidth: effectiveWidth * scale,
       scale: scale,
       contentMode: .fit
     )
 
-    placeholderView.frame = CGRect(
-      x: 0,
-      y: 0,
-      width: effectiveWidth,
-      height: rendering.placeholderHeight
+    presentationLoad.start(
+      source: source,
+      display: display,
+      loader: loader,
+      store: store,
+      onPending: { [weak self] in
+        self?.showPlaceholder(maxWidth: effectiveWidth)
+      },
+      onCompletion: { [weak self] completion in
+        guard let self else { return }
+        switch completion {
+        case .image(let image):
+          self.showImage(image, maxWidth: effectiveWidth)
+        case .loadFailed, .rejected:
+          self.showError()
+        }
+      }
     )
-
-    let result = store.resolve(source: source, display: display, loader: loader)
-    switch result {
-    case .ready(let img):
-      showImage(img, token: currentToken, maxWidth: effectiveWidth)
-    case .loading(let subscribe):
-      showPlaceholder()
-      subscription = subscribe { [weak self] image in
-        Task { @MainActor in
-          guard let self else { return }
-          if let image {
-            self.showImage(image, token: currentToken, maxWidth: effectiveWidth)
-          } else if currentToken == self.loadToken {
-            self.showError()
-          }
-        }
-      }
-    case .queued(let subscribe):
-      showPlaceholder()
-      let token = loadToken
-      subscription = subscribe { [weak self] image in
-        Task { @MainActor in
-          guard let self, self.loadToken == token else { return }
-          if let image {
-            self.showImage(image, token: token, maxWidth: effectiveWidth)
-          } else {
-            self.showError()
-          }
-        }
-      }
-    case .rejected:
-      showError()
-    }
   }
 
   @MainActor
-  private func showImage(_ img: UIImage, token: UUID, maxWidth: CGFloat) {
-    guard token == loadToken else { return }
+  private func showImage(_ img: UIImage, maxWidth: CGFloat) {
     clearFailureContent()
+    isShowingLoadingPlaceholder = false
     placeholderView.isHidden = true
     imageView.isHidden = false
     imageView.image = img
-    invalidateIntrinsicContentSize()
+    notifyReservedHeightChangedIfNeeded(maxWidth: maxWidth)
     setNeedsLayout()
     rendering.onLoadFinished?(source, img)
   }
 
-  private func showPlaceholder() {
+  private func notifyReservedHeightChangedIfNeeded(maxWidth: CGFloat? = nil) {
+    let width = maxWidth ?? resolvedMaxWidth()
+    let height = sizeThatFits(CGSize(width: max(width, 1), height: .greatestFiniteMagnitude)).height
+    guard abs(height - lastReservedHeight) > 0.5 else { return }
+    lastReservedHeight = height
+    invalidateIntrinsicContentSize()
+    onReservedHeightChanged?()
+  }
+
+  private func showPlaceholder(maxWidth: CGFloat) {
     clearFailureContent()
+    isShowingLoadingPlaceholder = true
+    placeholderView.frame = CGRect(
+      x: 0,
+      y: 0,
+      width: maxWidth,
+      height: rendering.placeholderHeight
+    )
     placeholderView.isHidden = false
     imageView.isHidden = true
+    notifyReservedHeightChangedIfNeeded(maxWidth: maxWidth)
   }
 
   private func showError() {
@@ -236,23 +298,22 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
 
   private func showFailureFallback(maxWidth: CGFloat) {
     clearFailureContent()
+    isShowingLoadingPlaceholder = false
     imageView.isHidden = true
+    placeholderView.isHidden = true
 
     guard let fallback = rendering.failureFallback else {
-      placeholderView.isHidden = false
-      frame.size = CGSize(width: maxWidth, height: rendering.placeholderHeight)
-      invalidateIntrinsicContentSize()
+      installFailureContentView(makeCompactFailureLabel(), maxWidth: maxWidth)
       return
     }
-
-    placeholderView.isHidden = true
 
     switch fallback {
     case .sourceCode(let code, let language):
       let view = InkCodeBlockViewFactory.makeView(
         code: code,
         language: language,
-        config: rendering.failureCodeBlockStyle
+        config: rendering.failureCodeBlockStyle,
+        appearance: InkAppearance.shared
       )
       installFailureContentView(view, maxWidth: maxWidth)
     }
@@ -269,12 +330,22 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
     let height = measuredFailureContentHeight(maxWidth: maxWidth)
     cachedFailureContentHeight = height
     failureContentView.frame = CGRect(x: 0, y: 0, width: maxWidth, height: height)
-    invalidateIntrinsicContentSize()
+    notifyReservedHeightChangedIfNeeded(maxWidth: maxWidth)
     setNeedsLayout()
   }
 
+  private func makeCompactFailureLabel() -> UILabel {
+    let label = UILabel()
+    label.adjustsFontForContentSizeCategory = true
+    label.numberOfLines = 0
+    label.font = UIFont.systemFont(ofSize: UIFont.labelFontSize)
+    label.textColor = UIColor.secondaryLabel
+    label.text = "[\u{1F5BC} image]"
+    return label
+  }
+
   private func measuredFailureContentHeight(maxWidth: CGFloat) -> CGFloat {
-    guard let failureContentView else { return rendering.placeholderHeight }
+    guard let failureContentView else { return inlineUnresolvedAttachmentHeight() }
     let savedFrame = failureContentView.frame
     failureContentView.bounds = CGRect(x: 0, y: 0, width: maxWidth, height: 0)
     failureContentView.setNeedsLayout()
@@ -290,6 +361,29 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
 
   private func updateFrameForFailureContent(maxWidth: CGFloat) {
     relayoutFailureContent(maxWidth: maxWidth)
+  }
+
+  public override func sizeThatFits(_ size: CGSize) -> CGSize {
+    let width = size.width > 0 ? size.width : resolvedMaxWidth()
+    if failureContentView != nil {
+      let height = cachedFailureContentHeight > 0 ? cachedFailureContentHeight : measuredFailureContentHeight(maxWidth: width)
+      return CGSize(width: width, height: height)
+    }
+    if let img = imageView.image {
+      let desiredWidth = min(width, rendering.sizing.maxBlockImageWidth ?? img.size.width)
+      let fitSize = fitted(
+        img.size,
+        maxWidth: max(width, 1),
+        upscales: rendering.sizing.upscalesSmallImages,
+        minPlaceholder: rendering.placeholderHeight,
+        maxHeight: rendering.sizing.maxImageHeight
+      )
+      return CGSize(width: desiredWidth, height: fitSize.height)
+    }
+    if isShowingLoadingPlaceholder {
+      return CGSize(width: width, height: rendering.placeholderHeight)
+    }
+    return CGSize(width: width, height: rendering.placeholderHeight)
   }
 
   public override var intrinsicContentSize: CGSize {
@@ -311,28 +405,28 @@ public final class InkImageBlock: UIView, InkRenderableBlock {
       )
       return CGSize(width: desiredWidth, height: fitSize.height)
     }
+    if isShowingLoadingPlaceholder {
+      return CGSize(width: UIView.noIntrinsicMetric, height: rendering.placeholderHeight)
+    }
     return CGSize(width: UIView.noIntrinsicMetric, height: rendering.placeholderHeight)
-  }
-
-  public func makeView() -> UIView {
-    setNeedsLayout()
-    return self
   }
 
   /// 取消订阅并重置为占位态，供列表复用。
   @MainActor
   public func prepareForReuse() {
-    subscription?.cancel()
+    presentationLoad.cancel()
     isConfigured = false
-    loadToken = UUID()
     configuredMaxWidth = 0
     imageView.image = nil
     imageView.isHidden = true
     clearFailureContent()
-    placeholderView.isHidden = false
-  }
-
-  deinit {
-    subscription?.cancel()
+    isShowingLoadingPlaceholder = false
+    placeholderView.isHidden = true
+    lastReservedHeight = -1
+    invalidateIntrinsicContentSize()
   }
 }
+
+/// 0.0.1 类型名兼容别名；请改用 ``InkImageBlock``。
+@available(*, deprecated, renamed: "InkImageBlock", message: "请改用 InkImageBlock。")
+public typealias InkImageBlockView = InkImageBlock

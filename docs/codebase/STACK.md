@@ -9,9 +9,9 @@
 | 主要语言 | Swift（包内语言模式 **v5**） | `Package.swift`：`swiftSettings: [.swiftLanguageMode(.v5)]` |
 | 工具链版本 | Swift tools **6.2+** | `Package.swift` 首行 `// swift-tools-version: 6.2` |
 | 包管理器 | Swift Package Manager (SPM) | `Package.swift`、`Package.resolved` |
-| 模块与构建系统 | SPM library target `InkMarkdown` + Xcode ExampleApp | `Package.swift`；`ExampleApp/ExampleApp.xcodeproj` |
-| 声明平台 | **仅 iOS 14+** | `Package.swift`：`platforms: [.iOS(.v14)]` |
-| 产品定位 | 纯 UIKit Markdown 渲染 → `NSAttributedString` / 块级 `UIView` | `AGENTS.md`、`README.md`、`docs/current-status.md` |
+| 模块与构建系统 | 五个 SPM library products：`InkMarkdown`、`InkMarkdownSwiftUI`、`InkMarkdownLaTeX`、`InkMarkdownMermaid`、`InkMarkdownKingfisher` + Xcode ExampleApp | `Package.swift`；`ExampleApp/ExampleApp.xcodeproj`；ADR-008 |
+| Manifest 声明 | `.iOS(.v15)`；不声明 macOS、tvOS、watchOS 或 visionOS | `Package.swift`；`docs/current-status.md` |
+| 产品定位 | 已发布 `0.0.1` 为 UIKit-first engine；未发布的 v0.0.2 增加独立 SwiftUI adapter，并把 LaTeX / Mermaid 实现拆为 opt-in addon products | `AGENTS.md`、`README.md`、`docs/current-status.md`、ADR-008 |
 
 ### 2) 依赖项
 
@@ -21,7 +21,8 @@
 | Foundation | 系统框架 | 解析辅助、正则匹配 | `Parser/InkLineClassifier.swift` 等 |
 | `Markdown`（swift-markdown） | **锁定 revision** `07ebc9c071b22a5d021031b798c3a84b76281213`（ADR-001） | 解析 Markdown → `Document` / `Markup` | `Package.swift` 依赖段；`Package.resolved` |
 | `swift-cmark` | 由 swift-markdown 传递；上游声明分支 `gfm`，resolved revision `0101bf2c6ff6a218f93150f340fe5ccf76d9f3aa` | cmark-gfm 底层解析 | `Package.resolved` |
-| SmartCodable | **未使用** | 早期规划提及，无实际代码依赖 | `docs/current-status.md` |
+| Kingfisher | `8.12.0` exact | 可选图片后端 | `Package.swift` |
+| iosMath | `2.3.1` exact | LaTeX 排版 | `Package.swift` |
 
 `InkMarkdown.swift` 声明 `@_exported import Markdown`，宿主引入 `import InkMarkdown` 后可直接使用 Markup 类型。
 
@@ -48,7 +49,7 @@ xcodebuild -scheme InkMarkdown \
   build
 
 # 测试
-xcodebuild -scheme InkMarkdown \
+xcodebuild -scheme InkMarkdown-Package \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
   test
 
@@ -67,8 +68,8 @@ rm -rf .build
 - **配置来源**：`Package.swift`、`Package.resolved`、`Packages/packages.json`、`ExampleApp` 工程配置
 - **环境变量**：无需应用级 `.env`；可继承 Git 代理环境变量（`http_proxy` / `https_proxy`）
 - **部署与运行约束**：
-  - 依赖 UIKit，仅支持 iOS Target
-  - 外部库声明仅支持 iOS 14+
+  - 已发布 UIKit engine 在 iOS Simulator 上验证；v0.0.2 已有新版 Simulator 证据，但 iOS/iPadOS 15 最低版本运行验证尚未完成
+  - 外部库声明的最低平台以 `Package.swift` 与 `docs/current-status.md` 的实际证据为准
   - 直接依赖项已锁定 revision；传递依赖项 `swift-cmark` 遵循 `Package.resolved` 锁定的 revision
 
 ### 6) 验证依据
@@ -77,17 +78,14 @@ rm -rf .build
 - `Package.resolved`
 - `docs/current-status.md`
 - `Packages/scripts/fetch-packages.sh`
-- `docs/codebase/.codebase-scan.txt`
 
 ## 目标与现状对比
 
 | 主题 | 规划目标 | 仓库现状 |
 |-------|-------------------|--------------------|
-| 多平台支持 | iOS 14+、macOS 11+、tvOS 14+、watchOS 7+（`AGENTS.md` 路线） | Manifest 仅声明 iOS 14+；源码依赖 UIKit；v1 对外仅支持 iOS（ADR-002） |
+| 产品平台范围 | iOS 15+、iPadOS 15+；不支持其他平台（ADR-008、ADR-010） | manifest 已收敛且已有新版 Simulator 证据；iOS/iPadOS 15 最低版本运行验证仍待完成 |
 | 本地 SPM 缓存 | 支持 `path: Packages/Caches/...` | 默认 Manifest 锁定远程 Revision；缓存脚本可选 |
-| SmartCodable | 早期依赖列表项 | 未引用 |
 
 ## 补充说明
 
-- 扫描报告中的 “Total files 2741 / LOC 116025” 包含 `.build/` 及 `Packages/Caches/` 中的第三方依赖代码。
-- 本库实际代码库 `Sources/InkMarkdown` 包含 **21 个 Swift 文件，约 3,000 行代码**。
+- 当前代码规模、模块明细与工作树状态以源码和执行时的 `git status` 为准，不以旧扫描摘要作发布证据。

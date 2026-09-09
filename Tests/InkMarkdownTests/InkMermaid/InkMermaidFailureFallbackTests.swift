@@ -143,7 +143,7 @@ private func waitForGeneratedLoaderCompletion(
       """,
       configuration: config
     )
-    guard let block = blocks.first as? InkImageBlock else {
+    guard let block = blocks.first?.makeView() as? InkImageBlock else {
       Issue.record("应生成 InkImageBlock")
       return
     }
@@ -168,62 +168,43 @@ private func waitForGeneratedLoaderCompletion(
     #expect(block.intrinsicContentSize.height < config.appearance.imageRendering.placeholderHeight)
   }
 
-  @Test func mermaidBlockRejectedShowsSourceCodeImmediately() {
-    var storeConfig = InkImageStore.Configuration()
-    storeConfig.maxConcurrentLoads = 1
-    storeConfig.maxPendingLoads = 0
-    let store = InkImageStore(configuration: storeConfig)
-
-    let slowLoader = DelayedURLImageLoader()
-    slowLoader.delay = 1_000_000_000
-    let display = DisplayContext(maxPixelWidth: 300, scale: 2)
-    _ = store.resolve(
-      source: ImageSource(url: URL(string: "https://example.com/blocker.png")!),
-      display: display,
-      loader: slowLoader
-    )
-
+  @Test func mermaidBlock_missingBackendShowsSourceCode() async {
     var rendering = InkImageRendering()
     rendering.isEnabled = true
     rendering.failureFallback = .sourceCode("sequenceDiagram\n  A->>B: hi", language: "mermaid")
-    rendering.failureCodeBlockStyle = InkAppearance().codeBlock
-
     let source = ImageSource(generated: InkGeneratedImageRequest(
-      owner: "mermaid",
-      rendererVersion: "test",
-      source: "sequenceDiagram\n  A->>B: hi",
-      styleIdentity: "light"
-    ))
-    let block = InkImageBlock(source: source, store: store, rendering: rendering)
-    block.configure(containerWidth: 280, loader: slowLoader)
-
-    let texts = collectLabelTexts(in: block)
-    #expect(texts.contains { $0.contains("sequenceDiagram") && $0.contains("A->>B: hi") })
+      owner: "mermaid", rendererVersion: "test", source: "sequenceDiagram\n  A->>B: hi", styleIdentity: "light"))
+    let block = InkImageBlock(source: source, rendering: rendering)
+    block.configure(containerWidth: 280)
+    for _ in 0..<100 {
+      if !collectLabelTexts(in: block).isEmpty { break }
+      try? await Task.sleep(nanoseconds: 10_000_000)
+    }
+    #expect(collectLabelTexts(in: block).contains { $0.contains("sequenceDiagram") })
     #expect(!hasVisibleGrayPlaceholder(in: block))
-    let expectedHeight = expectedCodeBlockHeight(lineCount: 2, style: rendering.failureCodeBlockStyle)
-    #expect(block.intrinsicContentSize.height >= expectedHeight - 1)
   }
 
-  @Test func imageBlockFailureWithoutFallbackKeepsGrayPlaceholder() async {
+  @Test func imageBlock_failureWithoutFallbackShowsCompactLabel() async {
     let url = URL(string: "https://example.com/fail.png")!
     let loader = FailingURLImageLoader()
     var rendering = InkImageRendering()
     rendering.isEnabled = true
-    rendering.loader = loader
+    rendering.backend = TestImageBackend(loader)
 
     let block = InkImageBlock(
       source: ImageSource(url: url),
-      store: InkImageStore(),
-      rendering: rendering
+      rendering: rendering,
+      store: InkImageStore()
     )
     block.configure(containerWidth: 300, loader: loader)
     await waitForLoaderCompletion(count: 1, loader: loader)
 
-    #expect(collectLabelTexts(in: block).isEmpty)
-    #expect(hasVisibleGrayPlaceholder(in: block))
+    #expect(collectLabelTexts(in: block).contains("[🖼 image]"))
+    #expect(!hasVisibleGrayPlaceholder(in: block))
+    #expect(block.intrinsicContentSize.height < rendering.placeholderHeight)
   }
 
-  @Test func imageBlockReuseClearsFailureFallbackAfterSuccess() async {
+  @Test func imageBlock_reuseClearsFailureFallbackAfterSuccess() async {
     let mermaidSource = "graph LR\n  X-->Y"
     let generatedSource = ImageSource(generated: InkGeneratedImageRequest(
       owner: "mermaid",
@@ -237,7 +218,7 @@ private func waitForGeneratedLoaderCompletion(
     rendering.failureFallback = .sourceCode(mermaidSource, language: "mermaid")
 
     let store = InkImageStore()
-    let block = InkImageBlock(source: generatedSource, store: store, rendering: rendering)
+    let block = InkImageBlock(source: generatedSource, rendering: rendering, store: store)
 
     let failingLoader = FailingGeneratedImageLoader()
     block.configure(containerWidth: 300, loader: failingLoader)
@@ -258,7 +239,7 @@ private func waitForGeneratedLoaderCompletion(
     #expect(block.intrinsicContentSize.height == 60 || block.frame.height == 60)
   }
 
-  @Test func imageBlockPrepareForReuseRemovesFailureFallback() async {
+  @Test func imageBlock_prepareForReuseRemovesFailureFallback() async {
     var rendering = InkImageRendering()
     rendering.isEnabled = true
     rendering.failureFallback = .sourceCode("flowchart TD\n  Q-->R", language: "mermaid")
@@ -269,7 +250,7 @@ private func waitForGeneratedLoaderCompletion(
       source: "flowchart TD\n  Q-->R",
       styleIdentity: "light"
     ))
-    let block = InkImageBlock(source: source, store: InkImageStore(), rendering: rendering)
+    let block = InkImageBlock(source: source, rendering: rendering, store: InkImageStore())
     block.configure(containerWidth: 260, loader: FailingGeneratedImageLoader())
 
     let deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000
@@ -281,6 +262,7 @@ private func waitForGeneratedLoaderCompletion(
 
     block.prepareForReuse()
     #expect(collectLabelTexts(in: block).isEmpty)
-    #expect(hasVisibleGrayPlaceholder(in: block))
+    #expect(!hasVisibleGrayPlaceholder(in: block))
+    #expect(block.intrinsicContentSize.height == rendering.placeholderHeight)
   }
 }

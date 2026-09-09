@@ -1,5 +1,5 @@
 {
-  "originHash" : "f4245b04c10f2a20187cc26aca58cd0a60e2f682a20a022b5861dd8c8822378b",
+  "originHash" : "19453152e0cf37799e9ffb80f0af765899dbcd64bb8d2c571cae063f4100283a",
   "pins" : [
     {
       "identity" : "iosmath",
@@ -11,21 +11,12 @@
       }
     },
     {
-      "identity" : "jxpagingview",
+      "identity" : "kingfisher",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pujiaxin33/JXPagingView.git",
+      "location" : "https://github.com/onevcat/Kingfisher.git",
       "state" : {
-        "revision" : "a55dd07adfa9729677e2287943af5aa40f5df31f",
-        "version" : "2.1.3"
-      }
-    },
-    {
-      "identity" : "jxsegmentedview",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pujiaxin33/JXSegmentedView.git",
-      "state" : {
-        "revision" : "fbbf965d7396bd99ac1ce88a80b6c950b85313f6",
-        "version" : "1.4.1"
+        "revision" : "be0d257b9bd47a4e6e1265fc8c237411825f107a",
+        "version" : "8.12.0"
       }
     },
     {
@@ -35,15 +26,6 @@
       "state" : {
         "revision" : "475e5dbff8cb22a74741a355c9c39d74f3a6c8e7",
         "version" : "7.0.0-beta.1"
-      }
-    },
-    {
-      "identity" : "snapkit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/SnapKit/SnapKit.git",
-      "state" : {
-        "revision" : "2842e6e84e82eb9a8dac0100ca90d9444b0307f4",
-        "version" : "5.7.1"
       }
     },
     {

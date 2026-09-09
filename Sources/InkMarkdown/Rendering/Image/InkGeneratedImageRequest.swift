@@ -4,7 +4,7 @@ import Foundation
 /// 由本地渲染器生成的图片输入。
 ///
 /// 此类型只保存可重建的文本输入与稳定身份材料，不保存位图或任务；位图的缓存、
-/// 并发合并和订阅始终由 ``InkImageStore`` 负责。
+/// 并发合并与缓存由 ``InkImageBackend`` 负责，呈现订阅由协调器桥接。
 public struct InkGeneratedImageRequest: Hashable, Sendable {
   /// 生成器的所有者，例如 `latex` 或 `mermaid`。
   public let owner: String

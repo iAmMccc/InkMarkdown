@@ -1,110 +1,60 @@
+//
+//  DemoCatalog.swift
+//  ExampleApp
+//
+//  Created by InkMarkdown on 2026/8/18.
+//
+
 import Foundation
 
-/// 第一层分类入口。
-enum DemoCategory: CaseIterable {
-  case markdownStandard
-  case customComponent
-  case streaming
-  case integration
+/// 一级分类：UIKit 渲染引擎 vs SwiftUI 适配器。
+public enum MainCategory: CaseIterable {
+  case uikitEngine
+  case swiftUIAdapter
 
-  var title: String {
+  public var title: String {
     switch self {
-    case .markdownStandard: return "Markdown 标准样式"
-    case .customComponent: return "自定义样式"
-    case .streaming: return "流式渲染"
-    case .integration: return "集成测试"
+    case .uikitEngine: return "📱 UIKit 渲染引擎"
+    case .swiftUIAdapter: return "⚡ SwiftUI 适配器"
     }
   }
 
-  var subtitle: String {
+  public var subtitle: String {
     switch self {
-    case .markdownStandard: return "标准 Markdown 语法的默认渲染效果"
-    case .customComponent: return "表格等业务自定义组件"
-    case .streaming: return "SSE 逐字吐字渲染"
-    case .integration: return "综合长文、本地文件、服务端 JSON、图片渲染"
+    case .uikitEngine: return "Core UIKit 富文本与 Block 视图渲染、组件扩展、配置与流式引擎"
+    case .swiftUIAdapter: return "InkMarkdownView、Environment 注入与流式会话管理"
     }
   }
 }
 
-/// 第二层列表数据源。
-enum DemoCatalog {
+/// 二级对齐测试集（UIKit 与 SwiftUI 1:1 对称）。
+public enum DemoScenario: CaseIterable {
+  case standardStatic
+  case customComponents
+  case configuration
+  case streamingDocument
+  case aiChat
+  case longTextPerformance
 
-  // MARK: - Markdown 标准样式
-
-  static func markdownStandardSections() -> [DemoSection] {
-    [
-      DemoSection(
-        title: "结构组件",
-        footer: "决定文档骨架的块级组件。",
-        rows: MarkdownComponent.structuralComponents.map { .component($0) }
-      ),
-      DemoSection(
-        title: "内容元素",
-        footer: "嵌在结构内的行内组件。",
-        rows: MarkdownComponent.inlineComponents.map { .component($0) }
-      ),
-    ]
+  public var title: String {
+    switch self {
+    case .standardStatic: return "1. 基础 Markdown 静态渲染"
+    case .customComponents: return "2. 自定义组件与富媒体"
+    case .configuration: return "3. 样式配置与动态主题"
+    case .streamingDocument: return "4. 流式 Markdown 渲染 (单文档)"
+    case .aiChat: return "5. AI SSE 对话问答"
+    case .longTextPerformance: return "6. 综合长文与性能基线"
+    }
   }
 
-  // MARK: - 自定义样式
-
-  static func customComponentSections() -> [DemoSection] {
-    [
-      DemoSection(
-        title: "自定义组件",
-        footer: "通过 Block 路由或独立组件实现的业务定制样式。",
-        rows: [
-          .component(.table),
-        ]
-      ),
-      DemoSection(
-        title: "图片渲染",
-        footer: "网络图、本地 Asset、Base64、块通道、行内混排、全屏预览等场景。",
-        rows: [
-          .scenario(.imageRenderingDemo),
-        ]
-      ),
-      DemoSection(
-        title: "公式与图表",
-        footer: "LaTeX 数学公式与 Mermaid 图表，本地生成位图并复用 Image Store。",
-        rows: [
-          .component(.latex),
-          .component(.mermaid),
-          .scenario(.diagramRenderingDemo),
-        ]
-      ),
-    ]
-  }
-
-  // MARK: - 流式渲染
-
-  static func streamingSections() -> [DemoSection] {
-    [
-      DemoSection(
-        title: "流式渲染",
-        footer: "模拟 AI 对话场景的实时渲染。",
-        rows: [
-          .scenario(.sseStreaming),
-          .scenario(.streamingPerformance),
-        ]
-      ),
-    ]
-  }
-
-  // MARK: - 集成测试
-
-  static func integrationSections() -> [DemoSection] {
-    [
-      DemoSection(
-        title: "集成场景",
-        footer: "常见接入路径验证。",
-        rows: [
-          .scenario(.comprehensiveReadme),
-          .scenario(.localFile),
-          .scenario(.serverJSON),
-          .scenario(.imageRendering),
-        ]
-      ),
-    ]
+  public var subtitle: String {
+    switch self {
+    case .standardStatic: return "标题、正文、加粗斜体、删除线、列表、引用、代码块与链接"
+    case .customComponents: return "表格滑动与复制、图片预览、LaTeX 公式与 Mermaid 流程图"
+    case .configuration: return "动态字号缩放、段落间距调整、主题色与 Dark Mode"
+    case .streamingDocument: return "逐字吐字、表格实时流式展示、真实大模型提问与状态机"
+    case .aiChat: return "历史消息列表、流式逐字追加与多端点选择"
+    case .longTextPerformance: return "超长 Markdown 综合文档解析渲染速度与滚动流畅度"
+    }
   }
 }

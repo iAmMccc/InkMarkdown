@@ -1,30 +1,84 @@
 import UIKit
 
 /// 分割线 Block：顶部一条细线 + 下方留白。
-public struct InkThematicBreakBlock: InkRenderableBlock {
+public struct InkThematicBreakBlock: InkRenderableBlock, InkReusableBlock {
   public let config: InkAppearance.ThematicBreak
 
-  public init(config: InkAppearance.ThematicBreak = InkAppearance.shared.thematicBreak) {
+  @MainActor
+  public init() {
+    self.init(config: InkAppearance.shared.thematicBreak)
+  }
+
+  public init(config: InkAppearance.ThematicBreak) {
     self.config = config
   }
 
-  public func makeView() -> UIView {
-    let container = UIView()
-    container.backgroundColor = .clear
-    container.translatesAutoresizingMaskIntoConstraints = false
-    container.heightAnchor.constraint(equalToConstant: config.lineThickness + config.spacingAfter).isActive = true
+  @MainActor public func makeView() -> UIView {
+    InkThematicBreakView(config: config)
+  }
 
-    let line = UIView()
-    line.backgroundColor = config.color
-    line.translatesAutoresizingMaskIntoConstraints = false
-    container.addSubview(line)
-    NSLayoutConstraint.activate([
-      line.topAnchor.constraint(equalTo: container.topAnchor),
-      line.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-      line.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-      line.heightAnchor.constraint(equalToConstant: config.lineThickness),
-    ])
+  @MainActor
+  public func updateExistingView(_ view: UIView) -> Bool {
+    guard let breakView = view as? InkThematicBreakView else { return false }
+    breakView.apply(config: config)
+    return true
+  }
 
-    return container
+  @MainActor
+  public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? InkThematicBreakBlock else { return false }
+    return config == previous.config
+  }
+}
+
+// MARK: - 内部视图实现
+
+final class InkThematicBreakView: UIView {
+
+  private var config: InkAppearance.ThematicBreak
+  private let lineView = UIView()
+
+  init(config: InkAppearance.ThematicBreak) {
+    self.config = config
+    super.init(frame: .zero)
+    backgroundColor = .clear
+    lineView.backgroundColor = config.color
+    addSubview(lineView)
+
+    isAccessibilityElement = true
+    accessibilityLabel = "分割线"
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  func apply(config: InkAppearance.ThematicBreak) {
+    self.config = config
+    lineView.backgroundColor = config.color
+    invalidateIntrinsicContentSize()
+  }
+
+  override func sizeThatFits(_ size: CGSize) -> CGSize {
+    let targetWidth = InkDisplayMetrics.resolvedMeasurementWidth(
+      proposal: size.width,
+      bounds: bounds.width
+    )
+    guard targetWidth > 0 else {
+      return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+    }
+    return CGSize(width: targetWidth, height: config.lineThickness + config.spacingAfter)
+  }
+
+  override var intrinsicContentSize: CGSize {
+    CGSize(width: UIView.noIntrinsicMetric, height: config.lineThickness + config.spacingAfter)
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    let width = bounds.width
+    guard width > 0 else { return }
+    lineView.frame = CGRect(x: 0, y: 0, width: width, height: config.lineThickness)
   }
 }

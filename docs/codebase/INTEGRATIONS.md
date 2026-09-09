@@ -12,7 +12,7 @@
 
 ### 2) 宿主集成接口
 
-InkMarkdown 不内置网络请求、身份验证或后端交互逻辑。宿主通过公开 API 进行集成：
+业务网络、身份验证与 SSE transport 由宿主负责；图片网络由宿主选择的图片后端负责。宿主通过公开 API 进行集成：
 
 | 接口 | 用途 | 验证依据 |
 |---------|---------|----------|
@@ -34,7 +34,7 @@ InkMarkdown 不内置网络请求、身份验证或后端交互逻辑。宿主�
 | 性能监控 / 统计分析 | 未使用 | 无关联代码 |
 | 消息队列 | 未使用 | 无关联代码 |
 | 远程配置 | 未使用 | 无关联代码 |
-| 图片下载 / CDN 缓存 | **opt-in**（默认关：`renderImage` 仅 `"[🖼 …]"` 占位）；开启后由 `InkImageStore` + `InkImageLoading` 承担 | `Rendering/Image/`、`InkImageRendering.isEnabled` |
+| 图片下载 / CDN 缓存 | **opt-in**（默认关：`renderImage` 仅 `"[🖼 …]"` 占位）；开启后由注入的 `InkImageBackend` 承担，`InkImageStore` 仅桥接呈现订阅 | `Rendering/Image/`、`InkImageRendering.isEnabled` |
 
 ### 4) 本地工具链集成
 
@@ -42,8 +42,9 @@ InkMarkdown 不内置网络请求、身份验证或后端交互逻辑。宿主�
 |------|------|----------|
 | `Packages/scripts/fetch-packages.sh` | 依据 `packages.json` 克隆依赖至 `Packages/Caches/` | 脚本内容 |
 | `packages.json` | 记录第三方依赖的 URL 与 Revision | `Packages/packages.json` |
-| XcodeBuildMCP | 构建与测试环境 | `AGENTS.md` |
-| codebase-memory | 本地代码库架构辅助查询 | `AGENTS.md` |
+| `XcodeBuildMCP` | 构建与测试环境 | `AGENTS.md` |
+| `Serena` | 基于 LSP (sourcekit-lsp) 的代码符号导航与重构 | `AGENTS.md` |
+| `ripgrep` (`rg`) | 高性能代码与全文检索工具 | `AGENTS.md` |
 
 ### 5) 凭证与安全配置
 

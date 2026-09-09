@@ -77,6 +77,12 @@ final class SSETextSegmentView: UIView, SSETypewriterSegment {
 
 
 
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        guard previousTraitCollection?.displayScale != traitCollection.displayScale else { return }
+        bindInlineAttachments()
+    }
+
     /// 写入 textStorage 并绑定行内 ``InkImageAttachment``，否则 LaTeX 等会永久停在占位图。
     private func applyVisibleText(_ text: NSAttributedString) {
         textView.attributedText = text
@@ -86,8 +92,7 @@ final class SSETextSegmentView: UIView, SSETypewriterSegment {
 
     private func bindInlineAttachments() {
         InkImageAttachment.bindAttachments(
-            in: textView.textStorage,
-            layoutManager: textView.layoutManager,
+            in: textView,
             onHeightChange: { [weak self] in
                 guard let self else { return }
                 self.invalidateIntrinsicContentSize()

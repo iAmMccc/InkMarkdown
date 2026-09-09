@@ -46,11 +46,11 @@ baselineOffset = max(0, (fixedLineHeight - font.lineHeight) / 2)
 
 颜色不进 `monospaced()`：要不要回落环境色，由 `renderInlineCode` + `appearance.inlineCode` 决定。
 
-相关测试：`headingInlineCode_*`、`blockquoteLink_*`、`strongInlineCode_*`、`strikethrough_*`。
+现有相关测试已覆盖标题、引用、strong 与 inline code 的组合语义，也覆盖删除线在普通文本和 inline code 叶子上的属性契约。自定义 `inlineSyntaxes` 与图片叶子仍遵守已记录的删除线组合限制。
 
 ### 范式 A 的缺点：叶子必须逐个读 context
 
-当前 context 下传是**范式 A**（accumulator 下传 + 叶子收集挂属性）：每个叶子（`renderText` / `renderInlineCode` / `renderImage`）都要显式读取 context 里每个相关标志，一次性挂载 attributes。
+当前 context 下传是**范式 A**（accumulator 下传 + 叶子收集挂属性）：每个叶子（`renderText` / `renderInlineCode` / `renderImage`）都要为其适用样式显式读取 context 标志，一次性挂载 attributes。
 
 带来的维护开销：**每新增一个样式标志，就必须在每个叶子补一段读取**。漏掉一个叶子，该叶子覆盖的子树就会丢样式。历史案例：删除线初版只补了 `renderText`，导致 `~~`code`~~` 的代码部分没有删除线（后改用 `.underlineStyle` 又错改成了下划线）——这是范式 A 的典型遗漏，并非逻辑错误。
 
@@ -142,10 +142,10 @@ SSE chunk
 
 要点：
 
-- **解耦**：解析慢不影响吐字帧率；显示侧每帧截取近似 O(1)
+- **解耦**：解析与显示在不同阶段调度；显示侧使用增量 `textStorage` 更新，但 substring、布局和测量成本随 workload 变化，不承诺 O(1)
 - **稳定边界**（`InkIncrementalMarkdownRenderer`）：已闭合前缀缓存；只重渲活跃后缀。未闭合代码围栏整段留在活跃区
 - **防过期**：`renderGeneration` / `parseVersion` 丢弃迟到的后台结果
-- **上限**：`maxParseLength = 50_000`（硬编码）
+- **上限**：默认 `maximumSourceLength = 50_000`；renderer/session initializer 可配置，并在会话创建时固化为共享 snapshot
 - **暂停**：`isDisplayPaused`；恢复时 `_flushDisplay`
 
 流式复用 `InkAttributedRenderer`，不是第二套渲染。

@@ -69,11 +69,10 @@ final class StreamingPerformanceViewController: UIViewController {
     resultLabel.text = "测试中..."
     previewTextView.attributedText = nil
 
-    DispatchQueue.global(qos: .userInitiated).async {
+    Task { @MainActor [weak self] in
+      await Task.yield()
       let result = InkStreamingPerformanceBenchmark.measure()
-      DispatchQueue.main.async { [weak self] in
-        self?.apply(result)
-      }
+      self?.apply(result)
     }
   }
 

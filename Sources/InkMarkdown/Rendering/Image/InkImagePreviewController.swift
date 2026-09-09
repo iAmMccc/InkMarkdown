@@ -6,15 +6,11 @@ import UIKit
 ///
 /// - `maxPreviewPixel`：高清解码的最长边像素上限，默认 4096，
 ///   避免超大图（如 8000×6000）一次性占用过多内存。
-/// - `bypassStore`：为 `true` 时高清图不写入 ``InkImageStore``，
-///   由预览控制器本地持有，dismiss 后立即释放，避免缓存膨胀。
+/// 缓存由显式注入的后端管理，预览不添加或绕过独立缓存层。
 public struct PreviewLoadPolicy: Sendable {
 
   /// 高清预览解码的最长边像素上限。
   public var maxPreviewPixel: CGFloat = 4096
-
-  /// 是否绕过 ``InkImageStore``，避免高清图进入内存缓存。
-  public var bypassStore: Bool = true
 
   public init() {}
 }
@@ -36,6 +32,7 @@ public final class InkImagePreviewController: UIViewController {
   private let previewPolicy: PreviewLoadPolicy
 
   private var highResTask: Task<Void, Never>?
+  private var highResGeneration = UUID()
 
   // MARK: - Views
 
@@ -69,17 +66,17 @@ public final class InkImagePreviewController: UIViewController {
   /// - Parameters:
   ///   - source: 图片来源，用于后台加载高清图。
   ///   - displayImage: 已有的降采样图，入场立即展示。
-  ///   - loader: 高清图加载器；为 `nil` 时仅展示 `displayImage`。
+  ///   - rendering: 图片配置；为 nil 时仅展示 displayImage，提供时复用完整后端。
   ///   - previewPolicy: 高清解码与缓存策略。
   public init(
     source: ImageSource,
     displayImage: UIImage,
-    loader: InkImageLoading? = nil,
+    rendering: InkImageRendering? = nil,
     previewPolicy: PreviewLoadPolicy = .init()
   ) {
     self.source = source
     self.displayImage = displayImage
-    self.loader = loader
+    self.loader = rendering.map { InkImageStore().loader(for: $0, source: source) }
     self.previewPolicy = previewPolicy
     super.init(nibName: nil, bundle: nil)
     modalPresentationStyle = .overFullScreen
@@ -213,32 +210,27 @@ public final class InkImagePreviewController: UIViewController {
   private func loadHighResImage() {
     guard let loader else { return }
 
-    let screenScale = UIScreen.main.scale
-    let screenBounds = UIScreen.main.bounds
+    let metrics = InkDisplayMetrics.resolve(for: view)
     let zoomCap = scrollView.maximumZoomScale
     let maxPixel = min(
-      max(screenBounds.width, screenBounds.height) * screenScale * zoomCap,
+      max(metrics.bounds.width, metrics.bounds.height) * metrics.scale * zoomCap,
       previewPolicy.maxPreviewPixel
     )
     let display = DisplayContext(
       maxPixelWidth: maxPixel,
-      scale: screenScale,
+      scale: metrics.scale,
       contentMode: .fit
     )
 
-    highResTask = Task { [weak self, source] in
-      guard let self else { return }
+    let generation = UUID()
+    highResGeneration = generation
+    highResTask = Task { [weak self, source, loader, display] in
       do {
         let highResImage = try await loader.loadImage(source: source, display: display)
         guard !Task.isCancelled else { return }
-        await MainActor.run {
-          UIView.transition(
-            with: self.imageView,
-            duration: 0.3,
-            options: .transitionCrossDissolve
-          ) {
-            self.imageView.image = highResImage
-          }
+        await MainActor.run { [weak self] in
+          guard let self, self.highResGeneration == generation else { return }
+          self.applyHighResImage(highResImage)
         }
       } catch {
         // 高清图加载失败不影响预览，继续使用降采样图
@@ -246,11 +238,21 @@ public final class InkImagePreviewController: UIViewController {
     }
   }
 
+  @MainActor
+  private func applyHighResImage(_ image: UIImage) {
+    UIView.transition(
+      with: imageView,
+      duration: 0.3,
+      options: .transitionCrossDissolve
+    ) { [weak self] in
+      self?.imageView.image = image
+    }
+  }
+
   // MARK: - Dismiss
 
   private func dismissPreview() {
-    highResTask?.cancel()
-    highResTask = nil
+    cancelHighResTask()
     imageView.image = nil
 
     UIView.animate(withDuration: 0.25, animations: {
@@ -260,6 +262,18 @@ public final class InkImagePreviewController: UIViewController {
     }) { _ in
       self.dismiss(animated: false)
     }
+  }
+
+  private func cancelHighResTask() {
+    highResTask?.cancel()
+    highResTask = nil
+    highResGeneration = UUID()
+  }
+
+  public override func viewDidDisappear(_ animated: Bool) {
+    super.viewDidDisappear(animated)
+    // Covers interactive and host-triggered dismiss paths that bypass dismissPreview().
+    cancelHighResTask()
   }
 
   // MARK: - Image Centering

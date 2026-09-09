@@ -1,0 +1,21 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -workspace .swiftpm/xcode/package.xcworkspace -list
+
+Resolve Package Graph
+2026-09-07 11:41:37.589 xcodebuild[58463:5376338] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+
+
+Resolved source packages:
+  InkMarkdown: /Users/shizihan/DailyUse/Github/InkMarkdown
+  swift-markdown: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/swift-markdown @ local
+  cmark-gfm: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/swift-cmark @ local
+  iosMath: /Users/shizihan/DailyUse/Github/InkMarkdown/Packages/Caches/iosMath @ local
+
+Information about workspace "InkMarkdown":
+    Schemes:
+        InkMarkdown
+        InkMarkdown-Package
+        InkMarkdownLaTeX
+        InkMarkdownMermaid
+        InkMarkdownSwiftUI
+

@@ -10,12 +10,22 @@ import Markdown
 /// 业务方可覆盖或追加自定义 handler，实现 Open-Closed 扩展。
 public enum InkBlockRenderer {
 
+  @preconcurrency @MainActor
   public static func render(
     _ source: String,
     configuration: InkConfiguration = .standard
   ) -> [InkRenderableBlock] {
-    let filtered = configuration.sourcePreparedForParsing(source)
-    let document = InkParser.parse(filtered)
+    let preparedSource = configuration.sourcePreparedForParsing(source)
+    return renderPreparedSource(preparedSource, configuration: configuration)
+  }
+
+  /// 在同一次顶层渲染中续接片段，避免非幂等 ``InkConfiguration/sourceFilter`` 被重复应用。
+  @preconcurrency @MainActor
+  static func renderPreparedSource(
+    _ source: InkPreparedMarkdownSource,
+    configuration: InkConfiguration
+  ) -> [InkRenderableBlock] {
+    let document = InkParser.parse(source.value)
     var blocks: [InkRenderableBlock] = []
     var pendingMarkup: [Markup] = []
 
@@ -27,7 +37,8 @@ public enum InkBlockRenderer {
         blocks.append(InkAttributedTextBlock(
           attributedText: attributed,
           insets: configuration.appearance.text.blockInsets,
-          linkTapHandler: configuration.linkTapHandler
+          linkTapHandler: configuration.linkTapHandler,
+          linkTapSemanticIdentity: configuration.linkTapSemanticIdentityForBlockReuse
         ))
       }
     }
@@ -44,19 +55,38 @@ public enum InkBlockRenderer {
       handlers.insert(InkLaTeXBlockHandler(), at: 0)
     }
 
-    for child in document.children {
-      let handled = handlers
-        .first { $0.canHandle(child) }?
-        .makeBlock(from: child, configuration: configuration)
-
-      if let block = handled {
+    let children = Array(document.children)
+    var index = 0
+    while index < children.count {
+      if let consumed = consumeMatchingBlocks(
+        handlers: handlers,
+        from: children,
+        startingAt: index,
+        configuration: configuration
+      ) {
         flushPendingAsAttributed()
-        blocks.append(block)
+        blocks.append(contentsOf: consumed.blocks)
+        index += consumed.consumedCount
       } else {
-        pendingMarkup.append(child)
+        pendingMarkup.append(children[index])
+        index += 1
       }
     }
     flushPendingAsAttributed()
     return blocks
   }
+
+  /// 仅 UIView block 的构造受 MainActor 约束；解析与 identity 不在此 helper 建立第二套状态。
+  @MainActor
+  private static func consumeMatchingBlocks(
+    handlers: [InkBlockHandler],
+    from children: [Markup],
+    startingAt index: Int,
+    configuration: InkConfiguration
+  ) -> (blocks: [InkRenderableBlock], consumedCount: Int)? {
+    handlers.lazy.compactMap {
+      $0.consumeBlocks(from: children, startingAt: index, configuration: configuration)
+    }.first
+  }
+
 }

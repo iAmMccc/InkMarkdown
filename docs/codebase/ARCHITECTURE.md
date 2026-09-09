@@ -1,5 +1,7 @@
 # 架构设计
 
+> 本页以已发布 `0.0.1` UIKit rendering engine 为主，也记录当前 source 中未发布 v0.0.2 的独立 SwiftUI adapter。发布状态与剩余验证见 [当前状态](../current-status.md)；架构范围见 [ADR-008](../decisions/ADR-008-swiftui-adapter-architecture.md) 与 [总体技术设计](../contributor-guide/08-swiftui-adapter-architecture.md)。
+
 ## 核心架构
 
 ### 1) 架构风格与模式
@@ -10,7 +12,7 @@
   - 渲染通道分离：根据元素能否构建为 `NSAttributedString`，划分为富文本通道与 `UIView` 块级通道。
   - 流式增量渲染：作为双通道上的控制编排机制（解析缓冲与显示缓冲），不新增第三套语义后端。
 - **架构约束**：
-  - **纯 UIKit 架构**：不提供 SwiftUI 渲染器。
+  - **当前 UIKit core**：不 import SwiftUI；未发布的 v0.0.2 在独立 product 中实现 adapter，不改变 core 的 UIKit-first 边界。
   - **固定行高机制**：固定行高结合 baseline 居中对齐，保证混排字体排版一致。
   - **v1 阶段直接渲染**：直接由 `Markup` 渲染，无独立 IR 中端（`InkIR` 规划于 v2）。
 
@@ -32,7 +34,7 @@ Markdown 源码
 2. **文本解析**：`InkParser.parse` 转换为 `Document(parsing:)`（`Parser/InkParser.swift`）。
 3. **富文本渲染**：`InkAttributedRenderer` 递归遍历 `Markup` 语法树。样式通过 `InkTextContext` 向下传递，叶子节点直接生成属性区块，后处理统一应用 `paragraphStyle` 与 `baselineOffset`。
 4. **块级路由**：`InkBlockRenderer` 遍历文档子节点；命中自定义 Handler 时冲刷待渲染 Markup 为富文本块，并追加自定义 `UIView` 块（`Block/InkBlockRenderer.swift`）。
-5. **流式渲染**：`append` 积累缓存（硬上限 50,000 字符）；后台 `InkIncrementalMarkdownRenderer` 执行增量解析；主线程使用 `CADisplayLink` 逐帧更新视图（`InkStreamRenderer.swift`）。
+5. **流式渲染**：`append` 积累 canonical source（默认上限 50,000，可在 renderer/session 创建时配置）；后台 `InkIncrementalMarkdownRenderer` 执行增量解析；主线程使用 `CADisplayLink` 逐帧更新视图（`InkStreamRenderer.swift`）。
 
 ### 3) 模块职责界定
 
@@ -61,8 +63,8 @@ Markdown 源码
 
 - **平台声明与范围**：底层与 Manifest 绑定 UIKit/iOS。
 - **依赖更新机制**：已锁定 Revision（ADR-001），升级需同步验证 CI 与测试集。
-- **核心文件体量**：`InkStreamRenderer`（约 632 行）与 `InkAttributedRenderer`（约 583 行）属于核心维护点。
-- **流式长度限制**：`maxParseLength = 50_000`，超限停止解析或截断处理。
+- **核心文件体量**：`InkStreamRenderer` 与 `InkAttributedRenderer`属于核心维护点。
+- **流式长度限制**：`maximumSourceLength` 默认 50_000；renderer/session 共享创建时固化的 snapshot，超出部分不进入 canonical source。
 - **v1 中端缺失**：复杂语义变换需借由 Renderer 或 `sourceFilter` 处理（中端架构规划于 v2）。
 
 ### 6) 验证依据

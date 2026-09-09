@@ -46,35 +46,43 @@ final class ImageDemoViewController: UIViewController {
       // 场景 1: 网络图 + 标准渲染
       ("场景 1: 网络图片", "![风景](https://picsum.photos/seed/ink-medium/400/300)", { appearance in
         appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.backend = DemoImages.backend
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
       // 场景 2: 本地 asset 图
       ("场景 2: 本地 Asset 图片", "![App 图标](asset://AppIcon)", { appearance in
         appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.backend = DemoImages.backend
       }),
       // 场景 3: base64 内联图
-      ("场景 3: Base64 内联图（小图正常显示）", "![base64](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==)", { appearance in
+      ("场景 3: Base64 内联图（小图正常显示）", "![base64](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==)", { appearance in
         appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.backend = DemoImages.backend
+        appearance.imageRendering.securityPolicy.allowedSchemes.insert(.data)
       }),
       // 场景 4: 独占段 promote → 块通道
       ("场景 4: 独占段图片（块通道）", "![大图](https://picsum.photos/seed/ink-block/1200/800)", { appearance in
         appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.backend = DemoImages.backend
         appearance.imageRendering.promotesToBlock = true
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
       // 场景 5: 行内图文混排（排除块级 tap）
       ("场景 5: 行内图文混排", "这是一段文字 ![图标](https://picsum.photos/seed/ink-icon/24/24) 中间嵌入了小图标，不破坏行高。", { appearance in
         appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.backend = DemoImages.backend
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
       // 场景 6: 点击查看大图（全屏预览）
       ("场景 6: 点击查看大图", "![点击查看大图](https://picsum.photos/seed/ink-block/1200/800)\n\n> 点击图片可全屏预览", { appearance in
         appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.backend = DemoImages.backend
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
       // 场景 7: 多图
       ("场景 7: 多图场景", "![图1](https://picsum.photos/seed/ink-medium/400/300)\n\n![图2](https://picsum.photos/seed/ink-block/400/300)\n\n![图3](https://picsum.photos/seed/ink-portrait/600/900)", { appearance in
         appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.backend = DemoImages.backend
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
       // 场景 8: 占位文本（图片关闭）
@@ -84,12 +92,14 @@ final class ImageDemoViewController: UIViewController {
       // 场景 9: 宿主自定义尺寸
       ("场景 9: 自定义最大宽度 200pt", "![限宽图](https://picsum.photos/seed/ink-block/1200/800)", { appearance in
         appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.backend = DemoImages.backend
         appearance.imageRendering.sizing.maxBlockImageWidth = 200
         appearance.imageRendering.securityPolicy.emptyHostPolicy = .allowAll
       }),
       // 场景 10: 安全拒绝
       ("场景 10: 安全拒绝（allowedHosts 不含目标域）", "![被拒绝的图](https://evil.example.com/malware.png)", { appearance in
         appearance.imageRendering.isEnabled = true
+        appearance.imageRendering.backend = DemoImages.backend
         appearance.imageRendering.securityPolicy.allowedHosts = ["safe.example.com"]
       }),
     ]

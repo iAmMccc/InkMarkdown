@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a reproducible build, rendering, runtime, or documentation problem.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for non-sensitive reports. Remove credentials and private data from examples and logs. Do not disclose suspected vulnerability details in a public issue.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product or area
+      options:
+        - InkMarkdown core
+        - InkMarkdownSwiftUI (unreleased 0.0.2)
+        - InkMarkdownLaTeX (unreleased 0.0.2)
+        - InkMarkdownMermaid (unreleased 0.0.2)
+        - ExampleApp
+        - Documentation or tooling
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Include the released version or exact commit/branch under test.
+      placeholder: "0.0.1 or an exact commit SHA"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include device or simulator, OS, Xcode, and Swift toolchain details.
+      placeholder: "iPhone simulator, iOS ..., Xcode ..., Swift ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Give the smallest Markdown input, code sample, and steps that reproduce the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+      description: State what you expected and what happened instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Optional. Remove credentials, tokens, private URLs, and personal data.
+      render: text
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add screenshots, links, or other context that is safe to publish.
