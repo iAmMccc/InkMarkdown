@@ -78,14 +78,14 @@ struct InkImageBlockPresentationAdapterTests {
     )
 
     blockA.prepareForReuse()
-    #expect(blockA.intrinsicContentSize.height == rendering.placeholderHeight)
+    #expect(blockA.intrinsicContentSize.height == 0)
     #expect(
-      blockA.sizeThatFits(CGSize(width: 240, height: CGFloat.greatestFiniteMagnitude)).height == rendering.placeholderHeight
+      blockA.sizeThatFits(CGSize(width: 240, height: CGFloat.greatestFiniteMagnitude)).height == 0
     )
 
     loader.succeed(1, image: makeSolidImage(width: 200, height: 80))
     for _ in 0..<20 { await Task.yield() }
-    #expect(blockA.intrinsicContentSize.height == rendering.placeholderHeight)
+    #expect(blockA.intrinsicContentSize.height == 0)
 
     let blockB = InkImageBlock(
       source: ImageSource(url: urlB),
