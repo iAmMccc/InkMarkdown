@@ -13,25 +13,21 @@ import UIKit
 @MainActor
 final class InkMarkdownCoordinator {
 
-  private enum StaticInput {
-    case markdown(String)
-    case blocks([InkRenderableBlock])
+  /// 内容事件生成语义块；布局和交互只消费这份呈现输入。
+  private struct StaticPresentation {
+    let markdown: String?
+    let blocks: [InkRenderableBlock]
+    let configuration: InkConfiguration
   }
 
   private let staticContinuity = InkBlockPresentationContinuity()
-  private var attachedStaticContinuity = false
   private var ownedStaticAttachmentToken: InkBlockPresentationAttachmentToken?
 
   weak var containerView: InkMarkdownContainerView?
   private let streamingHost = InkStreamingPresentationHost()
 
-  private var lastRenderedMarkdown: String?
-  private var lastRenderedConfiguration: InkConfiguration?
-  private var lastRenderedWidth: CGFloat?
-  private var lastRenderedEnvironmentSignature: InkBlockPresentationEnvironmentSignature?
-  private var hasRenderedStaticPresentation = false
-  private var latestStaticInput: StaticInput?
-  private var latestStaticConfiguration: InkConfiguration?
+  private var staticPresentation: StaticPresentation?
+  private var appliedLayout: (width: CGFloat, signature: InkBlockPresentationEnvironmentSignature)?
   private var isReconcilingStatic = false
 
   func resolvedConfiguration(_ configuration: InkConfiguration) -> InkConfiguration {
@@ -39,23 +35,27 @@ final class InkMarkdownCoordinator {
   }
 
   func updateStatic(markdown: String, configuration: InkConfiguration) {
-    releaseStreamingHostForStaticSwitch()
+    streamingHost.teardown(from: containerView)
     let effective = resolvedConfiguration(configuration)
     guard let container = containerView else { return }
-    guard attachStatic(to: container) else { return }
     installStaticContinuityCallbacks(on: container)
-    latestStaticInput = .markdown(markdown)
-    latestStaticConfiguration = effective
-
     let width = container.effectiveMeasureWidth
     let environmentSignature = container.resolvedEnvironmentSignature(for: effective)
-    if lastRenderedMarkdown == markdown,
-       let lastConfig = lastRenderedConfiguration,
-       lastConfig.isSemanticallyEqualTo(effective),
-       lastRenderedWidth.map({ abs($0 - width) <= 0.1 }) == true,
-       lastRenderedEnvironmentSignature == environmentSignature,
-       hasRenderedStaticPresentation {
-      return
+    if let presentation = staticPresentation,
+       presentation.markdown == markdown,
+       presentation.configuration.isSemanticallyEqualTo(effective) {
+      if let layout = appliedLayout,
+         abs(layout.width - width) <= 0.1,
+         layout.signature == environmentSignature {
+        return
+      }
+    } else {
+      staticPresentation = StaticPresentation(
+        markdown: markdown,
+        blocks: InkBlockRenderer.render(markdown, configuration: effective),
+        configuration: effective
+      )
+      appliedLayout = nil
     }
 
     _ = reconcileLatestStaticPresentation(
@@ -68,13 +68,12 @@ final class InkMarkdownCoordinator {
     _ blocks: [InkRenderableBlock],
     configuration: InkConfiguration
   ) {
-    releaseStreamingHostForStaticSwitch()
+    streamingHost.teardown(from: containerView)
     let effective = resolvedConfiguration(configuration)
     guard let container = containerView else { return }
-    guard attachStatic(to: container) else { return }
     installStaticContinuityCallbacks(on: container)
-    latestStaticInput = .blocks(blocks)
-    latestStaticConfiguration = effective
+    staticPresentation = StaticPresentation(markdown: nil, blocks: blocks, configuration: effective)
+    appliedLayout = nil
     _ = reconcileLatestStaticPresentation(
       constrainedWidth: container.effectiveMeasureWidth,
       environmentSignature: container.resolvedEnvironmentSignature(for: effective)
@@ -86,20 +85,13 @@ final class InkMarkdownCoordinator {
     renderEnvironment: InkRenderEnvironment? = nil
   ) {
     clearStaticContinuityCallbacks()
-    let wasShowingStaticPresentation = hasRenderedStaticPresentation
-    if wasShowingStaticPresentation {
-      hasRenderedStaticPresentation = false
-    }
-    latestStaticInput = nil
-    latestStaticConfiguration = nil
-    guard let container = containerView else { return }
-
-    if attachedStaticContinuity {
-      detachStatic(from: container)
-    }
-    if wasShowingStaticPresentation {
+    if staticPresentation != nil {
+      detachStatic(from: containerView)
       staticContinuity.endCycle()
+      staticPresentation = nil
+      appliedLayout = nil
     }
+    guard let container = containerView else { return }
 
     _ = streamingHost.update(
       session: session,
@@ -112,27 +104,16 @@ final class InkMarkdownCoordinator {
     streamingHost.teardown(from: dismantledContainer)
 
     let container = dismantledContainer ?? containerView
-    if attachedStaticContinuity {
-      detachStatic(from: container)
-    }
+    detachStatic(from: container)
     clearStaticContinuityCallbacks()
     dismantledContainer?.onContinuityHeightChanged = nil
     staticContinuity.endCycle()
-    lastRenderedMarkdown = nil
-    lastRenderedConfiguration = nil
-    lastRenderedWidth = nil
-    lastRenderedEnvironmentSignature = nil
-    hasRenderedStaticPresentation = false
-    latestStaticInput = nil
-    latestStaticConfiguration = nil
+    staticPresentation = nil
+    appliedLayout = nil
     containerView = nil
   }
 
   // MARK: - Static Helpers
-
-  private func releaseStreamingHostForStaticSwitch() {
-    streamingHost.teardown(from: containerView)
-  }
 
   private func installStaticContinuityCallbacks(on container: InkMarkdownContainerView) {
     container.onContinuityLayoutEnvironmentChanged = { [weak self] width, signature in
@@ -156,18 +137,8 @@ final class InkMarkdownCoordinator {
     staticContinuity.removeReconcileObserver(owner: self)
   }
 
-  @discardableResult
-  private func attachStatic(to container: InkMarkdownContainerView) -> Bool {
-    if !attachedStaticContinuity {
-      attachedStaticContinuity = true
-      ownedStaticAttachmentToken = nil
-    }
-    return true
-  }
-
   private func detachStatic(from container: InkMarkdownContainerView?) {
-    if attachedStaticContinuity,
-       staticContinuity.ownsAttachment(ownedStaticAttachmentToken),
+    if staticContinuity.ownsAttachment(ownedStaticAttachmentToken),
        let token = ownedStaticAttachmentToken,
        let detachPlan = staticContinuity.detach() {
       if let container {
@@ -180,7 +151,6 @@ final class InkMarkdownCoordinator {
       }
     }
     staticContinuity.removeReconcileObserver(owner: self)
-    attachedStaticContinuity = false
     ownedStaticAttachmentToken = nil
   }
 
@@ -191,28 +161,20 @@ final class InkMarkdownCoordinator {
   ) -> Bool {
     guard !isReconcilingStatic,
           let container = containerView,
-          let input = latestStaticInput,
-          let configuration = latestStaticConfiguration else {
+          let presentation = staticPresentation else {
       return false
     }
 
     isReconcilingStatic = true
     defer { isReconcilingStatic = false }
 
-    let blocks: [any InkRenderableBlock]
-    switch input {
-    case .markdown(let markdown):
-      blocks = InkBlockRenderer.render(markdown, configuration: configuration)
-    case .blocks(let value):
-      blocks = value
-    }
-
+    let configuration = presentation.configuration
     let width = constrainedWidth ?? container.effectiveMeasureWidth
     let signature = environmentSignature
       ?? container.resolvedEnvironmentSignature(for: configuration)
     let snapshot = InkBlockPresentationSnapshot(
       cycleID: staticContinuity.cycleID,
-      candidates: blocks.enumerated().map { index, block in
+      candidates: presentation.blocks.enumerated().map { index, block in
         InkBlockPresentationCandidate(block: block, structuralSlot: index)
       },
       configuration: configuration,
@@ -223,14 +185,7 @@ final class InkMarkdownCoordinator {
     guard container.apply(plan) else { return false }
 
     ownedStaticAttachmentToken = plan.attachmentToken
-    lastRenderedMarkdown = {
-      if case .markdown(let markdown) = input { return markdown }
-      return nil
-    }()
-    lastRenderedConfiguration = configuration
-    lastRenderedWidth = width
-    lastRenderedEnvironmentSignature = signature
-    hasRenderedStaticPresentation = true
+    appliedLayout = (width, signature)
     return true
   }
 }

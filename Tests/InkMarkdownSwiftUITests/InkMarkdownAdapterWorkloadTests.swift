@@ -17,6 +17,47 @@ import InkMarkdownSemanticCorpus
 @MainActor
 struct InkMarkdownAdapterWorkloadTests {
 
+  @Test("静态布局与折叠复用语义块，只有内容或配置更新重新解析")
+  func staticPresentation_parsesOnlyOnSemanticInputChange() throws {
+    var documentParseCount = 0
+    var configuration = InkConfiguration.standard
+    configuration.appearance.thought.isCollapsible = true
+    configuration.sourceFilter = { source in
+      if source.hasPrefix("<think>") { documentParseCount += 1 }
+      return source
+    }
+    let markdown = "<think>分析步骤</think>\n\n# 标题\n\n正文"
+    let container = InkMarkdownContainerView()
+    let coordinator = InkMarkdownCoordinator()
+    coordinator.containerView = container
+    defer { coordinator.teardown() }
+
+    coordinator.updateStatic(markdown: markdown, configuration: configuration)
+    #expect(documentParseCount == 1)
+    let thoughtView = try #require(container.subviews.compactMap { $0 as? InkThoughtBlockView }.first)
+    let wasCollapsed = thoughtView.isCollapsed
+    thoughtView.handleHeaderTap()
+    #expect(thoughtView.isCollapsed != wasCollapsed)
+
+    for width: CGFloat in [360, 744, 360] {
+      let size = container.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+      #expect(size.height > 0)
+      coordinator.updateStatic(markdown: markdown, configuration: configuration)
+      #expect(documentParseCount == 1, "测量和交互不应重新进入文档解析")
+    }
+    #expect(thoughtView.isCollapsed != wasCollapsed)
+
+    coordinator.updateStatic(markdown: markdown + "更新", configuration: configuration)
+    #expect(documentParseCount == 2)
+    configuration.appearance.text.fontSize += 1
+    coordinator.updateStatic(markdown: markdown + "更新", configuration: configuration)
+    #expect(documentParseCount == 3)
+
+    coordinator.updateBlocks([], configuration: configuration)
+    coordinator.updateStatic(markdown: markdown, configuration: configuration)
+    #expect(documentParseCount == 4, "blocks 入口切回 Markdown 时必须生成新语义输入")
+  }
+
   @Test("静态长文首测块数有界且同宽二次测量为 0")
   func staticLongDocument_measurementBudget() throws {
     let markdown = Self.workloadStaticMarkdown

@@ -71,6 +71,7 @@ Static SwiftUI adapter                 InkMarkdownRenderSession
 依赖始终从 `InkMarkdownSwiftUI` 指向 `InkMarkdown`：
 
 - `InkBlockRenderer` 解析 Markdown 并产出语义 `[InkRenderableBlock]`；
+- 静态 Coordinator 在 Markdown 或语义配置变化时生成一份 `StaticPresentation`；宽度、测量和折叠事件只重新协调其语义 blocks，不再进入文档解析；
 - continuity module 消费这些 block 及 adapter-only presentation evidence；
 - `InkMarkdownContainerView` 执行 mount、unmount、ordering 和 frame layout；
 - core renderer 不接收 cycle、lineage、view registry 或 measurement cache。
