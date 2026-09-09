@@ -100,8 +100,8 @@ public final class InkMarkdownRenderSession: ObservableObject {
   /// append 批处理期间抑制 renderer 触发的过早 flush。
   private var isBatchingDisplayUpdate = false
 
-  /// 供契约测试断言 remainder 派生缓冲（SSOT 仍为 `currentText`）。
-  internal var streamRemainder: String { remainderText }
+  /// renderer 独占保存已接收的正文；会话不再同步另一份 remainder 缓冲。
+  internal var streamRemainder: String { renderer.canonicalSource }
 
   /// 供 workload 契约证明流式 scanner 未重复检查历史 source。
   internal var thoughtScannerInputUnitInspectionCount: Int {
@@ -114,23 +114,11 @@ public final class InkMarkdownRenderSession: ObservableObject {
     set { renderer.isDisplayPaused = newValue }
   }
 
-  /// 递增以作废已排队的 deferred `@Published` 写入（`reset` / `cancel` 时调用）。
-  private var publishGeneration: UInt64 = 0
-
   /// 0-delay default-mode timer 载体，将 `@Published` 写入推迟到当前 view update 之外。
   private let publishHopper = PublishHopper()
 
-  /// 进入 `InkStreamRenderer` 的 remainder 派生文本（SSOT 为 `currentText`）。
-  private var remainderText: String = ""
-
   /// Core-owned PREFIX Thought 增量语法状态；session 只消费 delta，不复制标签语法。
   private var thoughtStreamingScanner = InkThoughtScanner.StreamingScanner()
-
-  /// 已确认、去除首尾空白的流式 Thought 正文；scanner 仅追加稳定 body delta。
-  private var streamingThoughtText: String = ""
-
-  /// 上一帧是否存在 PREFIX 思考块，用于检测 none→thought 转换。
-  private var hadStreamingThought: Bool = false
 
   /// 宿主用于跟随滚动或高度变化的显示刷新回调。
   ///
@@ -194,7 +182,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
       )
       notifyDisplayUpdate(slots: .presentationEnvironment)
       flushDisplayUpdateIfNeeded()
-      enqueuePublishedMutation { [weak self] in
+      publishHopper.schedule { [weak self] in
         self?.objectWillChange.send()
       }
       return
@@ -211,7 +199,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
       thought.renderConfiguration = configuration
       streamingThought = thought
     }
-    renderer.updateConfiguration(configuration, source: remainderText)
+    renderer.updateConfiguration(configuration, source: renderer.canonicalSource)
     if state == .finishing || state == .displayingFinalContent {
       renderer.finish()
     }
@@ -259,7 +247,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
   /// 此调用为 no-op。
   public func cancel() {
     guard state == .streaming || state == .finishing || state == .displayingFinalContent else { return }
-    invalidatePendingPublishedMutations()
+    publishHopper.cancel()
     beginNewPresentationCycle()
     state = .cancelled
     renderer.reset()
@@ -272,7 +260,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
   ///
   /// 清空唯一输入源、终态块列表及底层 renderer；随后可安全复用同一会话。
   public func reset() {
-    invalidatePendingPublishedMutations()
+    publishHopper.cancel()
     beginNewPresentationCycle()
     renderer.reset()
     setupCallbacks()
@@ -383,24 +371,18 @@ public final class InkMarkdownRenderSession: ObservableObject {
   private func applyStreamingScannerUpdate(
     _ update: InkThoughtScanner.StreamingScanner.Update
   ) {
-    let previousHadThought = hadStreamingThought
     let previousThoughtWasComplete = streamingThought?.isComplete
     var dirtySlots: StreamingDirtySlots = []
 
     switch update.phase {
     case .prefixUndecided, .passthrough:
       streamingThought = nil
-      hadStreamingThought = false
     case .thought(let isComplete):
-      if !update.thoughtBodyDelta.isEmpty {
-        streamingThoughtText += update.thoughtBodyDelta
-      }
-      hadStreamingThought = true
-      if !previousHadThought
+      if streamingThought == nil
           || !update.thoughtBodyDelta.isEmpty
           || previousThoughtWasComplete != isComplete {
         streamingThought = InkThoughtBlock(
-          thought: streamingThoughtText,
+          thought: (streamingThought?.thought ?? "") + update.thoughtBodyDelta,
           isComplete: isComplete,
           config: configuration.appearance.thought,
           renderConfiguration: configuration,
@@ -409,8 +391,6 @@ public final class InkMarkdownRenderSession: ObservableObject {
         dirtySlots.insert(.streamingThought)
       }
     }
-
-    remainderText += update.remainderDelta
 
     isBatchingDisplayUpdate = true
     defer {
@@ -421,11 +401,8 @@ public final class InkMarkdownRenderSession: ObservableObject {
       flushDisplayUpdateIfNeeded()
     }
 
-    if !previousHadThought && hadStreamingThought {
-      // PREFIX 在多个 chunks 后才确认时，撤回任何 speculative text attachment。
-      renderer.reset(to: remainderText)
-      dirtySlots.insert(.streamText)
-    } else if !update.remainderDelta.isEmpty {
+    // scanner 在 PREFIX 未决期间保留输入，只放行确认后的正文 delta。
+    if !update.remainderDelta.isEmpty {
       renderer.appendCanonical(update.remainderDelta)
       dirtySlots.insert(.streamText)
     }
@@ -433,10 +410,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
 
   private func clearStreamingSplitState() {
     streamingThought = nil
-    remainderText = ""
-    streamingThoughtText = ""
     thoughtStreamingScanner.reset()
-    hadStreamingThought = false
     pendingDisplayUpdateSlots = []
   }
 
@@ -470,27 +444,6 @@ public final class InkMarkdownRenderSession: ObservableObject {
     onDisplayUpdate?()
   }
 
-  /// 作废并清空 hopper 上排队的 deferred `@Published` 写入。
-  private func invalidatePendingPublishedMutations() {
-    publishGeneration += 1
-    publishHopper.cancel()
-  }
-
-  /// 将 `@Published` 写入推迟到 `.default` runloop mode 的下一轮 timer 队列。
-  ///
-  /// 不用 `DispatchQueue.main.async`：main queue 挂在 common modes，SwiftUI 在 view update
-  /// 期间会抽干 main queue。不用 `RunLoop.perform(inModes:)`：当前已在 default mode 时会在
-  /// 本轮 `__CFRunLoopDoBlocks` 同步执行。0-delay timer 进 default-mode 队列，等当前
-  /// source / view-update 栈返回后再 fire。
-  private func enqueuePublishedMutation(_ mutate: @escaping () -> Void) {
-    publishGeneration += 1
-    let generation = publishGeneration
-    publishHopper.schedule { [weak self] in
-      guard let self, self.publishGeneration == generation else { return }
-      mutate()
-    }
-  }
-
   private func setupCallbacks() {
     renderer.onDisplayUpdate = { [weak self] in
       self?.notifyDisplayUpdate(slots: .streamText)
@@ -513,7 +466,7 @@ public final class InkMarkdownRenderSession: ObservableObject {
         configuration: self.configuration
       )
 
-      self.enqueuePublishedMutation { [weak self] in
+      self.publishHopper.schedule { [weak self] in
         guard let self,
               self.state == .finishing || self.state == .displayingFinalContent,
               !self.isPromoted
@@ -555,7 +508,8 @@ private final class PresentationBindingRecord {
   }
 }
 
-/// 0-delay timer 回调载体；`NSObject.perform(_:with:afterDelay:inModes:)` 会 retain target 直至触发。
+/// 将发布推迟到当前 view-update 栈返回后的 default-mode timer；main queue 可能在更新期间被抽干。
+/// schedule 替换旧任务，cancel 同时撤销 timer 和闭包，因此无需另存发布代次。
 private final class PublishHopper: NSObject {
   private var mutate: (() -> Void)?
 

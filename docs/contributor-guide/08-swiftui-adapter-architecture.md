@@ -133,7 +133,7 @@ SwiftUI input + Environment
 ```text
 Application transport
   → render session (delta / finish / cancel / reset)
-  → InkThoughtScanner.splitStreamingSource(currentText)
+  → InkThoughtScanner.StreamingScanner.append(delta)
        ├ PREFIX 思考标签 → InkThoughtBlockView（identity-stable apply）
        └ remainder → InkStreamRenderer + bound UITextView
   → visible streaming text（vertical stack: [thoughtView?][textView]）
@@ -143,7 +143,7 @@ Application transport
   → final UIKit block container（不 re-parse）
 ```
 
-- render session 是 canonical source authority；`currentText` 为 SSOT，renderer 缓冲仅为 remainder 派生，不得各自截断或保存不一致版本。
+- render session 是 canonical source authority；`currentText` 为 SSOT，scanner 只消费已接受的 delta。renderer 独占保存 remainder 派生文本，session 从 renderer 读取它进行环境重渲染，不再同步第二份正文缓冲。未决 PREFIX 由 scanner 保留，不需要确认标签后再重置 renderer。
 - PREFIX 思考标签在流式阶段即进入 continuity module；用户折叠态写入当前 lineage 的 live presentation state。promotion 通过明确 lineage evidence 迁移状态，不要求沿用同一个 UIView，也不再手工把 view 状态复制进 `session.blocks`。
 - Chat 终态将 **同一会话实例** 挂到 `messages[].renderSession`，UI 仍用 `InkStreamMarkdownView(session:)`，**不得**切换为无 session 写回的 blocks 快照或 re-parse `content` 字符串。
 - “输入结束”“解析完成”“显示完成”“终态 block 可交互”是不同语义状态，必须被建模与测试，不能用一个布尔值掩盖。
