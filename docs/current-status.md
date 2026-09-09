@@ -24,7 +24,7 @@
 
 ## 尚需验收
 
-本次仅整理文档和指令，未运行产品测试、构建、Simulator 交互或远端 CI；删除的旧候选测试数量不作为当前通过证明。v0.0.2 发布前仍需按 [发布清单](release-checklist.md) 为选定候选记录实际命令、SHA、scheme、destination 与结果。
+2026-09-09 adapter 数据流重构已完成 Simulator 构建和受影响测试：88 项通过，另有 4 项失败与原始 HEAD 同范围对照一致，详见 [重构验证](qa/InkMarkdown-adapter-refactor-2026-09-09.md)。未执行 ExampleApp 手工操作、真机验收或远端 CI；本次结果不构成发布验收。v0.0.2 发布前仍需按 [发布清单](release-checklist.md) 为选定候选记录实际命令、SHA、scheme、destination 与结果。
 
 - iOS / iPadOS 15 runtime、当前 iPhone / iPad 入口、Split View、旋转、Dynamic Type 与 VoiceOver。
 - 布局测量最新改动的 chat 首轮高度、零宽恢复、表格与流式补通知，以及完整 layoutSubviews 调用栈的 ICS 观测；细项见 [当前布局验收项](qa/InkMarkdown-layout-measurement-contract-review-2026-09-08.md)。
