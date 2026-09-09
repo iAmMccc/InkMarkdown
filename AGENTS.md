@@ -1,5 +1,8 @@
 # InkMarkdown agent guidance
 
+回复遵循用户全局偏好；本文件只维护仓库约束。
+
+
 ## 产品边界
 
 - UIKit-first Markdown 库：swift-markdown 解析，`NSAttributedString` 与可路由 `UIView` block 渲染。
@@ -25,7 +28,6 @@
 | Markdown 渲染语义 | [语义规范](docs/spec/) |
 | 开发环境或依赖准备 | [开发指南](docs/contributor-guide/04-development.md) |
 | 本地 spec / ticket | [issue tracker](docs/agents/issue-tracker.md)；状态查 [triage labels](docs/agents/triage-labels.md) |
-| 明确继续 2026-08-28 审查 | [当轮摘要](docs/qa/InkMarkdown-current-task-summary-2026-08-28.md)，再核对当前差异 |
 
 目录结构、版本和测试数量从当前文件读取；不把历史状态复制进常驻指令。
 

@@ -48,7 +48,7 @@ xcodebuild test \
 ### 1. 提交 Issue
 
 在提交 Issue 前：
-- 检索既有 Issue、[FAQ](docs/contributor-guide/06-faq.md) 与 [ExampleApp 走查 SSOT](docs/qa/example-app-walkthrough-issues.md)，确认是否为已有已知问题或系统控制台噪声；
+- 检索既有 Issue、[FAQ](docs/contributor-guide/06-faq.md) 与 [当前项目状态](docs/current-status.md)，确认是否为已有已知问题或系统控制台噪声；
 - 明确描述重现步骤、使用的 Markdown 输入、期望输出与实际行为；
 - 如涉及崩溃或渲染错乱，请附带最小复现、相关日志或 ExampleApp 入口；不要在公开 Issue 中放入凭据、个人数据或安全漏洞细节。
 

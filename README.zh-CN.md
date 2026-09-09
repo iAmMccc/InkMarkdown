@@ -64,6 +64,7 @@ dependencies: [
 - `InkMarkdownSwiftUI`：托管 UIKit rendering engine 的 SwiftUI adapter。
 - `InkMarkdownLaTeX`：可选 LaTeX renderer 与生成图片 loader。
 - `InkMarkdownMermaid`：可选 Mermaid renderer、资源与生成图片 loader。
+- `InkMarkdownKingfisher`：可选图片后端，负责下载、解码、缓存、请求合并和取消。
 
 API 边界也按版本区分：已发布的 `0.0.1` 提供 UIKit 核心符号，包括 `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer`、`InkConfiguration` 和 `InkInlineSyntax`；尚未发布的 `0.0.2` 新增 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession`、`.inkConfiguration(...)` 以及独立 `InkMarkdownLaTeX.register()` / `InkMarkdownMermaid.register()` API。
 

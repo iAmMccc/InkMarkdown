@@ -52,9 +52,6 @@ let package = Package(
         .product(name: "Markdown", package: "swift-markdown")
       ],
       path: "Sources/InkMarkdown",
-      exclude: [
-        "Rendering/Components/TABLE_INTEGRATION_GUIDE.md"
-      ],
       swiftSettings: [
         .swiftLanguageMode(.v5),
         .enableExperimentalFeature("StrictConcurrency"),

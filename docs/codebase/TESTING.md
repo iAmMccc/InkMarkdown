@@ -63,13 +63,13 @@ xcodebuild -project ExampleApp/ExampleApp.xcodeproj \
 | Covered (evidence in tests) | Not yet (documented gaps) |
 |-----------------------------|---------------------------|
 | 固定行高与 baselineOffset | 完整 CommonMark / GFM 语义矩阵 |
-| 流式稳定前缀 / 未闭合 fence / 列表续行 | 删除线语义契约测试 |
-| 增量与全量输出一致性 + 性能闸门 | opt-in 图片策略契约测试（默认占位 + 开启真图） |
-| 快照脚手架可用性 | ExampleApp UI 自动化（库测试未覆盖） |
+| 流式稳定前缀 / 未闭合 fence / 列表续行；文本与代码删除线测试 | 完整组合语义矩阵 |
+| 增量与全量一致性、图片默认占位与业务策略测试 | 自定义后端的实际资源与安全行为 |
+| 快照脚手架可用性 | ExampleApp 实际交互验收 |
 | appearance 默认数值 | SwiftUI 完整 Markdown 语义、交互与可访问性矩阵 |
 | SwiftUI 静态配置刷新、会话状态机、headless finish、重置与配置 snapshot | iOS/iPadOS 15 runtime 验证与性能基线 |
 | App-hosted Mermaid WebKit → PNG 与右缘裁切关键链路 | 网络图片、完整表格/链接交互与系统级 VoiceOver 人工验收 |
-| CI 自动运行 iOS 测试（`.github/workflows/ci.yml`，push/PR 指定 Xcode 26.6 + iOS Simulator 26.5，见 `CONCERNS.md` High-2 Done） | SwiftUI ExampleApp UI 自动化 |
+| CI 配置包含 iOS 测试（`.github/workflows/ci.yml`，push/PR 指定 Xcode 26.6 + iOS Simulator 26.5；实际执行结果需核验） | SwiftUI ExampleApp 实际交互验收 |
 
 ### 6) Performance Testing Notes
 
@@ -82,6 +82,5 @@ xcodebuild -project ExampleApp/ExampleApp.xcodeproj \
 - `Tests/InkMarkdownTests/**/*.swift`
 - `Sources/InkMarkdown/Rendering/InkStreamRenderer.swift`（`InkStreamingPerformanceBenchmark`）
 - `docs/current-status.md`
-- `docs/codebase/.codebase-scan.txt`（PERFORMANCE & TESTING 段：无独立 perf 配置文件；CI/CD PIPELINES 段：`.github/workflows/ci.yml` 已核实存在）
 - `.github/workflows/ci.yml`（push/PR 自动运行 iOS Simulator 测试）
-- `docs/codebase/CONCERNS.md`（Top Risks：~~High~~ Done「无 CI」）
+- `.github/workflows/ci.yml`（任务配置；执行状态需另外核验）

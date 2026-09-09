@@ -63,7 +63,7 @@ Markdown 源码
 
 - **平台声明与范围**：底层与 Manifest 绑定 UIKit/iOS。
 - **依赖更新机制**：已锁定 Revision（ADR-001），升级需同步验证 CI 与测试集。
-- **核心文件体量**：`InkStreamRenderer`（约 632 行）与 `InkAttributedRenderer`（约 583 行）属于核心维护点。
+- **核心文件体量**：`InkStreamRenderer` 与 `InkAttributedRenderer`属于核心维护点。
 - **流式长度限制**：`maximumSourceLength` 默认 50_000；renderer/session 共享创建时固化的 snapshot，超出部分不进入 canonical source。
 - **v1 中端缺失**：复杂语义变换需借由 Renderer 或 `sourceFilter` 处理（中端架构规划于 v2）。
 

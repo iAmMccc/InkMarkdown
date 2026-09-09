@@ -8,7 +8,7 @@ Accepted
 
 2026-07-28
 
-Last updated: 2026-09-02
+Last updated: 2026-09-09
 
 ## Context
 
@@ -23,10 +23,10 @@ Last updated: 2026-09-02
 2. **opt-in 真图渲染**：宿主将 `isEnabled` 设为 `true` 后启用完整图片子系统，包括：
    - **行内通道**：`InkImageAttachment`（`NSTextAttachment` + 异步刷新布局）；
    - **块级通道**：独占图片段经 `InkImageBlockHandler` 提升为 `InkImageBlock`（`promotesToBlock` 默认 `true`）。
-3. **加载与缓存**：通过 `InkImageLoading` 协议注入加载器；默认 `DefaultURLSessionImageLoader` 支持 http/https/file/data/asset/bundle 分流与 ImageIO 降采样。`InkImageStore` 只提供 URL 级内存缓存与 inflight 请求合并，不提供磁盘缓存；缓存语义包含 loader identity，最后一个订阅取消时须把取消传递到底层加载任务。
+3. **加载与缓存**：宿主注入 `InkImageBackend`；可选 `InkMarkdownKingfisher` 提供完整后端。后端负责下载、解码、缓存、请求合并和取消；`InkImageStore` 只负责呈现订阅桥接。启用图片但未配置后端时报告 `backendNotConfigured`。详见 [ADR-012](ADR-012-pluggable-image-management.md)。
 4. **业务策略默认开放**：图片真图渲染开启后，空 host allowlist 默认允许所有 host。域名 allowlist 与业务 URL 规则由宿主按需注入，库不把业务来源限制设为使用图片能力的前置条件。
-5. **资源安全边界始终生效**：库仍校验支持的 scheme、HTTP 2xx、有效图片数据、重定向和响应大小。网络响应默认上限为可配置的 20 MiB；默认最多跟随 3 次重定向，宿主配置 host 策略时每次重定向都重新校验。`stripsQuery` 默认关闭以兼容签名或参数化 URL，`stripsFragment` 默认开启。
-6. **失败与重试**：单次加载失败使用既有 fallback，不写入成功缓存，也不执行隐藏自动重试。宿主可通过重新渲染、重置或自定义 loader 发起重试。
+5. **资源安全边界始终生效**：核心检查来源；所选后端检查网络响应、重定向和解码。Kingfisher 后端校验 HTTP 2xx、有效图片数据、重定向和响应大小。网络响应默认上限为可配置的 20 MiB；默认最多跟随 3 次重定向，宿主配置 host 策略时每次重定向都重新校验。`stripsQuery` 默认关闭以兼容签名或参数化 URL，`stripsFragment` 默认开启。
+6. **失败与重试**：单次加载失败使用既有 fallback，不写入成功缓存，也不执行隐藏自动重试。宿主可通过重新渲染、重置或自定义后端 发起重试。
 7. **相对 URL**：宿主提供 `baseURL` 时解析相对图片 URL；未提供时返回明确的 unsupported/no-base-URL 结果，不猜测地址。
 8. **交互**：`InkImagePreviewController` 供全屏预览；ExampleApp `ImageDemoViewController` 覆盖主要场景。
 9. **与 ADR-004 的关系**：ADR-004 描述的是 **v1 默认对外契约**；本 ADR **Amend** 其「不提供下载、缓存及异步附件 API」在默认关闭时仍成立，开启 opt-in 后由库内子系统承担，宿主无需自行拼装底层附件管线。
@@ -60,6 +60,6 @@ Last updated: 2026-09-02
 ## Consequences
 
 - `current-status.md`、`spec/common-syntax.md`、FAQ 与 codebase 证据层须区分 **默认占位** 与 **opt-in 真图**，并链接本 ADR。
-- ADR-004 状态标记为 **Amended**；历史正文保留，不 rewrite。
+- 默认占位与删除线契约统一维护在 ADR-004。
 - 测试矩阵须补充 opt-in 图片契约（占位默认、开启后附件/块行为）；已完成的实现修复不回写为新的架构决策，剩余发布证据继续由 `current-status.md` 跟踪。
-- 宿主文档须说明：未开启 `isEnabled` 时行为与 ADR-004 一致；开启后默认可加载满足资源安全边界的 HTTP(S) 图片。域名 allowlist 与自定义 loader 属于可选业务配置。
+- 宿主文档须说明：未开启 `isEnabled` 时行为与 ADR-004 一致；开启后默认可加载满足资源安全边界的 HTTP(S) 图片。域名 allowlist 与自定义后端 属于可选业务配置。

@@ -17,7 +17,7 @@
 
 - 库主模块为 `InkMarkdown`；测试使用 `@testable import InkMarkdown` 或 `@_spi(Performance)` 导入。
 - 性能基准接口置于 `@_spi(Performance)`，避免暴露至标准 public API。
-- Markdown 说明文档使用 `Package.swift` 的 `exclude` 选项，不参与编译。
+- 开发说明维护在 `docs/`；源码目录只保留构建所需资源及其许可证声明。
 
 ### 3) 代码格式与风格
 

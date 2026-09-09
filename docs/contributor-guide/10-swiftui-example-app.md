@@ -2,7 +2,7 @@
 
 本文说明如何在 `ExampleApp` 中验证 `InkMarkdownSwiftUI` adapter 的公开入口。示例程序仍由 UIKit AppDelegate / SceneDelegate 启动，然后从 UIKit 导航栈推入 `UIHostingController`；这对应 UIKit 宿主逐步接入 SwiftUI 的常见路径。
 
-UIKit 与 SwiftUI 在 **六个对称场景** 下 1:1 对齐（见 `DemoCatalog` / `DemoScenario`）。走查中发现的问题、限制与系统噪声以 [ExampleApp 走查 SSOT](../qa/example-app-walkthrough-issues.md) 为准。
+UIKit 与 SwiftUI 在 **六个对称场景** 下 1:1 对齐（见 `DemoCatalog` / `DemoScenario`）。走查中发现的问题、限制与系统噪声以 [当前项目状态](../current-status.md) 为准。
 
 ## 运行入口
 
@@ -84,7 +84,7 @@ finish 路径的 `@Published` defer 见 [09 §12](09-swiftui-uiviewrepresentable
 
 ## Demo 限制与走查结论
 
-以下行为为 **已知限制或演示边界**，完整症状与复现见 [走查 SSOT](../qa/example-app-walkthrough-issues.md)：
+以下行为为 **已知限制或演示边界**，完整症状与复现见 [当前项目状态](../current-status.md)：
 
 | 主题 | 限制 |
 | --- | --- |

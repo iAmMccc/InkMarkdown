@@ -73,7 +73,7 @@ xcodebuildmcp --version
 | Package scheme | `InkMarkdown-Package` |
 | App-hosted scheme | `ExampleApp` / `ExampleAppMermaidIntegrationTests` |
 | Destination | 独立 iPhone 17 Pro / iOS 26.5 Simulator |
-| Package 测试结果 | 2026-09-04 当前工作树：343 通过，0 失败，0 跳过（本机无 iOS 15 runtime）；非远端 CI |
+| Package 测试结果 | 验证范围与未验收项见 [当前状态](../current-status.md) |
 | App-hosted 测试结果 | Mermaid PNG/右缘裁切关键链路 1 项通过 |
 | 运行方式 | XcodeBuildMCP 2.6.2；Package 测试复用已解析的 SourcePackages checkout |
 

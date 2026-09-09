@@ -340,7 +340,7 @@ fallback 行为固定为：
 - 运行最小关键链路自动化测试；
 - 完成 build、manual check 和性能证据后，才更新 `current-status.md` 与发布状态。
 
-2026-08-28 历史证据：三条关键 reconciliation 链、公开 API 兼容与 workload gate 通过；Example static/configuration/components/streaming/chat continuity 矩阵已手工检查。当前 v0.0.2 的 iOS/iPadOS 15 实际运行仍是 release blocker，因此这里的 implemented 不等于 v0.0.2 已发布。
+实现入口与当前待验收范围分别见源码和 [当前状态](../current-status.md)，实现存在不等于发布验收完成。
 
 ## 15. 验收策略：Example 手工检查优先
 

@@ -285,7 +285,7 @@ Chat 层若在 chunk 路径重复发布视图级状态，或在 `finish()` 后�
    - `handleStreamComplete()` 先 `session.finish()`，再等待 `session.isPromoted == true`，然后将 session 转移到 `messages[].renderSession` 并设 `isStreaming = false`；终态 UI 仍用 `InkStreamMarkdownView(session: msg.renderSession)`。
 4. 流式尺寸刷新仍依赖 [§3 高频流式 State Diff](#3-高频流式-state-diff) 中的 `onDisplayUpdate` + `invalidateIntrinsicContentSize`，而非每个 chunk 触发 SwiftUI 全量重建。
 
-ExampleApp 走查结论见 [P4.1 — Chat Publishing（SwiftUI + UIKit）](../qa/example-app-walkthrough-issues.md#p41-chat-publishing--更新风暴swiftui--uikit)。
+ExampleApp 走查结论见 [当前项目状态](../current-status.md)。
 
 ---
 
@@ -308,7 +308,7 @@ ExampleApp 走查结论见 [P4.1 — Chat Publishing（SwiftUI + UIKit）](../qa
 
 1. **只文档化，不当库 defect 修** — 尤其 LaunchServices、WebKit 进程终止、第三方 IME。
 2. **不申请** `web-browser-engine` 等额外 entitlement 来消除 Mermaid 相关日志；Mermaid 离线渲染依赖 WebKit 是已知架构选择（见 [ADR-007](../decisions/ADR-007-local-generated-diagrams-and-formulas.md)）。
-3. 长文示例页不含 Mermaid 时仍见 `Failed to terminate`，多为**其他示例** Mermaid 进程残留或 Simulator 噪音，见 [走查 P6.2](../qa/example-app-walkthrough-issues.md#p62-样例范围与-mermaid-进程噪声)。
+3. 长文示例页不含 Mermaid 时仍见 `Failed to terminate`，多为**其他示例** Mermaid 进程残留或 Simulator 噪音，见 [当前项目状态](../current-status.md)。
 
 汇总表见 [FAQ §19](06-faq.md#19-控制台噪声simulator--系统)。
 
@@ -390,9 +390,9 @@ thought 的正文未变不代表展示未变。单独到达 `</think>` 时，`is
 
 ## 20. 异步测试必须等待所属模块的完成契约
 
-图片 loader 返回只代表解码结束，不代表 `InkImageStore` 已在 MainActor 写入缓存、广播订阅并清理 inflight。测试若轮询 loader 的完成计数后立即断言 Store 状态，会留下取决于 actor 调度的竞态，单测可能通过、全量并发回归却偶发失败。
+后端返回图片不代表主线程呈现订阅已经消费结果。测试若轮询底层完成计数后立即断言上层呈现，会产生调度竞态。资源缓存与 inflight 属于后端，呈现订阅属于核心 Store。
 
-缓存命中测试应等待 `InkImageStore.resolve(..., onLoad:)` 的完成回调，或重复查询直至返回 `.ready`；不能读取依赖组件的内部计数推断上层状态。通用规则是：断言哪个模块的状态，就等待哪个模块公开的完成边界。
+缓存命中测试通过后端契约验证；呈现测试等待订阅回调；不能读取依赖组件的内部计数推断上层状态。通用规则是：断言哪个模块的状态，就等待哪个模块公开的完成边界。
 
 ---
 
@@ -400,19 +400,19 @@ thought 的正文未变不代表展示未变。单独到达 `</think>` 时，`is
 
 Swift Testing、XCTest、`xcodebuild` 与 XcodeBuildMCP 对 skipped 的摘要格式不同。分组日志中的 “tests in suites” 可能包含 skipped；把各组数量直接相加并写成“全部通过”，会得到“300 项通过、另 1 项跳过”这种总数多算一次的矛盾结论。
 
-状态文档必须分别记录：通过、失败、跳过，并优先采用结构化 result bundle 或 XcodeBuildMCP 汇总。2026-09-02 候选的 333 通过、0 失败、1 跳过仅是历史记录；2026-09-04 当前工作树的 XcodeBuildMCP 结果为 343 通过、0 失败、0 跳过，仍不是远端 CI。
+验证结果与未验收项统一维护在 [当前状态](../current-status.md)，不以旧候选结果代替当前验收。
 
 ---
 
-## 22. 闭包与 loader 不能只比较 nil 性
+## 22. 不透明配置不能只比较 nil 性
 
-Swift 闭包、类型擦除 loader 和交互回调没有通用值相等性。只比较“两边都非 nil”会把新的 `sourceFilter`、链接处理、图片 loader 或复制反馈误判为旧行为，Coordinator 便会留住过期配置。反过来，把所有含闭包配置都永久视为不等，又会破坏 SwiftUI 幂等性。
+Swift 闭包、交互回调没有通用值相等性。只比较“两边都非 nil”会把新的 `sourceFilter`、链接处理、图片后端或复制反馈误判为旧行为，Coordinator 便会留住过期配置。反过来，把所有含闭包配置都永久视为不等，又会破坏 SwiftUI 幂等性。
 
 当前规则：
 
 1. 配置值拷贝保留不透明成员的语义身份。
 2. 直接重新赋值保守地生成新身份，保证不会误跳过更新。
-3. SwiftUI `body` 反复构造行为完全等价的闭包或 loader 时，使用 `setSourceFilter`、`setLinkTapHandler`、`setLoader` 等带 `InkSemanticIdentity` 的 API。
+3. SwiftUI `body` 反复构造等价闭包时，使用 `setSourceFilter`、`setLinkTapHandler` 等带 `InkSemanticIdentity` 的 API；图片后端保留稳定实例，其实例身份参与配置比较。
 4. 只有逻辑与所有捕获状态都等价时才能复用同一身份；状态改变必须更换身份。
 5. 内置 LaTeX / Mermaid loader 通过自身的 mode、style 与 limits 做值语义比较，不依赖实例地址。
 

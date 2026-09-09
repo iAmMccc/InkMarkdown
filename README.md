@@ -64,6 +64,7 @@ Or add the repository URL directly in Xcode via **File > Add Package Dependencie
 - `InkMarkdownSwiftUI`: SwiftUI adapter over the UIKit rendering engine.
 - `InkMarkdownLaTeX`: opt-in LaTeX renderer and generated-image loader.
 - `InkMarkdownMermaid`: opt-in Mermaid renderer, resources, and generated-image loader.
+- `InkMarkdownKingfisher`: optional image backend for downloading, decoding, caching, request coalescing, and cancellation.
 
 The API boundary is also versioned: released `0.0.1` provides the UIKit core symbols, including `InkAttributedRenderer`, `InkBlockRenderer`, `InkStreamRenderer`, `InkConfiguration`, and `InkInlineSyntax`; unreleased `0.0.2` adds `InkMarkdownView`, `InkStreamMarkdownView`, `InkMarkdownRenderSession`, `.inkConfiguration(...)`, and the separate `InkMarkdownLaTeX.register()` / `InkMarkdownMermaid.register()` APIs.
 

@@ -118,15 +118,14 @@ public protocol InkRenderableBlock {
 
 | 文件 | 职责 |
 | --- | --- |
-| `InkImageStore` | 缓存、inflight 合并、排队、预算与 loader identity（见 [ADR-011](../decisions/ADR-011-image-store-configuration-ownership.md)） |
+| `InkImageStore` | 呈现订阅桥接；缓存、合并、排队和预算由所选后端负责（见 [ADR-012](../decisions/ADR-012-pluggable-image-management.md)） |
 | `InkImagePresentationLoad` | 内部呈现订阅生命周期：替换、取消、过期抑制、一次终结；async 适配为 `InkImagePresentationLoadAsync` |
 | `InkImageBlock` | 块级图片 adapter：尺寸/占位/失败 fallback/tap；观察委托 PresentationLoad |
 | `InkImageAttachment` | 行内图片 adapter：保留 MaterializationIdentity 与 TextKit 段落抬升；观察委托 PresentationLoad |
-| `InkImagePreviewController` | 全屏预览：`bypassStore=true` 直载 loader；`false` 经 PresentationLoadAsync；保留 highResGeneration |
+| `InkImagePreviewController` | 全屏预览：使用配置中的图片后端与呈现订阅；保留高分辨率请求的过期结果抑制 |
 
 > Block / Attachment / Preview 不再各自 switch Store 的 ready/loading/queued/rejected。
 
-> 注意：`TABLE_INTEGRATION_GUIDE.md` 中的 API 已经过时，请以最新代码为准。
 
 ## 流式模块 (`InkStreamRenderer.swift`)
 
@@ -155,7 +154,7 @@ public protocol InkRenderableBlock {
 | 样式传递逻辑 | `InkTextContext`（参考 03 §3.2） |
 | 自定义块或行内语法 | `InkBlockHandler` / `InkInlineSyntax` |
 | 表格渲染与布局 | `InkTablePresentation`（来源/列宽）+ `InkTableBlockView` / `InkStreamTableView`（UIKit 呈现）+ `InkTableRenderHelper`（建行） |
-| 图片加载与呈现生命周期 | `InkImagePresentationLoad`（共享观察）+ `InkImageBlock` / `InkImageAttachment` / `InkImagePreviewController`（呈现差异）+ `InkImageStore`（缓存/调度） |
+| 图片加载与呈现生命周期 | `InkImagePresentationLoad`（共享观察）+ `InkImageBlock` / `InkImageAttachment` / `InkImagePreviewController`（呈现差异）+ `InkImageStore`（呈现订阅）+ `InkImageBackend`（资源管理） |
 | 代码块外观 | `InkCodeBlock`（实现位于 `InkCodeBlockView.swift`） |
 | 引用线与代码块背景 | `InkMarkdownLayoutManager` |
 | 流式渲染逻辑 | `InkStreamRenderer`（参考 03 §3.7） |

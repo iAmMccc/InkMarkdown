@@ -23,4 +23,4 @@ For contribution or validation questions, read [CONTRIBUTING.md](CONTRIBUTING.md
 
 ## Security-sensitive information
 
-Do not publish credentials, private data, or suspected vulnerability details in a public issue. The repository currently has no private vulnerability reporting channel: no route is documented in the repository, and GitHub private vulnerability reporting was verified as disabled on 2026-09-01. The maintainer decision needed before adding security reporting instructions is recorded in [docs-and-governance evidence](.scratch/v0.0.2-library-readiness/evidence/docs-and-governance.md).
+Do not publish credentials, private data, or suspected vulnerability details in a public issue. The repository currently has no private vulnerability reporting channel: no route is documented in the repository, and GitHub private vulnerability reporting was verified as disabled on 2026-09-01. The maintainer decision needed before adding security reporting instructions is recorded in [当前项目状态](docs/current-status.md).

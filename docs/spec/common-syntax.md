@@ -79,7 +79,7 @@
 
 | 通道 | 语法形态 | 渲染行为 |
 | --- | --- | --- |
-| 块路由（默认） | `<think>...</think>` / `<thought>...</thought>` | 实例化为原生可交互的 `InkThoughtBlockView` 卡片（支持点击展开/折叠、VoiceOver 适配、TextKit 统一排版与链接拦截）。**折叠态 SSOT** 为 `InkThoughtBlock.isCollapsed`；`makeView()` / `apply()` 读取该字段，视图 toggle 回写模型。流式 PREFIX 在 promotion 前即挂载卡片；finish / promotion 必须保留折叠态（不得仅靠 re-parse Markdown 字符串恢复 UI 状态）。 |
+| 块路由（默认） | `<think>...</think>` / `<thought>...</thought>` | 实例化为原生可交互的 `InkThoughtBlockView` 卡片（支持点击展开/折叠、VoiceOver 适配、TextKit 统一排版与链接拦截）。直接 UIKit block 使用 `InkThoughtBlock.isCollapsed`；SwiftUI adapter 的 live 折叠态由内部 continuity module 持有，block 字段用于初始/显式状态输入，视图变化经 adapter 协调。流式 PREFIX 在 promotion 前即挂载卡片；finish / promotion 必须保留折叠态（不得仅靠 re-parse Markdown 字符串恢复 UI 状态）。 |
 | 富文本 Fallback | `<think>...</think>` / `<thought>...</thought>` | **仅限** `InkAttributedRenderer` 及不使用 session 块通道的宿主：渲染为包含 `💭 已深度思考`（流式中途为 `💭 思考过程`）的富文本段落，并应用 `backgroundColor`。 |
 
 - **解析边界**：通过 `InkThoughtScanner` 唯一所有者精确匹配 `<think>` / `<thought>` 开标签与 `</think>` / `</thought>` 闭标签；严格排除 `<thinker>`、`<thinking>`、`<think class="x">` 等非法前缀。
