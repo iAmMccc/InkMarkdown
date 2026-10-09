@@ -1,0 +1,5 @@
+EXIT_ExampleApp_Debug:0
+BUILD SUCCEEDED Debug
+EXIT_ExampleApp_Release:0
+BUILD SUCCEEDED Release
+note: temporary XCLocalSwiftPackageReference overlay for Packages/Caches/{JXSegmentedView,JXPagingView,SnapKit,SmartCodable}; pbxproj restored to remote after builds

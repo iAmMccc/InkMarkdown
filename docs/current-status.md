@@ -1,97 +1,37 @@
 # 当前项目状态
 
-> 基线日期：2026-07-28。记录仓库可验证现状。
+核对日期：2026-09-09。本文记录当前源码可确认的能力和仍需验收的范围。版本发布记录见 [CHANGELOG](../CHANGELOG.md)；本地存在 `0.0.1` tag，本次未查询远端 Release。
 
-InkMarkdown 处于 **v1.0 发布准备阶段**。核心 UIKit 渲染管线、块级组件、流式渲染及基础测试已就绪；后续工作集中在公开 API 收敛、语法契约覆盖、CI 及发布工程。
+## 当前实现
 
-## 状态概览
+- UIKit-first：swift-markdown 解析，`NSAttributedString` 与可路由 `UIView` block 渲染；流式入口为 `InkStreamRenderer`。
+- SwiftUI 是独立 presentation adapter，共享 UIKit 渲染语义；公开入口包括 `InkMarkdownView`、`InkStreamMarkdownView`、`InkMarkdownRenderSession` 和 `.inkConfiguration()`。v0.0.2 保持 Markup 直渲染，InkIR 仍为后续规划。
+- [Package.swift](../Package.swift) 声明 iOS / iPadOS 15、Swift tools 6.2；生产 targets 使用 Swift 5 language mode。最低部署版本不等于已完成对应 runtime 验收。
+- 五个 library products：`InkMarkdown`、`InkMarkdownSwiftUI`、`InkMarkdownLaTeX`、`InkMarkdownMermaid`、`InkMarkdownKingfisher`。
+- 远程依赖固定为 swift-markdown revision `07ebc9c071b22a5d021031b798c3a84b76281213`、iosMath `2.3.1`、Kingfisher `8.12.0`。本地缓存只用于临时离线覆盖。
+- 图片默认关闭。启用后由宿主注入 `InkImageBackend`，未配置后端报告 `backendNotConfigured`；可选 Kingfisher product 负责下载、解码、缓存、合并与取消。核心 Store 负责呈现订阅。详见 [图片后端](contributor-guide/12-image-backends.md)。
+- SwiftUI 内部持有 block presentation continuity；表格呈现和宿主绑定按模块所有权维护。详见 [连续性](contributor-guide/11-block-presentation-continuity.md) 与 [布局测量](contributor-guide/13-layout-measurement-contract.md)。
 
-```text
-swift-markdown Markup
-  → NSAttributedString 富文本
-  → 路由为 UIKit 块级 UIView（按需）
-  → 流式增量渲染（可选）
-```
+## 已知边界
 
-- **产品范围**：仅支持 UIKit；不提供 SwiftUI 后端。
-- **目标平台**：`Package.swift` 仅声明 iOS 14+。
-- **工具链**：Swift tools 6.2，包内使用 Swift 5 语言模式。
-- **依赖管理**：`swift-markdown` 锁定 revision `07ebc9c071b22a5d021031b798c3a84b76281213`（ADR-001，详见 `Package.swift` / `Package.resolved`）。
-- **CI 环境**：`.github/workflows/ci.yml` 指定 `macos-26` + **Xcode 26.6**（Build `17F113`）+ **iPhone 17 Pro / iOS 26.5**（详见 [CI 排坑](contributor-guide/07-ci-and-toolchain-pitfalls.md)）。
-- **验证结果**：2026-07-15，本地执行 `xcodebuild test -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`：**32 项测试全部通过**。
+- 不承诺 macOS、tvOS、watchOS 或 visionOS；UIKit 包不能用 macOS host 的 `swift test` 结果验收。
+- 纯 attributed-string 通道不提供表格网格和块级 UIView；LaTeX / Mermaid 按需启用。
+- 删除线支持文本与行内代码；自定义 inline syntax 和图片的组合限制见 [语义规范](spec/extended-syntax.md)。
+- 不内置代码语法高亮引擎。TextKit 1 仍承担自定义背景绘制。
+- `maximumSourceLength` 默认 50,000，由 renderer/session 初始化时固定，流式与终态共享限制。
+- 图片核心不替自定义后端检查其内部网络行为；Core 不依赖 Kingfisher target，但包级解析仍可能下载可选依赖。
+- 无 App 宿主的 SwiftPM runner 不承担真实 Mermaid PNG 验收；该路径使用 ExampleApp app-hosted target。
 
-## 已落地能力
+## 尚需验收
 
-| 领域 | 实现方案 | 主要证据 |
-| --- | --- | --- |
-| 解析 | swift-markdown `Document` / `Markup`（`InkParser` 薄封装） | `Parser/InkParser.swift` |
-| 富文本渲染 | 标题、段落、强调、链接、行内代码、列表、引用等转为 `NSAttributedString` | `InkAttributedRenderer` |
-| 样式配置 | 按语法元素拆分 `InkAppearance`，单次渲染配置 `InkConfiguration` | `Configuration/` |
-| 固定行高 | paragraph style + baseline offset，覆盖混排字体 | `applyFixedLineHeight` 及相关测试 |
-| 块级路由 | 非富文本内容路由至 `InkRenderableBlock` / `UIView` | `InkBlockRenderer`、`InkBlockHandler` |
-| 内置块 | 代码块、表格、分割线 | `Rendering/Components/` |
-| 自定义扩展 | 源码预清洗、自定义行内语法扩展、自定义块级路由、链接点击回调 | `InkConfiguration` |
-| 流式渲染 | 稳定前缀 / 活跃后缀增量解析，解析与显示双缓冲 | `InkStreamRenderer` |
-| 图片（opt-in） | 默认文本占位；`InkImageRendering.isEnabled = true` 启用真图（行内 `InkImageAttachment` + 独占块 `InkImageBlock`、Store、安全策略、降采样） | `Rendering/Image/`、`ExampleApp/ImageDemoViewController` |
-| 示例程序 | 富文本、块渲染、SSE、流式表格、性能测试、图片与公式/图表 Demo 入口 | `ExampleApp/` |
-| 测试集 | 行高、上下文样式、流式边界、性能一致性、语义快照骨架 | `Tests/InkMarkdownTests/` |
+2026-09-09 adapter 数据流重构已完成 Simulator 构建和受影响测试：88 项通过，另有 4 项失败与原始 HEAD 同范围对照一致，详见 [重构验证](qa/InkMarkdown-adapter-refactor-2026-09-09.md)。未执行 ExampleApp 手工操作、真机验收或远端 CI；本次结果不构成发布验收。v0.0.2 发布前仍需按 [发布清单](release-checklist.md) 为选定候选记录实际命令、SHA、scheme、destination 与结果。
 
-**ExampleApp「公式与图表」**（用户可见总称，见 `CONTEXT.md`）提供三条验收路径：**组件 Pager**（LaTeX / Mermaid 分开展示）、**综合 Demo**（开启/关闭对照与失败错误条）、**SSE 流式**（块级闭合即生图）。LaTeX 与 Mermaid 均为 **opt-in**（默认关闭，不改变普通围栏语义）；架构与 Image Store 复用见 [ADR-007](decisions/ADR-007-local-generated-diagrams-and-formulas.md)。
+- iOS / iPadOS 15 runtime、当前 iPhone / iPad 入口、Split View、旋转、Dynamic Type 与 VoiceOver。
+- 布局测量最新改动的 chat 首轮高度、零宽恢复、表格与流式补通知，以及完整 layoutSubviews 调用栈的 ICS 观测；细项见 [当前布局验收项](qa/InkMarkdown-layout-measurement-contract-review-2026-09-08.md)。
+- 真机滚动、长文流式、图片与生成图、WebKit 冷启动、峰值内存和长会话性能基线。
+- 五个 product 的消费者构建、ExampleApp Debug / Release、app-hosted Mermaid 与受影响契约测试。
+- 同一发布候选 SHA 的远程依赖解析、CI 和兼容性/迁移核验。ADR-012 已允许图片后端破坏式 API 迁移，不能再套用“所有旧 API 均不删除”的旧门槛。
 
-## 已知限制
+## 维护方式
 
-| 限制项 | 当前行为 |
-| --- | --- |
-| 图片 | **默认**输出文本占位（`InkImageRendering.isEnabled` 默认 `false`，与 ADR-004 一致）；opt-in 开启后走真图子系统（加载、缓存、附件/块布局），详见 [ADR-006](decisions/ADR-006-opt-in-image-rendering.md) |
-| 删除线 | 已实现 `.strikethroughStyle`；但 `inlineSyntaxes` 命中时（如 `@提及`）不继承删除线（详见 [spec](spec/extended-syntax.md)） |
-| 表格 | 依赖 `InkBlockRenderer`；纯 `InkAttributedRenderer` 不提供网格布局 |
-| 代码高亮 | 未内置语法高亮引擎 |
-| 背景绘制 | 行内代码背景与引用竖线依赖 TextKit 1 布局管理器 / block view |
-| 超长流式输入 | `maxParseLength` 当前硬编码为 50,000 |
-| 测试覆盖率 | 包含 32 个测试，尚未完全覆盖 CommonMark/GFM 语义矩阵 |
-| 发布工程 | 具备 iOS Simulator CI；尚无 CHANGELOG 和稳定版本 Tag |
-
-## 决策与仓库现状差异
-
-| 主题 | 项目决策 / 目标 | 仓库现状 | 后续动作 |
-| --- | --- | --- | --- |
-| UI 范围 | 仅支持 UIKit | 源码完全基于 UIKit | 保持纯 UIKit 定位 |
-| 平台矩阵 | iOS 14+、macOS 11+、tvOS 14+、watchOS 7+ | `Package.swift` 仅声明 iOS 14+，源码直接依赖 UIKit | 完成条件编译与逐平台验证前，对外仅宣称 iOS 14+ |
-| 依赖策略 | **ADR-001**：固定外部 revision | 已固定 `swift-markdown` revision；传递依赖 `swift-cmark` 遵循上游 manifest 的 `gfm` 分支与 resolved revision | 依赖升级时更新 revision 并验证测试 |
-| 多平台实施 | **ADR-002**：v1.0 仅对外支持 iOS 14+ | `Package.swift` 仅声明 iOS 14+ | 文档不将多平台列为已支持 |
-| 图片 / 删除线 | **ADR-004**（默认占位）+ **ADR-006**（opt-in 真图）；删除线样式已实现 | opt-in 图片栈已落地；删除线已实现 `.strikethroughStyle` | spec 已更新；图片稳定性修复进行中 |
-| 流式长度 | **ADR-005**：`maxParseLength` 支持配置（默认 50_000） | 仍硬编码于 `InkStreamRenderer` | 开放配置项并补充测试 |
-| CI 构建 | 建立 iOS Simulator 自动测试 | 统一使用 Xcode 26.6 + iPhone 17 Pro/OS 26.5 | 镜像升级时更新配置与排坑文档 |
-| SmartCodable | 早期文档提及依赖 | 实际未引用 | 从依赖说明中移除 |
-| 项目阶段 | 早期标识为“初始化阶段” | 已具备核心功能、ExampleApp 与测试 | 标记为 v1.0 发布准备阶段 |
-
-## 构建与测试说明
-
-项目依赖 UIKit。在 macOS 环境直接运行 `swift build` 或 `swift test` 会提示 `no such module 'UIKit'`，该现象不代表 iOS target 构建失败。
-
-构建与测试应在包根目录使用原生 `xcodebuild` 工具：
-
-```bash
-xcodebuild test -scheme InkMarkdown -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
-```
-
-具体步骤详见 [开发指南](contributor-guide/04-development.md#构建与测试)。
-
-## v1.0 前优先级
-
-1. 补齐 CommonMark 与已支持 GFM 的语义断言。
-2. 审计公开 API 并补齐中文文档注释。
-3. 增加 CHANGELOG、版本策略与稳定版本 Tag。
-4. 图片 opt-in 契约与测试覆盖（架构决策见 [ADR-006](decisions/ADR-006-opt-in-image-rendering.md)；默认行为仍遵循 ADR-004）。
-
-详细里程碑见 [roadmap.md](roadmap.md)。开发者学习路径见 [文档首页](README.md)。
-
-## 维护触发条件
-
-发生以下变更时需更新本文：
-
-- `Package.swift` 的平台、依赖或 Swift 版本变更；
-- 新增或删除公开 Renderer、配置项或自定义扩展点；
-- Markdown 支持矩阵变更；
-- 测试数量或验证方式调整；
-- CI、版本标签或发布状态更新。
+能力变化时更新对应指南与语义规范；状态变化只更新本页。不要复制历史测试计数、临时日志路径或另建“当前任务摘要”。测试和构建方式见 [开发指南](contributor-guide/04-development.md)，未来方向见 [路线图](roadmap.md)。

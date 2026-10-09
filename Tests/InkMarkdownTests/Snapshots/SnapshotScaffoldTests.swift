@@ -7,7 +7,7 @@ import UIKit
 // 目的：证明 RenderSnapshot 基建可用、断言助手行为正确（正例与反例）。
 // 这是 T1.2/T1.3（CommonMark + GFM 全集契约快照）的地基。
 
-@Suite struct SnapshotScaffoldTests {
+@Suite @MainActor struct SnapshotScaffoldTests {
 
   /// 基建可渲染 + 可抽快照，纯文本不被属性抽取破坏。
   @Test func scaffold_rendersAndExtractsPlainText() {

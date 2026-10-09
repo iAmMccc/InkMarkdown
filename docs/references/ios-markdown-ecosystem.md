@@ -2,7 +2,7 @@
 
 对比 swift-markdown、MarkdownUI、Textual、SwiftStreamingMarkdown 与 InkMarkdown 的设计选型与技术边界，供架构选型与源码阅读参考。
 
-> 核对日期：2026-07-14。信息基于各项目开源代码与官方文档。
+> **证据状态：UNVERIFIED historical snapshot。** 本页于 2026-07-14 汇总，尚未按固定上游 revision 逐项复核；其中所有外部接口、平台、能力、性能与竞品比较断言均为 **UNVERIFIED**，不得作为产品宣传或架构结论。SwiftUI 相关的一手资料以 [SwiftUI Markdown 生态研究](swiftui-markdown-ecosystem-research.md) 为准。
 
 ## 评估维度
 

@@ -1,0 +1,174 @@
+date: 2026-09-07T06:57:29Z
+branch: feat/swiftUI
+HEAD: f71cc292a5708cf910f0e9a36ce73c7dedd7bd89
+status-short:
+## feat/swiftUI...origin/feat/swiftUI [ahead 1]
+ D .github/fixtures/consumer-smoke/Package.resolved
+ M .scratch/architecture-deepening-2026-09-07/evidence/README.md
+ M .scratch/architecture-deepening-2026-09-07/issues/01-capture-current-baseline.md
+ M .scratch/architecture-deepening-2026-09-07/issues/02-table-source-regression.md
+ M .scratch/architecture-deepening-2026-09-07/issues/03-table-cell-source.md
+ M .scratch/architecture-deepening-2026-09-07/issues/04-table-layout-state.md
+ M .scratch/architecture-deepening-2026-09-07/issues/05-table-static-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/06-table-stream-input.md
+ M .scratch/architecture-deepening-2026-09-07/issues/07-table-stream-layout.md
+ M .scratch/architecture-deepening-2026-09-07/issues/08-table-contract-old-plumbing.md
+ M .scratch/architecture-deepening-2026-09-07/issues/09-table-acceptance.md
+ M .scratch/architecture-deepening-2026-09-07/issues/10-image-controlled-loader.md
+ M .scratch/architecture-deepening-2026-09-07/issues/11-image-load-module.md
+ M .scratch/architecture-deepening-2026-09-07/issues/12-image-block-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/13-image-attachment-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/14-image-async-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/15-image-preview-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/16-image-lifetime-contract.md
+ M .scratch/architecture-deepening-2026-09-07/issues/17-image-acceptance.md
+ M .scratch/architecture-deepening-2026-09-07/issues/18-host-handoff-regression.md
+ M .scratch/architecture-deepening-2026-09-07/issues/19-session-binding-grant.md
+ M .scratch/architecture-deepening-2026-09-07/issues/20-host-render-snapshot.md
+ M .scratch/architecture-deepening-2026-09-07/issues/21-host-ownership-release.md
+ M .scratch/architecture-deepening-2026-09-07/issues/22-host-environment-events.md
+ M .scratch/architecture-deepening-2026-09-07/issues/23-coordinator-use-host.md
+ M .scratch/architecture-deepening-2026-09-07/issues/24-swiftui-remount-regression.md
+ M .scratch/architecture-deepening-2026-09-07/issues/25-host-contract-old-plumbing.md
+ M .scratch/architecture-deepening-2026-09-07/issues/26-host-acceptance.md
+ D ExampleApp/ExampleApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+ D Package.resolved
+ M Sources/InkMarkdown/Rendering/Components/InkStreamTableView.swift
+ M Sources/InkMarkdown/Rendering/Components/InkTableBlock.swift
+ M Sources/InkMarkdown/Rendering/Components/InkTableBlockView.swift
+ M Sources/InkMarkdown/Rendering/Components/InkTableRenderHelper.swift
+ M Sources/InkMarkdown/Rendering/Image/InkImageAttachment.swift
+ M Sources/InkMarkdown/Rendering/Image/InkImageBlock.swift
+ M Sources/InkMarkdown/Rendering/Image/InkImagePreviewController.swift
+ M Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownCoordinator.swift
+ M Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift
+ M Tests/InkMarkdownSwiftUITests/InkBlockPresentationContinuityTests.swift
+ M Tests/InkMarkdownSwiftUITests/InkMarkdownRenderSessionTests.swift
+ M Tests/InkMarkdownTests/AccessibilityAndDynamicTypeTests.swift
+ M Tests/InkMarkdownTests/ImageRenderingTests.swift
+ M Tests/InkMarkdownTests/InkAuditSemanticRegressionTests.swift
+ M docs/contributor-guide/05-modules.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/01-baseline.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/01-capture-current-baseline.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/02-table-source-regression.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/03-table-cell-source.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/04-table-layout-state.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/05-table-static-adapter.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/06-table-stream-input.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/07-table-stream-layout.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/08-table-contract-old-plumbing.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/09-table-acceptance.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/10-image-controlled-loader.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/11-image-load-module.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/12-image-block-adapter.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/13-image-attachment-adapter.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/14-image-async-adapter.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/15-image-preview-adapter.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/16-image-lifetime-contract.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/17-image-acceptance.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/18-host-handoff-regression.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/19-session-binding-grant.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/20-host-render-snapshot.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1135-ticket-01/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1145-ticket-02/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1150-ticket-03/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1152-ticket-03/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1200-ticket-04/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1205-ticket-05/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1210-ticket-06-07/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1220-ticket-08/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1225-ticket-09/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1235-ticket-10/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1245-ticket-11/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1255-ticket-12/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1258-ticket-12/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1300-ticket-12/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1302-ticket-12-existing/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1315-ticket-13-15/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1320-ticket-13-15/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1325-ticket-13-attachment/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1330-ticket-13-17/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1335-ticket-13-17/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1340-ticket-17-addon/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1400-ticket-18/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1415-ticket-19/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1415-ticket-27/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1440-ticket-20-26/
+?? .scratch/architecture-deepening-2026-09-07/evidence/20260907-1445-ticket-20-26/
+?? .scratch/architecture-deepening-2026-09-07/evidence/21-host-ownership-release.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/22-host-environment-events.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/23-coordinator-use-host.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/24-swiftui-remount-regression.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/25-host-contract-old-plumbing.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/26-host-acceptance.md
+?? .scratch/architecture-deepening-2026-09-07/evidence/cursor-progress.md
+?? Sources/InkMarkdown/Rendering/Components/InkTablePresentation.swift
+?? Sources/InkMarkdown/Rendering/Image/InkImagePresentationLoad.swift
+?? Sources/InkMarkdownSwiftUI/Bridge/InkStreamingPresentationHost.swift
+?? Tests/InkMarkdownSwiftUITests/InkStreamingPresentationHostTests.swift
+?? Tests/InkMarkdownTests/InkControlledImageLoaderFixtureTests.swift
+?? Tests/InkMarkdownTests/InkImageAttachmentPresentationAdapterTests.swift
+?? Tests/InkMarkdownTests/InkImageBlockPresentationAdapterTests.swift
+?? Tests/InkMarkdownTests/InkImagePresentationLifetimeTests.swift
+?? Tests/InkMarkdownTests/InkImagePresentationLoadTests.swift
+?? Tests/InkMarkdownTests/InkImagePreviewLoadTests.swift
+?? Tests/InkMarkdownTests/InkTablePresentationTests.swift
+?? Tests/InkMarkdownTests/Support/
+--- uncommitted production paths (sample) ---
+ D .github/fixtures/consumer-smoke/Package.resolved
+ M .scratch/architecture-deepening-2026-09-07/evidence/README.md
+ M .scratch/architecture-deepening-2026-09-07/issues/01-capture-current-baseline.md
+ M .scratch/architecture-deepening-2026-09-07/issues/02-table-source-regression.md
+ M .scratch/architecture-deepening-2026-09-07/issues/03-table-cell-source.md
+ M .scratch/architecture-deepening-2026-09-07/issues/04-table-layout-state.md
+ M .scratch/architecture-deepening-2026-09-07/issues/05-table-static-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/06-table-stream-input.md
+ M .scratch/architecture-deepening-2026-09-07/issues/07-table-stream-layout.md
+ M .scratch/architecture-deepening-2026-09-07/issues/08-table-contract-old-plumbing.md
+ M .scratch/architecture-deepening-2026-09-07/issues/09-table-acceptance.md
+ M .scratch/architecture-deepening-2026-09-07/issues/10-image-controlled-loader.md
+ M .scratch/architecture-deepening-2026-09-07/issues/11-image-load-module.md
+ M .scratch/architecture-deepening-2026-09-07/issues/12-image-block-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/13-image-attachment-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/14-image-async-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/15-image-preview-adapter.md
+ M .scratch/architecture-deepening-2026-09-07/issues/16-image-lifetime-contract.md
+ M .scratch/architecture-deepening-2026-09-07/issues/17-image-acceptance.md
+ M .scratch/architecture-deepening-2026-09-07/issues/18-host-handoff-regression.md
+ M .scratch/architecture-deepening-2026-09-07/issues/19-session-binding-grant.md
+ M .scratch/architecture-deepening-2026-09-07/issues/20-host-render-snapshot.md
+ M .scratch/architecture-deepening-2026-09-07/issues/21-host-ownership-release.md
+ M .scratch/architecture-deepening-2026-09-07/issues/22-host-environment-events.md
+ M .scratch/architecture-deepening-2026-09-07/issues/23-coordinator-use-host.md
+ M .scratch/architecture-deepening-2026-09-07/issues/24-swiftui-remount-regression.md
+ M .scratch/architecture-deepening-2026-09-07/issues/25-host-contract-old-plumbing.md
+ M .scratch/architecture-deepening-2026-09-07/issues/26-host-acceptance.md
+ D ExampleApp/ExampleApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+ D Package.resolved
+ M Sources/InkMarkdown/Rendering/Components/InkStreamTableView.swift
+ M Sources/InkMarkdown/Rendering/Components/InkTableBlock.swift
+ M Sources/InkMarkdown/Rendering/Components/InkTableBlockView.swift
+ M Sources/InkMarkdown/Rendering/Components/InkTableRenderHelper.swift
+ M Sources/InkMarkdown/Rendering/Image/InkImageAttachment.swift
+ M Sources/InkMarkdown/Rendering/Image/InkImageBlock.swift
+ M Sources/InkMarkdown/Rendering/Image/InkImagePreviewController.swift
+ M Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownCoordinator.swift
+ M Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift
+ M Tests/InkMarkdownSwiftUITests/InkBlockPresentationContinuityTests.swift
+ M Tests/InkMarkdownSwiftUITests/InkMarkdownRenderSessionTests.swift
+ M Tests/InkMarkdownTests/AccessibilityAndDynamicTypeTests.swift
+ M Tests/InkMarkdownTests/ImageRenderingTests.swift
+ M Tests/InkMarkdownTests/InkAuditSemanticRegressionTests.swift
+ M docs/contributor-guide/05-modules.md
+?? Sources/InkMarkdown/Rendering/Components/InkTablePresentation.swift
+?? Sources/InkMarkdown/Rendering/Image/InkImagePresentationLoad.swift
+?? Sources/InkMarkdownSwiftUI/Bridge/InkStreamingPresentationHost.swift
+?? Tests/InkMarkdownSwiftUITests/InkStreamingPresentationHostTests.swift
+?? Tests/InkMarkdownTests/InkControlledImageLoaderFixtureTests.swift
+?? Tests/InkMarkdownTests/InkImageAttachmentPresentationAdapterTests.swift
+?? Tests/InkMarkdownTests/InkImageBlockPresentationAdapterTests.swift
+?? Tests/InkMarkdownTests/InkImagePresentationLifetimeTests.swift
+?? Tests/InkMarkdownTests/InkImagePresentationLoadTests.swift
+?? Tests/InkMarkdownTests/InkImagePreviewLoadTests.swift
+?? Tests/InkMarkdownTests/InkTablePresentationTests.swift
+?? Tests/InkMarkdownTests/Support/

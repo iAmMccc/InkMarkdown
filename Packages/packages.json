@@ -1,5 +1,9 @@
 [
   {
+    "url": "https://github.com/onevcat/Kingfisher.git",
+    "version": "8.12.0"
+  },
+  {
     "url": "https://github.com/swiftlang/swift-markdown.git",
     "version": "07ebc9c071b22a5d021031b798c3a84b76281213"
   },

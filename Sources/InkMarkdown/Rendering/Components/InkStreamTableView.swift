@@ -21,13 +21,11 @@ public final class InkStreamTableView: UIView {
   private let config: InkAppearance.Table
   private let configuration: InkConfiguration
   private let layoutMode: InkTableLayoutMode
-
-  private var headers: [String] = []
-  private var rows: [[String]] = []
-  private var alignments: [Table.ColumnAlignment?] = []
+  private var presentation: InkTablePresentation
+  private var lastSnapshot: InkTableLayoutSnapshot?
 
   private var contentStack: UIStackView!
-  private var hasRenderedHeader: Bool = false
+  private var isRebuildingForWidth = false
 
   /// 行数变化时回调（用于通知外部更新 cell 高度）
   public var onHeightChange: (() -> Void)?
@@ -36,6 +34,7 @@ public final class InkStreamTableView: UIView {
     self.layoutMode = layoutMode
     self.config = configuration.appearance.table
     self.configuration = configuration
+    self.presentation = InkTablePresentation(layoutMode: layoutMode, configuration: configuration)
     super.init(frame: .zero)
     setupContainer()
   }
@@ -45,54 +44,136 @@ public final class InkStreamTableView: UIView {
     fatalError("init(coder:) has not been implemented")
   }
 
+  public override func layoutSubviews() {
+    super.layoutSubviews()
+    guard !isRebuildingForWidth, lastSnapshot != nil, bounds.width > 0 else { return }
+    let contentWidth = InkTableRenderHelper.contentWidth(for: self, config: config)
+    guard contentWidth > 0 else { return }
+
+    let pendingLayout = lastSnapshot?.hasColumnLayout != true
+    if layoutMode == .wrap {
+      // wrap：首轮正宽或宽度变化才重建。scroll 内容保持自然宽度，仅补做未知宽后的首次布局。
+      guard pendingLayout || abs(contentWidth - (lastSnapshot?.contentWidth ?? 0)) > 0.5 else { return }
+    } else if !pendingLayout {
+      return
+    }
+
+    // 宽度变化只重算列布局；不调用 onHeightChange，避免在布局栈中递归触发宿主尺寸失效。
+    isRebuildingForWidth = true
+    defer { isRebuildingForWidth = false }
+    let snapshot = presentation.layout(contentWidth: contentWidth)
+    lastSnapshot = snapshot
+    if snapshot.update == .fullRebuild || pendingLayout {
+      rebuildAllRows(from: snapshot)
+    }
+  }
+
   // MARK: - Public API
 
-  /// 设置表头（仅调用一次，后续调用会忽略）
+  /// 设置表头（仅调用一次，后续调用会忽略）。
+  ///
+  /// 宿主内容宽未知时只接纳表头与参考行，不建列、不触发 `onHeightChange`；
+  /// 真实宽到达后再布局。第二次调用仍忽略，避免丢失已接纳内容。
   /// - Parameters:
   ///   - headers: 表头文字
   ///   - alignments: 列对齐方式
   ///   - referenceRows: 用于列宽计算的参考数据（不会渲染），传入全部行数据可获得最优列宽
   public func setHeaders(_ headers: [String], alignments: [Table.ColumnAlignment?] = [], referenceRows: [[String]] = []) {
-    guard !hasRenderedHeader else { return }
-    self.headers = headers
-    self.alignments = alignments
-    hasRenderedHeader = true
+    setHeaders(
+      headers,
+      alignments: alignments,
+      referenceRows: referenceRows,
+      contentWidth: InkTableRenderHelper.contentWidth(for: self, config: config)
+    )
+  }
 
-    let widths = InkTableRenderHelper.measureColumnContentWidths(headers: headers, rows: referenceRows, config: config, configuration: configuration)
-    cachedFixedWidths = widths
-    switch layoutMode {
-    case .wrap:
-      cachedWidthMode = .ratio(InkTableRenderHelper.widthsToRatios(widths))
-    case .scroll:
-      cachedWidthMode = .fixed(widths)
+  /// 按指定内容宽接纳表头。`contentWidth <= 0` 时只保存数据。
+  func setHeaders(
+    _ headers: [String],
+    alignments: [Table.ColumnAlignment?] = [],
+    referenceRows: [[String]] = [],
+    contentWidth: CGFloat
+  ) {
+    guard let snapshot = presentation.setHeaders(
+      headers.map { .raw($0) },
+      referenceRows: referenceRows.map { row in row.map { .raw($0) } },
+      alignments: alignments,
+      contentWidth: contentWidth
+    ) else {
+      return
     }
-
+    lastSnapshot = snapshot
+    guard snapshot.hasColumnLayout else { return }
     let headerRow = UIView()
-    InkTableRenderHelper.makeRow(texts: headers, isHeader: true, widthMode: cachedWidthMode!, alignments: alignments, config: config, configuration: configuration, rowContainer: headerRow)
+    InkTableRenderHelper.makeRow(
+      cells: snapshot.headers,
+      isHeader: true,
+      widthMode: snapshot.widthMode,
+      alignments: snapshot.alignments,
+      config: config,
+      configuration: configuration,
+      rowContainer: headerRow
+    )
     contentStack.addArrangedSubview(headerRow)
     onHeightChange?()
   }
 
   /// 追加一行数据（SSE 每吐出一行时调用）
   /// 自动忽略 Markdown 分隔行（如 `---`、`:---`、`---:`、`:---:`）
+  ///
+  /// 未知宽时只接纳行数据，不建列、不触发 `onHeightChange`。
   public func appendRow(_ cells: [String]) {
-    if cells.allSatisfy({ Self.isSeparatorCell($0) }) { return }
-    rows.append(cells)
+    appendRow(cells, contentWidth: currentLayoutContentWidth)
+  }
 
-    if widthsNeedExpand(for: cells) {
-      let fullWidths = InkTableRenderHelper.measureColumnContentWidths(headers: headers, rows: rows, config: config, configuration: configuration)
-      rebuildAllRows(widths: fullWidths)
-    } else {
+  /// 按指定内容宽追加行。`contentWidth <= 0` 时只保存数据。
+  func appendRow(_ cells: [String], contentWidth: CGFloat) {
+    guard let snapshot = presentation.appendRow(
+      cells.map { .raw($0) },
+      contentWidth: contentWidth
+    ) else {
+      return
+    }
+    lastSnapshot = snapshot
+    guard snapshot.hasColumnLayout else { return }
+
+    switch snapshot.update {
+    case .fullRebuild:
+      rebuildAllRows(from: snapshot)
+    case .appendRow:
+      guard let row = snapshot.rows.last else { break }
       contentStack.addArrangedSubview(InkTableRenderHelper.makeSeparator(config: config))
       let rowView = UIView()
-      InkTableRenderHelper.makeRow(texts: cells, isHeader: false, widthMode: cachedWidthMode!, alignments: alignments, config: config, configuration: configuration, rowContainer: rowView)
+      InkTableRenderHelper.makeRow(
+        cells: row,
+        isHeader: false,
+        widthMode: snapshot.widthMode,
+        alignments: snapshot.alignments,
+        config: config,
+        configuration: configuration,
+        rowContainer: rowView
+      )
       contentStack.addArrangedSubview(rowView)
+    case .none:
+      break
     }
     onHeightChange?()
   }
 
   /// 当前已渲染的行数
-  public var rowCount: Int { rows.count }
+  public var rowCount: Int { presentation.rows.count }
+
+  /// 已按已知内容宽完成列布局。未知宽接纳阶段为 `false`。
+  var hasColumnLayout: Bool { lastSnapshot?.hasColumnLayout ?? false }
+
+  var layoutSnapshot: InkTableLayoutSnapshot? { lastSnapshot }
+
+  private var currentLayoutContentWidth: CGFloat {
+    if let snapshot = lastSnapshot, snapshot.hasColumnLayout {
+      return snapshot.contentWidth
+    }
+    return InkTableRenderHelper.contentWidth(for: self, config: config)
+  }
 
   // MARK: - Setup
 
@@ -122,7 +203,6 @@ public final class InkStreamTableView: UIView {
     addSubview(container)
     container.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([
-      // 规范总纲：上方不设间距（top=0），下方间距由 verticalInset 承担（规范：24）。
       container.topAnchor.constraint(equalTo: topAnchor),
       container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset),
       container.leadingAnchor.constraint(equalTo: leadingAnchor, constant: config.horizontalInset),
@@ -148,7 +228,6 @@ public final class InkStreamTableView: UIView {
     scrollView.translatesAutoresizingMaskIntoConstraints = false
     addSubview(scrollView)
     NSLayoutConstraint.activate([
-      // 规范总纲：上方不设间距（top=0），下方间距由 verticalInset 承担（规范：24）。
       scrollView.topAnchor.constraint(equalTo: topAnchor),
       scrollView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -config.verticalInset),
       scrollView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: config.horizontalInset),
@@ -177,47 +256,33 @@ public final class InkStreamTableView: UIView {
     ])
   }
 
-  // MARK: - 列宽
-
-  private var cachedWidthMode: InkTableRenderHelper.ColumnWidthMode?
-  private var cachedFixedWidths: [CGFloat] = []
-
-  /// 仅用新追加行的单元格与当前缓存列宽比较，O(cols) 而非 O(N×cols)
-  private func widthsNeedExpand(for cells: [String]) -> Bool {
-    let bodyFont = UIFont.systemFont(ofSize: config.bodyFontSize)
-    let maxColumnWidth = UIScreen.main.bounds.width * config.columnMaxWidthRatio
-    for (colIndex, text) in cells.enumerated() {
-      guard colIndex < cachedFixedWidths.count else { return true }
-      let cellWidth = min(
-        ceil((text as NSString).size(withAttributes: [.font: bodyFont]).width) + config.horizontalPadding * 2,
-        maxColumnWidth
-      )
-      if cellWidth > cachedFixedWidths[colIndex] + 0.5 {
-        return true
-      }
-    }
-    return false
-  }
-
-  private func rebuildAllRows(widths: [CGFloat]) {
-    cachedFixedWidths = widths
-    switch layoutMode {
-    case .wrap:
-      cachedWidthMode = .ratio(InkTableRenderHelper.widthsToRatios(widths))
-    case .scroll:
-      cachedWidthMode = .fixed(widths)
-    }
-
+  private func rebuildAllRows(from snapshot: InkTableLayoutSnapshot) {
     contentStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
     let headerRow = UIView()
-    InkTableRenderHelper.makeRow(texts: headers, isHeader: true, widthMode: cachedWidthMode!, alignments: alignments, config: config, configuration: configuration, rowContainer: headerRow)
+    InkTableRenderHelper.makeRow(
+      cells: snapshot.headers,
+      isHeader: true,
+      widthMode: snapshot.widthMode,
+      alignments: snapshot.alignments,
+      config: config,
+      configuration: configuration,
+      rowContainer: headerRow
+    )
     contentStack.addArrangedSubview(headerRow)
 
-    for row in rows {
+    for row in snapshot.rows {
       contentStack.addArrangedSubview(InkTableRenderHelper.makeSeparator(config: config))
       let rowView = UIView()
-      InkTableRenderHelper.makeRow(texts: row, isHeader: false, widthMode: cachedWidthMode!, alignments: alignments, config: config, configuration: configuration, rowContainer: rowView)
+      InkTableRenderHelper.makeRow(
+        cells: row,
+        isHeader: false,
+        widthMode: snapshot.widthMode,
+        alignments: snapshot.alignments,
+        config: config,
+        configuration: configuration,
+        rowContainer: rowView
+      )
       contentStack.addArrangedSubview(rowView)
     }
   }
@@ -226,21 +291,9 @@ public final class InkStreamTableView: UIView {
 
   @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
     guard gesture.state == .began else { return }
+    let headers = lastSnapshot?.originalHeaders ?? presentation.headers.map(\.original)
+    let rows = lastSnapshot?.originalRows ?? presentation.rows.map { $0.map(\.original) }
     UIPasteboard.general.string = InkTableRenderHelper.buildPlainText(headers: headers, rows: rows)
     InkTableRenderHelper.showCopyFeedback(on: self, config: config)
-  }
-
-  // MARK: - 分隔行检测
-
-  /// 判断单个 cell 是否为 Markdown 表格分隔行格式（`:?-+:?`）
-  private static func isSeparatorCell(_ cell: String) -> Bool {
-    let s = cell.trimmingCharacters(in: .whitespaces)
-    guard !s.isEmpty else { return true }
-    var i = s.startIndex
-    if s[i] == ":" { i = s.index(after: i) }
-    guard i < s.endIndex && s[i] == "-" else { return false }
-    while i < s.endIndex && s[i] == "-" { i = s.index(after: i) }
-    if i < s.endIndex && s[i] == ":" { i = s.index(after: i) }
-    return i == s.endIndex
   }
 }

@@ -188,6 +188,29 @@ enum MarkdownComponent: String, CaseIterable {
         - 嵌套 2.1
         - 嵌套 2.2
       - 第三项
+
+      ## 松散列表（续段归属）
+
+      - 首段落在列表项内
+
+        续段仍属于同一列表项，保持列表缩进与悬挂对齐。
+
+      ## 有序 / 无序混合嵌套
+
+      - 无序外层
+        1. 有序内层
+           - 无序深层
+
+      ## 列表内引用
+
+      - 列表项开头
+
+        > 引用仍在列表项内，不提升为根级内容。
+
+      ## 任务列表
+
+      - [ ] 待办事项
+      - [x] 已完成事项
       """
     case .orderedList:
       return """
@@ -219,6 +242,21 @@ enum MarkdownComponent: String, CaseIterable {
       | 8 | Array | 值类型集合，写时复制 | [Int]、[String] | 缓冲区 |
       | 9 | Dictionary | 值类型键值映射，写时复制 | [String: Int] | 缓冲区 |
       | 10 | Set | 值类型唯一集合，写时复制 | Set<Int> | 缓冲区 |
+
+      ## 复杂单元格与链接
+
+      | 名称 | 状态 | 备注 |
+      | :--- | :---: | ---: |
+      | **加粗** | `行内代码` | [打开苹果官网](https://www.apple.com) |
+      | *斜体* | ***粗斜*** | [CommonMark 规范](https://spec.commonmark.org/0.31.2/) |
+
+      ## 转义竖线与不齐行
+
+      | 表达式 | 含义 |
+      | --- | --- |
+      | a \\| b | 或运算（转义竖线应留在单元格内） |
+      | 空单元格见右 |  |
+      | 两列 | 多余列被忽略 | 补充 |
       """
     case .thematicBreak:
       return """
@@ -236,9 +274,16 @@ enum MarkdownComponent: String, CaseIterable {
       return "调用 `InkAttributedRenderer.render(_:)` 即可渲染。"
     case .link:
       return """
-      访问 [CommonMark 规范](https://spec.commonmark.org/0.31.2/) 了解更多。
+      行内式：访问 [CommonMark 规范](https://spec.commonmark.org/0.31.2/) 了解更多。
+
+      引用式：参见 [Swift 文档][swift-docs] 与 [Human Interface 指南][hig]。
 
       自动链接：<https://www.apple.com>
+
+      相对链接（按既有策略由宿主处理）：[项目内文档](docs/guide.md)
+
+      [swift-docs]: https://www.swift.org/documentation/
+      [hig]: https://developer.apple.com/design/human-interface-guidelines/
       """
     case .strikethrough:
       return """

@@ -1,58 +1,33 @@
+//
+//  ViewController.swift
+//  ExampleApp
+//
+//  Created by InkMarkdown on 2026/8/18.
+//
+
 import UIKit
 import InkMarkdown
 
-/// 第一层：大分类入口列表。
+/// 第一层：大分类入口列表（UIKit 渲染引擎 vs SwiftUI 适配器）。
 class StoreViewController: DemoListViewController {
 
-  private let categories = DemoCategory.allCases
+  private let categories = MainCategory.allCases
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    title = "InkMarkdown"
-      
-    print("首页启动了")
-
-    // TODO: YC - 目前用于测试的代码，后续记得删除
-    let markdown = "**~~x~~**"
-    let result = InkAttributedRenderer.render(markdown)
-
-    print("纯文本内容 \"\(result.string)\"")
-
-    print("----【属性 RUNs 遍历检测】-----")
-
-    let fullRange = NSRange(location: 0, length: result.length)
-    result.enumerateAttributes(in: fullRange) {
-      attributes,
-      range,
-      _ in
-      guard let swiftRange = Range(range, in: result.string) else { return }
-
-      let slice = result.string[swiftRange]
-
-      // 解析查看是否有删除线样式
-      let rawStyle = attributes[.strikethroughStyle] as? Int ?? 0
-      let underlineStyle = NSUnderlineStyle(rawValue: rawStyle)
-      let hasStrikethrough = underlineStyle.contains(.single) || rawStyle != 0
-
-      // 解析字体粗体样式
-      let font = attributes[.font] as? UIFont
-      let isBold = font?.fontDescriptor.symbolicTraits.contains(
-        .traitBold
-      ) ?? false
-      // 格式化输出检测结果
-
-
-      print("""
-       📍 范围: \(range.location..<(range.location + range.length)) | 文本: "\(slice)"
-          └─ 删除线(Strikethrough): \(hasStrikethrough ? "✅ 存在 (Style RawValue=\(rawStyle))" : "❌ 无")
-          └─ 粗体(Bold): \(isBold ? "✅ 存在" : "❌ 无")
-       """)
-    }
-
+    title = "InkMarkdown Demo"
   }
 
   override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
     categories.count
+  }
+
+  override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+    "UI 框架架构选择"
+  }
+
+  override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+    "请选择测试环境进入对应的功能测试集。两套框架下的测试集功能保持 1:1 对齐。"
   }
 
   override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -63,7 +38,7 @@ class StoreViewController: DemoListViewController {
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     super.tableView(tableView, didSelectRowAt: indexPath)
     let category = categories[indexPath.row]
-    let listVC = CategoryListViewController(category: category)
+    let listVC = CategoryListViewController(mainCategory: category)
     navigationController?.pushViewController(listVC, animated: true)
   }
 }

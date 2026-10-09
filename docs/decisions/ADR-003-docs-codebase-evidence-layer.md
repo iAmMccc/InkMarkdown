@@ -38,4 +38,4 @@ Accepted
 ## Consequences
 
 - `docs/README.md` 导航已包含 codebase 入口。
-- 与 `codebase-memory-mcp` 索引互补：Markdown 供直接阅读，图索引供结构查询。
+- 与 `Serena` MCP (LSP) 索引互补：Markdown 供直接阅读，LSP 符号索引供结构与代码语义查询。

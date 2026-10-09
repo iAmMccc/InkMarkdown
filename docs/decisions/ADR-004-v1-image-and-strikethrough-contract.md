@@ -1,8 +1,10 @@
 # ADR-004: v1 图片与删除线行为契约
 
+> 标题中的 “v1” 保留原始决策语境；当前发布计划以 `0.0.1` / `0.0.2` 为准。
+
 ## Status
 
-Amended — v1 **默认**图片契约仍有效（文本占位）；opt-in 真图渲染见 [ADR-006](ADR-006-opt-in-image-rendering.md)（2026-07-28）。删除线部分不受 ADR-006 影响。
+Amended — 默认图片占位契约仍有效；opt-in 真图由 [ADR-006](ADR-006-opt-in-image-rendering.md) 规定；删除线契约于 2026-08-17 按当前 implementation 更新。
 
 ## Date
 
@@ -10,31 +12,39 @@ Amended — v1 **默认**图片契约仍有效（文本占位）；opt-in 真图
 
 ## Context
 
-- 图片：当前 `renderImage` 输出文本占位（如带 🖼 的方括号字符串），不包含下载、缓存或附件布局。
-- 删除线：GFM 删除线语法未在行内渲染器中单独施加删除线样式，文本内容保留在子树中。富文本属性 `strikethroughStyle` 仅用于分割线绘制，不代表 GFM 删除线样式。
-- 完整图片渲染与删除线视觉支持会增加 v1 的开发与测试范围。
+原始决策将图片和删除线都视为未承诺能力：图片只输出文本占位，删除线只保留文本而不写入视觉属性。
+
+此后 implementation 已变化：
+
+- 图片默认仍输出占位，但 `InkImageRendering.isEnabled` 可启用真图附件与 `InkImageBlock`；具体资源、缓存和安全边界见 ADR-006。
+- `InkAttributedRenderer` 现已为文本与行内代码的 `Strikethrough` context 写入 `.strikethroughStyle`。但自定义 `inlineSyntaxes` 命中时目前不继承删除线属性，且图片叶子节点不承诺删除线视觉效果，均属于已知组合语义限制。
+
+文档必须区分默认行为、opt-in 行为与这一组合限制，不能继续把已实现的删除线样式写成缺失能力。
 
 ## Decision
 
-1. **v1 图片**：仅文本占位；**不**提供下载、缓存及异步附件 API。宿主若需要展示图片，可在块扩展或应用层自行处理。
-2. **v1 删除线**：不承诺 GFM 删除线视觉样式；规范与状态文档明确说明「内容保留，不保证样式」。
-3. 两项需求均**不阻塞 v1.0**；后续若实现，需补充 `spec/` 与测试并更新 ADR。
-
-## Alternatives Considered
-
-### v1 必须实现删除线样式与图片回调
-
-- Pros: 功能更完整  
-- Cons: 提高发布门槛；图片处理涉及线程与缓存机制  
-- Rejected: 不作为 v1 必备项
-
-### 静默「半支持」不写契约
-
-- Pros: 无需额外文档说明  
-- Cons: 宿主容易误判库的能力范围  
-- Rejected
+1. **图片默认行为**：保持文本占位；不会因普通 Markdown 图片自动发起网络加载。
+2. **图片 opt-in 行为**：由 ADR-006 定义。启用后可生成 `InkImageAttachment` 或 `InkImageBlock`，并遵循其资源与安全契约。
+3. **删除线行为**：GFM `Strikethrough` 的文本与行内代码叶子节点生成 `.strikethroughStyle`，是当前 UIKit rendering engine 的语义契约。
+4. **删除线组合限制**：自定义 `inlineSyntaxes` 命中时不保证继承删除线；图片叶子节点也不保证删除线视觉效果。两项限制必须在语义规范、测试和公开状态中可见。若未来改变，需补充契约测试。
 
 ## Consequences
 
-- `current-status.md` 已知限制表保持有效，作为对外支持范围说明。
-- 测试矩阵优先 CommonMark 已支持元素，不为未承诺能力编写空套测试。
+- README、状态文档与 swift-markdown 参考应将删除线列为已支持的样式，而非“仅保留文本”。
+- 默认图片占位与 opt-in 真图必须同时被测试，避免把“默认关闭”误解为“不支持图片”。
+- SwiftUI adapter 的完整语义对齐范围包含上述图片与删除线行为及其已知限制。
+- 后续新增图片或删除线行为时，更新 [语义规范](../spec/README.md)、当前状态和测试，而不是绕开既有契约。
+
+## Historical alternatives
+
+### 默认加载所有图片
+
+- 优点：最直观的视觉结果。
+- 缺点：把网络、缓存和安全责任隐式带入普通 Markdown 渲染。
+- 结论：拒绝；默认占位、显式 opt-in。
+
+### 静默保留删除线文本而不记录限制
+
+- 优点：短期实现成本低。
+- 缺点：宿主无法判断视觉语义是否完整。
+- 结论：拒绝；现已明确支持删除线，并记录 custom inline syntax 的组合限制。

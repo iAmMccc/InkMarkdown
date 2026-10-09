@@ -1,8 +1,8 @@
 import UIKit
-import InkMarkdown
+@_spi(InkMarkdown) import InkMarkdown
 
 /// 业务卡片样式 H1：浅紫圆角卡片 + ✦ 前缀图标 + 主标题 + 右侧"查看示例 ›" accessory。
-struct H1ActionCardBlock: InkRenderableBlock {
+struct H1ActionCardBlock: InkRenderableBlock, InkReusableBlock {
   let title: String
   /// 仅当该卡片需要 accessory 时设置；其余卡片只展示「✦ + 加粗标题」。
   let accessory: Accessory?
@@ -16,11 +16,24 @@ struct H1ActionCardBlock: InkRenderableBlock {
   func makeView() -> UIView {
     H1ActionCardView(title: title, accessory: accessory)
   }
+
+  func updateExistingView(_ view: UIView) -> Bool {
+    false
+  }
+
+  func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? H1ActionCardBlock else { return false }
+    return title == previous.title
+      && accessory?.text == previous.accessory?.text
+      && accessory?.alertTitle == previous.accessory?.alertTitle
+      && accessory?.alertMessage == previous.accessory?.alertMessage
+  }
 }
 
-private final class H1ActionCardView: UIView {
+final class H1ActionCardView: UIView {
 
   private let accessory: H1ActionCardBlock.Accessory?
+  private let titleLabel = UILabel()
 
   init(title: String, accessory: H1ActionCardBlock.Accessory?) {
     self.accessory = accessory
@@ -31,6 +44,11 @@ private final class H1ActionCardView: UIView {
   @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+
+  func apply(title: String) {
+    titleLabel.text = title
+    setNeedsLayout()
   }
 
   private func setup(title: String) {
@@ -54,7 +72,6 @@ private final class H1ActionCardView: UIView {
     iconView.translatesAutoresizingMaskIntoConstraints = false
     card.addSubview(iconView)
 
-    let titleLabel = UILabel()
     titleLabel.text = title
     titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
     titleLabel.textColor = .label

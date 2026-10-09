@@ -18,7 +18,7 @@
 1. 本目录不重复 `contributor-guide` 的详细说明，只保留带代码证据的简短基线。
 2. 架构设计与扩展指南维护在 `contributor-guide/` 和 `spec/` 中。
 3. 功能交付状态以 `current-status.md` 与测试为准，本目录仅做引用。
-4. 扫描原始数据见 [`.codebase-scan.txt`](.codebase-scan.txt)。
+4. 扫描原始数据见 [当前项目状态](../current-status.md)。
 
 ## 文档索引
 

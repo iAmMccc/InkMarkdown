@@ -16,6 +16,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -33,123 +36,91 @@ env:
   IOS_SIM_NAME: iPhone 17 Pro
   IOS_SIM_OS: "26.5"
   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+  # pull_request 默认 GITHUB_SHA 是合并测试 ref；发布证据必须绑定 PR head。
+  CANDIDATE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
 jobs:
-  test-ios:
-    # Job name 不能可靠引用 env context；版本以下方 Select/Verify 日志与 workflow env 为准。
-    name: iOS Simulator Tests (pinned toolchain)
+  package-tests:
+    name: Package / ${{ matrix.name }}
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Core
+            slug: core
+            timeout: 30
+            filters: >-
+              -only-testing:InkMarkdownTests
+              -only-testing:InkMarkdownCoreContractTests
+              -only-testing:ExampleAppPolicyTests
+          - name: SwiftUI adapter
+            slug: swiftui
+            timeout: 30
+            filters: -only-testing:InkMarkdownSwiftUITests
+          - name: Addon contracts
+            slug: addon-contracts
+            timeout: 30
+            filters: >-
+              -only-testing:InkMarkdownAddonContractTests
+              -only-testing:InkMarkdownLaTeXTests
+              -only-testing:InkMarkdownKingfisherTests
+          - name: Mermaid addon
+            slug: mermaid
+            timeout: 45
+            filters: -only-testing:InkMarkdownMermaidTests
 
     steps:
-      - name: Checkout
+      - name: Checkout candidate
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
 
-      - name: Select pinned Xcode
+      - name: Verify candidate checkout
         run: |
-          set -euo pipefail
-          if [[ ! -d "${XCODE_APP}" ]]; then
-            echo "::error::Pinned Xcode not found: ${XCODE_APP}"
-            echo "Installed Xcode apps:"
-            ls -1 /Applications | grep -i '^Xcode' || true
-            echo "See runner-images macos-26-arm64-Readme.md Xcode table."
-            echo "Update env.XCODE_* in .github/workflows/ci.yml when the image changes."
-            exit 1
-          fi
-          sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
-          sudo xcodebuild -license accept || true
-          echo "DEVELOPER_DIR=${DEVELOPER_DIR}"
-          xcodebuild -version
-          swift --version
+          actual_sha="$(git rev-parse HEAD)"
+          echo "candidate_sha=${CANDIDATE_SHA}"
+          echo "checkout_sha=${actual_sha}"
+          test "${actual_sha}" = "${CANDIDATE_SHA}"
 
-      - name: Verify pinned Xcode build
-        run: |
-          set -euo pipefail
-          ACTUAL_VERSION=$(xcodebuild -version | awk '/Xcode /{print $2}')
-          ACTUAL_BUILD=$(xcodebuild -version | awk '/Build version/{print $3}')
-          echo "Actual: Xcode ${ACTUAL_VERSION} (${ACTUAL_BUILD})"
-          echo "Expect: Xcode ${XCODE_VERSION} (${XCODE_BUILD})"
-          if [[ "${ACTUAL_VERSION}" != "${XCODE_VERSION}" ]]; then
-            echo "::error::Xcode version mismatch (pinned ${XCODE_VERSION}, got ${ACTUAL_VERSION})"
-            exit 1
-          fi
-          if [[ "${ACTUAL_BUILD}" != "${XCODE_BUILD}" ]]; then
-            echo "::error::Xcode build mismatch (pinned ${XCODE_BUILD}, got ${ACTUAL_BUILD})."
-            echo "Runner image may have replaced the app in place; update env.XCODE_BUILD after confirming."
-            exit 1
-          fi
+      - name: Set up pinned iOS toolchain
+        id: ios
+        uses: ./.github/actions/setup-ios
+        with:
+          xcode-app: ${{ env.XCODE_APP }}
+          xcode-version: ${{ env.XCODE_VERSION }}
+          xcode-build: ${{ env.XCODE_BUILD }}
+          simulator-name: ${{ env.IOS_SIM_NAME }}
+          simulator-os: ${{ env.IOS_SIM_OS }}
 
-      - name: Resolve Swift packages
+      - name: Verify package manifest
+        run: swift package dump-package > package-manifest.json
+
+      - name: Resolve package dependencies
         run: |
           set -euo pipefail
           xcodebuild -resolvePackageDependencies \
-            -scheme InkMarkdown \
+            -scheme InkMarkdown-Package \
             -clonedSourcePackagesDirPath SourcePackages
 
-      - name: Verify pinned simulator exists
+      - name: Test ${{ matrix.name }}
+        env:
+          DESTINATION: ${{ steps.ios.outputs.destination }}
+          TEST_FILTERS: ${{ matrix.filters }}
         run: |
           set -euo pipefail
-          DEST="platform=iOS Simulator,name=${IOS_SIM_NAME},OS=${IOS_SIM_OS}"
-          echo "Checking destination: ${DEST}"
-          python3 <<'PY'
-          import json, os, subprocess, sys
-
-          name = os.environ["IOS_SIM_NAME"]
-          os_ver = os.environ["IOS_SIM_OS"]
-          raw = subprocess.check_output(
-              ["xcrun", "simctl", "list", "devices", "available", "-j"],
-              text=True,
-          )
-          data = json.loads(raw)
-          matched = []
-          for runtime, devices in data.get("devices", {}).items():
-              # runtime: com.apple.CoreSimulator.SimRuntime.iOS-26-5
-              if "iOS" not in runtime:
-                  continue
-              for device in devices:
-                  if not device.get("isAvailable", True):
-                      continue
-                  if device.get("name") != name:
-                      continue
-                  # Map runtime suffix 26-5 / 26-5-0 → compare major.minor with IOS_SIM_OS
-                  suffix = runtime.rsplit(".iOS-", 1)[-1].replace("-", ".")
-                  # Accept 26.5 matching 26.5 or 26.5.x prefix
-                  if suffix == os_ver or suffix.startswith(os_ver + "."):
-                      matched.append((runtime, device.get("udid"), suffix))
-                  # Also accept when runtime encodes same numbers (26-5 vs 26.5)
-                  compact = os_ver.replace(".", "-")
-                  if runtime.endswith(f".iOS-{compact}") or f".iOS-{compact}-" in runtime:
-                      matched.append((runtime, device.get("udid"), suffix))
-
-          # Dedupe
-          matched = list({m[1]: m for m in matched}.values())
-          if not matched:
-              print(f"::error::Pinned simulator not available: name={name!r} OS={os_ver!r}", file=sys.stderr)
-              print("Available iPhone devices:", file=sys.stderr)
-              for runtime, devices in data.get("devices", {}).items():
-                  if "iOS" not in runtime:
-                      continue
-                  for device in devices:
-                      if "iPhone" in device.get("name", "") and device.get("isAvailable", True):
-                          print(f"  - {device.get('name')} @ {runtime}", file=sys.stderr)
-              print("Update env.IOS_SIM_NAME / env.IOS_SIM_OS in ci.yml", file=sys.stderr)
-              sys.exit(1)
-
-          runtime, udid, suffix = matched[0]
-          print(f"Found: {name} udid={udid} runtime={runtime} (parsed OS~{suffix})")
-          PY
-
-      - name: Test (pinned iOS Simulator)
-        run: |
-          set -euo pipefail
-          DEST="platform=iOS Simulator,name=${IOS_SIM_NAME},OS=${IOS_SIM_OS}"
-          echo "Using destination: ${DEST}"
+          # This isolates test execution, not the aggregate package build graph.
+          # Product-isolated compilation is verified by the consumer-builds job below.
+          read -r -a test_filter_args <<< "${TEST_FILTERS}"
           set -o pipefail
           xcodebuild test \
-            -scheme InkMarkdown \
-            -destination "${DEST}" \
+            -scheme InkMarkdown-Package \
+            -destination "${DESTINATION}" \
             -clonedSourcePackagesDirPath SourcePackages \
             -resultBundlePath TestResults.xcresult \
+            "${test_filter_args[@]}" \
             CODE_SIGNING_ALLOWED=NO \
             | tee xcodebuild-test.log
 
@@ -157,8 +128,221 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-test-failure-logs
+          name: package-${{ matrix.slug }}-failure
           path: |
             xcodebuild-test.log
             TestResults.xcresult
+            package-manifest.json
+          if-no-files-found: ignore
+
+  consumer-builds:
+    name: Consumer / ${{ matrix.name }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Core only
+            slug: core
+            scheme: InkMarkdownCoreConsumer
+          - name: SwiftUI adapter
+            slug: swiftui
+            scheme: InkMarkdownSwiftUIConsumer
+          - name: LaTeX addon
+            slug: latex
+            scheme: InkMarkdownLaTeXConsumer
+          - name: Mermaid addon
+            slug: mermaid
+            scheme: InkMarkdownMermaidConsumer
+          - name: Kingfisher backend
+            slug: kingfisher
+            scheme: InkMarkdownKingfisherConsumer
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+
+      - name: Verify candidate checkout
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          echo "candidate_sha=${CANDIDATE_SHA}"
+          echo "checkout_sha=${actual_sha}"
+          test "${actual_sha}" = "${CANDIDATE_SHA}"
+
+      - name: Set up pinned iOS toolchain
+        id: ios
+        uses: ./.github/actions/setup-ios
+        with:
+          xcode-app: ${{ env.XCODE_APP }}
+          xcode-version: ${{ env.XCODE_VERSION }}
+          xcode-build: ${{ env.XCODE_BUILD }}
+          simulator-name: ${{ env.IOS_SIM_NAME }}
+          simulator-os: ${{ env.IOS_SIM_OS }}
+
+      - name: Verify consumer fixture manifest
+        run: swift package --package-path .github/fixtures/consumer-smoke dump-package > consumer-manifest.json
+
+      - name: Build isolated ${{ matrix.name }} consumer
+        working-directory: .github/fixtures/consumer-smoke
+        env:
+          DESTINATION: ${{ steps.ios.outputs.destination }}
+          CONSUMER_SCHEME: ${{ matrix.scheme }}
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          xcodebuild build \
+            -scheme "${CONSUMER_SCHEME}" \
+            -destination "${DESTINATION}" \
+            -clonedSourcePackagesDirPath "${RUNNER_TEMP}/consumer-source-packages" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee "${GITHUB_WORKSPACE}/xcodebuild-consumer.log"
+
+      - name: Upload consumer build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consumer-${{ matrix.slug }}-failure
+          path: |
+            xcodebuild-consumer.log
+            consumer-manifest.json
+          if-no-files-found: ignore
+
+  example-app:
+    name: ExampleApp / ${{ matrix.configuration }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+
+      - name: Verify candidate checkout
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          echo "candidate_sha=${CANDIDATE_SHA}"
+          echo "checkout_sha=${actual_sha}"
+          test "${actual_sha}" = "${CANDIDATE_SHA}"
+
+      - name: Set up pinned iOS toolchain
+        id: ios
+        uses: ./.github/actions/setup-ios
+        with:
+          xcode-app: ${{ env.XCODE_APP }}
+          xcode-version: ${{ env.XCODE_VERSION }}
+          xcode-build: ${{ env.XCODE_BUILD }}
+          simulator-name: ${{ env.IOS_SIM_NAME }}
+          simulator-os: ${{ env.IOS_SIM_OS }}
+
+      - name: Resolve ExampleApp dependencies
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies \
+            -project ExampleApp/ExampleApp.xcodeproj \
+            -scheme ExampleApp \
+            -clonedSourcePackagesDirPath SourcePackages
+
+      - name: Build ExampleApp
+        env:
+          DESTINATION: ${{ steps.ios.outputs.destination }}
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          xcodebuild build \
+            -project ExampleApp/ExampleApp.xcodeproj \
+            -scheme ExampleApp \
+            -configuration "${{ matrix.configuration }}" \
+            -destination "${DESTINATION}" \
+            -clonedSourcePackagesDirPath SourcePackages \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee xcodebuild-example.log
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-${{ matrix.configuration }}-failure
+          path: xcodebuild-example.log
+          if-no-files-found: ignore
+
+  mermaid-hosted-integration:
+    name: ExampleApp / Mermaid integration
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+
+      - name: Verify candidate checkout
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          echo "candidate_sha=${CANDIDATE_SHA}"
+          echo "checkout_sha=${actual_sha}"
+          test "${actual_sha}" = "${CANDIDATE_SHA}"
+
+      - name: Set up pinned iOS toolchain
+        id: ios
+        uses: ./.github/actions/setup-ios
+        with:
+          xcode-app: ${{ env.XCODE_APP }}
+          xcode-version: ${{ env.XCODE_VERSION }}
+          xcode-build: ${{ env.XCODE_BUILD }}
+          simulator-name: ${{ env.IOS_SIM_NAME }}
+          simulator-os: ${{ env.IOS_SIM_OS }}
+
+      - name: Resolve ExampleApp dependencies
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies \
+            -project ExampleApp/ExampleApp.xcodeproj \
+            -scheme ExampleApp \
+            -clonedSourcePackagesDirPath SourcePackages
+
+      - name: Boot app-hosted Simulator
+        env:
+          SIMULATOR_UDID: ${{ steps.ios.outputs.simulator_udid }}
+        run: |
+          set -euo pipefail
+          xcrun simctl boot "${SIMULATOR_UDID}" || true
+          xcrun simctl bootstatus "${SIMULATOR_UDID}" -b
+
+      - name: Test app-hosted Mermaid integration
+        env:
+          DESTINATION: ${{ steps.ios.outputs.destination }}
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          xcodebuild test \
+            -project ExampleApp/ExampleApp.xcodeproj \
+            -scheme ExampleApp \
+            -configuration Debug \
+            -destination "${DESTINATION}" \
+            -clonedSourcePackagesDirPath SourcePackages \
+            -resultBundlePath ExampleAppMermaidTests.xcresult \
+            -only-testing:ExampleAppMermaidIntegrationTests \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee xcodebuild-mermaid-hosted.log
+
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-mermaid-integration-failure
+          path: |
+            xcodebuild-mermaid-hosted.log
+            ExampleAppMermaidTests.xcresult
           if-no-files-found: ignore

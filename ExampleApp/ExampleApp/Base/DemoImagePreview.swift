@@ -1,25 +1,44 @@
 import UIKit
 import InkMarkdown
 
+enum DemoPresentationContext {
+  /// 返回当前前台 Scene 的最上层展示控制器，供 SwiftUI Demo 注入 UIKit 预览入口。
+  static func topViewController() -> UIViewController? {
+    guard let root = UIApplication.shared.connectedScenes
+      .compactMap({ $0 as? UIWindowScene })
+      .first(where: { $0.activationState == .foregroundActive })?
+      .windows
+      .first(where: \.isKeyWindow)?
+      .rootViewController
+    else { return nil }
+
+    var top = root
+    while let presented = top.presentedViewController {
+      top = presented
+    }
+    return top
+  }
+}
+
 extension UIViewController {
   /// 弹出 InkMarkdown 自带的全屏图片预览；无可用 `UIImage` 时不展示。
   ///
   /// - Parameters:
   ///   - source: 图片来源，供预览控制器后台拉取高清图。
   ///   - image: 列表中已有的降采样占位图。
-  ///   - loader: 高清图加载器；为 `nil` 时预览仅展示占位图。
-  ///   - previewPolicy: 高清解码与缓存策略，默认 bypass Store。
+  ///   - rendering: 完整图片配置；省略时只展示已有图片。
+  ///   - previewPolicy: 高清解码尺寸策略，缓存由后端拥有。
   func presentInkImagePreview(
     source: ImageSource,
     image: UIImage?,
-    loader: InkImageLoading? = nil,
+    rendering: InkImageRendering? = nil,
     previewPolicy: PreviewLoadPolicy = PreviewLoadPolicy()
   ) {
     guard let image else { return }
     let preview = InkImagePreviewController(
       source: source,
       displayImage: image,
-      loader: loader,
+      rendering: rendering,
       previewPolicy: previewPolicy
     )
     preview.modalPresentationStyle = .fullScreen
@@ -33,11 +52,10 @@ extension InkAppearance {
     imageRendering.tapAction = .callback
     let rendering = imageRendering
     imageRendering.onImageTap = { source, image in
-      let loader = InkImageStore.shared.loader(for: rendering)
       presentingViewController()?.presentInkImagePreview(
         source: source,
         image: image,
-        loader: loader
+        rendering: rendering
       )
     }
   }

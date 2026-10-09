@@ -9,6 +9,7 @@ API 依赖参考指南，记录项目依赖的关键 API 以及外部库对比�
 | swift-markdown 的解析入口、节点、遍历与改写 | [swift-markdown API 速查](swift-markdown-api-guide.md) |
 | Foundation / UIKit 富文本与 TextKit 类型 | [Apple 文本系统 API 速查](apple-text-system-api-guide.md) |
 | iOS Markdown 开源库对比 | [iOS Markdown 库定位对比](ios-markdown-ecosystem.md) |
+| SwiftUI Markdown 上游事实研究 | [SwiftUI Markdown 生态研究](swiftui-markdown-ecosystem-research.md) |
 | InkMarkdown 内部模块划分 | [贡献者文档：模块详解](../contributor-guide/05-modules.md) |
 | Markdown 节点渲染规范 | [渲染语义规范](../spec/README.md) |
 

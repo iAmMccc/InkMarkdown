@@ -1,0 +1,114 @@
+Sources/InkMarkdown/Parser/InkLineClassifier.swift:4:public enum InkLineKind: Equatable {
+Sources/InkMarkdown/Parser/InkLineClassifier.swift:22:public enum InkLineClassifier {
+Sources/InkMarkdownLaTeX/InkMarkdownLaTeX.swift:5:public enum InkMarkdownLaTeX {
+Sources/InkMarkdownMermaid/InkMarkdownMermaid.swift:6:public enum InkMarkdownMermaid {
+Sources/InkMarkdown/Rendering/Block/InkBlockRenderer.swift:11:public enum InkBlockRenderer {
+Sources/InkMarkdown/Parser/InkParser.swift:8:public enum InkParser {
+Sources/InkMarkdown/Rendering/Block/InkAttributedTextBlock.swift:4:public struct InkAttributedTextBlock: InkRenderableBlock, InkReusableBlock, @unchecked Sendable {
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:6:@_spi(InkMarkdown) import InkMarkdown
+Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift:21:public final class InkMarkdownRenderSession: ObservableObject {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:27:public struct InkAppearance: Sendable {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:97:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:123:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:166:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:193:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:208:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:240:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:267:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:332:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:349:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:362:public extension InkAppearance {
+Sources/InkMarkdown/Configuration/InkAppearance.swift:444:public extension InkAppearance {
+Sources/InkMarkdownSwiftUI/Views/InkMarkdownView.swift:33:public struct InkMarkdownView: View {
+Sources/InkMarkdown/Rendering/InkStreamRenderer.swift:9:@_spi(InkMarkdown)
+Sources/InkMarkdown/Rendering/InkStreamRenderer.swift:10:public struct InkStreamSourceLimit: Sendable {
+Sources/InkMarkdown/Rendering/InkStreamRenderer.swift:75:public final class InkStreamRenderer: @unchecked Sendable {
+Sources/InkMarkdown/Rendering/InkStreamRenderer.swift:1064:@_spi(Performance) public enum InkStreamingPerformanceBenchmark {
+Sources/InkMarkdown/Configuration/InkRenderEnvironment.swift:8:public struct InkRenderEnvironment: Sendable, Hashable {
+Sources/InkMarkdownSwiftUI/Views/InkStreamMarkdownView.swift:39:public struct InkStreamMarkdownView: View {
+Sources/InkMarkdown/Rendering/Block/InkThoughtBlockHandler.swift:13:public struct InkThoughtBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+Sources/InkMarkdown/Rendering/Generated/InkMermaidIntegration.swift:5:public struct InkMermaidRendering: Equatable, Sendable {
+Sources/InkMarkdown/Rendering/Generated/InkMermaidIntegration.swift:21:public final class InkMermaidGeneratedImageLoader: InkGeneratedImageLoading, InkConfigurationSemanticsProviding, @unchecked Sendable {
+Sources/InkMarkdown/Rendering/Generated/InkMermaidIntegration.swift:75:public struct InkMermaidBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownRepresentable.swift:6:@_spi(InkMarkdown) import InkMarkdown
+Sources/InkMarkdown/Rendering/Generated/InkLaTeXIntegration.swift:5:public struct InkLaTeXRendering: Equatable, Sendable {
+Sources/InkMarkdown/Rendering/Generated/InkLaTeXIntegration.swift:56:public struct InkLaTeXGeneratedImageLoader: InkGeneratedImageLoading, InkConfigurationSemanticsProviding {
+Sources/InkMarkdown/Rendering/Generated/InkLaTeXIntegration.swift:114:public struct InkLaTeXInlineSyntax: InkInlineSyntax, InkConfigurationSemanticsProviding {
+Sources/InkMarkdown/Rendering/Generated/InkLaTeXIntegration.swift:182:public struct InkLaTeXBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+Sources/InkMarkdown/Rendering/Block/InkBlockHandler.swift:26:public protocol InkBlockHandler {
+Sources/InkMarkdown/Rendering/Block/InkBlockHandler.swift:62:public extension InkBlockHandler {
+Sources/InkMarkdown/Rendering/Block/InkBlockHandler.swift:94:public struct InkCodeBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+Sources/InkMarkdown/Rendering/Block/InkBlockHandler.swift:114:public struct InkThematicBreakHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+Sources/InkMarkdown/Rendering/Block/InkBlockHandler.swift:134:public struct InkTableBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXRenderRequest.swift:6:public enum InkLaTeXRenderMode: String, Hashable, Sendable {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXRenderRequest.swift:12:public struct InkLaTeXColor: Hashable, Sendable {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXRenderRequest.swift:90:public struct InkLaTeXStyle: Hashable, Sendable {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXRenderRequest.swift:136:public struct InkLaTeXRenderRequest: Hashable, Sendable {
+Sources/InkMarkdown/Rendering/Components/InkStreamTableView.swift:19:public final class InkStreamTableView: UIView {
+Sources/InkMarkdown/Configuration/InkSemanticIdentity.swift:8:public struct InkSemanticIdentity: Hashable, Sendable, ExpressibleByStringLiteral {
+Sources/InkMarkdown/Configuration/InkSemanticIdentity.swift:33:public protocol InkSemanticIdentityProviding {
+Sources/InkMarkdown/Configuration/InkSemanticIdentity.swift:38:public extension InkSemanticIdentityProviding {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXSyntax.swift:4:public enum InkLaTeXDelimiter: String, Hashable, Sendable {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXSyntax.swift:16:public struct InkLaTeXParseOptions: Sendable {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXSyntax.swift:37:public struct InkLaTeXExpression: Sendable {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXSyntax.swift:57:public enum InkLaTeXError: Error, Equatable, Sendable {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXSyntax.swift:90:public enum InkLaTeXSyntax {
+Sources/InkMarkdown/Rendering/Image/DisplayContext.swift:6:public struct DisplayContext: Hashable, Sendable {
+Sources/InkMarkdown/Rendering/Components/InkTableBlock.swift:5:public enum InkTableLayoutMode: Sendable, Equatable {
+Sources/InkMarkdown/Rendering/Components/InkTableBlock.swift:14:public struct InkTableBlock: InkRenderableBlock, InkReusableBlock {
+Sources/InkMarkdown/Rendering/Components/InkTableBlock.swift:119:public extension InkTableBlock {
+Sources/InkMarkdown/Configuration/InkConfiguration.swift:6:public protocol InkConfigurationSemanticsProviding: Sendable, InkSemanticIdentityProviding {
+Sources/InkMarkdown/Configuration/InkConfiguration.swift:48:public struct InkConfiguration: Sendable {
+Sources/InkMarkdown/Rendering/Image/InkImagePreviewController.swift:11:public struct PreviewLoadPolicy: Sendable {
+Sources/InkMarkdown/Rendering/Image/InkImagePreviewController.swift:80:public final class InkImagePreviewController: UIViewController {
+Sources/InkMarkdown/Rendering/Image/InkImageBlock.swift:11:public final class InkImageBlock: UIView, InkRenderableBlock, InkReusableBlock {
+Sources/InkMarkdown/Rendering/Image/InkImageBlock.swift:414:@available(*, deprecated, renamed: "InkImageBlock", message: "请改用 InkImageBlock。")
+Sources/InkMarkdown/Rendering/Image/InkImageBlock.swift:415:public typealias InkImageBlockView = InkImageBlock
+Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownContainerView.swift:6:@_spi(InkMarkdown) import InkMarkdown
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXImageRenderer.swift:4:public struct InkLaTeXRenderResult: @unchecked Sendable {
+Sources/InkMarkdown/Rendering/LaTeX/InkLaTeXImageRenderer.swift:20:public struct InkLaTeXImageRenderer: Sendable {
+Sources/InkMarkdown/Rendering/AttributedString/InkAttributedRenderer.swift:20:public struct InkAttributedRenderer {
+Sources/InkMarkdown/Rendering/Block/InkRenderableBlock.swift:8:public protocol InkRenderableBlock {
+Sources/InkMarkdown/Rendering/Block/InkRenderableBlock.swift:17:public protocol InkReusableBlock: InkRenderableBlock {
+Sources/InkMarkdownSwiftUI/Modifiers/InkConfigurationModifier.swift:15:public extension EnvironmentValues {
+Sources/InkMarkdownSwiftUI/Modifiers/InkConfigurationModifier.swift:23:public extension View {
+Sources/InkMarkdown/Rendering/Components/InkCodeBlockView.swift:4:public struct InkCodeBlock: InkRenderableBlock, InkReusableBlock {
+Sources/InkMarkdown/Rendering/Image/DefaultURLSessionImageLoader.swift:8:public final class DefaultURLSessionImageLoader: InkImageLoading, @unchecked Sendable {
+Sources/InkMarkdown/Rendering/Image/InkImageRendering.swift:12:public struct ImageSizing: Sendable {
+Sources/InkMarkdown/Rendering/Image/InkImageRendering.swift:46:public enum ImageTapAction: Sendable, Hashable {
+Sources/InkMarkdown/Rendering/Image/InkImageRendering.swift:58:public enum AnimatedImagePolicy: Sendable, Hashable {
+Sources/InkMarkdown/Rendering/Image/InkImageRendering.swift:85:public struct InkImageRendering: Sendable {
+Sources/InkMarkdown/Rendering/Image/InkImageBlockHandler.swift:9:public struct InkImageBlockHandler: InkBlockHandler, InkConfigurationSemanticsProviding {
+Sources/InkMarkdown/Rendering/InkInlineSyntax.swift:10:public struct InkInlineContext: Sendable {
+Sources/InkMarkdown/Rendering/InkInlineSyntax.swift:51:public protocol InkInlineSyntax {
+Sources/InkMarkdown/Rendering/Image/ImageSecurityPolicy.swift:11:public struct ImageSecurityPolicy: Sendable, Hashable {
+Sources/InkMarkdown/Rendering/Image/ImageLoadError.swift:2:public enum ImageLoadError: Error, Sendable {
+Sources/InkMarkdown/Rendering/Image/ImageLoadError.swift:28:public enum ImageRejectReason: Sendable {
+Sources/InkMarkdown/Rendering/Image/ImageSource.swift:6:public struct ImageSource: Hashable, Sendable {
+Sources/InkMarkdownSwiftUI/Continuity/InkStreamingRemainderBlock.swift:6:@_spi(InkMarkdown) import InkMarkdown
+Sources/InkMarkdown/Rendering/Image/InkImageLoading.swift:7:public protocol InkImageLoading: Sendable, InkSemanticIdentityProviding {
+Sources/InkMarkdown/Rendering/Components/InkThematicBreakBlock.swift:4:public struct InkThematicBreakBlock: InkRenderableBlock, InkReusableBlock {
+Sources/InkMarkdown/Rendering/Image/InkImageStore.swift:26:public final class InkImageStore {
+Sources/InkMarkdown/Rendering/Components/InkMarkdownLayoutManager.swift:4:public extension NSAttributedString.Key {
+Sources/InkMarkdown/Rendering/Components/InkMarkdownLayoutManager.swift:10:public struct InkInlineCodeBackgroundInfo {
+Sources/InkMarkdown/Rendering/Components/InkMarkdownLayoutManager.swift:27:public struct InkBlockquoteBarInfo {
+Sources/InkMarkdown/Rendering/Components/InkMarkdownLayoutManager.swift:42:public final class InkMarkdownLayoutManager: NSLayoutManager {
+Sources/InkMarkdown/Rendering/Mermaid/InkMermaidTypes.swift:9:public enum InkMermaidFence {
+Sources/InkMarkdown/Rendering/Mermaid/InkMermaidTypes.swift:16:public enum InkMermaidTheme: String, Hashable, Sendable {
+Sources/InkMarkdown/Rendering/Mermaid/InkMermaidTypes.swift:22:public struct InkMermaidDisplayContext: Hashable, Sendable {
+Sources/InkMarkdown/Rendering/Mermaid/InkMermaidTypes.swift:35:public struct InkMermaidRenderLimits: Hashable, Sendable {
+Sources/InkMarkdown/Rendering/Mermaid/InkMermaidTypes.swift:58:public struct InkMermaidRenderRequest: Hashable, Sendable {
+Sources/InkMarkdown/Rendering/Mermaid/InkMermaidTypes.swift:70:public struct InkMermaidRenderResult {
+Sources/InkMarkdown/Rendering/Mermaid/InkMermaidTypes.swift:83:public enum InkMermaidRenderError: Error, Equatable, Sendable {
+Sources/InkMarkdown/Rendering/Mermaid/InkMermaidTypes.swift:102:public extension InkMermaidRenderRequest {
+Sources/InkMarkdown/Rendering/Image/InkGeneratedImageLoading.swift:7:public protocol InkGeneratedImageLoading: InkImageLoading {
+Sources/InkMarkdown/Rendering/Image/InkGeneratedImageLoading.swift:14:public extension InkGeneratedImageLoading {
+Sources/InkMarkdown/Rendering/Components/InkThoughtBlock.swift:39:public struct InkThoughtBlock: InkRenderableBlock, InkReusableBlock {
+Sources/InkMarkdown/Rendering/Components/InkThoughtBlock.swift:158:public final class InkThoughtBlockView: UIView {
+Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownCoordinator.swift:6:@_spi(InkMarkdown) import InkMarkdown
+Sources/InkMarkdown/Rendering/Image/InkImageAttachment.swift:19:public final class InkImageAttachment: NSTextAttachment, @unchecked Sendable {
+Sources/InkMarkdown/Rendering/Image/InkImageAttachment.swift:447:public extension InkImageAttachment {
+Sources/InkMarkdown/Rendering/Mermaid/InkMermaidImageRenderer.swift:10:public final class InkMermaidImageRenderer: NSObject {
+Sources/InkMarkdown/Rendering/Image/DisplayKey.swift:7:public struct DisplayKey: Hashable, Sendable {
+Sources/InkMarkdown/Rendering/Image/InkGeneratedImageRequest.swift:8:public struct InkGeneratedImageRequest: Hashable, Sendable {
+Sources/InkMarkdownSwiftUI/Continuity/InkBlockPresentationContinuity.swift:8:@_spi(InkMarkdown) import InkMarkdown

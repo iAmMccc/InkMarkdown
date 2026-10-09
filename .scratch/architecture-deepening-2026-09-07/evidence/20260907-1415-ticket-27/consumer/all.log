@@ -1,0 +1,12 @@
+=== BUILD InkMarkdownCoreConsumer ===
+EXIT_InkMarkdownCoreConsumer:0
+1861:** BUILD SUCCEEDED **
+=== BUILD InkMarkdownSwiftUIConsumer ===
+EXIT_InkMarkdownSwiftUIConsumer:0
+2046:** BUILD SUCCEEDED **
+=== BUILD InkMarkdownLaTeXConsumer ===
+EXIT_InkMarkdownLaTeXConsumer:0
+2436:** BUILD SUCCEEDED **
+=== BUILD InkMarkdownMermaidConsumer ===
+EXIT_InkMarkdownMermaidConsumer:0
+2031:** BUILD SUCCEEDED **

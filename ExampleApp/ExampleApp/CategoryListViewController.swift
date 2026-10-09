@@ -1,24 +1,23 @@
-import UIKit
-import InkMarkdown
+//
+//  CategoryListViewController.swift
+//  ExampleApp
+//
+//  Created by InkMarkdown on 2026/8/18.
+//
 
-/// 第二层：分类下的子列表，点击进入详情。
+import UIKit
+import SwiftUI
+import InkMarkdown
+import InkMarkdownSwiftUI
+
+/// 第二层：指定 UI 框架下的功能测试用例列表（UIKit 与 SwiftUI 1:1 对称）。
 final class CategoryListViewController: DemoListViewController {
 
-  private let category: DemoCategory
-  private let sections: [DemoSection]
+  private let mainCategory: MainCategory
+  private let scenarios = DemoScenario.allCases
 
-  init(category: DemoCategory) {
-    self.category = category
-    switch category {
-    case .markdownStandard:
-      self.sections = DemoCatalog.markdownStandardSections()
-    case .customComponent:
-      self.sections = DemoCatalog.customComponentSections()
-    case .streaming:
-      self.sections = DemoCatalog.streamingSections()
-    case .integration:
-      self.sections = DemoCatalog.integrationSections()
-    }
+  init(mainCategory: MainCategory) {
+    self.mainCategory = mainCategory
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -29,35 +28,26 @@ final class CategoryListViewController: DemoListViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    title = category.title
+    title = mainCategory.title
   }
 
   // MARK: - DataSource
 
-  override func numberOfSections(in tableView: UITableView) -> Int {
-    sections.count
-  }
-
   override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    sections[section].rows.count
+    scenarios.count
   }
 
   override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-    sections[section].title
+    "测试用例集 (\(mainCategory == .uikitEngine ? "UIKit 渲染引擎" : "SwiftUI 适配器"))"
   }
 
   override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-    sections[section].footer
+    "两套 UI 框架共享相同的底层渲染规范与语义。"
   }
 
   override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    let entry = sections[indexPath.section].rows[indexPath.row]
-    switch entry {
-    case .component(let component):
-      return dequeueSubtitleCell(title: component.displayName, subtitle: component.subtitle)
-    case .scenario(let scenario):
-      return dequeueSubtitleCell(title: scenario.title, subtitle: scenario.subtitle)
-    }
+    let scenario = scenarios[indexPath.row]
+    return dequeueSubtitleCell(title: scenario.title, subtitle: scenario.subtitle)
   }
 
   // MARK: - Delegate
@@ -66,36 +56,50 @@ final class CategoryListViewController: DemoListViewController {
     super.tableView(tableView, didSelectRowAt: indexPath)
     guard let nav = navigationController else { return }
 
-    let entry = sections[indexPath.section].rows[indexPath.row]
-    switch entry {
-    case .component(let component):
-      let pager = ComponentPagerViewController(component: component)
-      nav.pushViewController(pager, animated: true)
+    let scenario = scenarios[indexPath.row]
+    let vc = viewController(for: scenario)
+    nav.pushViewController(vc, animated: true)
+  }
 
-    case .scenario(let scenario):
-      let vc = viewController(for: scenario)
-      nav.pushViewController(vc, animated: true)
+  private func viewController(for scenario: DemoScenario) -> UIViewController {
+    switch mainCategory {
+    case .uikitEngine:
+      switch scenario {
+      case .standardStatic:
+        return UIKitStandardMarkdownDemoViewController()
+      case .customComponents:
+        return UIKitComponentsDemoViewController()
+      case .configuration:
+        return UIKitConfigurationDemoViewController()
+      case .streamingDocument:
+        return UIKitStreamingMarkdownViewController()
+      case .aiChat:
+        return SSEChatViewController()
+      case .longTextPerformance:
+        return MarkdownDetailViewController(title: scenario.title, resourceName: "comprehensive-readme")
+      }
+
+    case .swiftUIAdapter:
+      switch scenario {
+      case .standardStatic:
+        return hostingController(SwiftUIStaticMarkdownDemoView(), title: scenario.title)
+      case .customComponents:
+        return hostingController(SwiftUIComponentsDemoView(), title: scenario.title)
+      case .configuration:
+        return hostingController(SwiftUIConfigurationDemoView(), title: scenario.title)
+      case .streamingDocument:
+        return hostingController(SwiftUIStreamingMarkdownDemoView(), title: scenario.title)
+      case .aiChat:
+        return hostingController(SwiftUIChatDemoView(), title: scenario.title)
+      case .longTextPerformance:
+        return hostingController(SwiftUILongTextDemoView(), title: scenario.title)
+      }
     }
   }
 
-  private func viewController(for scenario: Scenario) -> UIViewController {
-    switch scenario {
-    case .comprehensiveReadme:
-      return MarkdownDetailViewController(title: scenario.title, resourceName: "comprehensive-readme")
-    case .localFile:
-      return MarkdownDetailViewController(title: scenario.title, resourceName: "comprehensive-readme")
-    case .serverJSON:
-      return ServerMarkdownViewController()
-    case .sseStreaming:
-      return SSEChatViewController()
-    case .streamingPerformance:
-      return StreamingPerformanceViewController()
-    case .imageRendering:
-      return ImageIntegrationViewController()
-    case .imageRenderingDemo:
-      return ImageDemoViewController()
-    case .diagramRenderingDemo:
-      return GeneratedContentDemoViewController()
-    }
+  private func hostingController<Content: View>(_ rootView: Content, title: String) -> UIViewController {
+    let controller = UIHostingController(rootView: rootView)
+    controller.title = title
+    return controller
   }
 }

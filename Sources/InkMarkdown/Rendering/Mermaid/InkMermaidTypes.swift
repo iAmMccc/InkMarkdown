@@ -95,7 +95,7 @@ public enum InkMermaidRenderError: Error, Equatable, Sendable {
   case snapshotFailed
   case pngEncodingFailed
   case timedOut
-  /// 历史兼容 case：`InkMermaidRenderScheduler` 不再抛出；Mermaid 准入队列上限由 `InkImageStore` 控制。
+  /// 历史兼容 case：`InkMermaidRenderScheduler` 不再抛出；Mermaid 准入队列上限由图片后端控制。
   case queueFull(limit: Int)
 }
 

@@ -1,24 +1,25 @@
 # 二、架构设计
 
-本文介绍解析、富文本、块路由和流式渲染的分层设计，以及自定义扩展点的边界。
+本文介绍 UIKit rendering engine 的解析、富文本、块路由和流式渲染分层，以及自定义扩展点的边界。
 
 解析使用 swift-markdown。渲染分为两条路径：可包含在富文本中的元素使用 `NSAttributedString`，独立块元素使用 `UIView`。流式渲染基于这两者提供增量更新与双缓冲机制。
 
-版本演进（见 [roadmap](../roadmap.md)）：v2 会在解析与渲染之间引入 **InkIR + 可选 Transformer**，方便组合与测试复杂语义变换。渲染后端仍然基于 UIKit。v1 保持由 Markup 直接渲染。
+`0.0.1` 已发布的 implementation 保持由 Markup 直接渲染。未发布的 v0.0.2 已在该 engine 外实现独立 `InkMarkdownSwiftUI` adapter product，使 SwiftUI 宿主复用相同语义；整体范围、数据流与剩余发布验证见 [SwiftUI Adapter 总体技术设计](08-swiftui-adapter-architecture.md) 和 [当前状态](../current-status.md)。v2 才会在解析与渲染之间引入 **InkIR + 可选 Transformer**，并据真实需求评估 native SwiftUI renderer。
 
 文本绘制默认使用 **TextKit 1**（`InkMarkdownLayoutManager`）。
 
 ## 分层设计
 
-| 层级 | 主要类型 |
+| 层级 | 主要类型 / 职责 |
 | --- | --- |
-| 接入层 | `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer` / `InkStreamTableView` |
+| SwiftUI adapter（v0.0.2） | 独立 `InkMarkdownSwiftUI` product；托管 UIKit view、configuration snapshot、尺寸与生命周期 |
+| UIKit 接入层 | `InkAttributedRenderer`、`InkBlockRenderer`、`InkStreamRenderer` / `InkStreamTableView` |
 | 配置层 | `InkConfiguration`、`InkAppearance` |
 | 解析层 | `InkParser`、`InkLineClassifier` → `Document` / `Markup` |
 | 富文本层 | `InkAttributedRenderer` + `InkTextContext` → `InkMarkdownLayoutManager` |
 | 块路由层 | `InkBlockRenderer` + Handlers → CodeBlock / Table / ThematicBreak |
 
-各层间仅传递：`Document` / `Markup` / `NSAttributedString` / `InkRenderableBlock`。
+UIKit engine 各层间传递 `Document` / `Markup` / `NSAttributedString` / `InkRenderableBlock`。SwiftUI adapter 只在 product seam 使用这些既有语义与 UIKit 容器，不把 SwiftUI 类型反向传入 engine。
 
 ## 双通道渲染
 
@@ -50,6 +51,7 @@
 | `Rendering/InkTextContext.swift` | 行内样式 context（internal） |
 | `Rendering/InkInlineSyntax.swift` | 行内语法自定义扩展点 |
 | `Rendering/InkStreamRenderer.swift` | 流式渲染、增量解析与性能基准 |
+| `../InkMarkdownSwiftUI/`（v0.0.2） | 独立 SwiftUI adapter target；详细结构由总体技术设计与后续 module 文档定义 |
 
 ## 数据流 (`InkBlockRenderer.render`)
 
@@ -68,15 +70,17 @@
 | 链接点击回调 | `(URL, UIView) -> Bool` | `linkTapHandler`（返回 `true` 表示已处理） |
 | 样式配置 | `InkAppearance` | `appearance` / `shared` |
 
-### 当前版本 vs v2 架构
+### v0.0.2、当前 UIKit engine 与 v2 架构
 
 | 时机 | 机制 | 适用场景 |
 | --- | --- | --- |
+| SwiftUI product seam（v0.0.2） | configuration / Environment adapter | 向 UIKit engine 注入 view-scoped 渲染语义，不复制 parser 或 renderer |
 | 解析前 | `sourceFilter` | 修改原始文本字符串 |
 | 渲染行内 | `InkInlineSyntax` | 单端轻量语法解析（如简单的 `@` 标识） |
 | 渲染块 | `InkBlockHandler` | 将整块替换为 `UIView` |
 | 点击交互 | `linkTapHandler` | 拦截与处理链接 |
 | **v2 渲染前** | **`InkTransformer`（IR）** | 复杂多规则变换、需组合与单测的树结构操作 |
+| **未来 native SwiftUI renderer** | **InkIR consumer（待决）** | 仅在 InkIR 成熟且存在真实第二 adapter 需求后评估 |
 
 简单规则使用前四项扩展点即可。规则较多或需要单独测试语义变换时，使用 Phase B 规划的 IR 转换架构。
 

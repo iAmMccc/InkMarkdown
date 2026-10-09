@@ -1,0 +1,87 @@
+import SwiftUI
+import InkMarkdown
+import InkMarkdownSwiftUI
+
+/// 展示显式配置和 `.inkConfiguration(...)` 环境注入两种用法。
+struct SwiftUIConfigurationDemoView: View {
+
+  @State private var usesLargeText = false
+  @State private var usesCompactSpacing = false
+  @State private var isThoughtCollapsible = true
+  @State private var usesInitiallyCollapsed = false
+
+  private let markdown = """
+  # 配置驱动的 Markdown
+
+  当前配置会同时影响显式传入配置的视图和通过 Environment 获取配置的视图。
+
+  <think>
+  配置页 Thought：先检查 `inline code` 背景，再手动折叠并观察配置变化。
+  </think>
+
+  Thought 后的普通段落用于检查间距和高度变化。
+
+  ## 配置项
+
+  - 正文字号与行高
+  - 标题字号
+  - 段落间距
+  - 链接颜色
+  """
+
+  private var configuration: InkConfiguration {
+    var config = InkConfiguration.standard
+    config.appearance.text.fontSize = usesLargeText ? 20 : 17
+    config.appearance.text.lineHeight = usesLargeText ? 32 : 28
+    config.appearance.text.paragraphSpacing = usesCompactSpacing ? 6 : 12
+    config.appearance.heading.h1FontSize = usesLargeText ? 28 : 21
+    config.appearance.heading.h1LineHeight = usesLargeText ? 36 : 30
+    config.appearance.link.color = .systemBlue
+    config.appearance.thought.isCollapsible = isThoughtCollapsible
+    config.appearance.thought.isInitiallyCollapsed = usesInitiallyCollapsed
+    return config
+  }
+
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("InkConfiguration")
+            .font(.title2)
+            .fontWeight(.semibold)
+          Text("控件改变的是同一份配置值；视图会按 SwiftUI 更新重新渲染。")
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+        }
+
+        VStack(alignment: .leading, spacing: 10) {
+          Toggle("放大正文与标题", isOn: $usesLargeText)
+          Toggle("收紧段落间距", isOn: $usesCompactSpacing)
+          Toggle("允许 Thought 折叠", isOn: $isThoughtCollapsible)
+          Toggle("调用方初始折叠（显式 override）", isOn: $usesInitiallyCollapsed)
+          Text("检查 Thought 底色、inline code 背景与卡片外正文边界；再切换折叠能力、字号和初始折叠，确认交互与布局同步。")
+            .font(.footnote)
+            .foregroundColor(.secondary)
+        }
+
+        Divider()
+
+        Text("显式传入 configuration")
+          .font(.headline)
+        InkMarkdownView(markdown, configuration: configuration)
+          .frame(maxWidth: .infinity, alignment: .leading)
+
+        Divider()
+
+        Text("通过 Environment 注入")
+          .font(.headline)
+        InkMarkdownView(markdown)
+          .inkConfiguration(configuration)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 20)
+    }
+    .navigationBarTitle("配置与 Environment", displayMode: .inline)
+  }
+}

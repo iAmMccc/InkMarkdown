@@ -7,7 +7,7 @@ import Markdown
 /// 正文段落里 `baseFont` 是正文字号，表格单元格里 `baseFont` 是表格数据行字号，
 /// 表头里则是表头字号（含字重）。行内语法扩展应基于此上下文渲染，
 /// 从而与所在容器的整体风格保持一致，而非各自硬读全局样式。
-public struct InkInlineContext {
+public struct InkInlineContext: Sendable {
 
   /// 当前上下文的基准字体（含字号与字重）。
   public let baseFont: UIFont

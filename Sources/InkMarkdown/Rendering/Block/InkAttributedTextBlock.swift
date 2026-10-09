@@ -1,26 +1,54 @@
 import UIKit
 
 /// 兜底块：把非自定义 UIView 的部分塞回 NSAttributedString，用 UITextView 渲染。
-public struct InkAttributedTextBlock: InkRenderableBlock {
-  public let attributedText: NSAttributedString
+public struct InkAttributedTextBlock: InkRenderableBlock, InkReusableBlock, @unchecked Sendable {
+  nonisolated(unsafe) public let attributedText: NSAttributedString
   /// 文本容器内边距。
-  public let insets: UIEdgeInsets
+  nonisolated public let insets: UIEdgeInsets
   /// 链接点击回调。命中 `.link` 属性时交还业务方处理；返回 `true` 拦截默认行为。
   /// 与表格单元格 `InkTableCellTextView` 共用同一套 `linkTapHandler` 语义，
   /// 使富文本兜底块里的链接（含业务自定义 scheme，如 `$标签$`）也能被拦截。
-  public let linkTapHandler: ((URL, UIView) -> Bool)?
+  nonisolated(unsafe) public let linkTapHandler: ((URL, UIView) -> Bool)?
+  nonisolated private let linkTapSemanticIdentity: InkSemanticIdentity?
 
-  public init(
+  nonisolated public init(
     attributedText: NSAttributedString,
-    insets: UIEdgeInsets = InkAppearance.shared.text.blockInsets,
     linkTapHandler: ((URL, UIView) -> Bool)? = nil
+  ) {
+    self.init(
+      attributedText: attributedText,
+      insets: InkAppearance.shared.text.blockInsets,
+      linkTapHandler: linkTapHandler,
+      linkTapSemanticIdentity: linkTapHandler == nil ? nil : .unique()
+    )
+  }
+
+  nonisolated public init(
+    attributedText: NSAttributedString,
+    insets: UIEdgeInsets,
+    linkTapHandler: ((URL, UIView) -> Bool)? = nil
+  ) {
+    self.init(
+      attributedText: attributedText,
+      insets: insets,
+      linkTapHandler: linkTapHandler,
+      linkTapSemanticIdentity: linkTapHandler == nil ? nil : .unique()
+    )
+  }
+
+  nonisolated init(
+    attributedText: NSAttributedString,
+    insets: UIEdgeInsets,
+    linkTapHandler: ((URL, UIView) -> Bool)?,
+    linkTapSemanticIdentity: InkSemanticIdentity?
   ) {
     self.attributedText = attributedText
     self.insets = insets
     self.linkTapHandler = linkTapHandler
+    self.linkTapSemanticIdentity = linkTapSemanticIdentity
   }
 
-  public func makeView() -> UIView {
+  @MainActor public func makeView() -> UIView {
     let textContainer = NSTextContainer(size: CGSize(width: 0, height: CGFloat.greatestFiniteMagnitude))
     textContainer.lineFragmentPadding = 0
     let layoutManager = InkMarkdownLayoutManager()
@@ -33,15 +61,33 @@ public struct InkAttributedTextBlock: InkRenderableBlock {
     textView.linkTapHandler = linkTapHandler
     textView.isEditable = false
     textView.isSelectable = true
-    // 有自定义 linkTapHandler 时关闭数据探测，避免系统自动识别与业务 scheme 抢占点击。
-    textView.dataDetectorTypes = linkTapHandler == nil ? UIDataDetectorTypes.link : []
+    // Markdown 文本在解析阶段已由引擎打上 .link 属性，无需开启正则数据探测，避免与富文本属性及手势冲突。
+    textView.dataDetectorTypes = []
     textView.backgroundColor = UIColor.clear
     textView.isScrollEnabled = false
+    textView.adjustsFontForContentSizeCategory = true
     textView.textContainerInset = insets
-    MainActor.assumeIsolated {
-      InkImageAttachment.bindAttachments(in: textStorage, layoutManager: layoutManager)
-    }
+    textView.bindInlineImageAttachments()
     return textView
+  }
+
+  @MainActor
+  public func updateExistingView(_ view: UIView) -> Bool {
+    guard let textView = view as? InkAttributedBlockTextView else { return false }
+    textView.linkTapHandler = linkTapHandler
+    textView.textStorage.setAttributedString(attributedText)
+    textView.textContainerInset = insets
+    textView.bindInlineImageAttachments()
+    textView.invalidateIntrinsicContentSize()
+    return true
+  }
+
+  @MainActor
+  public func hasEquivalentContent(to previous: any InkRenderableBlock) -> Bool {
+    guard let previous = previous as? InkAttributedTextBlock else { return false }
+    return attributedText.isEqual(to: previous.attributedText)
+      && insets == previous.insets
+      && linkTapSemanticIdentity == previous.linkTapSemanticIdentity
   }
 }
 
@@ -53,6 +99,58 @@ final class InkAttributedBlockTextView: UITextView, UITextViewDelegate {
 
   var linkTapHandler: ((URL, UIView) -> Bool)? {
     didSet { delegate = linkTapHandler == nil ? nil : self }
+  }
+
+  /// 宿主接收异步图片引起的高度变化；自身先失效文本测量。
+  var onInlineImageHeightChange: (() -> Void)?
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    bindInlineImageAttachments()
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    bindInlineImageAttachments()
+  }
+
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    guard previousTraitCollection?.displayScale != traitCollection.displayScale else { return }
+    bindInlineImageAttachments()
+  }
+
+  func bindInlineImageAttachments() {
+    InkImageAttachment.bindAttachments(in: self, onHeightChange: { [weak self] in
+      guard let self else { return }
+      self.invalidateIntrinsicContentSize()
+      self.setNeedsLayout()
+      self.onInlineImageHeightChange?()
+    })
+  }
+
+  override func sizeThatFits(_ size: CGSize) -> CGSize {
+    let targetWidth = InkDisplayMetrics.resolvedMeasurementWidth(
+      proposal: size.width,
+      bounds: bounds.width
+    )
+    guard targetWidth > 0, let layoutManager = textContainer.layoutManager else {
+      if targetWidth <= 0 {
+        return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
+      }
+      return super.sizeThatFits(size)
+    }
+    let contentWidth = max(0, targetWidth - textContainerInset.left - textContainerInset.right)
+    textContainer.size = CGSize(width: contentWidth, height: .greatestFiniteMagnitude)
+    bindInlineImageAttachments()
+    _ = layoutManager.glyphRange(for: textContainer)
+    let rect = layoutManager.usedRect(for: textContainer)
+    let calculatedHeight = ceil(rect.height + textContainerInset.top + textContainerInset.bottom)
+    return CGSize(width: targetWidth, height: calculatedHeight)
+  }
+
+  override var intrinsicContentSize: CGSize {
+    sizeThatFits(CGSize(width: bounds.width > 0 ? bounds.width : UIView.noIntrinsicMetric, height: .greatestFiniteMagnitude))
   }
 
   func textView(

@@ -28,6 +28,9 @@ enum Scenario {
   case imageRendering
   case imageRenderingDemo
   case diagramRenderingDemo
+  case swiftUIStatic
+  case swiftUIConfiguration
+  case swiftUIStreaming
 
   var title: String {
     switch self {
@@ -39,6 +42,9 @@ enum Scenario {
     case .imageRendering: return "图片渲染"
     case .imageRenderingDemo: return "图片渲染 Demo"
     case .diagramRenderingDemo: return "公式与图表 Demo"
+    case .swiftUIStatic: return "静态 Markdown View"
+    case .swiftUIConfiguration: return "配置与 Environment"
+    case .swiftUIStreaming: return "流式 Markdown View"
     }
   }
 
@@ -52,6 +58,9 @@ enum Scenario {
     case .imageRendering: return "块级可点放大，行内图文混排演示"
     case .imageRenderingDemo: return "10 个场景：网络图、Asset、Base64、块通道等"
     case .diagramRenderingDemo: return "LaTeX 公式 + Mermaid 26 种图表类型本地渲染"
+    case .swiftUIStatic: return "InkMarkdownView + 宿主 ScrollView"
+    case .swiftUIConfiguration: return "显式配置与 .inkConfiguration(...)"
+    case .swiftUIStreaming: return "RenderSession + InkStreamMarkdownView"
     }
   }
 }

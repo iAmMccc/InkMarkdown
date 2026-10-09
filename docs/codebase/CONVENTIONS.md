@@ -17,7 +17,7 @@
 
 - 库主模块为 `InkMarkdown`；测试使用 `@testable import InkMarkdown` 或 `@_spi(Performance)` 导入。
 - 性能基准接口置于 `@_spi(Performance)`，避免暴露至标准 public API。
-- Markdown 说明文档使用 `Package.swift` 的 `exclude` 选项，不参与编译。
+- 开发说明维护在 `docs/`；源码目录只保留构建所需资源及其许可证声明。
 
 ### 3) 代码格式与风格
 
@@ -34,9 +34,9 @@
 |-------|---------|----------|
 | 文本解析 | 不抛出异常；依赖 swift-markdown 的容错解析机制 | `InkParser` 同步返回 `Document` |
 | 内容渲染 | 未知的 inline 语法回退至默认子树；未知的 HTML 文本返回空字符串 | `renderInline` / `renderInlineHTML` |
-| 流式 `append` | 字符数超过 `maxParseLength` 时直接 `return` | `InkStreamRenderer.append` |
-| 流式 `finish` | 超过限制时截断缓存区后执行最终解析 | `finish()` 分支逻辑 |
-| 日志输出 | 未使用统一日志框架 | 源码中无 os.Logger 或 print 机制 |
+| 流式 `append` | 只把当前 snapshot 剩余容量内的 prefix 接受到 canonical source；容量耗尽后忽略后续输入 | `InkStreamRenderer.append` / `InkMarkdownRenderSession.append` |
+| 流式 `finish` | 只消费 append 入口已经接受的 canonical source，不再次独立截断 | `finish()` 与 promotion 路径 |
+| 内部降级诊断 | 仅在 `#if DEBUG` 中通过 Unified Logging 输出可定位信息；Release 静默降级，不增加 public callback，生产路径不直接使用 `print` | `InkBlockPresentationContinuity.diagnoseLocalFallback` |
 
 ### 5) 文档注释规范
 

@@ -1,0 +1,107 @@
+name: Set up pinned iOS toolchain
+description: Select and verify the repository's pinned Xcode and Simulator destination.
+
+inputs:
+  xcode-app:
+    description: Absolute path to the pinned Xcode application.
+    required: true
+  xcode-version:
+    description: Expected Xcode marketing version.
+    required: true
+  xcode-build:
+    description: Expected Xcode build number.
+    required: true
+  simulator-name:
+    description: Expected Simulator device name.
+    required: true
+  simulator-os:
+    description: Expected Simulator OS version.
+    required: true
+
+outputs:
+  destination:
+    description: Verified xcodebuild destination.
+    value: ${{ steps.destination.outputs.value }}
+  simulator_udid:
+    description: UDID of the verified Simulator.
+    value: ${{ steps.destination.outputs.udid }}
+
+runs:
+  using: composite
+  steps:
+    - name: Select pinned Xcode
+      shell: bash
+      env:
+        XCODE_APP: ${{ inputs.xcode-app }}
+      run: |
+        set -euo pipefail
+        if [[ ! -d "${XCODE_APP}" ]]; then
+          echo "::error::Pinned Xcode not found: ${XCODE_APP}"
+          ls -1 /Applications | grep -i '^Xcode' || true
+          exit 1
+        fi
+        sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
+        sudo xcodebuild -license accept || true
+        xcodebuild -version
+        swift --version
+
+    - name: Verify pinned Xcode build
+      shell: bash
+      env:
+        EXPECTED_VERSION: ${{ inputs.xcode-version }}
+        EXPECTED_BUILD: ${{ inputs.xcode-build }}
+      run: |
+        set -euo pipefail
+        actual_version=$(xcodebuild -version | awk '/Xcode /{print $2}')
+        actual_build=$(xcodebuild -version | awk '/Build version/{print $3}')
+        if [[ "${actual_version}" != "${EXPECTED_VERSION}" ]]; then
+          echo "::error::Xcode version mismatch (expected ${EXPECTED_VERSION}, got ${actual_version})"
+          exit 1
+        fi
+        if [[ "${actual_build}" != "${EXPECTED_BUILD}" ]]; then
+          echo "::error::Xcode build mismatch (expected ${EXPECTED_BUILD}, got ${actual_build})"
+          exit 1
+        fi
+
+    - name: Verify pinned Simulator
+      id: destination
+      shell: bash
+      env:
+        SIMULATOR_NAME: ${{ inputs.simulator-name }}
+        SIMULATOR_OS: ${{ inputs.simulator-os }}
+      run: |
+        set -euo pipefail
+        destination="platform=iOS Simulator,name=${SIMULATOR_NAME},OS=${SIMULATOR_OS}"
+        xcrun simctl list devices available -j > "${RUNNER_TEMP}/available-simulators.json"
+        simulator_udid=$(python3 - "${RUNNER_TEMP}/available-simulators.json" <<'PY'
+        import json
+        import os
+        import sys
+
+        path = sys.argv[1]
+        name = os.environ["SIMULATOR_NAME"]
+        expected_os = os.environ["SIMULATOR_OS"]
+        with open(path, encoding="utf-8") as handle:
+          data = json.load(handle)
+
+        matches = []
+        for runtime, devices in data.get("devices", {}).items():
+          if ".iOS-" not in runtime:
+            continue
+          runtime_os = runtime.rsplit(".iOS-", 1)[-1].replace("-", ".")
+          if runtime_os != expected_os and not runtime_os.startswith(expected_os + "."):
+            continue
+          for device in devices:
+            if device.get("name") == name and device.get("isAvailable", True):
+              matches.append(device.get("udid"))
+
+        if not matches:
+          raise SystemExit(
+            f"::error::Pinned Simulator unavailable: name={name!r}, OS={expected_os!r}"
+          )
+        print(matches[0])
+        PY
+        )
+        echo "Verified Simulator: ${SIMULATOR_NAME} / iOS ${SIMULATOR_OS} / ${simulator_udid}"
+        echo "value=${destination}" >> "${GITHUB_OUTPUT}"
+        echo "udid=${simulator_udid}" >> "${GITHUB_OUTPUT}"

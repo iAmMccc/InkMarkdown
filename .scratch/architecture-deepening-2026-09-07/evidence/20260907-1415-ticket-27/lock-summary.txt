@@ -1,0 +1,31 @@
+HEAD=f71cc292a5708cf910f0e9a36ce73c7dedd7bd89
+BRANCH=feat/swiftUI
+DATE=2026-09-07T06:17:08Z
+--- production/docs/tests status ---
+ M Sources/InkMarkdown/Rendering/Components/InkStreamTableView.swift
+ M Sources/InkMarkdown/Rendering/Components/InkTableBlock.swift
+ M Sources/InkMarkdown/Rendering/Components/InkTableBlockView.swift
+ M Sources/InkMarkdown/Rendering/Components/InkTableRenderHelper.swift
+ M Sources/InkMarkdown/Rendering/Image/InkImageAttachment.swift
+ M Sources/InkMarkdown/Rendering/Image/InkImageBlock.swift
+ M Sources/InkMarkdown/Rendering/Image/InkImagePreviewController.swift
+ M Sources/InkMarkdownSwiftUI/Bridge/InkMarkdownCoordinator.swift
+ M Sources/InkMarkdownSwiftUI/Session/InkMarkdownRenderSession.swift
+ M Tests/InkMarkdownSwiftUITests/InkBlockPresentationContinuityTests.swift
+ M Tests/InkMarkdownSwiftUITests/InkMarkdownRenderSessionTests.swift
+ M Tests/InkMarkdownTests/AccessibilityAndDynamicTypeTests.swift
+ M Tests/InkMarkdownTests/InkAuditSemanticRegressionTests.swift
+ M docs/contributor-guide/05-modules.md
+?? Sources/InkMarkdown/Rendering/Components/InkTablePresentation.swift
+?? Sources/InkMarkdown/Rendering/Image/InkImagePresentationLoad.swift
+?? Sources/InkMarkdownSwiftUI/Bridge/InkStreamingPresentationHost.swift
+?? Tests/InkMarkdownSwiftUITests/InkStreamingPresentationHostTests.swift
+?? Tests/InkMarkdownTests/InkControlledImageLoaderFixtureTests.swift
+?? Tests/InkMarkdownTests/InkImageAttachmentPresentationAdapterTests.swift
+?? Tests/InkMarkdownTests/InkImageBlockPresentationAdapterTests.swift
+?? Tests/InkMarkdownTests/InkImagePresentationLifetimeTests.swift
+?? Tests/InkMarkdownTests/InkImagePresentationLoadTests.swift
+?? Tests/InkMarkdownTests/InkImagePreviewLoadTests.swift
+?? Tests/InkMarkdownTests/InkTablePresentationTests.swift
+?? Tests/InkMarkdownTests/Support/
+--- git diff --check (selected) ---

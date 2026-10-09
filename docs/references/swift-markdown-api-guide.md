@@ -126,7 +126,7 @@ struct Printer: MarkupWalker {
 | `Link` | `destination?`、`title?` | 已渲染：链接颜色 + `linkTapHandler` |
 | `Image` | `source?`、alt 子节点 | 默认：降级为 `[🖼 …]` 占位；opt-in（`InkImageRendering.isEnabled`）：真图附件/块，见 [ADR-006](../decisions/ADR-006-opt-in-image-rendering.md) |
 | `InlineCode` | code | 已渲染：等宽字体 + 背景色 |
-| `Strikethrough` | 行内子节点 | 降级：仅保留文本，缺失删除线样式 |
+| `Strikethrough` | 行内子节点 | 已渲染：文本与行内代码写入 `.strikethroughStyle`；自定义 `inlineSyntaxes` 与图片叶子节点不保证该属性，见 [扩展语法](../spec/extended-syntax.md) |
 | `LineBreak` / `SoftBreak` | — | 已渲染：`\n` / 空格 |
 | `InlineHTML` | rawHTML | 降级：`<br>` 转换为换行；丢弃自定义标签 |
 | `CustomInline` / `SymbolLink` / `InlineAttributes` | — | 未独立处理 |

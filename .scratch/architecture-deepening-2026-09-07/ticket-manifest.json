@@ -1,0 +1,442 @@
+[
+  {
+    "id": 1,
+    "file": "issues/01-capture-current-baseline.md",
+    "title": "建立三个方向的当前可复查基线",
+    "spec": "spec.md",
+    "blocked_by": [],
+    "acceptance_ids": [
+      "G-07",
+      "G-08"
+    ]
+  },
+  {
+    "id": 2,
+    "file": "issues/02-table-source-regression.md",
+    "title": "固化表格来源和未显示参考行回归场景",
+    "spec": "table-spec.md",
+    "blocked_by": [
+      1
+    ],
+    "acceptance_ids": [
+      "T-01",
+      "T-03",
+      "T-04"
+    ]
+  },
+  {
+    "id": 3,
+    "file": "issues/03-table-cell-source.md",
+    "title": "让单元格来源成为一个不可错配的内部输入",
+    "spec": "table-spec.md",
+    "blocked_by": [
+      2
+    ],
+    "acceptance_ids": [
+      "T-01",
+      "T-02",
+      "T-03",
+      "T-11"
+    ]
+  },
+  {
+    "id": 4,
+    "file": "issues/04-table-layout-state.md",
+    "title": "集中表格测量和列宽失效状态",
+    "spec": "table-spec.md",
+    "blocked_by": [
+      3
+    ],
+    "acceptance_ids": [
+      "T-04",
+      "T-05",
+      "T-06",
+      "T-07"
+    ]
+  },
+  {
+    "id": 5,
+    "file": "issues/05-table-static-adapter.md",
+    "title": "迁移静态表格到集中呈现状态",
+    "spec": "table-spec.md",
+    "blocked_by": [
+      4
+    ],
+    "acceptance_ids": [
+      "T-01",
+      "T-02",
+      "T-05",
+      "T-08",
+      "T-10"
+    ]
+  },
+  {
+    "id": 6,
+    "file": "issues/06-table-stream-input.md",
+    "title": "迁移流式表格的输入接纳与参考行所有权",
+    "spec": "table-spec.md",
+    "blocked_by": [
+      4
+    ],
+    "acceptance_ids": [
+      "T-03",
+      "T-04",
+      "T-09"
+    ]
+  },
+  {
+    "id": 7,
+    "file": "issues/07-table-stream-layout.md",
+    "title": "迁移流式扩列和 resize 到同一布局规则",
+    "spec": "table-spec.md",
+    "blocked_by": [
+      6
+    ],
+    "acceptance_ids": [
+      "T-04",
+      "T-05",
+      "T-06",
+      "T-07",
+      "T-10"
+    ]
+  },
+  {
+    "id": 8,
+    "file": "issues/08-table-contract-old-plumbing.md",
+    "title": "删除表格旧平行输入协议",
+    "spec": "table-spec.md",
+    "blocked_by": [
+      5,
+      7
+    ],
+    "acceptance_ids": [
+      "T-11",
+      "G-02",
+      "G-09"
+    ]
+  },
+  {
+    "id": 9,
+    "file": "issues/09-table-acceptance.md",
+    "title": "完成表格方向验收和规格证据映射",
+    "spec": "table-spec.md",
+    "blocked_by": [
+      8
+    ],
+    "acceptance_ids": [
+      "T-01",
+      "T-02",
+      "T-03",
+      "T-04",
+      "T-05",
+      "T-06",
+      "T-07",
+      "T-08",
+      "T-09",
+      "T-10",
+      "T-11",
+      "T-12"
+    ]
+  },
+  {
+    "id": 10,
+    "file": "issues/10-image-controlled-loader.md",
+    "title": "建立可控图片加载事件 fixture",
+    "spec": "image-spec.md",
+    "blocked_by": [
+      1
+    ],
+    "acceptance_ids": [
+      "I-02",
+      "I-03",
+      "I-04"
+    ]
+  },
+  {
+    "id": 11,
+    "file": "issues/11-image-load-module.md",
+    "title": "实现共享 Store 呈现订阅生命周期",
+    "spec": "image-spec.md",
+    "blocked_by": [
+      10
+    ],
+    "acceptance_ids": [
+      "I-01",
+      "I-02",
+      "I-03",
+      "I-04",
+      "I-05"
+    ]
+  },
+  {
+    "id": 12,
+    "file": "issues/12-image-block-adapter.md",
+    "title": "迁移块级图片到共享生命周期",
+    "spec": "image-spec.md",
+    "blocked_by": [
+      11
+    ],
+    "acceptance_ids": [
+      "I-01",
+      "I-03",
+      "I-06"
+    ]
+  },
+  {
+    "id": 13,
+    "file": "issues/13-image-attachment-adapter.md",
+    "title": "迁移行内图片观察并保留宿主重绑语义",
+    "spec": "image-spec.md",
+    "blocked_by": [
+      11
+    ],
+    "acceptance_ids": [
+      "I-03",
+      "I-07",
+      "I-08"
+    ]
+  },
+  {
+    "id": 14,
+    "file": "issues/14-image-async-adapter.md",
+    "title": "为共享观察提供一次终结的 async adapter",
+    "spec": "image-spec.md",
+    "blocked_by": [
+      11
+    ],
+    "acceptance_ids": [
+      "I-09"
+    ]
+  },
+  {
+    "id": 15,
+    "file": "issues/15-image-preview-adapter.md",
+    "title": "迁移预览 Store 分支并保持显式直载",
+    "spec": "image-spec.md",
+    "blocked_by": [
+      14
+    ],
+    "acceptance_ids": [
+      "I-09",
+      "I-10"
+    ]
+  },
+  {
+    "id": 16,
+    "file": "issues/16-image-lifetime-contract.md",
+    "title": "验证释放并删除图片旧观察路径",
+    "spec": "image-spec.md",
+    "blocked_by": [
+      12,
+      13,
+      15
+    ],
+    "acceptance_ids": [
+      "I-05",
+      "I-11",
+      "I-12",
+      "G-02",
+      "G-09"
+    ]
+  },
+  {
+    "id": 17,
+    "file": "issues/17-image-acceptance.md",
+    "title": "完成图片方向契约与交互验收",
+    "spec": "image-spec.md",
+    "blocked_by": [
+      16
+    ],
+    "acceptance_ids": [
+      "I-01",
+      "I-02",
+      "I-03",
+      "I-04",
+      "I-05",
+      "I-06",
+      "I-07",
+      "I-08",
+      "I-09",
+      "I-10",
+      "I-11",
+      "I-12"
+    ]
+  },
+  {
+    "id": 18,
+    "file": "issues/18-host-handoff-regression.md",
+    "title": "固化宿主交接与周期作废关键场景",
+    "spec": "session-spec.md",
+    "blocked_by": [
+      1
+    ],
+    "acceptance_ids": [
+      "S-02",
+      "S-03",
+      "S-04",
+      "S-05",
+      "S-07",
+      "S-12"
+    ]
+  },
+  {
+    "id": 19,
+    "file": "issues/19-session-binding-grant.md",
+    "title": "把 Session 的 observer 与文本绑定收成一组资源",
+    "spec": "session-spec.md",
+    "blocked_by": [
+      18
+    ],
+    "acceptance_ids": [
+      "S-03",
+      "S-05",
+      "S-08",
+      "G-05"
+    ]
+  },
+  {
+    "id": 20,
+    "file": "issues/20-host-render-snapshot.md",
+    "title": "建立流式宿主的完整 snapshot 呈现入口",
+    "spec": "session-spec.md",
+    "blocked_by": [
+      19
+    ],
+    "acceptance_ids": [
+      "S-01",
+      "S-06",
+      "S-09"
+    ]
+  },
+  {
+    "id": 21,
+    "file": "issues/21-host-ownership-release.md",
+    "title": "实现新宿主的等待、接管与有序释放",
+    "spec": "session-spec.md",
+    "blocked_by": [
+      20
+    ],
+    "acceptance_ids": [
+      "S-02",
+      "S-03",
+      "S-04",
+      "S-05",
+      "S-06",
+      "S-10"
+    ]
+  },
+  {
+    "id": 22,
+    "file": "issues/22-host-environment-events.md",
+    "title": "集中提交后环境更新与显示通知",
+    "spec": "session-spec.md",
+    "blocked_by": [
+      21
+    ],
+    "acceptance_ids": [
+      "S-02",
+      "S-07",
+      "S-08",
+      "S-09",
+      "S-12"
+    ]
+  },
+  {
+    "id": 23,
+    "file": "issues/23-coordinator-use-host.md",
+    "title": "让生产 Coordinator 使用完整流式宿主 module",
+    "spec": "session-spec.md",
+    "blocked_by": [
+      22
+    ],
+    "acceptance_ids": [
+      "S-01",
+      "S-04",
+      "S-07",
+      "S-08",
+      "S-11",
+      "S-14"
+    ]
+  },
+  {
+    "id": 24,
+    "file": "issues/24-swiftui-remount-regression.md",
+    "title": "验证真实 SwiftUI 移除与重挂载",
+    "spec": "session-spec.md",
+    "blocked_by": [
+      23
+    ],
+    "acceptance_ids": [
+      "S-06",
+      "S-11",
+      "S-12",
+      "S-13"
+    ]
+  },
+  {
+    "id": 25,
+    "file": "issues/25-host-contract-old-plumbing.md",
+    "title": "删除旧流式宿主接线与重复 owner 字段",
+    "spec": "session-spec.md",
+    "blocked_by": [
+      24
+    ],
+    "acceptance_ids": [
+      "S-14",
+      "G-02",
+      "G-05",
+      "G-09"
+    ]
+  },
+  {
+    "id": 26,
+    "file": "issues/26-host-acceptance.md",
+    "title": "完成宿主接管方向验收与职责文档",
+    "spec": "session-spec.md",
+    "blocked_by": [
+      25
+    ],
+    "acceptance_ids": [
+      "S-01",
+      "S-02",
+      "S-03",
+      "S-04",
+      "S-05",
+      "S-06",
+      "S-07",
+      "S-08",
+      "S-09",
+      "S-10",
+      "S-11",
+      "S-12",
+      "S-13",
+      "S-14"
+    ]
+  },
+  {
+    "id": 27,
+    "file": "issues/27-integrated-final-gates.md",
+    "title": "完成三个方向的联合集成与交付证据",
+    "spec": "spec.md",
+    "blocked_by": [
+      9,
+      17,
+      26
+    ],
+    "acceptance_ids": [
+      "G-01",
+      "G-02",
+      "G-03",
+      "G-04",
+      "G-05",
+      "G-06",
+      "G-07",
+      "G-08",
+      "G-09",
+      "G-10",
+      "T-12",
+      "I-12",
+      "S-14"
+    ]
+  }
+]

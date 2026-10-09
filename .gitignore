@@ -14,6 +14,8 @@ xcuserdata/
 ## 本地工具状态（勿提交）
 .workbuddy/
 .verification-logs/
+.test-stash/
+.omx/
 
 ## Obj-C/Swift specific
 *.hmap
@@ -75,8 +77,9 @@ fastlane/test_output
 Packages/Caches/
 ExampleApp/Packages/Caches/
 
-# codebase-memory-mcp 本地代码索引
-.codebase-memory/
+# 本地代码索引与任务工具状态
+.serena/
+.freebuff/
 
 # Xcode DerivedData
 DerivedData/
