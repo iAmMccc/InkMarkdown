@@ -126,7 +126,7 @@ jobs:
 
       - name: Upload test artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: package-${{ matrix.slug }}-failure
           path: |
@@ -203,7 +203,7 @@ jobs:
 
       - name: Upload consumer build log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: consumer-${{ matrix.slug }}-failure
           path: |
@@ -269,7 +269,7 @@ jobs:
 
       - name: Upload build log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: example-${{ matrix.configuration }}-failure
           path: xcodebuild-example.log
@@ -339,7 +339,7 @@ jobs:
 
       - name: Upload test artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: example-mermaid-integration-failure
           path: |
