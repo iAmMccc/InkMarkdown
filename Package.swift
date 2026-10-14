@@ -29,7 +29,7 @@ let package = Package(
     ),
   ],
   dependencies: [
-    .package(url: "https://github.com/onevcat/Kingfisher.git", exact: "8.12.0"),
+    .package(url: "https://github.com/onevcat/Kingfisher.git", exact: "8.13.0"),
     // Apple 官方 Markdown 解析器：固定 revision，保证可重复构建（ADR-001）
     // 升级时：改 revision → 更新 Package.resolved → iOS Simulator 全量测试
     .package(

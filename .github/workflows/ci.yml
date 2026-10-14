@@ -73,7 +73,7 @@ jobs:
 
     steps:
       - name: Checkout candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.CANDIDATE_SHA }}
           persist-credentials: false
@@ -126,7 +126,7 @@ jobs:
 
       - name: Upload test artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: package-${{ matrix.slug }}-failure
           path: |
@@ -161,7 +161,7 @@ jobs:
 
     steps:
       - name: Checkout candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.CANDIDATE_SHA }}
           persist-credentials: false
@@ -203,7 +203,7 @@ jobs:
 
       - name: Upload consumer build log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: consumer-${{ matrix.slug }}-failure
           path: |
@@ -222,7 +222,7 @@ jobs:
 
     steps:
       - name: Checkout candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.CANDIDATE_SHA }}
           persist-credentials: false
@@ -269,7 +269,7 @@ jobs:
 
       - name: Upload build log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: example-${{ matrix.configuration }}-failure
           path: xcodebuild-example.log
@@ -282,7 +282,7 @@ jobs:
 
     steps:
       - name: Checkout candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.CANDIDATE_SHA }}
           persist-credentials: false
@@ -339,7 +339,7 @@ jobs:
 
       - name: Upload test artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: example-mermaid-integration-failure
           path: |
