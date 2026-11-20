@@ -37,7 +37,7 @@ let package = Package(
       revision: "07ebc9c071b22a5d021031b798c3a84b76281213"
     ),
     // iosMath 2.3.1：LaTeX 本地排版（MIT；字体许可见 docs/decisions/ADR-007）。
-    .package(url: "https://github.com/kostub/iosMath.git", exact: "2.3.1"),
+    .package(url: "https://github.com/kostub/iosMath.git", exact: "2.5.0"),
   ],
   targets: [
     .target(
